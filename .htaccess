@@ -1,0 +1,20 @@
+# Tomodachi POS - Apache Configuration
+
+# Prevenir acceso directo a archivos de configuración
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+# Proteger archivos sensibles
+<FilesMatch "\.(sql|log)$">
+    Require all denied
+</FilesMatch>
+
+# Configuración de PHP (para PHP 8.x)
+<IfModule mod_php.c>
+    php_value session.cookie_httponly 1
+    php_value session.use_only_cookies 1
+</IfModule>
+
+# Redirigir al login si se accede a la raíz
+DirectoryIndex public/login.html

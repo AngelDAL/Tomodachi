@@ -1,0 +1,28 @@
+# Tomodachi POS - Git Ignore
+
+# Archivos de configuración sensibles
+config/database.php
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+*.log
+
+# Directorios temporales
+/temp/
+/cache/
+/uploads/
+
+# Archivos de IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# Dependencias
+/vendor/
+/node_modules/
+
+# Archivos de backup
+*.bak
+*.backup
+*.old

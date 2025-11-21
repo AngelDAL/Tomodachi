@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Tomodachi POS</title>
+    <link rel="stylesheet" href="/Tomodachi/public/css/main.css">
+    <link rel="stylesheet" href="/Tomodachi/public/css/dashboard.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Tomodachi POS</h2>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="/Tomodachi/public/dashboard.html" class="nav-item active">
+                    <span>📊</span> Dashboard
+                </a>
+                <a href="/Tomodachi/public/sales.html" class="nav-item">
+                    <span>💰</span> Punto de Venta
+                </a>
+                <a href="/Tomodachi/public/inventory.html" class="nav-item">
+                    <span>📦</span> Inventario
+                </a>
+                <a href="/Tomodachi/public/reports.html" class="nav-item">
+                    <span>📈</span> Reportes
+                </a>
+                <a href="#" class="nav-item" id="logoutBtn">
+                    <span>🚪</span> Cerrar Sesión
+                </a>
+            </nav>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <h1>Dashboard</h1>
+                <div class="user-info">
+                    <span id="userName">Usuario</span>
+                    <span id="userRole" class="badge"></span>
+                </div>
+            </header>
+            
+            <div class="dashboard-content">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">💵</div>
+                        <div class="stat-info">
+                            <h3>Ventas del Día</h3>
+                            <p class="stat-value" id="dailySales">$0.00</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">🛒</div>
+                        <div class="stat-info">
+                            <h3>Transacciones</h3>
+                            <p class="stat-value" id="transactions">0</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">📦</div>
+                        <div class="stat-info">
+                            <h3>Productos</h3>
+                            <p class="stat-value" id="products">0</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">⚠️</div>
+                        <div class="stat-info">
+                            <h3>Stock Bajo</h3>
+                            <p class="stat-value" id="lowStock">0</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="welcome-message">
+                    <h2>Bienvenido al Sistema de Punto de Venta</h2>
+                    <p>Seleccione una opción del menú para comenzar</p>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script src="/Tomodachi/public/js/api.js"></script>
+    <script src="/Tomodachi/public/js/app.js"></script>
+    <script>
+        // Verificar sesión al cargar
+        document.addEventListener('DOMContentLoaded', async () => {
+            const session = await checkSession();
+            if (!session) {
+                window.location.href = '/Tomodachi/public/login.html';
+                return;
+            }
+            
+            // Mostrar info del usuario
+            document.getElementById('userName').textContent = session.full_name;
+            document.getElementById('userRole').textContent = session.role.toUpperCase();
+        });
+        
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+            e.preventDefault();
+            await logout();
+        });
+    </script>
+</body>
+</html>

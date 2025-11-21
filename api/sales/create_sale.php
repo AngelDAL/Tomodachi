@@ -18,10 +18,13 @@ require_once '../../config/constants.php';
 require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
 require_once '../../includes/Validator.class.php';
+require_once '../../includes/Auth.class.php';
 
-session_start();
-if (!isset($_SESSION['user_id'])) { Response::unauthorized(); }
-if (!in_array($_SESSION['role'],[ROLE_ADMIN,ROLE_MANAGER,ROLE_CASHIER])) { Response::error('Permisos insuficientes',403); }
+$db = new Database();
+$auth = new Auth($db);
+
+if (!$auth->isLoggedIn()) { Response::unauthorized(); }
+if (!in_array($auth->getCurrentUser()['role'],[ROLE_ADMIN,ROLE_MANAGER,ROLE_CASHIER])) { Response::error('Permisos insuficientes',403); }
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') { Response::error('Método no permitido',405); }
 
 try {
@@ -51,7 +54,13 @@ try {
     // Obtener caja abierta si no se pasa register_id
     if ($register_id<=0) {
         $open = $db->selectOne('SELECT register_id FROM cash_registers WHERE store_id = ? AND status = ?',[$store_id,REGISTER_OPEN]);
-        if (!$open) { Response::error('No hay caja abierta para la tienda',409); }
+        if (!$open) {
+            // Abrir caja automáticamente
+            $user = $auth->getCurrentUser();
+            $register_id = $db->insert('INSERT INTO cash_registers (store_id, user_id, opening_date, initial_amount, status) VALUES (?,?,NOW(),0,?)',
+                [$store_id, $user['user_id'], REGISTER_OPEN]);
+            $open = ['register_id' => $register_id];
+        }
         $register_id = (int)$open['register_id'];
     } else {
         $open = $db->selectOne('SELECT register_id FROM cash_registers WHERE register_id = ? AND status = ?',[$register_id,REGISTER_OPEN]);
@@ -89,8 +98,9 @@ try {
     // Transacción
     $db->beginTransaction();
     try {
+        $user = $auth->getCurrentUser();
         $sale_id = $db->insert('INSERT INTO sales (store_id, user_id, register_id, sale_date, subtotal, tax, discount, total, payment_method, status, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,NOW())',[
-            $store_id, $_SESSION['user_id'], $register_id, date('Y-m-d H:i:s'), $subtotal, $tax, $discount, $total, $payment_method, SALE_COMPLETED
+            $store_id, $user['user_id'], $register_id, date('Y-m-d H:i:s'), $subtotal, $tax, $discount, $total, $payment_method, SALE_COMPLETED
         ]);
 
         foreach ($productsToUpdate as $p) {
@@ -98,7 +108,7 @@ try {
             $db->update('UPDATE inventory SET current_stock = ?, last_updated = NOW() WHERE inventory_id = ?',[$p['new_stock'],$p['inventory_id']]);
             // Movimiento inventario tipo sale
             $db->insert('INSERT INTO inventory_movements (store_id, product_id, user_id, movement_type, quantity, previous_stock, new_stock, notes, created_at) VALUES (?,?,?,?,?,?,?,?,NOW())',[
-                $store_id,$p['product_id'],$_SESSION['user_id'],MOVEMENT_SALE,$p['quantity'],$p['previous_stock'],$p['new_stock'],'Venta #'.$sale_id
+                $store_id,$p['product_id'],$user['user_id'],MOVEMENT_SALE,$p['quantity'],$p['previous_stock'],$p['new_stock'],'Venta #'.$sale_id
             ]);
             // Detalle venta
             $lineSubtotal = $p['quantity'] * $p['price'];
@@ -111,7 +121,7 @@ try {
         if (in_array($payment_method,[PAYMENT_CASH,PAYMENT_MIXED])) {
             $cashTotal = ($payment_method===PAYMENT_MIXED) ? $cash_amount : $total;
             if ($cashTotal>0) {
-                $db->insert('INSERT INTO cash_movements (register_id, user_id, movement_type, amount, description, created_at) VALUES (?,?,?,?,?,NOW())',[ $register_id, $_SESSION['user_id'], 'sale', $cashTotal, 'Venta #'.$sale_id ]);
+                $db->insert('INSERT INTO cash_movements (register_id, user_id, movement_type, amount, description, created_at) VALUES (?,?,?,?,?,NOW())',[ $register_id, $user['user_id'], 'sale', $cashTotal, 'Venta #'.$sale_id ]);
             }
         }
 

@@ -8,10 +8,12 @@
     <link rel="stylesheet" href="/Tomodachi/public/css/dashboard.css">
 </head>
 <body>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
     <div class="app-container">
         <!-- Sidebar -->
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
+                <button class="sidebar-close" id="sidebarClose" aria-label="Cerrar menú">✕</button>
                 <h2>Tomodachi POS</h2>
             </div>
             
@@ -37,7 +39,10 @@
         <!-- Main Content -->
         <main class="main-content">
             <header class="main-header">
-                <h1>Dashboard</h1>
+                <div class="header-left">
+                    <button class="sidebar-toggle" id="sidebarToggle" aria-label="Menú">☰</button>
+                    <h1>Dashboard</h1>
+                </div>
                 <div class="user-info">
                     <span id="userName">Usuario</span>
                     <span id="userRole" class="badge"></span>

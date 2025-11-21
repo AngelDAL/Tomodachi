@@ -11,7 +11,17 @@ require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
 require_once '../../includes/Validator.class.php';
 
-session_start();
+// Inicializar sesión con parámetros consistentes
+if (session_status() === PHP_SESSION_NONE) {
+    session_name(SESSION_NAME);
+    session_set_cookie_params([
+        'lifetime' => SESSION_LIFETIME,
+        'path' => '/Tomodachi/', // asegúramos que el cookie se envíe en rutas del proyecto
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
+    session_start();
+}
 if (!isset($_SESSION['user_id'])) { Response::unauthorized(); }
 
 $method = $_SERVER['REQUEST_METHOD'];
@@ -23,7 +33,7 @@ try {
             $store_id = isset($_GET['store_id']) ? (int)$_GET['store_id'] : 0;
             $search = isset($_GET['search']) ? trim($_GET['search']) : '';
             $params=[];
-            $sql = 'SELECT p.product_id, p.product_name, p.description, p.barcode, p.qr_code, p.price, p.cost, p.min_stock, p.status, p.category_id, c.category_name';
+            $sql = 'SELECT p.product_id, p.product_name, p.description, p.image_path, p.barcode, p.qr_code, p.price, p.cost, p.min_stock, p.status, p.category_id, c.category_name';
             if ($store_id>0) {
                 $sql .= ', i.current_stock';
             }
@@ -32,9 +42,10 @@ try {
             $conditions=[];
             if ($search !== '') {
                 $conditions[]='(p.product_name LIKE ? OR p.barcode LIKE ? OR p.qr_code LIKE ?)';
-                $params[]='%'.$search.'%';
-                $params[]='%'.$search+'%';
-                $params[]='%'.$search+'%';
+                $pattern = '%'.$search.'%';
+                $params[] = $pattern;
+                $params[] = $pattern;
+                $params[] = $pattern;
             }
             if ($conditions) { $sql .= ' WHERE '.implode(' AND ',$conditions); }
             $sql .= ' ORDER BY p.product_name ASC LIMIT 200';
@@ -64,7 +75,7 @@ try {
             $id=$db->insert('INSERT INTO products (category_id, product_name, description, barcode, qr_code, price, cost, min_stock, status, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,NOW(),NOW())',[
                 $category_id,$product_name,$description,$barcode,$qr_code,$price,$cost,$min_stock,STATUS_ACTIVE
             ]);
-            $product=$db->selectOne('SELECT product_id, product_name, barcode, qr_code, price, cost, min_stock, status FROM products WHERE product_id = ?',[$id]);
+            $product=$db->selectOne('SELECT product_id, product_name, image_path, barcode, qr_code, price, cost, min_stock, status FROM products WHERE product_id = ?',[$id]);
             Response::success($product,'Producto creado');
             break;
         case 'PUT':
@@ -90,7 +101,7 @@ try {
             $params[]=$product_id;
             $sql='UPDATE products SET '.implode(', ',$fields).' WHERE product_id = ?';
             $db->update($sql,$params);
-            $product=$db->selectOne('SELECT product_id, product_name, barcode, qr_code, price, cost, min_stock, status FROM products WHERE product_id = ?',[$product_id]);
+            $product=$db->selectOne('SELECT product_id, product_name, image_path, barcode, qr_code, price, cost, min_stock, status FROM products WHERE product_id = ?',[$product_id]);
             Response::success($product,'Producto actualizado');
             break;
         default:

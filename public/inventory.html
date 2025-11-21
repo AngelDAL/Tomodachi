@@ -8,10 +8,12 @@
     <link rel="stylesheet" href="/Tomodachi/public/css/dashboard.css">
 </head>
 <body>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
     <div class="app-container">
         <!-- Sidebar -->
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
+                <button class="sidebar-close" id="sidebarClose" aria-label="Cerrar menú">✕</button>
                 <h2>Tomodachi POS</h2>
             </div>
             
@@ -37,24 +39,36 @@
         <!-- Main Content -->
         <main class="main-content">
             <header class="main-header">
-                <h1>Inventario</h1>
+                <div class="header-left">
+                    <button class="sidebar-toggle" id="sidebarToggle" aria-label="Menú">☰</button>
+                    <h1>Inventario</h1>
+                </div>
                 <div class="user-info">
                     <span id="userName">Usuario</span>
                     <span id="userRole" class="badge"></span>
                 </div>
             </header>
             
-            <div class="dashboard-content">
-                <div class="welcome-message">
-                    <h2>Módulo de Inventario</h2>
-                    <p>En construcción - Próximamente disponible</p>
-                </div>
+            <div class="inventory-content">
+                <section class="inv-left compact-controls">
+                    <h2>Inventario</h2>
+                    <div class="control-bar">
+                        <input type="text" id="invSearch" placeholder="Buscar productos" aria-label="Buscar productos">
+                        <input type="number" id="productIdInput" placeholder="ID" aria-label="ID Producto">
+                        <label class="file-label" for="imageFileInput">📁</label>
+                        <input type="file" id="imageFileInput" accept="image/png,image/jpeg" class="hidden" aria-label="Seleccionar imagen">
+                        <button type="button" id="uploadImageBtn" class="btn-secondary" aria-label="Subir imagen">⬆️</button>
+                    </div>
+                    <div id="invResults" class="results-list"></div>
+                    <div id="uploadPreview" class="upload-preview"></div>
+                </section>
             </div>
         </main>
     </div>
     
     <script src="/Tomodachi/public/js/api.js"></script>
     <script src="/Tomodachi/public/js/app.js"></script>
+    <script src="/Tomodachi/public/js/inventory.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             const session = await checkSession();

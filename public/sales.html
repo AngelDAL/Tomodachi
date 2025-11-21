@@ -6,12 +6,15 @@
     <title>Punto de Venta - Tomodachi POS</title>
     <link rel="stylesheet" href="/Tomodachi/public/css/main.css">
     <link rel="stylesheet" href="/Tomodachi/public/css/dashboard.css">
+    <link rel="stylesheet" href="/Tomodachi/public/css/sales.css">
 </head>
 <body>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
     <div class="app-container">
         <!-- Sidebar -->
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
+                <button class="sidebar-close" id="sidebarClose" aria-label="Cerrar menú">✕</button>
                 <h2>Tomodachi POS</h2>
             </div>
             
@@ -36,18 +39,113 @@
         
         <!-- Main Content -->
         <main class="main-content">
-            <header class="main-header">
-                <h1>Punto de Venta</h1>
-                <div class="user-info">
-                    <span id="userName">Usuario</span>
-                    <span id="userRole" class="badge"></span>
+            <div class="pos-container">
+                <!-- Encabezado con búsqueda -->
+                <div class="pos-header">
+                    <div class="header-top">
+                        <button class="sidebar-toggle" id="sidebarToggle" aria-label="Menú">☰</button>
+                        <h1>Punto de Venta</h1>
+                        <div style="width: 40px;"></div> <!-- Espaciador -->
+                    </div>
+                    
+                    <div class="search-section">
+                        <input type="text" id="searchInput" placeholder="🔍 Buscar producto..." autocomplete="off" aria-label="Buscar producto" class="search-main">
+                        <button id="toggleScannerBtn" type="button" class="btn-scanner" aria-label="Escáner" title="Activar escáner">📷</button>
+                    </div>
+                    
+                    <div id="scannerContainer" class="scanner-container hidden">
+                        <div id="qr-reader" style="width:100%;"></div>
+                    </div>
                 </div>
-            </header>
-            
-            <div class="dashboard-content">
-                <div class="welcome-message">
-                    <h2>Módulo de Punto de Venta</h2>
-                    <p>En construcción - Próximamente disponible</p>
+                
+                <!-- Galería de productos principal -->
+                <div class="products-main">
+                    <div id="searchResults" class="search-results hidden"></div>
+                    <div id="productGallery" class="gallery-main"></div>
+                </div>
+                
+                <!-- Carrito Flotante Inferior -->
+                <div class="cart-footer">
+                    <button class="cart-toggle" id="cartToggle" aria-label="Ver carrito">
+                        <span class="cart-icon">🛒</span>
+                        <span class="cart-badge" id="cartBadge">0</span>
+                        <span class="cart-label">Carrito</span>
+                    </button>
+                    
+                    <div class="cart-panel" id="cartPanel">
+                        <div class="cart-header">
+                            <h2>Carrito</h2>
+                            <button class="close-cart" id="closeCartBtn">✕</button>
+                        </div>
+                        
+                        <div class="cart-tabs">
+                            <button class="cart-tab-btn active" data-tab="products">
+                                <span>🛍️</span> Productos
+                            </button>
+                            <button class="cart-tab-btn" data-tab="adjustments">
+                                <span>⚙️</span> Ajustes
+                            </button>
+                        </div>
+                        
+                        <!-- Tab: Productos -->
+                        <div class="cart-tab-content active" id="tab-products">
+                            <div class="cart-items">
+                                <table class="cart-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Producto</th>
+                                            <th>Precio</th>
+                                            <th>Cant.</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="cartBody"></tbody>
+                                </table>
+                                <div class="empty-cart" id="emptyCartMsg">Sin productos</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Tab: Ajustes -->
+                        <div class="cart-tab-content" id="tab-adjustments">
+                            <div class="adjustments-section">
+                                <div class="adjustment-row">
+                                    <label>Descuento:</label>
+                                    <input type="number" id="discountInput" min="0" step="0.01" value="0" placeholder="0.00">
+                                </div>
+                                <div class="adjustment-row">
+                                    <label>Impuesto:</label>
+                                    <input type="number" id="taxInput" min="0" step="0.01" value="0" placeholder="0.00">
+                                </div>
+                                
+                                <div class="payment-section">
+                                    <label>Método de pago:</label>
+                                    <select id="paymentMethod" aria-label="Método de pago">
+                                        <option value="cash">💵 Efectivo</option>
+                                        <option value="card">💳 Tarjeta</option>
+                                        <option value="transfer">🔄 Transferencia</option>
+                                        <option value="mixed">🔀 Mixto</option>
+                                    </select>
+                                    
+                                    <div id="cashReceivedRow" class="cash-row">
+                                        <label>Recibido:</label>
+                                        <input type="number" id="cashReceivedInput" min="0" step="0.01" value="0" placeholder="0.00">
+                                        <span>Cambio: <strong id="changeDisplay">$0.00</strong></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Pie del carrito con botón -->
+                        <div class="cart-footer-section">
+                            <button id="finalizeSaleBtn" class="btn-finalize-sale" disabled title="Finalizar venta">✓</button>
+                        </div>
+                    </div>
+                    
+                    <div class="total-display">
+                        <div class="total-badge">
+                            <span id="totalBadge">$0.00</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>
@@ -55,6 +153,9 @@
     
     <script src="/Tomodachi/public/js/api.js"></script>
     <script src="/Tomodachi/public/js/app.js"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="/Tomodachi/public/js/scanner.js"></script>
+    <script src="/Tomodachi/public/js/sales.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             const session = await checkSession();
@@ -63,8 +164,11 @@
                 return;
             }
             
-            document.getElementById('userName').textContent = session.full_name;
-            document.getElementById('userRole').textContent = session.role.toUpperCase();
+            // Pasar store_id a través del atributo data del body
+            document.body.setAttribute('data-store-id', session.store_id || 1);
+            
+            // Iniciar POS después de que la sesión esté verificada
+            initPOS();
         });
         
         document.getElementById('logoutBtn').addEventListener('click', async (e) => {

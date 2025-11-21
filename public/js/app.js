@@ -58,6 +58,63 @@ function showNotification(message, type = 'info') {
     }, 3000);
 }
 
+// Sidebar toggle (mobile)
+document.addEventListener('DOMContentLoaded', () => {
+    const toggleBtn = document.getElementById('sidebarToggle');
+    const sidebar = document.getElementById('sidebar');
+    const sidebarClose = document.querySelector('.sidebar-close');
+    const overlay = document.getElementById('sidebarOverlay');
+    const body = document.body;
+    
+    const closeSidebar = () => {
+        sidebar && sidebar.classList.remove('open');
+        overlay && overlay.classList.remove('show');
+        body.classList.remove('no-scroll');
+    };
+    
+    if (toggleBtn && sidebar) {
+        toggleBtn.addEventListener('click', () => {
+            const isSmall = window.innerWidth <= 860;
+            sidebar.classList.toggle('open');
+            const isOpen = sidebar.classList.contains('open');
+            if (overlay && isSmall) {
+                overlay.classList.toggle('show', isOpen);
+            }
+            if (isSmall) {
+                body.classList.toggle('no-scroll', isOpen);
+            }
+        });
+    }
+    
+    // Botón de cerrar en el sidebar
+    if (sidebarClose) {
+        sidebarClose.addEventListener('click', closeSidebar);
+    }
+    
+    if (overlay) {
+        overlay.addEventListener('click', closeSidebar);
+    }
+    
+    // Cerrar sidebar al hacer clic en un nav-item
+    const navItems = document.querySelectorAll('.nav-item');
+    navItems.forEach(item => {
+        item.addEventListener('click', () => {
+            if (window.innerWidth <= 860) {
+                closeSidebar();
+            }
+        });
+    });
+    
+    // Auto reset on resize
+    window.addEventListener('resize', () => {
+        if (window.innerWidth > 860) {
+            overlay && overlay.classList.remove('show');
+            body.classList.remove('no-scroll');
+            sidebar && sidebar.classList.remove('open');
+        }
+    });
+});
+
 /**
  * Formatear moneda
  */

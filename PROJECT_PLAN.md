@@ -672,6 +672,103 @@ Response:
 
 ---
 
+## 📑 Documentación Detallada de Endpoints Implementados
+
+### Autenticación
+| Método | Endpoint | Descripción | Parámetros | Notas |
+|--------|----------|-------------|------------|-------|
+| POST | `/api/auth/login.php` | Inicia sesión | `username`, `password` | Devuelve datos de usuario y rol |
+| GET | `/api/auth/verify_session.php` | Verifica sesión activa | - | Usado por frontend para persistencia |
+| POST | `/api/auth/logout.php` | Cierra sesión | - | Destruye la sesión actual |
+
+### Usuarios
+| Método | Endpoint | Descripción | Parámetros | Roles |
+|--------|----------|-------------|------------|-------|
+| POST | `/api/users/create.php` | Crear usuario | `store_id`, `username`, `password`, `role`, `full_name`, `email` | Admin, Manager (limitado) |
+| GET | `/api/users/read.php` | Listar usuarios | `store_id` (opcional) | Admin, Manager |
+| PUT | `/api/users/update.php` | Actualizar usuario | `user_id`, campos | Admin, Manager (según campos) |
+| DELETE | `/api/users/delete.php` | Desactivar usuario | `user_id` | Admin |
+
+### Tiendas
+| Método | Endpoint | Descripción | Parámetros | Roles |
+|--------|----------|-------------|------------|-------|
+| POST | `/api/stores/create.php` | Crear tienda | `store_name`, `address`, `phone` | Admin |
+| GET | `/api/stores/read.php` | Listar tiendas | - | Admin, Manager |
+| PUT | `/api/stores/update.php` | Actualizar tienda | `store_id`, campos | Admin |
+
+### Inventario y Productos
+| Método | Endpoint | Descripción | Parámetros | Notas |
+|--------|----------|-------------|------------|-------|
+| GET | `/api/inventory/products.php` | Listar productos | `store_id`, filtros (`search`, `status`) | Incluye stock si aplica |
+| POST | `/api/inventory/products.php` | Crear producto | `category_id`, `product_name`, `barcode`, `price`, etc. | Valida duplicados barcode/qr |
+| PUT | `/api/inventory/products.php` | Actualizar producto | `product_id`, campos | Control unicidad barcode/qr |
+| GET/POST/PUT/DELETE | `/api/inventory/categories.php` | CRUD categorías | según método | Endpoint multipropósito |
+| POST | `/api/inventory/stock.php` | Ajustar stock | `store_id`, `product_id`, `adjustment`, `movement_type`, `notes` | Registra movimiento previo/nuevo |
+| GET | `/api/inventory/scanner.php` | Buscar por código | `barcode` o `qr_code`, `store_id` opcional | Uso en POS y ajuste |
+
+### Ventas
+| Método | Endpoint | Descripción | Parámetros | Notas |
+|--------|----------|-------------|------------|-------|
+| POST | `/api/sales/create_sale.php` | Registrar venta | `store_id`, `items[]`, `payment_method`, `discount`, `tax` | Transacción: valida stock, descuenta inventario, registra movimientos |
+| GET | `/api/sales/get_sales.php` | Listar ventas | `store_id`, `date` | Ventas del día filtradas |
+| GET | `/api/sales/sale_details.php` | Detalle de venta | `sale_id` | Items con totales |
+| POST | `/api/sales/cancel_sale.php` | Cancelar venta | `sale_id`, motivo opcional | Reversa stock + movimiento caja negativo |
+
+#### Flujo Interno `create_sale.php`
+1. Verifica sesión y permisos.
+2. Valida parámetros (`store_id`, items, método pago).
+3. Obtiene caja abierta.
+4. Inicia transacción.
+5. Itera items: valida stock y calcula subtotales.
+6. Calcula totals (subtotal, discount, tax, total).
+7. Inserta venta y detalles.
+8. Descuenta inventario y registra movimientos `sale`.
+9. Registra movimiento de caja `sale` si corresponde.
+10. Commit y respuesta; rollback en error.
+
+#### Flujo Interno `cancel_sale.php`
+1. Verifica sesión.
+2. Obtiene venta y confirma estado `completed`.
+3. Inicia transacción.
+4. Recorre detalles: suma stock y movimiento `return`.
+5. Cambia estado a `cancelled`.
+6. Movimiento caja `withdrawal` por total (si efectivo/mixto).
+7. Commit / rollback en error.
+
+### Caja
+| Método | Endpoint | Descripción | Parámetros | Notas |
+|--------|----------|-------------|------------|-------|
+| POST | `/api/cash_register/open_register.php` | Abrir caja | `store_id`, `initial_amount` | Una abierta por tienda |
+| POST | `/api/cash_register/cash_movements.php` | Entrada/Retiro | `store_id` o `register_id`, `movement_type`, `amount`, `description` | Tipos: `entry`, `withdrawal` |
+| POST | `/api/cash_register/close_register.php` | Cerrar caja | `register_id`, `counted_amount`, `notes` | Calcula esperado y diferencia |
+| GET | `/api/cash_register/current_register.php` | Consulta caja abierta | `store_id` o `register_id` | Totales de entradas, retiros, ventas |
+
+#### Fórmula de Cierre
+```
+expected = initial_amount + Σ(entry) - Σ(withdrawal) + Σ(ventas efectivo)
+difference = counted_amount - expected
+```
+
+### Formato de Error Estándar
+```json
+{
+    "success": false,
+    "message": "Validación fallida",
+    "errors": {"field": "Detalle"}
+}
+```
+
+### Consideraciones
+- Ventas y cancelaciones usan transacciones multi-tabla.
+- Ajustes de stock: atomicidad simple (update + log).
+- Cierre de caja no modifica ventas; resume movimientos.
+
+### Mejoras Futuras
+- Desglose de pago mixto.
+- Reportes avanzados (fase 4).
+- Logging/auditoría ampliada.
+- Paginación configurable en listados grandes.
+
 ## 📞 Notas de Desarrollo
 
 Este documento es una guía de referencia. Cada módulo debe ser desarrollado siguiendo los principios SOLID y manteniendo el código limpio y documentado.

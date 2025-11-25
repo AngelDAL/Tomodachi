@@ -7,8 +7,8 @@ let CURRENT_STORE_ID = null;
 // Variables globales para elementos DOM
 let searchInput, searchResults, cartBody, emptyCartMsg;
 let totalBadge, cartBadge, discountInput, taxInput, paymentMethodSelect;
-let cashReceivedRow, cashReceivedInput, changeDisplay, finalizeSaleBtn;
-let cartToggle, cartPanel, closeCartBtn, productGallery;
+let checkoutReceivedInput, checkoutChangeDisplay, finalizeSaleBtn;
+let cartToggle, cartPanel, closeCartBtn, productGallery, cartHandleBtn, panelTotalEl;
 
 function initPOS() {
   // Inicializar referencias a elementos DOM
@@ -21,14 +21,15 @@ function initPOS() {
   discountInput = document.getElementById('discountInput');
   taxInput = document.getElementById('taxInput');
   paymentMethodSelect = document.getElementById('paymentMethod');
-  cashReceivedRow = document.getElementById('cashReceivedRow');
-  cashReceivedInput = document.getElementById('cashReceivedInput');
-  changeDisplay = document.getElementById('changeDisplay');
+  checkoutReceivedInput = document.getElementById('checkoutReceived');
+  checkoutChangeDisplay = document.getElementById('checkoutChange');
   finalizeSaleBtn = document.getElementById('finalizeSaleBtn');
   cartToggle = document.getElementById('cartToggle');
   cartPanel = document.getElementById('cartPanel');
   closeCartBtn = document.getElementById('closeCartBtn');
   productGallery = document.getElementById('productGallery');
+  cartHandleBtn = document.getElementById('cartHandle');
+  panelTotalEl = document.getElementById('panelTotal');
 
   // Obtener store_id del atributo de datos en el body
   CURRENT_STORE_ID = document.body.getAttribute('data-store-id') || 1;
@@ -41,25 +42,53 @@ function initPOS() {
 function bindEvents() {
   // Búsqueda con debounce
   let debounceTimer;
-  searchInput.addEventListener('input', () => {
-    clearTimeout(debounceTimer);
-    const term = searchInput.value.trim();
-    if (!term) { 
-      searchResults.classList.add('hidden');
-      productGallery.style.display = 'grid';
-      return; 
-    }
-    debounceTimer = setTimeout(() => searchProducts(term), 300);
-  });
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      clearTimeout(debounceTimer);
+      const term = searchInput.value.trim();
+      if (!term) { 
+        if (searchResults) searchResults.classList.add('hidden');
+        if (productGallery) productGallery.style.display = 'grid';
+        return; 
+      }
+      debounceTimer = setTimeout(() => searchProducts(term), 300);
+    });
+  }
 
   // Carrito toggle
-  cartToggle.addEventListener('click', () => {
-    cartPanel.classList.toggle('open');
-  });
+  if (cartToggle) {
+    cartToggle.addEventListener('click', () => {
+      toggleCartPanel();
+    });
+  }
 
-  closeCartBtn.addEventListener('click', () => {
-    cartPanel.classList.remove('open');
-  });
+  if (closeCartBtn && cartPanel) {
+    closeCartBtn.addEventListener('click', () => {
+      cartPanel.classList.remove('open');
+      cartPanel.setAttribute('aria-hidden','true');
+    });
+  }
+
+  if (cartHandleBtn) {
+    cartHandleBtn.addEventListener('click', () => toggleCartPanel());
+    // Drag para abrir/cerrar
+    let startX = null, dragging = false;
+    const onDown = (e) => { startX = (e.touches? e.touches[0].clientX : e.clientX); dragging = true; };
+    const onMove = (e) => {
+      if (!dragging) return;
+      const x = (e.touches? e.touches[0].clientX : e.clientX);
+      const dx = startX - x; // positivo al arrastrar hacia la izquierda
+      if (!cartPanel.classList.contains('open') && dx > 40) { toggleCartPanel(true); dragging=false; }
+      if (cartPanel.classList.contains('open') && dx < -40) { toggleCartPanel(false); dragging=false; }
+    };
+    const onUp = () => { dragging=false; };
+    cartHandleBtn.addEventListener('mousedown', onDown);
+    cartHandleBtn.addEventListener('touchstart', onDown, {passive:true});
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('touchmove', onMove, {passive:true});
+    window.addEventListener('mouseup', onUp);
+    window.addEventListener('touchend', onUp);
+  }
 
   // Pestañas del carrito
   document.querySelectorAll('.cart-tab-btn').forEach(btn => {
@@ -70,18 +99,20 @@ function bindEvents() {
   });
 
   // Eventos de cálculos
-  discountInput.addEventListener('input', recalcTotals);
-  taxInput.addEventListener('input', recalcTotals);
-  paymentMethodSelect.addEventListener('change', onPaymentMethodChange);
-  cashReceivedInput.addEventListener('input', recalcChange);
-  finalizeSaleBtn.addEventListener('click', finalizeSale);
+  if (discountInput) discountInput.addEventListener('input', recalcTotals);
+  if (taxInput) taxInput.addEventListener('input', recalcTotals);
+  if (paymentMethodSelect) paymentMethodSelect.addEventListener('change', onPaymentMethodChange);
+  if (checkoutReceivedInput) {
+    checkoutReceivedInput.addEventListener('input', recalcChange);
+    // Seleccionar todo el texto al enfocar para edición rápida
+    checkoutReceivedInput.addEventListener('focus', (e) => {
+      e.target.select();
+      setTimeout(() => e.target.select(), 0);
+    });
+  }
+  if (finalizeSaleBtn) finalizeSaleBtn.addEventListener('click', finalizeSale);
 
-  // Cerrar carrito al hacer click afuera
-  document.addEventListener('click', (e) => {
-    if (!cartPanel.contains(e.target) && !cartToggle.contains(e.target)) {
-      cartPanel.classList.remove('open');
-    }
-  });
+  // Eliminado auto-cierre al hacer click fuera: el usuario controla con botones
 }
 
 function switchCartTab(tabName) {
@@ -205,17 +236,14 @@ function recalcTotals() {
   if (totalBadge) {
     totalBadge.textContent = formatCurrency(total);
   }
+  if (panelTotalEl) {
+    panelTotalEl.textContent = formatCurrency(total);
+  }
   recalcChange();
 }
 
 function onPaymentMethodChange() {
-  if (!paymentMethodSelect || !cashReceivedRow) return;
-  const method = paymentMethodSelect.value;
-  if (method === 'cash' || method === 'mixed') {
-    cashReceivedRow.classList.add('show');
-  } else {
-    cashReceivedRow.classList.remove('show');
-  }
+  if (!paymentMethodSelect) return;
   recalcChange();
 }
 
@@ -227,11 +255,43 @@ function recalcChange() {
   const tax = (taxInput && taxInput.value) ? parseFloat(taxInput.value) : 0;
   const total = Math.max(0, subtotal - discount + tax);
   if (method === 'cash' || method === 'mixed') {
-    const received = (cashReceivedInput && cashReceivedInput.value) ? parseFloat(cashReceivedInput.value) : 0;
+    const received = (checkoutReceivedInput && checkoutReceivedInput.value) ? parseFloat(checkoutReceivedInput.value) : 0;
     const change = received - total;
-    if (changeDisplay) {
-      changeDisplay.textContent = formatCurrency(change >= 0 ? change : 0);
+    if (checkoutChangeDisplay) {
+      checkoutChangeDisplay.textContent = formatCurrency(change >= 0 ? change : 0);
+      if (change < 0) {
+        checkoutChangeDisplay.classList.add('negative');
+      } else {
+        checkoutChangeDisplay.classList.remove('negative');
+      }
     }
+  } else {
+    if (checkoutChangeDisplay) checkoutChangeDisplay.textContent = '—';
+    if (checkoutChangeDisplay) checkoutChangeDisplay.classList.remove('negative');
+  }
+  // Habilitar botón finalizar según reglas
+  if (finalizeSaleBtn) {
+    let canFinalize = CART.length > 0;
+    if (canFinalize) {
+      if (method === 'cash' || method === 'mixed') {
+        const received = parseFloat(checkoutReceivedInput.value) || 0;
+        canFinalize = received >= total && total > 0;
+      } else {
+        canFinalize = total > 0;
+      }
+    }
+    finalizeSaleBtn.disabled = !canFinalize;
+  }
+}
+
+function toggleCartPanel(forceOpen = null) {
+  const open = forceOpen !== null ? forceOpen : !cartPanel.classList.contains('open');
+  if (open) {
+    cartPanel.classList.add('open');
+    cartPanel.setAttribute('aria-hidden','false');
+  } else {
+    cartPanel.classList.remove('open');
+    cartPanel.setAttribute('aria-hidden','true');
   }
 }
 
@@ -249,8 +309,8 @@ async function finalizeSale() {
   };
   
   // Añadir cash_amount si es necesario
-  if ((method === 'cash' || method === 'mixed') && cashReceivedInput) {
-    payload.cash_amount = parseFloat(cashReceivedInput.value) || 0;
+  if ((method === 'cash' || method === 'mixed') && checkoutReceivedInput) {
+    payload.cash_amount = parseFloat(checkoutReceivedInput.value) || 0;
   }
   
   try {
@@ -261,8 +321,8 @@ async function finalizeSale() {
       renderCart();
       if (discountInput) discountInput.value='0'; 
       if (taxInput) taxInput.value='0'; 
-      if (cashReceivedInput) cashReceivedInput.value='0';
-      if (cartPanel) cartPanel.classList.remove('open');
+      if (checkoutReceivedInput) checkoutReceivedInput.value='0';
+      // Mantener panel abierto; solo se cierra manualmente
     } else {
       showNotification(res.message||'Error venta', 'error');
     }
@@ -272,6 +332,8 @@ async function finalizeSale() {
     finalizeSaleBtn.disabled = false;
   }
 }
+
+// Ajuste: ya no existe barra de resumen separada; recalcTotals gestiona todo
 
 function escapeHtml(str) {
   return str.replace(/[&<>"']/g, function(m) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m]); });

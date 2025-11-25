@@ -538,7 +538,7 @@ table tr:hover {
 }
 
 /* Responsive */
-@media (max-width: 768px) {
+@media (max-width: 862px) {
     .sidebar {
         position: fixed;
         left: -200px;

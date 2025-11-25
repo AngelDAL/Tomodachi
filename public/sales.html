@@ -12,146 +12,139 @@
 <body>
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
     <div class="app-container">
-        <!-- Sidebar -->
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <button class="sidebar-close" id="sidebarClose" aria-label="Cerrar menú"><i class="fas fa-times"></i></button>
-                <h2>Tomodachi POS</h2>
-            </div>
-            
-            <nav class="sidebar-nav">
-                <a href="/Tomodachi/public/dashboard.html" class="nav-item">
-                    <span><i class="fas fa-chart-line"></i></span> Dashboard
-                </a>
-                <a href="/Tomodachi/public/sales.html" class="nav-item active">
-                    <span><i class="fas fa-cash-register"></i></span> Punto de Venta
-                </a>
-                <a href="/Tomodachi/public/inventory.html" class="nav-item">
-                    <span><i class="fas fa-box"></i></span> Inventario
-                </a>
-                <a href="/Tomodachi/public/reports.html" class="nav-item">
-                    <span><i class="fas fa-chart-bar"></i></span> Reportes
-                </a>
-                <a href="#" class="nav-item" id="logoutBtn">
-                    <span><i class="fas fa-sign-out-alt"></i></span> Cerrar Sesión
-                </a>
-            </nav>
-        </aside>
-        
-        <!-- Main Content -->
-        <main class="main-content">
-            <div class="pos-container">
-                <!-- Encabezado con búsqueda -->
-                <div class="pos-header">
-                    <div class="header-top">
-                        <button class="sidebar-toggle" id="sidebarToggle" aria-label="Menú"><i class="fas fa-bars"></i></button>
-                        <h1>Punto de Venta</h1>
-                        <div style="width: 40px;"></div> <!-- Espaciador -->
+                <!-- Sidebar -->
+                <aside class="sidebar" id="sidebar">
+                    <div class="sidebar-header">
+                        <button class="sidebar-close" id="sidebarClose" aria-label="Cerrar menú"><i class="fas fa-times"></i></button>
+                        <h2>Tomodachi POS</h2>
                     </div>
-                    
-                    <div class="search-section">
-                        <input type="text" id="searchInput" placeholder="Buscar producto..." autocomplete="off" aria-label="Buscar producto" class="search-main">
-                        <button id="toggleScannerBtn" type="button" class="btn-scanner" aria-label="Escáner" title="Activar escáner"><i class="fas fa-barcode"></i></button>
-                    </div>
-                    
-                    <div id="scannerContainer" class="scanner-container hidden">
-                        <div id="qr-reader" style="width:100%;"></div>
-                    </div>
-                </div>
-                
-                <!-- Galería de productos principal -->
-                <div class="products-main">
-                    <div id="searchResults" class="search-results hidden"></div>
-                    <div id="productGallery" class="gallery-main"></div>
-                </div>
-                
-                <!-- Carrito Flotante Inferior -->
-                <div class="cart-footer">
-                    <button class="cart-toggle" id="cartToggle" aria-label="Ver carrito">
-                        <span class="cart-icon"><i class="fas fa-shopping-cart"></i></span>
-                        <span class="cart-badge" id="cartBadge">0</span>
-                        <span class="cart-label">Carrito</span>
-                    </button>
-                    
-                    <div class="cart-panel" id="cartPanel">
-                        <div class="cart-header">
-                            <h2>Carrito</h2>
-                            <button class="close-cart" id="closeCartBtn"><i class="fas fa-times"></i></button>
-                        </div>
-                        
-                        <div class="cart-tabs">
-                            <button class="cart-tab-btn active" data-tab="products">
-                                <span><i class="fas fa-shopping-bag"></i></span> Productos
-                            </button>
-                            <button class="cart-tab-btn" data-tab="adjustments">
-                                <span><i class="fas fa-cog"></i></span> Ajustes
-                            </button>
-                        </div>
-                        
-                        <!-- Tab: Productos -->
-                        <div class="cart-tab-content active" id="tab-products">
-                            <div class="cart-items">
-                                <table class="cart-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Producto</th>
-                                            <th>Precio</th>
-                                            <th>Cant.</th>
-                                            <th></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="cartBody"></tbody>
-                                </table>
-                                <div class="empty-cart" id="emptyCartMsg">Sin productos</div>
+                    <nav class="sidebar-nav">
+                        <a href="/Tomodachi/public/dashboard.html" class="nav-item">
+                            <span><i class="fas fa-chart-line"></i></span> Dashboard
+                        </a>
+                        <a href="/Tomodachi/public/sales.html" class="nav-item active">
+                            <span><i class="fas fa-cash-register"></i></span> Punto de Venta
+                        </a>
+                        <a href="/Tomodachi/public/inventory.html" class="nav-item">
+                            <span><i class="fas fa-box"></i></span> Inventario
+                        </a>
+                        <a href="/Tomodachi/public/reports.html" class="nav-item">
+                            <span><i class="fas fa-chart-bar"></i></span> Reportes
+                        </a>
+                        <a href="#" class="nav-item" id="logoutBtn">
+                            <span><i class="fas fa-sign-out-alt"></i></span> Cerrar Sesión
+                        </a>
+                    </nav>
+                </aside>
+
+                <!-- Main Content -->
+                <main class="main-content">
+                    <div class="pos-container">
+                        <!-- Encabezado con búsqueda -->
+                        <div class="pos-header">
+                            <div class="header-top">
+                                <button class="sidebar-toggle" id="sidebarToggle" aria-label="Menú"><i class="fas fa-bars"></i></button>
+                                <h1>Punto de Venta</h1>
+                                <div style="width: 40px;"></div>
+                            </div>
+                            <div class="search-section">
+                                <input type="text" id="searchInput" placeholder="Buscar producto..." autocomplete="off" aria-label="Buscar producto" class="search-main">
+                                <button id="toggleScannerBtn" type="button" class="btn-scanner" aria-label="Escáner" title="Activar escáner"><i class="fas fa-barcode"></i></button>
+                            </div>
+                            <div id="scannerContainer" class="scanner-container hidden">
+                                <div id="qr-reader" style="width:100%;"></div>
                             </div>
                         </div>
-                        
-                        <!-- Tab: Ajustes -->
-                        <div class="cart-tab-content" id="tab-adjustments">
-                            <div class="adjustments-section">
-                                <div class="adjustment-row">
-                                    <label>Descuento:</label>
-                                    <input type="number" id="discountInput" min="0" step="0.01" value="0" placeholder="0.00">
+
+                        <!-- Galería de productos principal -->
+                        <div class="products-main">
+                            <div id="searchResults" class="search-results hidden"></div>
+                            <div id="productGallery" class="gallery-main"></div>
+                        </div>
+
+                        <!-- Footer fijo inferior: checkout -->
+                        <div class="cart-footer">
+                            <div class="checkout-group" role="group" aria-label="Resumen y pago">
+                                <div class="checkout-item total-item" aria-label="Total a pagar">
+                                    <div class="checkout-label"><i class="fas fa-sack-dollar" aria-hidden="true"></i><span>Total</span></div>
+                                    <span id="totalBadge" class="checkout-value total-value" aria-live="polite">$0.00</span>
                                 </div>
-                                <div class="adjustment-row">
-                                    <label>Impuesto:</label>
-                                    <input type="number" id="taxInput" min="0" step="0.01" value="0" placeholder="0.00">
+                                <div class="checkout-item received-item" aria-label="Monto recibido">
+                                    <div class="checkout-label"><i class="fas fa-hand-holding-dollar" aria-hidden="true"></i><span>Recibido</span></div>
+                                    <input type="number" id="checkoutReceived" min="0" step="0.01" value="0" class="checkout-input" placeholder="0.00" aria-label="Ingresar monto recibido">
                                 </div>
-                                
-                                <div class="payment-section">
-                                    <label>Método de pago:</label>
-                                    <select id="paymentMethod" aria-label="Método de pago">
-                                        <option value="cash"><i class="fas fa-money-bill"></i> Efectivo</option>
-                                        <option value="card"><i class="fas fa-credit-card"></i> Tarjeta</option>
-                                        <option value="transfer"><i class="fas fa-exchange-alt"></i> Transferencia</option>
-                                        <option value="mixed"><i class="fas fa-random"></i> Mixto</option>
-                                    </select>
-                                    
-                                    <div id="cashReceivedRow" class="cash-row">
-                                        <label>Recibido:</label>
-                                        <input type="number" id="cashReceivedInput" min="0" step="0.01" value="0" placeholder="0.00">
-                                        <span>Cambio: <strong id="changeDisplay">$0.00</strong></span>
+                                <div class="checkout-item change-item" aria-label="Cambio a entregar">
+                                    <div class="checkout-label"><i class="fas fa-coins" aria-hidden="true"></i><span>Cambio</span></div>
+                                    <span id="checkoutChange" class="checkout-value change-value" aria-live="polite">$0.00</span>
+                                </div>
+                                <button id="finalizeSaleBtn" class="btn-finalize-sale" disabled title="Finalizar venta" aria-label="Finalizar venta"><i class="fas fa-check"></i><span class="btn-text">Finalizar</span></button>
+                            </div>
+                        </div>
+
+                        <!-- Asa y panel lateral del carrito (oculto por defecto) -->
+                        <button id="cartHandle" class="cart-handle" aria-label="Abrir carrito"><i class="fas fa-shopping-cart"></i></button>
+                        <aside class="cart-side-panel" id="cartPanel" aria-label="Carrito de compras" aria-hidden="true">
+                            <div class="cart-side-header">
+                                <h2>Carrito</h2>
+                                <button class="close-cart" id="closeCartBtn" aria-label="Cerrar carrito"><i class="fas fa-times"></i></button>
+                            </div>
+                            <div class="cart-tabs">
+                                <button class="cart-tab-btn active" data-tab="products">
+                                    <span><i class="fas fa-shopping-bag"></i></span> Productos
+                                </button>
+                                <button class="cart-tab-btn" data-tab="adjustments">
+                                    <span><i class="fas fa-cog"></i></span> Ajustes
+                                </button>
+                            </div>
+                            <!-- Tab: Productos -->
+                            <div class="cart-tab-content active" id="tab-products">
+                                <div class="cart-items">
+                                    <table class="cart-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Producto</th>
+                                                <th>Precio</th>
+                                                <th>Cant.</th>
+                                                <th></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="cartBody"></tbody>
+                                    </table>
+                                    <div class="empty-cart" id="emptyCartMsg">Sin productos</div>
+                                </div>
+                            </div>
+                            <!-- Tab: Ajustes -->
+                            <div class="cart-tab-content" id="tab-adjustments">
+                                <div class="adjustments-section">
+                                    <div class="adjustments-row">
+                                        <div class="adjustment-item">
+                                            <label>Descuento:</label>
+                                            <input type="number" id="discountInput" min="0" step="0.01" value="0" placeholder="0.00" class="compact-input">
+                                        </div>
+                                        <div class="adjustment-item">
+                                            <label>Impuesto:</label>
+                                            <input type="number" id="taxInput" min="0" step="0.01" value="0" placeholder="0.00" class="compact-input">
+                                        </div>
+                                    </div>
+                                    <div class="payment-section">
+                                        <label>Método de pago:</label>
+                                        <select id="paymentMethod" aria-label="Método de pago">
+                                            <option value="cash">Efectivo</option>
+                                            <option value="card">Tarjeta</option>
+                                            <option value="transfer">Transferencia</option>
+                                            <option value="mixed">Mixto</option>
+                                        </select>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        
-                        <!-- Pie del carrito con botón -->
-                        <div class="cart-footer-section">
-                            <button id="finalizeSaleBtn" class="btn-finalize-sale" disabled title="Finalizar venta"><i class="fas fa-check"></i></button>
-                        </div>
+                            <div class="cart-side-footer">
+                                <span>Total</span>
+                                <strong id="panelTotal">$0.00</strong>
+                            </div>
+                        </aside>
                     </div>
-                    
-                    <div class="total-display">
-                        <div class="total-badge">
-                            <span id="totalBadge">$0.00</span>
-                        </div>
-                    </div>
-                </div>
+                </main>
             </div>
-        </main>
-    </div>
-    
     <script src="/Tomodachi/public/js/api.js"></script>
     <script src="/Tomodachi/public/js/app.js"></script>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
@@ -164,18 +157,18 @@
                 window.location.href = '/Tomodachi/public/login.html';
                 return;
             }
-            
-            // Pasar store_id a través del atributo data del body
             document.body.setAttribute('data-store-id', session.store_id || 1);
-            
-            // Iniciar POS después de que la sesión esté verificada
             initPOS();
         });
-        
-        document.getElementById('logoutBtn').addEventListener('click', async (e) => {
-            e.preventDefault();
-            await logout();
-        });
+        (function(){
+            const logoutEl = document.getElementById('logoutBtn');
+            if (logoutEl) {
+                logoutEl.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    await logout();
+                });
+            }
+        })();
     </script>
 </body>
 </html>

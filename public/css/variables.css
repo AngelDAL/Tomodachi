@@ -1,0 +1,62 @@
+:root {
+    /* Brand Colors */
+    --primary-color: #4c77af;
+    --primary-dark: #4577a0;
+    --primary-darker: #2e647d;
+    --primary-light: #e8f5e9;
+    --primary-lighter: #f0f8f5;
+    --primary-shadow: rgba(46, 125, 50, 0.22);
+
+    --secondary-color: #2196F3;
+    --secondary-dark: #1976d2;
+    --secondary-darker: #0d47a1;
+    --secondary-light: #e3f2fd;
+
+    /* Status Colors */
+    --success-color: #4CAF50;
+    --danger-color: #f44336;
+    --danger-dark: #d32f2f;
+    --warning-color: #ff9800;
+    --warning-dark: #ef6c00;
+    --info-color: #2196F3;
+
+    /* Neutral Colors */
+    --white: #ffffff;
+    --black: #000000;
+    --dark-color: #333333;
+    --light-color: #f5f5f5;
+    
+    /* Text Colors */
+    --text-color: #333333;
+    --text-medium: #555555;
+    --text-light: #666666;
+    --text-muted: #999999;
+
+    /* Backgrounds */
+    --bg-body: #f4f7f6;
+    --bg-card: #ffffff;
+    --bg-light: #f5f5f5;
+    --bg-lighter: #f8f8f8;
+    --bg-lightest: #fafafa;
+    --bg-hover: #f9f9f9;
+
+    /* Borders */
+    --border-color: #dddddd;
+    --border-light: #eeeeee;
+    --border-lighter: #eaeaea;
+    --border-input: #b0bec5;
+    --border-focus: #4CAF50;
+
+    /* Layout */
+    --sidebar-width: 250px;
+    --header-height: 60px;
+    --border-radius: 8px;
+    --border-radius-sm: 4px;
+    --border-radius-lg: 12px;
+    
+    /* Shadows */
+    --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 8px rgba(0,0,0,0.1);
+    --shadow-lg: 0 8px 16px rgba(0,0,0,0.1);
+    --shadow-card: 0 2px 5px rgba(0,0,0,0.05);
+}

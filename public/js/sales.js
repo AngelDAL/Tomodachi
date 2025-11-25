@@ -221,7 +221,7 @@ function renderCart() {
         const id = parseInt(btn.getAttribute('data-id'));
         CART = CART.filter(i=>i.product_id!==id);
         renderCart();
-        showNotification('Producto removido', 'info');
+        // showNotification('Producto removido', 'info');
       });
     });
   }

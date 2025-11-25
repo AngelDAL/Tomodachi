@@ -369,7 +369,9 @@ async function fetchByCode(code) {
   try {
     const res = await API.get('/api/inventory/scanner.php', { barcode: code, store_id: CURRENT_STORE_ID });
     if (res.success && res.data) {
-      addProductToCart({ product_id: res.data.product_id, product_name: res.data.product_name, unit_price: parseFloat(res.data.price) });
+      const p = res.data;
+      addProductToCart({ product_id: p.product_id, product_name: p.product_name, unit_price: parseFloat(p.price) });
+      showScannedProductOverlay(p);
       showNotification('Producto añadido', 'success');
     } else {
       showNotification('Código no encontrado', 'error');
@@ -378,6 +380,106 @@ async function fetchByCode(code) {
     showNotification('Error escáner', 'error');
   }
 }
+
+function showScannedProductOverlay(product) {
+  let overlay = document.getElementById('scannerOverlay');
+  const container = document.getElementById('scannerContainer');
+  
+  if (!container) return;
+
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'scannerOverlay';
+    overlay.className = 'scanner-overlay';
+    container.appendChild(overlay);
+  }
+  
+  // Ajustar ruta de imagen si es relativa
+  let imgPath = product.image_path;
+  if (imgPath && !imgPath.startsWith('http') && !imgPath.startsWith('/')) {
+      imgPath = '/' + imgPath;
+  }
+  if (!imgPath) imgPath = '/Tomodachi/public/assets/images/no-image.png';
+  
+  // Escapar comillas simples para CSS url()
+  const cssImgPath = imgPath.replace(/'/g, "\\'");
+
+  overlay.innerHTML = `
+    <div class="scanned-product-card" style="position: relative; overflow: hidden; background: white; z-index: 1;">
+      <!-- Fondo con imagen borrosa -->
+      <div style="
+          position: absolute;
+          top: 0; left: 0; right: 0; bottom: 0;
+          background-image: url('${cssImgPath}');
+          background-size: cover;
+          background-position: center;
+          filter: blur(8px);
+          opacity: 0.4;
+          z-index: -1;
+      "></div>
+      
+      <!-- Contenido principal -->
+      <div style="position: relative; z-index: 2; padding: 10px;">
+        <img src="${imgPath}" alt="Producto" style="max-width:120px; max-height:120px; object-fit:contain; margin-bottom:10px; border-radius: 8px; background: rgba(255,255,255,0.9); padding: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+        <div class="scanned-info">
+          <h3 style="margin:0 0 5px; font-size:1.1rem; color:#222; font-weight: 700; text-shadow: 0 1px 1px rgba(255,255,255,0.8);">${escapeHtml(product.product_name)}</h3>
+          <span class="price" style="font-size:1.4rem; font-weight:bold; color:var(--primary-color); text-shadow: 0 2px 0 rgba(255,255,255,1);">${formatCurrency(product.price)}</span>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  overlay.classList.add('visible');
+  
+  if (window.scanOverlayTimeout) clearTimeout(window.scanOverlayTimeout);
+  window.scanOverlayTimeout = setTimeout(() => {
+    overlay.classList.remove('visible');
+  }, 2000);
+}
+
+// Función para pruebas visuales con flujo real
+function probarEfectosVisuales(barcode = '7501234567890') {
+    console.log(`🎬 Iniciando prueba de escáner con código: ${barcode}...`);
+
+    // 1. Referencias al DOM
+    const scannerContainer = document.getElementById('scannerContainer');
+    const toggleBtn = document.getElementById('toggleScannerBtn');
+    const productsMain = document.querySelector('.products-main');
+    
+    if (!scannerContainer || !toggleBtn) {
+        console.error("❌ No se encontraron elementos del escáner.");
+        return;
+    }
+
+    // 2. Activar modo escáner visualmente si no está activo
+    if (scannerContainer.classList.contains('hidden')) {
+        scannerContainer.classList.remove('hidden');
+        if (productsMain) productsMain.classList.add('hidden');
+        toggleBtn.innerHTML = '<i class="fas fa-times"></i>';
+        toggleBtn.setAttribute('aria-label', 'Cerrar escáner');
+        scannerContainer.style.backgroundColor = "#000";
+        scannerContainer.style.minHeight = "300px";
+    }
+
+    console.log("📷 Escáner activo. Simulando lectura...");
+
+    // 3. Simular delay de lectura y llamar al flujo real
+    setTimeout(() => {
+        console.log(`📡 Consultando API con código: ${barcode}`);
+        // Llamada real al backend
+        fetchByCode(barcode);
+        
+        // Enfocar input recibido (opcional, ya que el usuario podría seguir escaneando)
+        const receivedInput = document.getElementById('checkoutReceived');
+        if (receivedInput) {
+            // receivedInput.focus(); 
+        }
+
+    }, 1500);
+}
+
+// Exponer globalmente
+window.probarEfectosVisuales = probarEfectosVisuales;
 
 // Exponer fetchByCode globalmente
 window.fetchByCode = fetchByCode;

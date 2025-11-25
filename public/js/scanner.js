@@ -18,7 +18,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function startScanner() {
     scannerContainer.classList.remove('hidden');
-    toggleScannerBtn.textContent = 'Desactivar Escáner';
+    toggleScannerBtn.innerHTML = '<i class="fas fa-times"></i>';
+    toggleScannerBtn.setAttribute('aria-label', 'Cerrar escáner');
+    
+    // Ocultar galería de productos
+    const productsMain = document.querySelector('.products-main');
+    if (productsMain) productsMain.classList.add('hidden');
+
     if (!qrScannerInstance) {
       try {
         qrScannerInstance = new Html5Qrcode('qr-reader');
@@ -39,7 +45,12 @@ document.addEventListener('DOMContentLoaded', () => {
       }).catch(e=>console.error(e));
     }
     scannerContainer.classList.add('hidden');
-    toggleScannerBtn.textContent = 'Activar Escáner';
+    toggleScannerBtn.innerHTML = '<i class="fas fa-barcode"></i>';
+    toggleScannerBtn.setAttribute('aria-label', 'Activar escáner');
+
+    // Mostrar galería de productos
+    const productsMain = document.querySelector('.products-main');
+    if (productsMain) productsMain.classList.remove('hidden');
   }
 
   function onScanSuccess(decodedText) {

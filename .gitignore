@@ -13,6 +13,9 @@ Thumbs.db
 /cache/
 /uploads/
 
+# Imágenes de productos (generadas dinámicamente)
+public/assets/images/products/
+
 # Archivos de IDE
 .vscode/
 .idea/

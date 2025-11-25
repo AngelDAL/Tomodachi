@@ -12,10 +12,13 @@ require_once '../../config/database.php';
 require_once '../../config/constants.php';
 require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
+require_once '../../includes/Auth.class.php';
 
-session_start();
-if (!isset($_SESSION['user_id'])) { Response::unauthorized(); }
-if (!in_array($_SESSION['role'],[ROLE_ADMIN,ROLE_MANAGER])) { Response::error('Permisos insuficientes',403); }
+$db = new Database();
+$auth = new Auth($db);
+
+if (!$auth->isLoggedIn()) { Response::unauthorized(); }
+if (!in_array($auth->getCurrentUser()['role'],[ROLE_ADMIN,ROLE_MANAGER])) { Response::error('Permisos insuficientes',403); }
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') { Response::error('Método no permitido',405); }
 
 try {
@@ -47,7 +50,7 @@ try {
     if(!file_put_contents($path,$data_bin)) { Response::error('No se pudo guardar archivo',500); }
 
     // Guardar ruta relativa
-    $relative = 'public/assets/images/products/'.$filename;
+    $relative = 'Tomodachi/public/assets/images/products/'.$filename;
     $db->update('UPDATE products SET image_path = ?, updated_at = NOW() WHERE product_id = ?',[$relative,$product_id]);
     $updated = $db->selectOne('SELECT product_id, product_name, image_path FROM products WHERE product_id = ?',[$product_id]);
     Response::success($updated,'Imagen actualizada');

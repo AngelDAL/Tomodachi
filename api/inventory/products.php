@@ -30,7 +30,22 @@ try {
     $db = new Database();
     switch ($method) {
         case 'GET':
-            $store_id = isset($_GET['store_id']) ? (int)$_GET['store_id'] : 0;
+            $requested_store_id = isset($_GET['store_id']) ? (int)$_GET['store_id'] : 0;
+            $session_store_id = isset($_SESSION['store_id']) ? (int)$_SESSION['store_id'] : 0;
+
+            // Seguridad: Validar que el usuario solo acceda a su propia tienda
+            if ($requested_store_id > 0 && $requested_store_id !== $session_store_id) {
+                Response::error('No autorizado para ver inventario de otra tienda', 403);
+            }
+
+            // Usar la tienda solicitada (ya validada) o la de la sesión por defecto
+            $store_id = ($requested_store_id > 0) ? $requested_store_id : $session_store_id;
+            
+            if ($store_id <= 0) {
+                // Si no se identifica una tienda válida, devolver lista vacía por seguridad
+                Response::success([], 'No se identificó tienda activa');
+            }
+            
             $search = isset($_GET['search']) ? trim($_GET['search']) : '';
             $params=[];
             $sql = 'SELECT p.product_id, p.product_name, p.description, p.image_path, p.barcode, p.qr_code, p.price, p.cost, p.min_stock, p.status, p.category_id, c.category_name';
@@ -38,8 +53,21 @@ try {
                 $sql .= ', i.current_stock';
             }
             $sql .= ' FROM products p LEFT JOIN categories c ON p.category_id = c.category_id';
-            if ($store_id>0) { $sql .= ' LEFT JOIN inventory i ON i.product_id = p.product_id AND i.store_id = ?'; $params[]=$store_id; }
+            
+            // JOIN con inventario
+            if ($store_id>0) { 
+                $sql .= ' LEFT JOIN inventory i ON i.product_id = p.product_id AND i.store_id = ?'; 
+                $params[]=$store_id; 
+            }
+            
             $conditions=[];
+            
+            // FILTRO POR TIENDA (CRÍTICO)
+            if ($store_id > 0) {
+                $conditions[] = 'p.store_id = ?';
+                $params[] = $store_id;
+            }
+
             if ($search !== '') {
                 $conditions[]='(p.product_name LIKE ? OR p.barcode LIKE ? OR p.qr_code LIKE ?)';
                 $pattern = '%'.$search.'%';
@@ -56,6 +84,11 @@ try {
             if (!in_array($_SESSION['role'],[ROLE_ADMIN,ROLE_MANAGER])) { Response::error('Permisos insuficientes',403); }
             $data=json_decode(file_get_contents('php://input'),true);
             if(!$data){ Response::validationError(['body'=>'JSON inválido']); }
+            
+            // Obtener store_id de la sesión
+            $store_id = isset($_SESSION['store_id']) ? (int)$_SESSION['store_id'] : 0;
+            if ($store_id <= 0) { Response::error('Error de sesión: Tienda no identificada', 400); }
+
             $errors=[];
             $product_name=isset($data['product_name'])?Validator::sanitizeString($data['product_name']):'';
             $category_id=isset($data['category_id'])?(int)$data['category_id']:null;
@@ -65,16 +98,25 @@ try {
             $cost=isset($data['cost'])?$data['cost']:0;
             $min_stock=isset($data['min_stock'])?(int)$data['min_stock']:0;
             $description=isset($data['description'])?Validator::sanitizeString($data['description']):'';
+            
             if(!Validator::required($product_name)){$errors['product_name']='Requerido';}
             if($category_id && !$db->selectOne('SELECT category_id FROM categories WHERE category_id = ?',[$category_id])){$errors['category_id']='No existe';}
-            if($barcode && $db->selectOne('SELECT product_id FROM products WHERE barcode = ?',[$barcode])){$errors['barcode']='Duplicado';}
-            if($qr_code && $db->selectOne('SELECT product_id FROM products WHERE qr_code = ?',[$qr_code])){$errors['qr_code']='Duplicado';}
+            
+            // Validar duplicados SOLO dentro de la misma tienda
+            if($barcode && $db->selectOne('SELECT product_id FROM products WHERE barcode = ? AND store_id = ?',[$barcode, $store_id])){$errors['barcode']='Duplicado en esta tienda';}
+            if($qr_code && $db->selectOne('SELECT product_id FROM products WHERE qr_code = ? AND store_id = ?',[$qr_code, $store_id])){$errors['qr_code']='Duplicado en esta tienda';}
+            
             if(!Validator::validatePrice($price)){$errors['price']='Precio inválido';}
             if(!Validator::validatePrice($cost)){$errors['cost']='Costo inválido';}
             if($errors){ Response::validationError($errors); }
-            $id=$db->insert('INSERT INTO products (category_id, product_name, description, barcode, qr_code, price, cost, min_stock, status, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,NOW(),NOW())',[
-                $category_id,$product_name,$description,$barcode,$qr_code,$price,$cost,$min_stock,STATUS_ACTIVE
+            
+            $id=$db->insert('INSERT INTO products (store_id, category_id, product_name, description, barcode, qr_code, price, cost, min_stock, status, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,NOW(),NOW())',[
+                $store_id, $category_id,$product_name,$description,$barcode,$qr_code,$price,$cost,$min_stock,STATUS_ACTIVE
             ]);
+            
+            // Crear entrada inicial en inventario para esta tienda
+            $db->insert('INSERT INTO inventory (store_id, product_id, current_stock) VALUES (?, ?, 0)', [$store_id, $id]);
+
             $product=$db->selectOne('SELECT product_id, product_name, image_path, barcode, qr_code, price, cost, min_stock, status FROM products WHERE product_id = ?',[$id]);
             Response::success($product,'Producto creado');
             break;
@@ -82,24 +124,52 @@ try {
             if (!in_array($_SESSION['role'],[ROLE_ADMIN,ROLE_MANAGER])) { Response::error('Permisos insuficientes',403); }
             $data=json_decode(file_get_contents('php://input'),true);
             if(!$data){ Response::validationError(['body'=>'JSON inválido']); }
+            
+            $store_id = isset($_SESSION['store_id']) ? (int)$_SESSION['store_id'] : 0;
             $product_id=isset($data['product_id'])?(int)$data['product_id']:0;
+            
             if($product_id<=0){ Response::validationError(['product_id'=>'Requerido']); }
-            $exists=$db->selectOne('SELECT product_id FROM products WHERE product_id = ?',[$product_id]);
-            if(!$exists){ Response::notFound('Producto no existe'); }
+            
+            // Verificar que el producto exista Y pertenezca a la tienda
+            $exists=$db->selectOne('SELECT product_id FROM products WHERE product_id = ? AND store_id = ?',[$product_id, $store_id]);
+            if(!$exists){ Response::notFound('Producto no existe o no pertenece a su tienda'); }
+            
             $fields=[];$params=[];
             if(isset($data['product_name'])){ $fields[]='product_name = ?'; $params[]=Validator::sanitizeString($data['product_name']); }
             if(isset($data['description'])){ $fields[]='description = ?'; $params[]=Validator::sanitizeString($data['description']); }
-            if(isset($data['barcode'])){ $barcode=Validator::sanitizeString($data['barcode']); if($barcode && $db->selectOne('SELECT product_id FROM products WHERE barcode = ? AND product_id <> ?',[$barcode,$product_id])){ Response::validationError(['barcode'=>'Duplicado']); } $fields[]='barcode = ?'; $params[]=$barcode; }
-            if(isset($data['qr_code'])){ $qr=Validator::sanitizeString($data['qr_code']); if($qr && $db->selectOne('SELECT product_id FROM products WHERE qr_code = ? AND product_id <> ?',[$qr,$product_id])){ Response::validationError(['qr_code'=>'Duplicado']); } $fields[]='qr_code = ?'; $params[]=$qr; }
+            
+            if(isset($data['barcode'])){ 
+                $barcode=Validator::sanitizeString($data['barcode']); 
+                // Validar duplicado en la misma tienda
+                if($barcode && $db->selectOne('SELECT product_id FROM products WHERE barcode = ? AND store_id = ? AND product_id <> ?',[$barcode, $store_id, $product_id])){ 
+                    Response::validationError(['barcode'=>'Duplicado en esta tienda']); 
+                } 
+                $fields[]='barcode = ?'; $params[]=$barcode; 
+            }
+            
+            if(isset($data['qr_code'])){ 
+                $qr=Validator::sanitizeString($data['qr_code']); 
+                // Validar duplicado en la misma tienda
+                if($qr && $db->selectOne('SELECT product_id FROM products WHERE qr_code = ? AND store_id = ? AND product_id <> ?',[$qr, $store_id, $product_id])){ 
+                    Response::validationError(['qr_code'=>'Duplicado en esta tienda']); 
+                } 
+                $fields[]='qr_code = ?'; $params[]=$qr; 
+            }
+            
             if(isset($data['price'])){ if(!Validator::validatePrice($data['price'])){ Response::validationError(['price'=>'Inválido']); } $fields[]='price = ?'; $params[]=$data['price']; }
             if(isset($data['cost'])){ if(!Validator::validatePrice($data['cost'])){ Response::validationError(['cost'=>'Inválido']); } $fields[]='cost = ?'; $params[]=$data['cost']; }
             if(isset($data['min_stock'])){ $fields[]='min_stock = ?'; $params[]=(int)$data['min_stock']; }
             if(isset($data['status'])){ if(!in_array($data['status'],[STATUS_ACTIVE,STATUS_INACTIVE])){ Response::validationError(['status'=>'Inválido']); } $fields[]='status = ?'; $params[]=$data['status']; }
             if(isset($data['category_id'])){ $cid=(int)$data['category_id']; if($cid && !$db->selectOne('SELECT category_id FROM categories WHERE category_id = ?',[$cid])){ Response::validationError(['category_id'=>'No existe']); } $fields[]='category_id = ?'; $params[]=$cid; }
+            
             if(!$fields){ Response::error('Nada para actualizar',400); }
             $fields[]='updated_at = NOW()';
             $params[]=$product_id;
-            $sql='UPDATE products SET '.implode(', ',$fields).' WHERE product_id = ?';
+            
+            // Asegurar WHERE store_id = ? para seguridad extra
+            $sql='UPDATE products SET '.implode(', ',$fields).' WHERE product_id = ? AND store_id = ?';
+            $params[]=$store_id;
+            
             $db->update($sql,$params);
             $product=$db->selectOne('SELECT product_id, product_name, image_path, barcode, qr_code, price, cost, min_stock, status FROM products WHERE product_id = ?',[$product_id]);
             Response::success($product,'Producto actualizado');

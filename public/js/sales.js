@@ -136,7 +136,8 @@ function switchCartTab(tabName) {
 
 async function searchProducts(term) {
   try {
-    const res = await API.get('/api/inventory/products.php', { store_id: CURRENT_STORE_ID, search: term });
+    // Eliminado store_id de los parámetros, el backend usa la sesión
+    const res = await API.get('/api/inventory/products.php', { search: term });
     if (!res.success) { return; }
     const list = res.data || [];
     
@@ -342,7 +343,8 @@ function escapeHtml(str) {
 // Galería de productos
 async function loadGallery(){
   try {
-    const res = await API.get('/api/inventory/products.php', { store_id: CURRENT_STORE_ID });
+    // Eliminado store_id de los parámetros, el backend usa la sesión
+    const res = await API.get('/api/inventory/products.php', {});
     if(res.success){
       const list = res.data || [];
       productGallery.innerHTML = list.map(p => `<div class="gallery-item" data-id="${p.product_id}" data-price="${p.price}" title="${escapeHtml(p.product_name)}">
@@ -367,7 +369,8 @@ async function loadGallery(){
 // Funcionalidad de escáner
 async function fetchByCode(code) {
   try {
-    const res = await API.get('/api/inventory/scanner.php', { barcode: code, store_id: CURRENT_STORE_ID });
+    // Eliminado store_id de los parámetros, el backend usa la sesión
+    const res = await API.get('/api/inventory/scanner.php', { barcode: code });
     if (res.success && res.data) {
       const p = res.data;
       addProductToCart({ product_id: p.product_id, product_name: p.product_name, unit_price: parseFloat(p.price) });

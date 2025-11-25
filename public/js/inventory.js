@@ -182,8 +182,8 @@ async function submitAddProduct() {
         sku: formData.get('sku'),
         barcode: formData.get('barcode'),
         price: parseFloat(formData.get('price')),
-        current_stock: parseInt(formData.get('stock')),
-        store_id: storeId
+        current_stock: parseInt(formData.get('stock'))
+        // store_id eliminado, el backend lo toma de la sesión
     };
     
     // Validar datos requeridos
@@ -499,7 +499,8 @@ async function uploadImage() {
 
 async function loadProducts() {
     try {
-        const response = await fetch(`/Tomodachi/api/inventory/products.php?store_id=${storeId}`);
+        // Eliminado store_id de los parámetros, el backend usa la sesión
+        const response = await fetch(`/Tomodachi/api/inventory/products.php`);
         const data = await response.json();
         
         if (data.success) {

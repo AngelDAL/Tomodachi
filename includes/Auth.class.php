@@ -17,6 +17,15 @@ class Auth {
     private function initSession() {
         if (session_status() === PHP_SESSION_NONE) {
             session_name(SESSION_NAME);
+            
+            // Configurar parámetros de cookie para que sea accesible en todo el proyecto
+            session_set_cookie_params([
+                'lifetime' => SESSION_LIFETIME,
+                'path' => '/Tomodachi/',
+                'httponly' => true,
+                'samesite' => 'Lax'
+            ]);
+            
             session_start();
             
             // Regenerar ID de sesión periódicamente

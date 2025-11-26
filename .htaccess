@@ -17,4 +17,7 @@
 </IfModule>
 
 # Redirigir al login si se accede a la raíz
-DirectoryIndex public/login.html
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^$ public/login.html [L,R=302]
+</IfModule>

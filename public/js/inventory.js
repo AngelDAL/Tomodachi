@@ -16,7 +16,7 @@ const SEARCH_DEBOUNCE_DELAY = 500; // 500ms de espera después de dejar de escri
 document.addEventListener('DOMContentLoaded', async function() {
     const session = await checkSession();
     if (!session) {
-        window.location.href = '/Tomodachi/public/login.html';
+        window.location.href = 'login.html';
         return;
     }
     storeId = session.store_id || 1;
@@ -205,7 +205,7 @@ async function submitAddProduct() {
     try {
         showNotification('Guardando producto...', 'info');
         
-        const response = await fetch('/Tomodachi/api/inventory/products.php', {
+        const response = await fetch('https://tomodachi.baburu.shop/api/inventory/products.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(productData)
@@ -260,7 +260,7 @@ async function uploadImageAuto(file) {
             // Mostrar notificación de carga
             showNotification('Subiendo imagen...', 'info');
             
-            const response = await fetch('/Tomodachi/api/inventory/upload_image.php', {
+            const response = await fetch('https://tomodachi.baburu.shop/api/inventory/upload_image.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -468,7 +468,7 @@ async function uploadImage() {
     const reader = new FileReader();
     reader.onload = async (e) => {
         try {
-            const response = await fetch('/Tomodachi/api/inventory/upload_image.php', {
+            const response = await fetch('https://tomodachi.baburu.shop/api/inventory/upload_image.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -500,7 +500,7 @@ async function uploadImage() {
 async function loadProducts() {
     try {
         // Eliminado store_id de los parámetros, el backend usa la sesión
-        const response = await fetch(`/Tomodachi/api/inventory/products.php`);
+        const response = await fetch(`https://tomodachi.baburu.shop/api/inventory/products.php`);
         const data = await response.json();
         
         if (data.success) {
@@ -572,7 +572,7 @@ async function savePrice(input) {
     }
 
     try {
-        const response = await fetch('/Tomodachi/api/inventory/products.php', {
+        const response = await fetch('https://tomodachi.baburu.shop/api/inventory/products.php', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -612,7 +612,7 @@ async function saveStock(input) {
     }
 
     try {
-        const response = await fetch('/Tomodachi/api/inventory/products.php', {
+        const response = await fetch('https://tomodachi.baburu.shop/api/inventory/products.php', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

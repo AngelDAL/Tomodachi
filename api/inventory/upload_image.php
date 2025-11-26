@@ -50,7 +50,7 @@ try {
     if(!file_put_contents($path,$data_bin)) { Response::error('No se pudo guardar archivo',500); }
 
     // Guardar ruta relativa
-    $relative = 'Tomodachi/public/assets/images/products/'.$filename;
+    $relative = 'public/assets/images/products/'.$filename;
     $db->update('UPDATE products SET image_path = ?, updated_at = NOW() WHERE product_id = ?',[$relative,$product_id]);
     $updated = $db->selectOne('SELECT product_id, product_name, image_path FROM products WHERE product_id = ?',[$product_id]);
     Response::success($updated,'Imagen actualizada');

@@ -29,7 +29,7 @@ async function logout() {
         const response = await API.post('/api/auth/logout.php');
         
         if (response.success) {
-            window.location.href = '/Tomodachi/public/login.html';
+            window.location.href = 'login.html';
         }
     } catch (error) {
         console.error('Error al cerrar sesión:', error);

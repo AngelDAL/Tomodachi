@@ -402,7 +402,7 @@ function showScannedProductOverlay(product) {
   if (imgPath && !imgPath.startsWith('http') && !imgPath.startsWith('/')) {
       imgPath = '/' + imgPath;
   }
-  if (!imgPath) imgPath = '/Tomodachi/public/assets/images/no-image.png';
+  // if (!imgPath) imgPath = '/Tomodachi/public/assets/images/no-image.png';
   
   // Escapar comillas simples para CSS url()
   const cssImgPath = imgPath.replace(/'/g, "\\'");

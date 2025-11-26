@@ -4,7 +4,7 @@
  */
 
 const API = {
-    baseURL: 'http://localhost/Tomodachi',
+    baseURL: 'https://tomodachi.baburu.shop',
     
     /**
      * Realizar petición GET

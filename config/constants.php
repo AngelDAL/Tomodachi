@@ -47,6 +47,6 @@ define('REGISTER_CLOSED', 'closed');
 define('RECORDS_PER_PAGE', 20);
 
 // Rutas
-define('BASE_URL', 'https://tomodachi.baburu.shop/');
+define('BASE_URL', 'localhost/Tomodachi/');
 define('API_URL', BASE_URL . 'api/');
 define('PUBLIC_URL', BASE_URL . 'public/');

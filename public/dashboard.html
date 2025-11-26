@@ -98,8 +98,9 @@
         // Verificar sesión al cargar
         document.addEventListener('DOMContentLoaded', async () => {
             const session = await checkSession();
+            console.log('Sesión verificada:', session); 
             if (!session) {
-                window.location.href = 'login.html';
+                // window.location.href = 'login.html';
                 return;
             }
             

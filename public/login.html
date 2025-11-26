@@ -55,16 +55,19 @@
             const password = document.getElementById('password').value;
 
             try {
-                const response = await API.post('/api/auth/login.php', {
-                    username,
-                    password
+                const response = await fetch('../api/auth/login.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ username, password })
                 });
-
-                if (response.success) {
-                    // Redirigir al dashboard
+                const data = await response.json();
+                if (data.success) {
                     window.location.href = 'dashboard.html';
                 } else {
-                    showError(response.message);
+                    showError(data.message);
                 }
             } catch (error) {
                 showError('Error al iniciar sesión. Intente nuevamente.');

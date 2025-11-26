@@ -13,7 +13,7 @@ let searchTimeout = null;
 const SEARCH_DEBOUNCE_DELAY = 500; // 500ms de espera después de dejar de escribir
 
 // Inicializar cuando el DOM esté listo
-document.addEventListener('DOMContentLoaded', async function() {
+document.addEventListener('DOMContentLoaded', async function () {
     const session = await checkSession();
     if (!session) {
         window.location.href = 'login.html';
@@ -31,37 +31,37 @@ function initInventory() {
 function bindEvents() {
     // Búsqueda con debouncing
     const searchInput = document.getElementById('searchInput');
-    
+
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
             // Mostrar indicador de búsqueda
             const loadingEl = document.getElementById('searchLoading');
             if (loadingEl) loadingEl.style.display = 'inline-block';
-            
+
             // Cancelar búsqueda anterior
             if (searchTimeout) {
                 clearTimeout(searchTimeout);
             }
-            
+
             // Ejecutar búsqueda después de 500ms sin escribir
             searchTimeout = setTimeout(() => {
                 currentFilter = e.target.value.trim();
                 performSearch();
-                
+
                 // Ocultar indicador de búsqueda
                 if (loadingEl) loadingEl.style.display = 'none';
             }, SEARCH_DEBOUNCE_DELAY);
         });
-        
+
         // Permitir buscar inmediatamente con Enter
         searchInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 if (searchTimeout) clearTimeout(searchTimeout);
-                
+
                 currentFilter = searchInput.value.trim();
                 performSearch();
-                
+
                 const loadingEl = document.getElementById('searchLoading');
                 if (loadingEl) loadingEl.style.display = 'none';
             }
@@ -70,7 +70,7 @@ function bindEvents() {
 
     // Carga de imagen - Auto upload al seleccionar
     const fileInput = document.getElementById('productImage');
-    
+
     if (fileInput) {
         fileInput.addEventListener('change', (e) => {
             selectedFile = e.target.files[0];
@@ -79,39 +79,39 @@ function bindEvents() {
             }
         });
     }
-    
+
     // Modal para agregar producto
     const addProductBtn = document.getElementById('addProductBtn');
     const closeModalBtn = document.getElementById('closeModalBtn');
     const cancelProductBtn = document.getElementById('cancelProductBtn');
     const addProductForm = document.getElementById('addProductForm');
     const addProductModal = document.getElementById('addProductModal');
-    
+
     if (addProductBtn) {
         addProductBtn.addEventListener('click', () => {
             openAddProductModal();
         });
     }
-    
+
     if (closeModalBtn) {
         closeModalBtn.addEventListener('click', () => {
             closeAddProductModal();
         });
     }
-    
+
     if (cancelProductBtn) {
         cancelProductBtn.addEventListener('click', () => {
             closeAddProductModal();
         });
     }
-    
+
     if (addProductForm) {
         addProductForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             await submitAddProduct();
         });
     }
-    
+
     // Cerrar modal al hacer clic fuera
     if (addProductModal) {
         addProductModal.addEventListener('click', (e) => {
@@ -126,17 +126,17 @@ function performSearch() {
     // Mostrar información de búsqueda
     const searchInfoEl = document.getElementById('searchInfo');
     const resultCountEl = document.getElementById('searchResultCount');
-    
+
     let filtered = products;
     if (currentFilter) {
         const term = currentFilter.toLowerCase();
-        filtered = products.filter(p => 
+        filtered = products.filter(p =>
             (p.product_name && p.product_name.toLowerCase().includes(term)) ||
             (p.sku && p.sku.toLowerCase().includes(term)) ||
             (p.barcode && p.barcode.toLowerCase().includes(term))
         );
     }
-    
+
     // Mostrar información de resultados
     if (searchInfoEl && resultCountEl) {
         if (currentFilter) {
@@ -146,7 +146,7 @@ function performSearch() {
             searchInfoEl.style.display = 'none';
         }
     }
-    
+
     renderProducts(filtered);
 }
 
@@ -174,7 +174,7 @@ function closeAddProductModal() {
 async function submitAddProduct() {
     const form = document.getElementById('addProductForm');
     if (!form) return;
-    
+
     const formData = new FormData(form);
     const productData = {
         product_name: formData.get('product_name'),
@@ -185,38 +185,38 @@ async function submitAddProduct() {
         current_stock: parseInt(formData.get('stock'))
         // store_id eliminado, el backend lo toma de la sesión
     };
-    
+
     // Validar datos requeridos
     if (!productData.product_name) {
         showNotification('El nombre del producto es requerido', 'error');
         return;
     }
-    
+
     if (isNaN(productData.price) || productData.price < 0) {
         showNotification('El precio debe ser un número válido', 'error');
         return;
     }
-    
+
     if (isNaN(productData.current_stock) || productData.current_stock < 0) {
         showNotification('El stock debe ser un número válido', 'error');
         return;
     }
-    
+
     try {
         showNotification('Guardando producto...', 'info');
-        
-        const response = await fetch('https://tomodachi.baburu.shop/api/inventory/products.php', {
+
+        const response = await fetch('../api/inventory/products.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(productData)
         });
-        
+
         const data = await response.json();
-        
+
         if (data.success) {
             showNotification('✓ Producto agregado correctamente', 'success');
             closeAddProductModal();
-            
+
             // Recargar productos
             setTimeout(() => {
                 loadProducts();
@@ -248,7 +248,7 @@ function showPreview(file) {
 
 async function uploadImageAuto(file) {
     const productId = currentEditingProduct;
-    
+
     if (!productId) {
         showNotification('Selecciona un producto primero', 'error');
         return;
@@ -259,8 +259,8 @@ async function uploadImageAuto(file) {
         try {
             // Mostrar notificación de carga
             showNotification('Subiendo imagen...', 'info');
-            
-            const response = await fetch('https://tomodachi.baburu.shop/api/inventory/upload_image.php', {
+
+            const response = await fetch('../api/inventory/upload_image.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -270,7 +270,7 @@ async function uploadImageAuto(file) {
             });
 
             const data = await response.json();
-            
+
             if (data.success) {
                 showNotification('✓ Imagen subida correctamente', 'success');
                 // Limpiar
@@ -297,10 +297,10 @@ const toastSystem = {
     queue: [],
     isProcessing: false,
     maxVisible: 3,
-    
+
     init() {
         if (this.container) return;
-        
+
         this.container = document.createElement('div');
         this.container.id = 'toast-container';
         this.container.style.cssText = `
@@ -318,26 +318,26 @@ const toastSystem = {
         `;
         document.body.appendChild(this.container);
     },
-    
+
     show(message, type = 'info') {
         this.init();
         this.queue.push({ message, type, id: Date.now() + Math.random() });
         this.processQueue();
     },
-    
+
     processQueue() {
         if (this.isProcessing || this.queue.length === 0) return;
-        
+
         if (this.activeToasts.size >= this.maxVisible && this.queue.length > 0) {
             // Remover el toast más antiguo
             const firstId = this.activeToasts.keys().next().value;
             this.removeToast(firstId, true);
             return;
         }
-        
+
         this.isProcessing = true;
         const toastData = this.queue.shift();
-        
+
         setTimeout(() => {
             this.displayToast(toastData);
             this.isProcessing = false;
@@ -346,10 +346,10 @@ const toastSystem = {
             }
         }, 100);
     },
-    
+
     displayToast(toastData) {
         const { message, type, id } = toastData;
-        
+
         const toast = document.createElement('div');
         toast.id = `toast-${id}`;
         toast.className = `toast toast-${type}`;
@@ -367,23 +367,23 @@ const toastSystem = {
             opacity: 1;
             pointer-events: auto;
         `;
-        
+
         this.container.appendChild(toast);
         this.activeToasts.set(id, { element: toast, timeout: null });
-        
+
         // Click para cerrar
         toast.addEventListener('click', () => {
             this.removeToast(id);
         });
-        
+
         // Auto-cerrar después de 4 segundos
         const timeout = setTimeout(() => {
             this.removeToast(id);
         }, 4000);
-        
+
         const toastInfo = this.activeToasts.get(id);
         if (toastInfo) toastInfo.timeout = timeout;
-        
+
         // Pausar al pasar mouse
         toast.addEventListener('mouseenter', () => {
             if (toastInfo && toastInfo.timeout) {
@@ -391,7 +391,7 @@ const toastSystem = {
                 toastInfo.timeout = null;
             }
         });
-        
+
         // Reanudar al salir
         toast.addEventListener('mouseleave', () => {
             if (toastInfo && !toastInfo.timeout) {
@@ -401,18 +401,18 @@ const toastSystem = {
             }
         });
     },
-    
+
     removeToast(id, immediate = false) {
         const toastInfo = this.activeToasts.get(id);
         if (!toastInfo) return;
-        
+
         // Limpiar timeout
         if (toastInfo.timeout) {
             clearTimeout(toastInfo.timeout);
         }
-        
+
         const element = toastInfo.element;
-        
+
         if (immediate) {
             // Remover inmediatamente
             if (element.parentElement) {
@@ -423,13 +423,13 @@ const toastSystem = {
             // Animar salida
             element.style.animation = 'toastSlideUp 0.3s ease-out';
             element.style.opacity = '0';
-            
+
             setTimeout(() => {
                 if (element.parentElement) {
                     element.remove();
                 }
                 this.activeToasts.delete(id);
-                
+
                 // Procesar siguiente en la cola si hay
                 if (this.queue.length > 0) {
                     this.isProcessing = false;
@@ -438,9 +438,9 @@ const toastSystem = {
             }, 300);
         }
     },
-    
+
     getColor(type) {
-        switch(type) {
+        switch (type) {
             case 'success':
                 return 'rgba(76, 175, 80, 0.95)';
             case 'error':
@@ -459,7 +459,7 @@ function showNotification(message, type = 'info') {
 
 async function uploadImage() {
     const productId = document.getElementById('productId')?.value;
-    
+
     if (!productId || !selectedFile) {
         alert('Selecciona producto e imagen');
         return;
@@ -468,7 +468,7 @@ async function uploadImage() {
     const reader = new FileReader();
     reader.onload = async (e) => {
         try {
-            const response = await fetch('https://tomodachi.baburu.shop/api/inventory/upload_image.php', {
+            const response = await fetch('../api/inventory/upload_image.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -478,7 +478,7 @@ async function uploadImage() {
             });
 
             const data = await response.json();
-            
+
             if (data.success) {
                 alert('Imagen subida correctamente');
                 document.getElementById('uploadPreview').innerHTML = '';
@@ -500,9 +500,9 @@ async function uploadImage() {
 async function loadProducts() {
     try {
         // Eliminado store_id de los parámetros, el backend usa la sesión
-        const response = await fetch(`https://tomodachi.baburu.shop/api/inventory/products.php`);
+        const response = await fetch(`../api/inventory/products.php`);
         const data = await response.json();
-        
+
         if (data.success) {
             products = data.data || [];
             renderProducts(products);
@@ -519,7 +519,7 @@ function renderProducts(items) {
     if (!container) return;
 
     if (items.length === 0) {
-        const emptyMessage = currentFilter 
+        const emptyMessage = currentFilter
             ? '<p style="grid-column: 1/-1; text-align: center; color: #999; padding: 40px;"><i class="fas fa-search"></i><br><br>No se encontraron productos con "<strong>' + escapeHtml(currentFilter) + '</strong>"</p>'
             : '<p style="grid-column: 1/-1; text-align: center; color: #999; padding: 40px;"><i class="fas fa-inbox"></i><br><br>No hay productos en el inventario</p>';
         container.innerHTML = emptyMessage;
@@ -527,10 +527,10 @@ function renderProducts(items) {
     }
 
     container.innerHTML = items.map(product => {
-        const imgHtml = product.image_path 
+        const imgHtml = product.image_path
             ? `<img src="/${product.image_path}" alt="${product.product_name}" onerror="this.parentElement.innerHTML='<span class=&quot;no-image&quot;><i class=&quot;fas fa-image&quot;></i></span>'">`
             : '<span class="no-image"><i class="fas fa-image"></i></span>';
-        
+
         return `
         <div class="product-card" data-product-id="${product.product_id}" title="${escapeHtml(product.product_name)}">
             <div class="product-image" onclick="openImageUpload(${product.product_id})">
@@ -572,7 +572,7 @@ async function savePrice(input) {
     }
 
     try {
-        const response = await fetch('https://tomodachi.baburu.shop/api/inventory/products.php', {
+        const response = await fetch('../api/inventory/products.php', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -582,7 +582,7 @@ async function savePrice(input) {
         });
 
         const data = await response.json();
-        
+
         if (data.success) {
             // Actualizar el producto en el array local
             const product = products.find(p => p.product_id == productId);
@@ -612,7 +612,7 @@ async function saveStock(input) {
     }
 
     try {
-        const response = await fetch('https://tomodachi.baburu.shop/api/inventory/products.php', {
+        const response = await fetch('../api/inventory/products.php', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -622,7 +622,7 @@ async function saveStock(input) {
         });
 
         const data = await response.json();
-        
+
         if (data.success) {
             // Actualizar el producto en el array local
             const product = products.find(p => p.product_id == productId);

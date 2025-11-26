@@ -8,12 +8,13 @@
  */
 async function checkSession() {
     try {
-        const response = await API.get('/api/auth/verify_session.php');
-        
-        if (response.success && response.data.logged_in) {
-            return response.data.user;
+        const response = await fetch('../api/auth/verify_session.php');
+        const dataResponse = await response.json();
+        if (dataResponse.success && dataResponse.data.logged_in) {
+            console.log('Sesión activa para el usuario:', dataResponse.data.user);
+            return dataResponse.data.user;
         }
-        
+        console.log('No hay sesión activa.');
         return null;
     } catch (error) {
         console.error('Error al verificar sesión:', error);
@@ -26,9 +27,9 @@ async function checkSession() {
  */
 async function logout() {
     try {
-        const response = await API.post('/api/auth/logout.php');
-        
-        if (response.success) {
+        const response = await fetch('../api/auth/logout.php');
+        const dataResponse = await response.json();
+        if (dataResponse.success) {
             window.location.href = 'login.html';
         }
     } catch (error) {
@@ -43,13 +44,13 @@ function showNotification(message, type = 'info') {
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
     notification.textContent = message;
-    
+
     document.body.appendChild(notification);
-    
+
     setTimeout(() => {
         notification.classList.add('show');
     }, 100);
-    
+
     setTimeout(() => {
         notification.classList.remove('show');
         setTimeout(() => {
@@ -65,13 +66,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const sidebarClose = document.querySelector('.sidebar-close');
     const overlay = document.getElementById('sidebarOverlay');
     const body = document.body;
-    
+
     const closeSidebar = () => {
         sidebar && sidebar.classList.remove('open');
         overlay && overlay.classList.remove('show');
         body.classList.remove('no-scroll');
     };
-    
+
     if (toggleBtn && sidebar) {
         toggleBtn.addEventListener('click', () => {
             const isSmall = window.innerWidth <= 860;
@@ -85,16 +86,16 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-    
+
     // Botón de cerrar en el sidebar
     if (sidebarClose) {
         sidebarClose.addEventListener('click', closeSidebar);
     }
-    
+
     if (overlay) {
         overlay.addEventListener('click', closeSidebar);
     }
-    
+
     // Cerrar sidebar al hacer clic en un nav-item
     const navItems = document.querySelectorAll('.nav-item');
     navItems.forEach(item => {
@@ -104,7 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
-    
+
     // Auto reset on resize
     window.addEventListener('resize', () => {
         if (window.innerWidth > 860) {
@@ -144,7 +145,7 @@ function formatDate(date) {
 function validateForm(formElement) {
     const inputs = formElement.querySelectorAll('[required]');
     let isValid = true;
-    
+
     inputs.forEach(input => {
         if (!input.value.trim()) {
             input.classList.add('error');
@@ -153,6 +154,6 @@ function validateForm(formElement) {
             input.classList.remove('error');
         }
     });
-    
+
     return isValid;
 }

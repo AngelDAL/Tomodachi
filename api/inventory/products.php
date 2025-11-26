@@ -16,7 +16,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_name(SESSION_NAME);
     session_set_cookie_params([
         'lifetime' => SESSION_LIFETIME,
-        'path' => '/Tomodachi/', // asegúramos que el cookie se envíe en rutas del proyecto
+        'path' => '/', // asegúramos que el cookie se envíe en rutas del proyecto
         'httponly' => true,
         'samesite' => 'Lax'
     ]);

@@ -21,7 +21,7 @@ class Auth {
             // Configurar parámetros de cookie para que sea accesible en todo el proyecto
             session_set_cookie_params([
                 'lifetime' => SESSION_LIFETIME,
-                'path' => '/Tomodachi/',
+                'path' => '/',
                 'httponly' => true,
                 'samesite' => 'Lax'
             ]);

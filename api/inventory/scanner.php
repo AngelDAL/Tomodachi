@@ -13,7 +13,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_name(SESSION_NAME);
     session_set_cookie_params([
         'lifetime' => SESSION_LIFETIME,
-        'path' => '/Tomodachi/',
+        'path' => '/',
         'httponly' => true,
         'samesite' => 'Lax'
     ]);

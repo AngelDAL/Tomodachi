@@ -354,19 +354,28 @@ const toastSystem = {
         toast.id = `toast-${id}`;
         toast.className = `toast toast-${type}`;
         toast.textContent = message;
+        // Estilos base manejados por CSS, solo mantenemos los necesarios para la animación/posicionamiento dinámico si fuera el caso
+        // Pero en este caso, todo puede ir al CSS.
+        // Mantenemos solo lo mínimo indispensable o eliminamos el style.cssText si todo está en CSS.
+        // Dado que inventory.css no tiene la clase .toast base completa (solo los colores),
+        // añadiré la clase .toast al CSS en el siguiente paso o inyectaré estilos compatibles aquí.
+        // Mejor opción: Actualizar inventory.css con la clase .toast base y limpiar aquí.
+        
+        // Por ahora, para asegurar compatibilidad inmediata sin tocar CSS de nuevo si no es necesario:
         toast.style.cssText = `
             padding: 12px 16px;
-            background: ${this.getColor(type)};
-            color: white;
-            border-radius: 6px;
+            color: var(--white);
+            border-radius: var(--border-radius);
             font-size: 0.9rem;
-            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+            box-shadow: var(--shadow-md);
             cursor: pointer;
             user-select: none;
             animation: toastSlideDown 0.3s ease-out;
             opacity: 1;
             pointer-events: auto;
+            margin-bottom: 10px;
         `;
+        // El background color ya viene por la clase toast-{type} definida en inventory.css
 
         this.container.appendChild(toast);
         this.activeToasts.set(id, { element: toast, timeout: null });
@@ -436,19 +445,6 @@ const toastSystem = {
                     this.processQueue();
                 }
             }, 300);
-        }
-    },
-
-    getColor(type) {
-        switch (type) {
-            case 'success':
-                return 'rgba(76, 175, 80, 0.95)';
-            case 'error':
-                return 'rgba(244, 67, 54, 0.95)';
-            case 'warning':
-                return 'rgba(255, 193, 7, 0.95)';
-            default:
-                return 'rgba(33, 150, 243, 0.95)';
         }
     }
 };
@@ -520,8 +516,8 @@ function renderProducts(items) {
 
     if (items.length === 0) {
         const emptyMessage = currentFilter
-            ? '<p style="grid-column: 1/-1; text-align: center; color: #999; padding: 40px;"><i class="fas fa-search"></i><br><br>No se encontraron productos con "<strong>' + escapeHtml(currentFilter) + '</strong>"</p>'
-            : '<p style="grid-column: 1/-1; text-align: center; color: #999; padding: 40px;"><i class="fas fa-inbox"></i><br><br>No hay productos en el inventario</p>';
+            ? '<p style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 40px;"><i class="fas fa-search"></i><br><br>No se encontraron productos con "<strong>' + escapeHtml(currentFilter) + '</strong>"</p>'
+            : '<p style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 40px;"><i class="fas fa-inbox"></i><br><br>No hay productos en el inventario</p>';
         container.innerHTML = emptyMessage;
         return;
     }

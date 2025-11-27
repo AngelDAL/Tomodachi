@@ -10,6 +10,14 @@ let totalBadge, cartBadge, discountInput, taxInput, paymentMethodSelect;
 let checkoutReceivedInput, checkoutChangeDisplay, finalizeSaleBtn;
 let cartToggle, cartPanel, closeCartBtn, productGallery, cartHandleBtn, panelTotalEl;
 
+// Modal elements
+let itemOptionsModal, closeItemModalBtn, saveItemOptionsBtn;
+let modalProductName, modalOriginalPrice, modalNewPrice;
+let discountTypeSelect, discPercentInput, discFixedInput, nxnBuyInput, nxnPayInput;
+let optPercent, optFixed, optNxn;
+
+let EDITING_PRODUCT_ID = null;
+
 function initPOS() {
   // Inicializar referencias a elementos DOM
   searchInput = document.getElementById('searchInput');
@@ -17,7 +25,7 @@ function initPOS() {
   cartBody = document.getElementById('cartBody');
   emptyCartMsg = document.getElementById('emptyCartMsg');
   totalBadge = document.getElementById('totalBadge');
-  cartBadge = document.getElementById('cartBadge');
+  cartBadge = document.getElementById('cartCountBadge');
   discountInput = document.getElementById('discountInput');
   taxInput = document.getElementById('taxInput');
   paymentMethodSelect = document.getElementById('paymentMethod');
@@ -30,6 +38,22 @@ function initPOS() {
   productGallery = document.getElementById('productGallery');
   cartHandleBtn = document.getElementById('cartHandle');
   panelTotalEl = document.getElementById('panelTotal');
+
+  // Modal elements init
+  itemOptionsModal = document.getElementById('itemOptionsModal');
+  closeItemModalBtn = document.getElementById('closeItemModalBtn');
+  saveItemOptionsBtn = document.getElementById('saveItemOptionsBtn');
+  modalProductName = document.getElementById('modalProductName');
+  modalOriginalPrice = document.getElementById('modalOriginalPrice');
+  modalNewPrice = document.getElementById('modalNewPrice');
+  discountTypeSelect = document.getElementById('discountTypeSelect');
+  discPercentInput = document.getElementById('discPercentInput');
+  discFixedInput = document.getElementById('discFixedInput');
+  nxnBuyInput = document.getElementById('nxnBuyInput');
+  nxnPayInput = document.getElementById('nxnPayInput');
+  optPercent = document.getElementById('opt-percent');
+  optFixed = document.getElementById('opt-fixed');
+  optNxn = document.getElementById('opt-nxn');
 
   // Obtener store_id del atributo de datos en el body
   CURRENT_STORE_ID = document.body.getAttribute('data-store-id') || 1;
@@ -112,6 +136,16 @@ function bindEvents() {
   }
   if (finalizeSaleBtn) finalizeSaleBtn.addEventListener('click', finalizeSale);
 
+  // Modal events
+  if (closeItemModalBtn) closeItemModalBtn.addEventListener('click', closeItemOptions);
+  if (saveItemOptionsBtn) saveItemOptionsBtn.addEventListener('click', saveItemOptions);
+  if (discountTypeSelect) discountTypeSelect.addEventListener('change', onDiscountTypeChange);
+  
+  // Live preview events
+  [discPercentInput, discFixedInput, nxnBuyInput, nxnPayInput].forEach(el => {
+      if (el) el.addEventListener('input', updateModalPreview);
+  });
+
   // Eliminado auto-cierre al hacer click fuera: el usuario controla con botones
 }
 
@@ -150,7 +184,7 @@ async function searchProducts(term) {
     }
 
     searchResults.innerHTML = list.map(p => `
-      <div class="search-result-item" data-id="${p.product_id}" data-price="${p.price}" data-name="${escapeHtml(p.product_name)}">
+      <div class="search-result-item" data-id="${p.product_id}" data-price="${p.price}" data-name="${escapeHtml(p.product_name)}" data-image="${p.image_path || ''}">
         <span class="search-result-name">${escapeHtml(p.product_name)}</span>
         <span class="search-result-price">${formatCurrency(p.price)}</span>
       </div>
@@ -164,7 +198,8 @@ async function searchProducts(term) {
         addProductToCart({
           product_id: parseInt(el.getAttribute('data-id')),
           product_name: el.getAttribute('data-name'),
-          unit_price: parseFloat(el.getAttribute('data-price'))
+          unit_price: parseFloat(el.getAttribute('data-price')),
+          image_path: el.getAttribute('data-image')
         });
         searchInput.value = '';
         searchResults.classList.add('hidden');
@@ -180,9 +215,21 @@ function addProductToCart(prod) {
   const existing = CART.find(i => i.product_id === prod.product_id);
   if (existing) {
     existing.quantity += 1;
-    existing.subtotal = existing.quantity * existing.unit_price;
+    recalcItemPrice(existing);
   } else {
-    CART.push({ product_id: prod.product_id, product_name: prod.product_name, unit_price: prod.unit_price, quantity: 1, subtotal: prod.unit_price });
+    CART.push({ 
+      product_id: prod.product_id, 
+      product_name: prod.product_name, 
+      unit_price: prod.unit_price, 
+      original_price: prod.unit_price,
+      quantity: 1, 
+      subtotal: prod.unit_price,
+      image_path: prod.image_path,
+      discount_type: 'none',
+      discount_value: 0,
+      nxn_buy: 0,
+      nxn_pay: 0
+    });
   }
   renderCart();
   showNotification('Producto añadido', 'success');
@@ -195,25 +242,68 @@ function renderCart() {
     cartBody.innerHTML = '';
     emptyCartMsg.style.display = 'block';
     if (finalizeSaleBtn) finalizeSaleBtn.disabled = true;
-    if (cartBadge) cartBadge.textContent = '0';
+    if (cartBadge) {
+        cartBadge.textContent = '0';
+        cartBadge.style.display = 'none';
+    }
   } else {
     emptyCartMsg.style.display = 'none';
     if (finalizeSaleBtn) finalizeSaleBtn.disabled = false;
-    if (cartBadge) cartBadge.textContent = CART.length;
+    
+    // Calculate total items count
+    const totalItems = CART.reduce((sum, item) => sum + item.quantity, 0);
+    if (cartBadge) {
+        cartBadge.textContent = totalItems;
+        cartBadge.style.display = 'flex';
+    }
 
-    cartBody.innerHTML = CART.map(item => `<tr>
-      <td>${escapeHtml(item.product_name)}</td>
-      <td>${formatCurrency(item.unit_price)}</td>
+    cartBody.innerHTML = CART.map(item => {
+        let imgHtml = '<div class="cart-item-img-placeholder"><i class="fas fa-box"></i></div>';
+        if (item.image_path) {
+            // Ensure path is correct
+            let src = item.image_path;
+            if (!src.startsWith('/') && !src.startsWith('http')) src = '/' + src;
+            imgHtml = `<img src="${src}" alt="img" class="cart-item-img">`;
+        }
+
+        // Price display (show original crossed out if discounted)
+        let priceHtml = formatCurrency(item.unit_price);
+        if (item.unit_price < item.original_price) {
+            priceHtml = `<div class="price-col">
+                <span class="old-price">${formatCurrency(item.original_price)}</span>
+                <span class="new-price">${formatCurrency(item.unit_price)}</span>
+            </div>`;
+        }
+
+        return `<tr>
+      <td>
+        <div class="cart-item-info">
+            ${imgHtml}
+            <div class="cart-item-name">${escapeHtml(item.product_name)}</div>
+        </div>
+      </td>
+      <td>${priceHtml}</td>
       <td><input type="number" min="1" value="${item.quantity}" data-id="${item.product_id}" class="qty-input"></td>
-      <td><button class="remove-btn" data-id="${item.product_id}">✕</button></td>
-    </tr>`).join('');
+      <td>
+        <div class="cart-actions">
+            <button class="edit-btn" data-id="${item.product_id}" title="Editar precio/descuento"><i class="fas fa-pencil-alt"></i></button>
+            <button class="remove-btn" data-id="${item.product_id}" title="Eliminar"><i class="fas fa-trash"></i></button>
+        </div>
+      </td>
+    </tr>`;
+    }).join('');
 
     // Bind qty changes
     Array.from(cartBody.querySelectorAll('.qty-input')).forEach(inp => {
       inp.addEventListener('input', () => {
         let q = parseInt(inp.value); if (!q || q < 1) q = 1; inp.value = q;
         const id = parseInt(inp.getAttribute('data-id'));
-        const it = CART.find(i => i.product_id === id); it.quantity = q; it.subtotal = it.quantity * it.unit_price; renderCart();
+        const it = CART.find(i => i.product_id === id); 
+        if (it) {
+            it.quantity = q; 
+            recalcItemPrice(it);
+            renderCart();
+        }
       });
     });
 
@@ -223,11 +313,150 @@ function renderCart() {
         const id = parseInt(btn.getAttribute('data-id'));
         CART = CART.filter(i => i.product_id !== id);
         renderCart();
-        // showNotification('Producto removido', 'info');
       });
+    });
+
+    // Bind edit
+    Array.from(cartBody.querySelectorAll('.edit-btn')).forEach(btn => {
+        btn.addEventListener('click', () => {
+            const id = parseInt(btn.getAttribute('data-id'));
+            openItemOptions(id);
+        });
     });
   }
   recalcTotals();
+}
+
+// ==========================================
+// MODAL & DISCOUNT LOGIC
+// ==========================================
+
+function openItemOptions(id) {
+    const item = CART.find(i => i.product_id === id);
+    if (!item) return;
+
+    EDITING_PRODUCT_ID = id;
+    
+    // Populate modal
+    if (modalProductName) modalProductName.textContent = item.product_name;
+    if (modalOriginalPrice) modalOriginalPrice.textContent = formatCurrency(item.original_price);
+    
+    // Set current values
+    if (discountTypeSelect) discountTypeSelect.value = item.discount_type || 'none';
+    
+    if (discPercentInput) discPercentInput.value = item.discount_type === 'percent' ? item.discount_value : '';
+    if (discFixedInput) discFixedInput.value = item.discount_type === 'fixed' ? item.discount_value : '';
+    
+    if (nxnBuyInput) nxnBuyInput.value = item.nxn_buy || '';
+    if (nxnPayInput) nxnPayInput.value = item.nxn_pay || '';
+
+    onDiscountTypeChange(); // Show/hide inputs
+    updateModalPreview(); // Calc preview
+
+    if (itemOptionsModal) {
+        itemOptionsModal.classList.remove('hidden');
+        itemOptionsModal.setAttribute('aria-hidden', 'false');
+    }
+}
+
+function closeItemOptions() {
+    if (itemOptionsModal) {
+        itemOptionsModal.classList.add('hidden');
+        itemOptionsModal.setAttribute('aria-hidden', 'true');
+    }
+    EDITING_PRODUCT_ID = null;
+}
+
+function onDiscountTypeChange() {
+    const type = discountTypeSelect.value;
+    
+    if (optPercent) optPercent.classList.add('hidden');
+    if (optFixed) optFixed.classList.add('hidden');
+    if (optNxn) optNxn.classList.add('hidden');
+
+    if (type === 'percent' && optPercent) optPercent.classList.remove('hidden');
+    if (type === 'fixed' && optFixed) optFixed.classList.remove('hidden');
+    if (type === 'nxn' && optNxn) optNxn.classList.remove('hidden');
+
+    updateModalPreview();
+}
+
+function updateModalPreview() {
+    const item = CART.find(i => i.product_id === EDITING_PRODUCT_ID);
+    if (!item) return;
+
+    const type = discountTypeSelect.value;
+    let newPrice = item.original_price;
+
+    if (type === 'percent') {
+        const pct = parseFloat(discPercentInput.value) || 0;
+        newPrice = item.original_price * (1 - pct / 100);
+    } else if (type === 'fixed') {
+        const discount = parseFloat(discFixedInput.value) || 0;
+        newPrice = Math.max(0, item.original_price - discount);
+    } else if (type === 'nxn') {
+        // For NxN, the unit price depends on quantity. 
+        // In preview, we can show the effective unit price based on current quantity in cart
+        // or just show "Variable" or calculate for the current quantity.
+        const buy = parseInt(nxnBuyInput.value) || 1;
+        const pay = parseInt(nxnPayInput.value) || 1;
+        
+        if (buy > 0 && item.quantity >= buy) {
+             const sets = Math.floor(item.quantity / buy);
+             const remainder = item.quantity % buy;
+             const payableQty = (sets * pay) + remainder;
+             newPrice = (payableQty * item.original_price) / item.quantity;
+        }
+    }
+
+    if (modalNewPrice) modalNewPrice.textContent = formatCurrency(newPrice);
+}
+
+function saveItemOptions() {
+    const item = CART.find(i => i.product_id === EDITING_PRODUCT_ID);
+    if (!item) return;
+
+    const type = discountTypeSelect.value;
+    item.discount_type = type;
+
+    if (type === 'percent') {
+        item.discount_value = parseFloat(discPercentInput.value) || 0;
+    } else if (type === 'fixed') {
+        item.discount_value = parseFloat(discFixedInput.value) || 0;
+    } else if (type === 'nxn') {
+        item.nxn_buy = parseInt(nxnBuyInput.value) || 1;
+        item.nxn_pay = parseInt(nxnPayInput.value) || 1;
+    } else {
+        item.discount_value = 0;
+    }
+
+    recalcItemPrice(item);
+    renderCart();
+    closeItemOptions();
+    showNotification('Precio actualizado', 'success');
+}
+
+function recalcItemPrice(item) {
+    let newUnitPrice = item.original_price;
+
+    if (item.discount_type === 'percent') {
+        newUnitPrice = item.original_price * (1 - item.discount_value / 100);
+    } else if (item.discount_type === 'fixed') {
+        newUnitPrice = Math.max(0, item.original_price - item.discount_value);
+    } else if (item.discount_type === 'nxn') {
+        const buy = item.nxn_buy || 1;
+        const pay = item.nxn_pay || 1;
+        
+        if (buy > 0 && item.quantity >= buy) {
+             const sets = Math.floor(item.quantity / buy);
+             const remainder = item.quantity % buy;
+             const payableQty = (sets * pay) + remainder;
+             newUnitPrice = (payableQty * item.original_price) / item.quantity;
+        }
+    }
+
+    item.unit_price = newUnitPrice;
+    item.subtotal = item.quantity * item.unit_price;
 }
 
 function recalcTotals() {
@@ -350,7 +579,7 @@ async function loadGallery() {
     const resData = await res.json();
     if (resData.success) {
       const list = resData.data || [];
-      productGallery.innerHTML = list.map(p => `<div class="gallery-item" data-id="${p.product_id}" data-price="${p.price}" title="${escapeHtml(p.product_name)}">
+      productGallery.innerHTML = list.map(p => `<div class="gallery-item" data-id="${p.product_id}" data-price="${p.price}" data-image="${p.image_path || ''}" title="${escapeHtml(p.product_name)}">
         <div class="img-wrap">${p.image_path ? `<img src="/${p.image_path}" alt="img">` : '<span class="no-img">Sin imagen</span>'}</div>
         <div class="g-name">${escapeHtml(p.product_name)}</div>
         <div class="g-price">${formatCurrency(p.price)}</div>
@@ -361,7 +590,8 @@ async function loadGallery() {
           addProductToCart({
             product_id: parseInt(el.getAttribute('data-id')),
             product_name: el.querySelector('.g-name').textContent,
-            unit_price: parseFloat(el.getAttribute('data-price'))
+            unit_price: parseFloat(el.getAttribute('data-price')),
+            image_path: el.getAttribute('data-image')
           });
         });
       });
@@ -377,7 +607,12 @@ async function fetchByCode(code) {
     const resData = await res.json();
     if (resData.success && res.data) {
       const p = resData.data;
-      addProductToCart({ product_id: p.product_id, product_name: p.product_name, unit_price: parseFloat(p.price) });
+      addProductToCart({ 
+        product_id: p.product_id, 
+        product_name: p.product_name, 
+        unit_price: parseFloat(p.price),
+        image_path: p.image_path 
+      });
       showScannedProductOverlay(p);
       showNotification('Producto añadido', 'success');
     } else {

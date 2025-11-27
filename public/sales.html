@@ -82,7 +82,10 @@
                         </div>
 
                         <!-- Asa y panel lateral del carrito (oculto por defecto) -->
-                        <button id="cartHandle" class="cart-handle" aria-label="Abrir carrito"><i class="fas fa-shopping-cart"></i></button>
+                        <button id="cartHandle" class="cart-handle" aria-label="Abrir carrito">
+                            <i class="fas fa-shopping-cart"></i>
+                            <span id="cartCountBadge" class="cart-badge" style="display: none;">0</span>
+                        </button>
                         <aside class="cart-side-panel" id="cartPanel" aria-label="Carrito de compras" aria-hidden="true">
                             <div class="cart-side-header">
                                 <h2>Carrito</h2>
@@ -102,10 +105,10 @@
                                     <table class="cart-table">
                                         <thead>
                                             <tr>
-                                                <th>Producto</th>
+                                                <th>Info</th> <!-- Cambiado para incluir img + nombre -->
                                                 <th>Precio</th>
                                                 <th>Cant.</th>
-                                                <th></th>
+                                                <th>Acciones</th> <!-- Espacio para editar y borrar -->
                                             </tr>
                                         </thead>
                                         <tbody id="cartBody"></tbody>
@@ -145,6 +148,71 @@
                     </div>
                 </main>
             </div>
+
+            <!-- Modal para Opciones de Producto (Descuentos y Promociones) -->
+    <div id="itemOptionsModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalProductName">Editar Producto</h3>
+                <button class="modal-close" id="closeItemModalBtn"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="current-price-info">
+                    <p>Precio Original: <span id="modalOriginalPrice">$0.00</span></p>
+                </div>
+                
+                <div class="discount-type-selector">
+                    <label>Tipo de Ajuste:</label>
+                    <select id="discountTypeSelect">
+                        <option value="none">Sin descuento</option>
+                        <option value="percent">Porcentaje (%)</option>
+                        <option value="fixed">Descuento Fijo ($)</option>
+                        <option value="nxn">Promoción NxN</option>
+                    </select>
+                </div>
+
+                <!-- Opciones dinámicas -->
+                <div id="opt-percent" class="discount-option hidden">
+                    <label>Porcentaje de descuento:</label>
+                    <div class="input-group">
+                        <input type="number" id="discPercentInput" min="0" max="100" placeholder="Ej: 10">
+                        <span>%</span>
+                    </div>
+                </div>
+
+                <div id="opt-fixed" class="discount-option hidden">
+                    <label>Monto a descontar:</label>
+                    <div class="input-group">
+                        <span>$</span>
+                        <input type="number" id="discFixedInput" min="0" step="0.01" placeholder="0.00">
+                    </div>
+                </div>
+
+                <div id="opt-nxn" class="discount-option hidden">
+                    <label>Configuración NxN:</label>
+                    <div class="nxn-group">
+                        <div class="nxn-item">
+                            <small>Lleva</small>
+                            <input type="number" id="nxnBuyInput" min="1" placeholder="Ej: 2">
+                        </div>
+                        <div class="nxn-item">
+                            <small>Paga</small>
+                            <input type="number" id="nxnPayInput" min="0" placeholder="Ej: 1">
+                        </div>
+                    </div>
+                    <p class="hint-text">Ejemplo: 2x1 (Lleva 2, Paga 1)</p>
+                </div>
+
+                <div class="final-price-preview">
+                    <p>Nuevo Precio Unitario: <strong id="modalNewPrice">$0.00</strong></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="saveItemOptionsBtn" class="btn-primary">Aplicar Cambios</button>
+            </div>
+        </div>
+    </div>
+
     <script src="js/api.js"></script>
     <script src="js/app.js"></script>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>

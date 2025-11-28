@@ -18,27 +18,18 @@
 
 /* Ajuste de brillo y contraste para el video */
 #qr-reader video {
-    filter: brightness(1.2) contrast(1.15);
+    filter: brightness(1.1) contrast(1.1);
     object-fit: cover;
     border-radius: 16px;
 }
 
-/* Overlay de guías de escaneo - ELIMINADO */
-.scanner-guides,
-.scanner-focus-box,
-.scanner-instruction {
-    display: none !important;
-}
-
-/* Responsive: En móviles muy pequeños, ajustar tamaño */
-@media (max-width: 360px) {
-    .scanner-focus-box {
-        width: 200px;
-        height: 200px;
-    }
-    
-    @keyframes scanLine {
-        0% { transform: translateY(-80px); opacity: 0; }
-        100% { transform: translateY(80px); opacity: 0; }
-    }
+/* 
+   La librería Html5Qrcode inserta su propio canvas/elementos para el qrbox si se configura.
+   Aseguramos que el contenedor permita verlos correctamente.
+*/
+#qr-reader__scan_region {
+    /* Estilo para el borde que la librería podría generar */
+    border: 2px solid rgba(255, 255, 255, 0.8) !important;
+    box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.5); /* Efecto viñeta nativo si la librería usa este ID */
+    border-radius: 12px;
 }

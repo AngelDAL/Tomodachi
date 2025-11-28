@@ -29,10 +29,21 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!qrScannerInstance) {
       try {
         qrScannerInstance = new Html5Qrcode('qr-reader');
+        // Configuración basada en productsEvents.js para máxima compatibilidad
         const config = { 
             fps: 10, 
-            qrbox: { width: 250, height: 250 }, // Restaurado para rendimiento en Firefox (WASM), aunque no haya guías visuales
-            // experimentalFeatures: { useBarCodeDetectorIfSupported: true }, // Desactivado por problemas en Firefox
+            qrbox: function (viewfinderWidth, viewfinderHeight) {
+                // Cálculo dinámico del área de escaneo (70% del lado más pequeño)
+                let minEdgePercentage = 0.7;
+                let minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
+                let qrboxSize = Math.floor(minEdgeSize * minEdgePercentage);
+                return {
+                    width: qrboxSize,
+                    height: qrboxSize
+                };
+            },
+            aspectRatio: 1.0,
+            rememberLastUsedCamera: true,
             formatsToSupport: [ 
                 Html5QrcodeSupportedFormats.QR_CODE, 
                 Html5QrcodeSupportedFormats.CODE_128, 
@@ -47,7 +58,6 @@ document.addEventListener('DOMContentLoaded', () => {
             ] 
         };
         
-        // Configuración específica para mejorar compatibilidad
         const cameraConfig = { facingMode: 'environment' };
         
         qrScannerInstance.start(cameraConfig, config, onScanSuccess, onScanError)

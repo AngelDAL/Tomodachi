@@ -607,7 +607,7 @@ async function fetchByCode(code) {
     // Eliminado store_id de los parámetros, el backend usa la sesión
     const res = await fetch('../api/inventory/scanner.php?barcode=' + code, { method: 'GET', headers: { 'Content-Type': 'application/json' }, credentials: 'include' });
     const resData = await res.json();
-    if (resData.success && res.data) {
+    if (resData.success && resData.data) {
       const p = resData.data;
       addProductToCart({ 
         product_id: p.product_id, 

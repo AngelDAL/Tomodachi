@@ -2,6 +2,7 @@
  * Módulo de escáner (placeholder cámara + entrada manual)
  */
 let qrScannerInstance = null;
+let isScanningLocked = false; // Bloqueo para evitar lecturas múltiples
 
 document.addEventListener('DOMContentLoaded', () => {
   const toggleScannerBtn = document.getElementById('toggleScannerBtn');
@@ -28,9 +29,32 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!qrScannerInstance) {
       try {
         qrScannerInstance = new Html5Qrcode('qr-reader');
-        const config = { fps: 10, qrbox: 250, aspectRatio: 1.0, formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE, Html5QrcodeSupportedFormats.CODE_128, Html5QrcodeSupportedFormats.EAN_13 ] };
-        qrScannerInstance.start({ facingMode: 'environment' }, config, onScanSuccess, onScanError)
-          .catch(err => { console.error(err); if (window.showNotification) showNotification('No se pudo iniciar escáner','error'); });
+        const config = { 
+            fps: 10, 
+            qrbox: 250, 
+            // aspectRatio: 1.0, // Comentado para mejorar compatibilidad móvil/safari
+            formatsToSupport: [ 
+                Html5QrcodeSupportedFormats.QR_CODE, 
+                Html5QrcodeSupportedFormats.CODE_128, 
+                Html5QrcodeSupportedFormats.EAN_13,
+                Html5QrcodeSupportedFormats.EAN_8,
+                Html5QrcodeSupportedFormats.CODE_39,
+                Html5QrcodeSupportedFormats.CODE_93,
+                Html5QrcodeSupportedFormats.UPC_A,
+                Html5QrcodeSupportedFormats.UPC_E,
+                Html5QrcodeSupportedFormats.CODABAR,
+                Html5QrcodeSupportedFormats.ITF
+            ] 
+        };
+        
+        // Configuración específica para mejorar compatibilidad
+        const cameraConfig = { facingMode: 'environment' };
+        
+        qrScannerInstance.start(cameraConfig, config, onScanSuccess, onScanError)
+          .catch(err => { 
+            console.error("Error iniciando escáner:", err); 
+            if (window.showNotification) showNotification('No se pudo acceder a la cámara. Verifique permisos.','error'); 
+          });
       } catch (e) {
         console.error(e);
       }
@@ -54,8 +78,20 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function onScanSuccess(decodedText) {
+    if (isScanningLocked) return; // Si está bloqueado, ignorar
+
+    isScanningLocked = true; // Bloquear nuevas lecturas
+    
+    // Reproducir sonido beep si existe (opcional)
+    // const audio = new Audio('assets/sound/beep.mp3'); audio.play().catch(e=>{});
+
     if (window.fetchByCode) { window.fetchByCode(decodedText); }
-    if (window.showNotification) showNotification('Código leído', 'success');
+    // if (window.showNotification) showNotification('Código leído', 'success'); // Ya lo hace fetchByCode
+
+    // Desbloquear después de 1.5 segundos
+    setTimeout(() => {
+        isScanningLocked = false;
+    }, 1500);
   }
 
   function onScanError(err) {

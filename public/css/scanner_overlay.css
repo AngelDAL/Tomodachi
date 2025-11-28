@@ -57,11 +57,11 @@
     position: absolute;
     width: 30px;
     height: 30px;
-    border-color: #4ade80; /* Verde neón suave */
+    border-color: rgba(255, 255, 255, 0.9); /* Blanco limpio */
     border-style: solid;
     border-width: 4px;
     border-radius: 8px;
-    box-shadow: 0 0 8px rgba(74, 222, 128, 0.4);
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
 }
 
 /* Esquina superior izquierda */
@@ -96,24 +96,9 @@
     border-top: none;
 }
 
-/* Línea de escaneo animada - Estilo láser sutil */
+/* Línea de escaneo eliminada para vista más limpia */
 .scanner-line {
-    position: absolute;
-    width: 90%;
-    left: 5%;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, #4ade80, transparent);
-    box-shadow: 0 0 10px rgba(74, 222, 128, 0.6);
-    top: 50%;
-    animation: scanLine 2.5s infinite ease-in-out;
-    opacity: 0.8;
-}
-
-@keyframes scanLine {
-    0% { transform: translateY(-100px); opacity: 0; }
-    20% { opacity: 1; }
-    80% { opacity: 1; }
-    100% { transform: translateY(100px); opacity: 0; }
+    display: none;
 }
 
 /* Texto de instrucción */

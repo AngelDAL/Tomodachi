@@ -19,7 +19,7 @@
 /* Ajuste de brillo y contraste para el video */
 #qr-reader video {
     filter: brightness(1.1) contrast(1.1);
-    object-fit: cover;
+    /* object-fit: cover; ELIMINADO: Causa distorsión con aspectRatio 1.0 */
     border-radius: 16px;
 }
 

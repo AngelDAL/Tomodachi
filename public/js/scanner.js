@@ -28,8 +28,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!qrScannerInstance) {
       try {
-        qrScannerInstance = new Html5Qrcode('qr-reader');
-        // Configuración basada en productsEvents.js para máxima compatibilidad
+        // Mover formatos al constructor para soporte correcto
+        const formats = [ 
+            Html5QrcodeSupportedFormats.QR_CODE, 
+            Html5QrcodeSupportedFormats.CODE_128, 
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.EAN_8,
+            Html5QrcodeSupportedFormats.CODE_39,
+            Html5QrcodeSupportedFormats.CODE_93,
+            Html5QrcodeSupportedFormats.UPC_A,
+            Html5QrcodeSupportedFormats.UPC_E,
+            Html5QrcodeSupportedFormats.CODABAR,
+            Html5QrcodeSupportedFormats.ITF
+        ];
+        
+        qrScannerInstance = new Html5Qrcode('qr-reader', { formatsToSupport: formats, verbose: false });
+        
+        // Configuración basada en productsEvents.js
         const config = { 
             fps: 10, 
             qrbox: function (viewfinderWidth, viewfinderHeight) {
@@ -43,19 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
             },
             aspectRatio: 1.0,
-            rememberLastUsedCamera: true,
-            formatsToSupport: [ 
-                Html5QrcodeSupportedFormats.QR_CODE, 
-                Html5QrcodeSupportedFormats.CODE_128, 
-                Html5QrcodeSupportedFormats.EAN_13,
-                Html5QrcodeSupportedFormats.EAN_8,
-                Html5QrcodeSupportedFormats.CODE_39,
-                Html5QrcodeSupportedFormats.CODE_93,
-                Html5QrcodeSupportedFormats.UPC_A,
-                Html5QrcodeSupportedFormats.UPC_E,
-                Html5QrcodeSupportedFormats.CODABAR,
-                Html5QrcodeSupportedFormats.ITF
-            ] 
+            rememberLastUsedCamera: true
         };
         
         const cameraConfig = { facingMode: 'environment' };

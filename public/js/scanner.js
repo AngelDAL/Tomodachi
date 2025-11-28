@@ -31,8 +31,10 @@ document.addEventListener('DOMContentLoaded', () => {
         qrScannerInstance = new Html5Qrcode('qr-reader');
         const config = { 
             fps: 10, 
-            qrbox: 250, 
-            // aspectRatio: 1.0, // Comentado para mejorar compatibilidad móvil/safari
+            // qrbox: 250, // Eliminado para escanear todo el frame (mejor sin guías)
+            experimentalFeatures: {
+                useBarCodeDetectorIfSupported: true
+            },
             formatsToSupport: [ 
                 Html5QrcodeSupportedFormats.QR_CODE, 
                 Html5QrcodeSupportedFormats.CODE_128, 

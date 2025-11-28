@@ -4,8 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Tomodachi POS</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/dashboard.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
@@ -13,25 +15,25 @@
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
-                <button class="sidebar-close" id="sidebarClose" aria-label="Cerrar menú">✕</button>
+                <button class="sidebar-close" id="sidebarClose" aria-label="Cerrar menú"><i class="fas fa-times"></i></button>
                 <h2>Tomodachi POS</h2>
             </div>
             
             <nav class="sidebar-nav">
                 <a href="dashboard.html" class="nav-item active">
-                    <span>📊</span> Dashboard
+                    <span><i class="fas fa-chart-line"></i></span> Dashboard
                 </a>
                 <a href="sales.html" class="nav-item">
-                    <span>💰</span> Punto de Venta
+                    <span><i class="fas fa-cash-register"></i></span> Punto de Venta
                 </a>
                 <a href="inventory.html" class="nav-item">
-                    <span>📦</span> Inventario
+                    <span><i class="fas fa-box"></i></span> Inventario
                 </a>
                 <a href="reports.html" class="nav-item">
-                    <span>📈</span> Reportes
+                    <span><i class="fas fa-chart-bar"></i></span> Reportes
                 </a>
                 <a href="#" class="nav-item" id="logoutBtn">
-                    <span>🚪</span> Cerrar Sesión
+                    <span><i class="fas fa-sign-out-alt"></i></span> Cerrar Sesión
                 </a>
             </nav>
         </aside>
@@ -40,7 +42,7 @@
         <main class="main-content">
             <header class="main-header">
                 <div class="header-left">
-                    <button class="sidebar-toggle" id="sidebarToggle" aria-label="Menú">☰</button>
+                    <button class="sidebar-toggle" id="sidebarToggle" aria-label="Menú"><i class="fas fa-bars"></i></button>
                     <h1>Dashboard</h1>
                 </div>
                 <div class="user-info">
@@ -52,55 +54,105 @@
             <div class="dashboard-content">
                 <div class="stats-grid">
                     <div class="stat-card">
-                        <div class="stat-icon">💵</div>
+                        <div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div>
                         <div class="stat-info">
                             <h3>Ventas del Día</h3>
                             <p class="stat-value" id="dailySales">$0.00</p>
+                            <p style="font-size: 0.85rem; color: #27ae60; margin-top: 5px;">
+                                <i class="fas fa-coins"></i> Ganancia: <span id="dailyProfit" style="font-weight: bold;">$0.00</span>
+                            </p>
                         </div>
                     </div>
                     
                     <div class="stat-card">
-                        <div class="stat-icon">🛒</div>
+                        <div class="stat-icon"><i class="fas fa-receipt"></i></div>
                         <div class="stat-info">
                             <h3>Transacciones</h3>
                             <p class="stat-value" id="transactions">0</p>
                         </div>
                     </div>
-                    
-                    <div class="stat-card">
-                        <div class="stat-icon">📦</div>
-                        <div class="stat-info">
-                            <h3>Productos</h3>
-                            <p class="stat-value" id="products">0</p>
+                </div>
+                
+                <div class="charts-grid">
+                    <div class="chart-section" style="grid-column: 1 / -1;">
+                        <div class="chart-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 10px;">
+                            <h3><i class="fas fa-chart-line" style="color: #3498db;"></i> Ventas vs Ganancias</h3>
+                            <div class="chart-controls" style="display: flex; align-items: center; gap: 10px;">
+                                <button id="prevWeekBtn" class="btn-icon" aria-label="Semana anterior"><i class="fas fa-chevron-left"></i></button>
+                                <span id="chartRangeLabel" style="font-weight: 500; color: #666;">Semana Actual</span>
+                                <button id="nextWeekBtn" class="btn-icon" aria-label="Semana siguiente"><i class="fas fa-chevron-right"></i></button>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div class="stat-card">
-                        <div class="stat-icon">⚠️</div>
-                        <div class="stat-info">
-                            <h3>Stock Bajo</h3>
-                            <p class="stat-value" id="lowStock">0</p>
+                        <div class="chart-container">
+                            <canvas id="salesChart"></canvas>
                         </div>
                     </div>
                 </div>
-                
-                <div class="welcome-message">
-                    <h2>Bienvenido al Sistema de Punto de Venta</h2>
-                    <p>Seleccione una opción del menú para comenzar</p>
+
+                <div class="lists-grid">
+                    <div class="list-section">
+                        <h3><i class="fas fa-star" style="color: #f1c40f;"></i> Productos Más Vendidos</h3>
+                        <div class="table-responsive">
+                            <table class="dashboard-table">
+                                <thead>
+                                    <tr>
+                                        <th><i class="fas fa-image"></i> Imagen</th>
+                                        <th><i class="fas fa-box"></i> Producto</th>
+                                        <th><i class="fas fa-shopping-cart"></i> Vendidos</th>
+                                        <th><i class="fas fa-dollar-sign"></i> Ingresos</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="topProductsList"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="list-section">
+                        <h3><i class="fas fa-exclamation-triangle" style="color: #e74c3c;"></i> Stock Bajo</h3>
+                        <div class="table-responsive">
+                            <table class="dashboard-table">
+                                <thead>
+                                    <tr>
+                                        <th><i class="fas fa-box"></i> Producto</th>
+                                        <th><i class="fas fa-cubes"></i> Stock</th>
+                                        <th><i class="fas fa-sort-numeric-down"></i> Mínimo</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="lowStockList"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="list-section" style="grid-column: 1 / -1;">
+                        <h3><i class="fas fa-history" style="color: #3498db;"></i> Ventas Recientes</h3>
+                        <div class="table-responsive">
+                            <table class="dashboard-table">
+                                <thead>
+                                    <tr>
+                                        <th><i class="fas fa-calendar-alt"></i> Fecha</th>
+                                        <th><i class="fas fa-boxes"></i> Productos</th>
+                                        <th><i class="fas fa-money-bill"></i> Total</th>
+                                        <th><i class="fas fa-hand-holding-usd"></i> Ganancia</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recentSalesList"></tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>
     </div>
     
-    <script src="js/api.js"></script>
     <script src="js/app.js"></script>
+    <script src="js/dashboard.js"></script>
     <script>
         // Verificar sesión al cargar
         document.addEventListener('DOMContentLoaded', async () => {
             const session = await checkSession();
-            console.log('Sesión verificada:', session); 
+            
             if (!session) {
-                // window.location.href = 'login.html';
+                window.location.href = 'login.html';
                 return;
             }
             

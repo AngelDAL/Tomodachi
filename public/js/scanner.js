@@ -31,10 +31,8 @@ document.addEventListener('DOMContentLoaded', () => {
         qrScannerInstance = new Html5Qrcode('qr-reader');
         const config = { 
             fps: 10, 
-            // qrbox: 250, // Eliminado para escanear todo el frame (mejor sin guías)
-            experimentalFeatures: {
-                useBarCodeDetectorIfSupported: true
-            },
+            qrbox: { width: 250, height: 250 }, // Restaurado para rendimiento en Firefox (WASM), aunque no haya guías visuales
+            // experimentalFeatures: { useBarCodeDetectorIfSupported: true }, // Desactivado por problemas en Firefox
             formatsToSupport: [ 
                 Html5QrcodeSupportedFormats.QR_CODE, 
                 Html5QrcodeSupportedFormats.CODE_128, 

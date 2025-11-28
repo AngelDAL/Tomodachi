@@ -126,25 +126,41 @@
                 
                 <div class="form-row">
                     <div class="form-group">
+                        <label for="productCategoryInput">Categoría</label>
+                        <select id="productCategoryInput" name="category_id">
+                            <option value="">Seleccionar categoría...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
                         <label for="productSkuInput">SKU/Código</label>
                         <input type="text" id="productSkuInput" name="sku" placeholder="Ej: SKU12345">
                     </div>
-                    
-                    <div class="form-group">
-                        <label for="productBarcodeInput">Código de Barras</label>
-                        <input type="text" id="productBarcodeInput" name="barcode" placeholder="Escanea o ingresa">
-                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="productBarcodeInput">Código de Barras</label>
+                    <input type="text" id="productBarcodeInput" name="barcode" placeholder="Escanea o ingresa">
                 </div>
                 
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="productPriceInput">Precio <span class="required">*</span></label>
+                        <label for="productCostInput">Costo (Compra)</label>
+                        <input type="number" id="productCostInput" name="cost" placeholder="0.00" step="0.01" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="productPriceInput">Precio (Venta) <span class="required">*</span></label>
                         <input type="number" id="productPriceInput" name="price" placeholder="0.00" step="0.01" min="0" required>
                     </div>
-                    
+                </div>
+
+                <div class="form-row">
                     <div class="form-group">
                         <label for="productStockInput">Stock Inicial <span class="required">*</span></label>
                         <input type="number" id="productStockInput" name="stock" placeholder="0" min="0" value="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="productMinStockInput">Stock Mínimo</label>
+                        <input type="number" id="productMinStockInput" name="min_stock" placeholder="5" min="0" value="5">
                     </div>
                 </div>
                 
@@ -153,6 +169,153 @@
                     <button type="submit" class="btn-save">Agregar Producto</button>
                 </div>
             </form>
+        </div>
+    </div>
+    
+    <!-- Drawer para Detalles/Edición de Producto -->
+    <div id="productDetailsModal" class="drawer-overlay">
+        <div class="drawer-content">
+            <div class="drawer-header">
+                <h2><i class="fas fa-edit"></i> Detalles del Producto</h2>
+                <button type="button" class="drawer-close" id="closeDetailsModalBtn" aria-label="Cerrar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="drawer-body">
+                <form id="editProductForm" class="drawer-form">
+                    <input type="hidden" id="editProductId" name="product_id">
+
+                    <!-- Tarjeta de Imagen -->
+                    <div class="details-card">
+                        <div class="card-body" style="padding: 0;">
+                            <div class="product-image-container large-preview">
+                                <img id="detailImage" src="" alt="Producto" class="detail-img">
+                                <div class="image-overlay">
+                                    <label for="detailImageInput" class="btn-change-image"><i class="fas fa-camera"></i> Cambiar Imagen</label>
+                                    <input type="file" id="detailImageInput" accept="image/*" class="hidden">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tarjeta Análisis de Ganancia -->
+                    <div class="details-card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-chart-line"></i> Análisis de Ganancia</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="profit-grid">
+                                <div class="profit-item">
+                                    <span class="label">Precio Venta</span>
+                                    <span id="detailPriceDisplay" class="value">$0.00</span>
+                                </div>
+                                <div class="profit-item">
+                                    <span class="label">Costo Compra</span>
+                                    <span id="detailCostDisplay" class="value">$0.00</span>
+                                </div>
+                                <div class="profit-item highlight">
+                                    <span class="label">Ganancia</span>
+                                    <span id="detailProfitDisplay" class="value profit-positive">$0.00</span>
+                                </div>
+                                <div class="profit-item">
+                                    <span class="label">Margen</span>
+                                    <span id="detailMarginDisplay" class="value">0%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tarjeta Información General -->
+                    <div class="details-card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-info-circle"></i> Información General</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label for="editProductName">Nombre del Producto</label>
+                                <input type="text" id="editProductName" name="product_name" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="editProductDesc">Descripción</label>
+                                <textarea id="editProductDesc" name="description" rows="2"></textarea>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="editProductCategory">Categoría</label>
+                                    <select id="editProductCategory" name="category_id">
+                                        <option value="">Sin categoría</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="editProductStatus">Estado</label>
+                                    <select id="editProductStatus" name="status">
+                                        <option value="active">Activo</option>
+                                        <option value="inactive">Inactivo</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tarjeta Códigos -->
+                    <div class="details-card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-barcode"></i> Códigos de Identificación</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="editProductBarcode">Código de Barras</label>
+                                    <input type="text" id="editProductBarcode" name="barcode">
+                                </div>
+                                <div class="form-group">
+                                    <label for="editProductQR">Código QR</label>
+                                    <input type="text" id="editProductQR" name="qr_code">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tarjeta Precios e Inventario -->
+                    <div class="details-card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-tags"></i> Precios e Inventario</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="editProductCost">Costo (Compra)</label>
+                                    <input type="number" id="editProductCost" name="cost" step="0.01" min="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="editProductPrice">Precio (Venta)</label>
+                                    <input type="number" id="editProductPrice" name="price" step="0.01" min="0" required>
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="editProductStock">Stock Actual</label>
+                                    <input type="number" id="editProductStock" name="current_stock" min="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="editProductMinStock">Stock Mínimo</label>
+                                    <input type="number" id="editProductMinStock" name="min_stock" min="0">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions-centered">
+                        <button type="button" class="btn-danger" id="deleteProductBtn" style="display: none;">Eliminar</button>
+                        <button type="button" class="btn-cancel" id="cancelEditBtn">Cancelar</button>
+                        <button type="submit" class="btn-save">Guardar Cambios</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
     

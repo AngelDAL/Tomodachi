@@ -3,6 +3,7 @@
  */
 
 let products = [];
+let categories = [];
 let currentFilter = '';
 let selectedFile = null;
 let storeId = 1;
@@ -25,6 +26,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 
 function initInventory() {
     bindEvents();
+    loadCategories();
     loadProducts();
 }
 
@@ -120,6 +122,50 @@ function bindEvents() {
             }
         });
     }
+
+    // Modal de detalles
+    const closeDetailsBtn = document.getElementById('closeDetailsModalBtn');
+    const cancelEditBtn = document.getElementById('cancelEditBtn');
+    const editForm = document.getElementById('editProductForm');
+    const detailImageInput = document.getElementById('detailImageInput');
+    const editCostInput = document.getElementById('editProductCost');
+    const editPriceInput = document.getElementById('editProductPrice');
+
+    if (closeDetailsBtn) closeDetailsBtn.addEventListener('click', closeProductDetails);
+    if (cancelEditBtn) cancelEditBtn.addEventListener('click', closeProductDetails);
+    
+    if (editForm) {
+        editForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await submitEditProduct();
+        });
+    }
+
+    if (detailImageInput) {
+        detailImageInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) uploadImageFromDetails(file);
+        });
+    }
+
+    // Recalcular ganancia en tiempo real
+    if (editCostInput && editPriceInput) {
+        const updateProfit = () => {
+            const cost = parseFloat(editCostInput.value) || 0;
+            const price = parseFloat(editPriceInput.value) || 0;
+            updateProfitDisplay(price, cost);
+        };
+        editCostInput.addEventListener('input', updateProfit);
+        editPriceInput.addEventListener('input', updateProfit);
+    }
+
+    // Cerrar modal detalles al hacer clic fuera
+    const detailsModal = document.getElementById('productDetailsModal');
+    if (detailsModal) {
+        detailsModal.addEventListener('click', (e) => {
+            if (e.target === detailsModal) closeProductDetails();
+        });
+    }
 }
 
 function performSearch() {
@@ -179,10 +225,13 @@ async function submitAddProduct() {
     const productData = {
         product_name: formData.get('product_name'),
         description: formData.get('description'),
+        category_id: formData.get('category_id'),
         sku: formData.get('sku'),
         barcode: formData.get('barcode'),
         price: parseFloat(formData.get('price')),
-        current_stock: parseInt(formData.get('stock'))
+        cost: parseFloat(formData.get('cost')) || 0,
+        current_stock: parseInt(formData.get('stock')),
+        min_stock: parseInt(formData.get('min_stock')) || 0
         // store_id eliminado, el backend lo toma de la sesión
     };
 
@@ -510,6 +559,29 @@ async function loadProducts() {
     }
 }
 
+async function loadCategories() {
+    try {
+        const response = await fetch('../api/inventory/categories.php');
+        const data = await response.json();
+        if (data.success) {
+            categories = data.data || [];
+            populateCategorySelects();
+        }
+    } catch (error) {
+        console.error('Error cargando categorías:', error);
+    }
+}
+
+function populateCategorySelects() {
+    const addSelect = document.getElementById('productCategoryInput');
+    const editSelect = document.getElementById('editProductCategory');
+    
+    const options = categories.map(c => `<option value="${c.category_id}">${escapeHtml(c.category_name)}</option>`).join('');
+    
+    if (addSelect) addSelect.innerHTML = '<option value="">Seleccionar categoría...</option>' + options;
+    if (editSelect) editSelect.innerHTML = '<option value="">Sin categoría</option>' + options;
+}
+
 function renderProducts(items) {
     const container = document.getElementById('invResults');
     if (!container) return;
@@ -529,11 +601,11 @@ function renderProducts(items) {
 
         return `
         <div class="product-card" data-product-id="${product.product_id}" title="${escapeHtml(product.product_name)}">
-            <div class="product-image" onclick="openImageUpload(${product.product_id})">
+            <div class="product-image" onclick="openProductDetails(${product.product_id})">
                 ${imgHtml}
             </div>
             <div class="product-info">
-                <div class="product-name">${escapeHtml(product.product_name)}</div>
+                <div class="product-name" onclick="openProductDetails(${product.product_id})">${escapeHtml(product.product_name)}</div>
                 <div class="product-details">
                     <div class="product-detail-row">
                         <span class="detail-icon"><i class="fas fa-tag"></i></span>
@@ -550,11 +622,179 @@ function renderProducts(items) {
     }).join('');
 }
 
-function openImageUpload(productId) {
+function openProductDetails(productId) {
+    const product = products.find(p => p.product_id == productId);
+    if (!product) return;
+
     currentEditingProduct = productId;
-    document.getElementById('productId').value = productId;
-    document.getElementById('productImage').click();
+    
+    // Llenar formulario
+    document.getElementById('editProductId').value = product.product_id;
+    document.getElementById('editProductName').value = product.product_name;
+    document.getElementById('editProductDesc').value = product.description || '';
+    document.getElementById('editProductCategory').value = product.category_id || '';
+    document.getElementById('editProductStatus').value = product.status || 'active';
+    document.getElementById('editProductBarcode').value = product.barcode || '';
+    document.getElementById('editProductQR').value = product.qr_code || '';
+    document.getElementById('editProductCost').value = product.cost || 0;
+    document.getElementById('editProductPrice').value = product.price;
+    document.getElementById('editProductStock').value = product.current_stock || 0;
+    document.getElementById('editProductMinStock').value = product.min_stock || 0;
+
+    // Imagen
+    const img = document.getElementById('detailImage');
+    if (product.image_path) {
+        img.src = '/' + product.image_path;
+        img.style.display = 'block';
+    } else {
+        img.src = ''; // O una imagen placeholder
+        img.style.display = 'none';
+    }
+
+    // Calcular ganancia inicial
+    updateProfitDisplay(parseFloat(product.price) || 0, parseFloat(product.cost) || 0);
+
+    // Mostrar modal
+    const modal = document.getElementById('productDetailsModal');
+    if (modal) modal.classList.add('show');
 }
+
+function closeProductDetails() {
+    const modal = document.getElementById('productDetailsModal');
+    if (modal) modal.classList.remove('show');
+    currentEditingProduct = null;
+    // Limpiar formulario
+    document.getElementById('editProductForm')?.reset();
+}
+
+function updateProfitDisplay(price, cost) {
+    // Asegurar que sean números
+    price = parseFloat(price) || 0;
+    cost = parseFloat(cost) || 0;
+
+    const profit = price - cost;
+    const margin = price > 0 ? (profit / price) * 100 : 0;
+    
+    const profitEl = document.getElementById('detailProfitDisplay');
+    
+    document.getElementById('detailPriceDisplay').textContent = '$' + price.toFixed(2);
+    document.getElementById('detailCostDisplay').textContent = '$' + cost.toFixed(2);
+    
+    profitEl.textContent = '$' + profit.toFixed(2);
+    profitEl.className = profit >= 0 ? 'profit-positive' : 'profit-negative';
+    
+    document.getElementById('detailMarginDisplay').textContent = margin.toFixed(1) + '%';
+}
+
+async function submitEditProduct() {
+    const form = document.getElementById('editProductForm');
+    if (!form) return;
+
+    const formData = new FormData(form);
+    const newStock = parseInt(formData.get('current_stock'));
+    
+    const productData = {
+        product_id: currentEditingProduct,
+        product_name: formData.get('product_name'),
+        description: formData.get('description'),
+        category_id: formData.get('category_id'),
+        status: formData.get('status'),
+        barcode: formData.get('barcode'),
+        qr_code: formData.get('qr_code'),
+        price: parseFloat(formData.get('price')),
+        cost: parseFloat(formData.get('cost')),
+        min_stock: parseInt(formData.get('min_stock'))
+    };
+
+    try {
+        showNotification('Guardando cambios...', 'info');
+        
+        // 1. Actualizar datos del producto
+        const response = await fetch('../api/inventory/products.php', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(productData)
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+            throw new Error(data.message || 'No se pudo actualizar el producto');
+        }
+
+        // 2. Verificar si hay cambio de stock
+        const currentProduct = products.find(p => p.product_id == currentEditingProduct);
+        const oldStock = currentProduct ? (currentProduct.current_stock || 0) : 0;
+
+        if (!isNaN(newStock) && newStock !== oldStock) {
+            const stockResponse = await fetch('../api/inventory/stock.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    store_id: storeId,
+                    product_id: currentEditingProduct,
+                    movement_type: 'adjustment',
+                    quantity: newStock,
+                    notes: 'Ajuste desde edición de producto'
+                })
+            });
+            
+            const stockData = await stockResponse.json();
+            if (!stockData.success) {
+                showNotification('Producto guardado, pero error al actualizar stock: ' + stockData.message, 'warning');
+            } else {
+                showNotification('✓ Producto y stock actualizados', 'success');
+            }
+        } else {
+            showNotification('✓ Cambios guardados', 'success');
+        }
+
+        closeProductDetails();
+        loadProducts();
+
+    } catch (error) {
+        console.error('Error:', error);
+        showNotification('✗ Error: ' + error.message, 'error');
+    }
+}
+
+async function uploadImageFromDetails(file) {
+    if (!currentEditingProduct) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        try {
+            showNotification('Actualizando imagen...', 'info');
+            const response = await fetch('../api/inventory/upload_image.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    product_id: currentEditingProduct,
+                    image_base64: e.target.result
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showNotification('✓ Imagen actualizada', 'success');
+                // Actualizar vista previa en modal
+                const img = document.getElementById('detailImage');
+                img.src = e.target.result;
+                img.style.display = 'block';
+                // Recargar lista de fondo
+                loadProducts();
+            } else {
+                showNotification('✗ Error al subir imagen', 'error');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showNotification('✗ Error de conexión', 'error');
+        }
+    };
+    reader.readAsDataURL(file);
+}
+
 
 async function savePrice(input) {
     const productId = input.getAttribute('data-product-id');
@@ -598,9 +838,9 @@ async function savePrice(input) {
 
 async function saveStock(input) {
     const productId = input.getAttribute('data-product-id');
-    const stock = parseInt(input.value);
+    const newStock = parseInt(input.value);
 
-    if (isNaN(stock) || stock < 0) {
+    if (isNaN(newStock) || newStock < 0) {
         alert('Stock inválido');
         const product = products.find(p => p.product_id == productId);
         if (product) input.value = product.current_stock || 0;
@@ -608,29 +848,34 @@ async function saveStock(input) {
     }
 
     try {
-        const response = await fetch('../api/inventory/products.php', {
-            method: 'PUT',
+        // Usar endpoint de ajuste de stock
+        const response = await fetch('../api/inventory/stock.php', {
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+                store_id: storeId,
                 product_id: productId,
-                min_stock: stock
+                movement_type: 'adjustment',
+                quantity: newStock,
+                notes: 'Ajuste rápido desde inventario'
             })
         });
 
         const data = await response.json();
 
         if (data.success) {
+            showNotification('✓ Stock actualizado', 'success');
             // Actualizar el producto en el array local
             const product = products.find(p => p.product_id == productId);
-            if (product) product.current_stock = stock;
+            if (product) product.current_stock = newStock;
         } else {
-            alert('Error: ' + (data.message || 'No se pudo actualizar stock'));
+            showNotification('✗ Error: ' + (data.message || 'No se pudo actualizar stock'), 'error');
             const product = products.find(p => p.product_id == productId);
             if (product) input.value = product.current_stock || 0;
         }
     } catch (error) {
         console.error('Error:', error);
-        alert('Error al actualizar stock');
+        showNotification('✗ Error al actualizar stock', 'error');
         const product = products.find(p => p.product_id == productId);
         if (product) input.value = product.current_stock || 0;
     }

@@ -183,21 +183,23 @@ async function searchProducts(term) {
       return;
     }
 
-    searchResults.innerHTML = list.map(p => `
-      <div class="search-result-item" data-id="${p.product_id}" data-price="${p.price}" data-name="${escapeHtml(p.product_name)}" data-image="${p.image_path || ''}">
-        <span class="search-result-name">${escapeHtml(p.product_name)}</span>
-        <span class="search-result-price">${formatCurrency(p.price)}</span>
+    // Renderizar resultados con el mismo estilo que la galería principal
+    searchResults.innerHTML = list.map((p, index) => `
+      <div class="gallery-item" data-id="${p.product_id}" data-price="${p.price}" data-image="${p.image_path || ''}" title="${escapeHtml(p.product_name)}" style="animation-delay: ${Math.min(index * 0.05, 0.5)}s">
+        <div class="img-wrap">${p.image_path ? `<img src="/${p.image_path}" alt="img">` : '<span class="no-img">Sin imagen</span>'}</div>
+        <div class="g-name">${escapeHtml(p.product_name)}</div>
+        <div class="g-price">${formatCurrency(p.price)}</div>
       </div>
     `).join('');
 
     productGallery.style.display = 'none';
     searchResults.classList.remove('hidden');
 
-    Array.from(searchResults.querySelectorAll('.search-result-item')).forEach(el => {
+    Array.from(searchResults.querySelectorAll('.gallery-item')).forEach(el => {
       el.addEventListener('click', () => {
         addProductToCart({
           product_id: parseInt(el.getAttribute('data-id')),
-          product_name: el.getAttribute('data-name'),
+          product_name: el.querySelector('.g-name').textContent,
           unit_price: parseFloat(el.getAttribute('data-price')),
           image_path: el.getAttribute('data-image')
         });

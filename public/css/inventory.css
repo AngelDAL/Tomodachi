@@ -1032,3 +1032,347 @@
         max-height: 95vh;
     }
 }
+
+/* Estilos para el modal de detalles */
+.product-details-grid {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 2rem;
+    padding: 1rem;
+}
+
+.details-left {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* Estilos reutilizados en el drawer */
+/* .product-image-container se mantiene igual */
+
+
+/* Estilos para el Drawer (Panel Lateral) */
+.drawer-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.drawer-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.drawer-content {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 600px;
+    max-width: 90%;
+    height: 100%;
+    background: var(--bg-card);
+    box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.drawer-overlay.show .drawer-content {
+    transform: translateX(0);
+}
+
+.drawer-header {
+    padding: 20px;
+    border-bottom: 1px solid var(--border-light);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--bg-card);
+    z-index: 10;
+}
+
+.drawer-header h2 {
+    margin: 0;
+    font-size: 1.3rem;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.drawer-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.drawer-close:hover {
+    background: var(--bg-hover);
+    color: var(--danger-color);
+    transform: rotate(90deg);
+}
+
+.drawer-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    /* Scrollbar styling */
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
+}
+
+.drawer-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.drawer-body::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.drawer-body::-webkit-scrollbar-thumb {
+    background-color: var(--border-color);
+    border-radius: 3px;
+}
+
+/* Ajustes específicos para el contenido del drawer de producto */
+.product-details-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    padding: 0; /* Padding ya manejado por drawer-body */
+}
+
+.details-left {
+    width: 100%;
+    max-width: 300px;
+    margin: 0 auto;
+}
+
+.details-right {
+    width: 100%;
+}
+
+/* Ajustes responsive para el drawer */
+@media (max-width: 768px) {
+    .drawer-content {
+        width: 100%;
+        max-width: 100%;
+    }
+    
+    .product-details-grid {
+        gap: 1.5rem;
+    }
+}
+
+/* Estilos para las tarjetas del Drawer */
+.drawer-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding-bottom: 20px;
+}
+
+.details-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: var(--border-radius);
+    padding: 0;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+}
+
+.card-header {
+    background: var(--bg-lightest);
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.card-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+}
+
+.card-header h3 i {
+    color: var(--primary-color);
+    opacity: 0.8;
+}
+
+.card-body {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* Estilos para imagen grande en tarjeta separada */
+.product-image-container.large-preview {
+    width: 100%;
+    height: 250px;
+    background: var(--white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    border: none;
+    border-radius: 0;
+}
+
+.product-image-container.large-preview img {
+    max-height: 100%;
+    max-width: 100%;
+    object-fit: contain;
+}
+
+/* Overlay de cambio de imagen */
+.image-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: 20px;
+    background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.3s ease;
+}
+
+.product-image-container:hover .image-overlay {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.btn-change-image {
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.btn-change-image:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
+}
+
+/* En móviles, mostrar siempre el overlay */
+@media (hover: none) {
+    .image-overlay {
+        opacity: 1;
+        transform: translateY(0);
+        background: linear-gradient(to top, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 100%);
+        padding: 15px;
+    }
+    
+    .btn-change-image {
+        background: rgba(0, 0, 0, 0.5);
+        border-color: rgba(255, 255, 255, 0.2);
+        font-size: 0.8rem;
+        padding: 6px 12px;
+    }
+}
+
+.profit-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    text-align: center;
+}
+
+.profit-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px;
+    background: var(--bg-lightest);
+    border-radius: var(--border-radius-sm);
+}
+
+.profit-item .label {
+    font-size: 0.7rem;
+    color: var(--text-light);
+    text-transform: uppercase;
+}
+
+.profit-item .value {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--text-color);
+}
+
+.profit-item.highlight {
+    background: var(--primary-light);
+}
+
+.profit-item.highlight .value {
+    color: var(--primary-color);
+}
+
+/* Acciones centradas */
+.form-actions-centered {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 10px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-light);
+    position: sticky;
+    bottom: 0;
+    background: var(--bg-card);
+    z-index: 5;
+    padding-bottom: 10px; /* Espacio extra si es sticky */
+}
+
+.form-actions-centered button {
+    min-width: 140px;
+    padding: 12px 20px;
+    font-size: 0.95rem;
+}
+
+/* Responsive para el drawer */
+@media (max-width: 600px) {
+    .profit-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .form-actions-centered {
+        flex-direction: column;
+    }
+    
+    .form-actions-centered button {
+        width: 100%;
+    }
+}

@@ -1076,7 +1076,7 @@
     .pos-container {
         grid-template-columns: 1fr;
         height: auto;
-        max-height: none;
+        max-height: 90vh;
     }
 
     .pos-left,
@@ -1780,4 +1780,268 @@
 
 .btn-primary:hover {
     background: var(--primary-dark);
+}
+/* Ajustes para el Checkout Header (Movido arriba) */
+.checkout-header {
+    position: relative;
+    box-shadow: none;
+    border-bottom: 1px solid var(--border-light);
+    padding: 10px 16px;
+    background: white;
+}
+
+.checkout-group {
+    justify-content: space-between; /* Distribuir espacio uniformemente */
+    align-items: center; /* Alinear verticalmente al centro */
+}
+
+/* Alinear items del checkout */
+.checkout-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Centrar contenido horizontalmente */
+    justify-content: center;
+    text-align: center;
+}
+
+.checkout-label {
+    justify-content: center;
+    margin-bottom: 4px;
+}
+
+/* Corregir alineación del input recibido */
+.received-item .checkout-input {
+    text-align: center;
+    padding: 5px 0;
+    height: auto;
+    margin: 0;
+    line-height: 1.2;
+    display: block; /* Asegurar comportamiento de bloque */
+}
+
+/* Asegurar que los valores de texto estén alineados con el input */
+.checkout-value {
+    justify-content: center;
+    height: auto; /* Permitir altura natural */
+    line-height: 1.2;
+    padding: 5px 0; /* Igualar padding del input */
+    display: block; /* Comportamiento similar al input */
+}
+
+/* Ajuste específico para el botón finalizar */
+.checkout-group .btn-finalize-sale {
+    margin-left: auto; /* Empujar a la derecha si hay espacio extra */
+}
+
+/* Ajustes Responsive para el Header Checkout */
+@media (max-width: 640px) {
+    .checkout-header {
+        padding: 8px 10px;
+    }
+    
+    .checkout-group {
+        gap: 10px;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr); /* 3 columnas iguales para datos */
+        grid-template-rows: auto auto; /* 2 filas */
+    }
+    
+    /* Los 3 items de datos en la primera fila */
+    .checkout-item {
+        grid-row: 1;
+    }
+    
+    /* El botón ocupa toda la segunda fila */
+    .checkout-group .btn-finalize-sale {
+        grid-row: 2;
+        grid-column: 1 / -1;
+        width: 100%;
+        margin-top: 8px;
+    }
+}
+
+/* ==========================================================================
+   COMPACT STICKY CHECKOUT HEADER
+   ========================================================================== */
+
+/* Asegurar que el header completo sea sticky */
+.pos-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: white;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+/* Reducir tamaño del contenedor del checkout */
+.checkout-header {
+    padding: 4px 12px;
+    background: #fcfcfc;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+/* Ajustar grupo para ser más compacto */
+.checkout-group {
+    padding: 0;
+    gap: 15px;
+}
+
+/* Etiquetas más pequeñas */
+.checkout-label {
+    font-size: 0.6rem;
+    margin-bottom: 0;
+    opacity: 0.8;
+}
+
+.checkout-label i {
+    font-size: 0.7rem;
+}
+
+/* Valores más compactos */
+.total-value, 
+.change-value {
+    font-size: 1.1rem;
+    padding: 0;
+}
+
+/* Input recibido más compacto */
+.received-item .checkout-input {
+    font-size: 1.1rem;
+    padding: 0;
+    width: 90px;
+    background: transparent;
+    border-bottom-width: 1px;
+}
+
+.received-item .checkout-input:focus {
+    background: white;
+}
+
+/* Botón finalizar más pequeño */
+.checkout-group .btn-finalize-sale {
+    padding: 6px 16px;
+    font-size: 0.9rem;
+    min-width: 100px;
+    height: 36px;
+    box-shadow: 0 2px 5px rgba(46, 125, 50, 0.2);
+}
+
+/* Ajustes Responsive Compactos */
+@media (max-width: 640px) {
+    .checkout-header {
+        padding: 6px 8px;
+    }
+
+    .checkout-group {
+        gap: 6px;
+        /* Mantener grid pero más ajustado */
+    }
+
+    .total-value, 
+    .change-value {
+        font-size: 1rem;
+    }
+
+    .received-item .checkout-input {
+        font-size: 1rem;
+        width: 100%;
+    }
+
+    .checkout-group .btn-finalize-sale {
+        height: 32px;
+        padding: 0 12px;
+        font-size: 0.85rem;
+        margin-top: 4px;
+    }
+    
+    /* Reducir altura de la barra de búsqueda también para ganar espacio */
+    .search-section {
+        padding: 8px 10px;
+    }
+    
+    .search-main {
+        padding: 6px 10px;
+        font-size: 0.9rem;
+    }
+    
+    .btn-scanner {
+        padding: 6px 10px;
+    }
+}
+
+/* ==========================================================================
+   STICKY CHECKOUT HEADER (FIXED SIZE)
+   ========================================================================== */
+
+/* Estado Base (Fijo y Compacto) */
+.pos-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: white;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    padding-bottom: 0;
+}
+
+.checkout-header {
+    padding: 8px 12px; /* Tamaño intermedio fijo */
+    background: #fcfcfc;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.checkout-label {
+    font-size: 0.65rem; /* Tamaño intermedio fijo */
+    margin-bottom: 2px;
+    opacity: 0.9;
+}
+
+.checkout-label i {
+    font-size: 0.8rem;
+}
+
+.total-value, 
+.change-value {
+    font-size: 1.25rem; /* Tamaño intermedio fijo */
+}
+
+.received-item .checkout-input {
+    font-size: 1.25rem; /* Tamaño intermedio fijo */
+    width: 100px;
+    padding: 2px 0;
+}
+
+.checkout-group .btn-finalize-sale {
+    height: 40px; /* Tamaño intermedio fijo */
+    font-size: 0.95rem;
+    padding: 0 16px;
+}
+
+.search-section {
+    padding: 10px 14px;
+}
+
+/* Ajustes Responsive */
+@media (max-width: 640px) {
+    .checkout-header {
+        padding: 6px 10px;
+    }
+    
+    .total-value, 
+    .change-value {
+        font-size: 1.1rem;
+    }
+
+    .received-item .checkout-input {
+        font-size: 1.1rem;
+        width: 90px;
+    }
+
+    .checkout-group .btn-finalize-sale {
+        height: 36px;
+        font-size: 0.9rem;
+    }
+    
+    .search-section {
+        padding: 8px 10px;
+    }
 }

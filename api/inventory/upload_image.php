@@ -49,7 +49,7 @@ try {
     }
 
     // Parse base64
-    if (!preg_match('/^data:(image\/(png|jpeg|jpg));base64,(.+)$/', $img64, $matches)) {
+    if (!preg_match('/^data:(image\/(png|jpeg|jpg|webp));base64,(.+)$/', $img64, $matches)) {
         Response::validationError(['image_base64' => 'Formato inválido']);
     }
     $mime = $matches[1];
@@ -63,9 +63,20 @@ try {
     }
 
     $filename = 'p_' . $product_id . '_' . time() . '.' . $ext;
-    $targetDir = realpath(__DIR__ . '/../../public/assets/images/products');
+    
+    // Definir ruta objetivo
+    $targetPath = __DIR__ . '/../../public/assets/images/products';
+    
+    // Verificar si existe, si no, intentar crearla
+    if (!is_dir($targetPath)) {
+        if (!mkdir($targetPath, 0777, true)) {
+            Response::error('No se pudo crear el directorio de imágenes en: ' . $targetPath, 500);
+        }
+    }
+
+    $targetDir = realpath($targetPath);
     if (!$targetDir) {
-        Response::error('Directorio imágenes no existe', 500);
+        Response::error('Error al resolver la ruta del directorio: ' . $targetPath, 500);
     }
     $path = $targetDir . DIRECTORY_SEPARATOR . $filename;
     if (!file_put_contents($path, $data_bin)) {

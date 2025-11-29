@@ -599,21 +599,20 @@ function renderProducts(items) {
             ? `<img src="/${product.image_path}" alt="${product.product_name}" onerror="this.parentElement.innerHTML='<span class=&quot;no-image&quot;><i class=&quot;fas fa-image&quot;></i></span>'">`
             : '<span class="no-image"><i class="fas fa-image"></i></span>';
 
+        const stockClass = (product.current_stock <= product.min_stock) ? 'stock-low' : 'stock-ok';
+        const formattedPrice = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(product.price);
+
         return `
-        <div class="product-card" data-product-id="${product.product_id}" title="${escapeHtml(product.product_name)}">
-            <div class="product-image" onclick="openProductDetails(${product.product_id})">
+        <div class="product-card" onclick="openProductDetails(${product.product_id})" title="Ver detalles de ${escapeHtml(product.product_name)}">
+            <div class="product-image">
                 ${imgHtml}
             </div>
             <div class="product-info">
-                <div class="product-name" onclick="openProductDetails(${product.product_id})">${escapeHtml(product.product_name)}</div>
-                <div class="product-details">
-                    <div class="product-detail-row">
-                        <span class="detail-icon"><i class="fas fa-tag"></i></span>
-                        <input type="number" class="product-price-input" value="${parseFloat(product.price).toFixed(2)}" data-product-id="${product.product_id}" placeholder="0.00" step="0.01" onchange="savePrice(this)">
-                    </div>
-                    <div class="product-detail-row">
-                        <span class="detail-icon"><i class="fas fa-cubes"></i></span>
-                        <input type="number" class="product-qty" value="${product.current_stock !== null ? product.current_stock : 0}" data-product-id="${product.product_id}" min="0" placeholder="0" onchange="saveStock(this)">
+                <div class="product-name">${escapeHtml(product.product_name)}</div>
+                <div class="product-meta">
+                    <div class="meta-price">${formattedPrice}</div>
+                    <div class="meta-stock ${stockClass}">
+                        <i class="fas fa-cubes"></i> ${product.current_stock !== null ? product.current_stock : 0}
                     </div>
                 </div>
             </div>

@@ -1,0 +1,3 @@
+
+//En linux si no cuentas con las librerias puedes descargarlas de la siguiente manera.
+sudo apt install php-mysql php-json php-mbstring php-xml php-curl

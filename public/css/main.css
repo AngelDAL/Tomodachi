@@ -934,3 +934,299 @@ table tr:hover {
         transform: scale(1) translateY(0);
     }
 }
+/* Estilos para el menú de usuario (Dropdown) */
+.user-menu-container {
+    position: relative;
+    cursor: pointer;
+}
+
+.user-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: white;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    border-radius: 4px;
+    min-width: 180px;
+    z-index: 1001;
+    margin-top: 10px;
+    border: 1px solid #eee;
+}
+
+.user-dropdown.show {
+    display: block;
+    animation: fade-in 0.2s ease;
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 15px;
+    color: var(--text-color);
+    text-decoration: none;
+    transition: background 0.2s;
+    font-size: 0.95rem;
+}
+
+.dropdown-item:hover {
+    background-color: #f5f5f5;
+}
+
+.dropdown-item i {
+    color: var(--danger-color);
+    width: 20px;
+    text-align: center;
+}
+
+/* Media Query para Bottom Navigation en Móvil */
+@media (max-width: 768px) {
+    /* Sidebar se convierte en Bottom Nav */
+    .sidebar {
+        position: fixed;
+        left: 0 !important;
+        bottom: 0;
+        top: auto;
+        width: 100%;
+        height: auto;
+        z-index: 2000;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        display: block;
+        padding: 0;
+        background-color: var(--dark-color);
+        border-top: 1px solid rgba(255,255,255,0.1);
+        overflow: visible !important; /* Permitir que el tooltip salga del contenedor */
+    }
+
+    .sidebar-header {
+        display: none;
+    }
+
+    .sidebar-nav {
+        display: flex;
+        justify-content: space-around;
+        padding: 0;
+        margin: 0;
+        width: 100%;
+    }
+
+    .nav-item {
+        flex-direction: column;
+        padding: 8px 5px;
+        font-size: 0.7rem;
+        text-align: center;
+        flex: 1;
+        justify-content: center;
+        border-radius: 0;
+        color: rgba(255,255,255,0.6);
+    }
+
+    .nav-item.active {
+        color: var(--primary-color);
+        background-color: transparent;
+        position: relative;
+    }
+    
+    .nav-item.active::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 40%;
+        height: 3px;
+        background-color: var(--primary-color);
+        border-radius: 0 0 4px 4px;
+    }
+
+    .nav-item:hover {
+        background-color: rgba(255,255,255,0.05);
+        color: white;
+    }
+
+    .nav-item span {
+        margin-right: 0;
+        margin-bottom: 4px;
+        font-size: 1.4rem;
+        display: block;
+    }
+    
+    /* Ocultar botón de logout del menú inferior */
+    .nav-item#logoutBtn {
+        display: none;
+    }
+
+    /* Ajustar contenido principal */
+    .main-content {
+        margin-left: 0;
+        padding-bottom: 80px; /* Espacio para el bottom nav */
+    }
+    
+    /* Ocultar botón toggle del sidebar */
+    .sidebar-toggle {
+        display: none;
+    }
+    
+    /* Ajustes del header */
+    .main-header {
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        margin-bottom: 15px;
+        padding: 15px;
+    }
+    
+    .header-left h1 {
+        font-size: 1.2rem;
+    }
+}
+
+/* Estilos para el menú tooltip de usuario (Bottom Nav / Sidebar) */
+.nav-group {
+    position: relative;
+    width: 100%;
+}
+
+.nav-item-btn {
+    width: 100%;
+    background: none;
+    border: none;
+    font-family: inherit;
+    cursor: pointer;
+    text-align: left;
+    font-size: 1rem;
+}
+
+.user-tooltip-menu {
+    display: none;
+    position: absolute;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 5px 25px rgba(0,0,0,0.2);
+    padding: 10px;
+    min-width: 200px;
+    z-index: 2002;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.user-tooltip-menu.show {
+    display: flex;
+}
+
+.tooltip-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 15px;
+    color: var(--text-color);
+    text-decoration: none;
+    border-radius: 8px;
+    transition: background 0.2s;
+    opacity: 0;
+    transform: translateY(10px);
+    font-size: 0.95rem;
+}
+
+.tooltip-item:hover {
+    background-color: #f0f2f5;
+    color: var(--primary-color);
+}
+
+.tooltip-item i {
+    width: 20px;
+    text-align: center;
+    color: var(--primary-color);
+}
+
+.tooltip-item:last-child i {
+    color: var(--danger-color);
+}
+
+/* Animación de aparición escalonada */
+.user-tooltip-menu.show .tooltip-item {
+    animation: slideUpFade 0.3s forwards;
+}
+
+.user-tooltip-menu.show .tooltip-item:nth-child(1) { animation-delay: 0.05s; }
+.user-tooltip-menu.show .tooltip-item:nth-child(2) { animation-delay: 0.1s; }
+.user-tooltip-menu.show .tooltip-item:nth-child(3) { animation-delay: 0.15s; }
+
+@keyframes slideUpFade {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Posicionamiento en Escritorio (Sidebar lateral) */
+@media (min-width: 769px) {
+    .user-tooltip-menu {
+        left: 100%; /* A la derecha del sidebar */
+        top: 0;
+        margin-left: 15px;
+    }
+    
+    /* Flechita apuntando a la izquierda */
+    .user-tooltip-menu::before {
+        content: '';
+        position: absolute;
+        left: -8px;
+        top: 20px;
+        border-top: 8px solid transparent;
+        border-bottom: 8px solid transparent;
+        border-right: 8px solid white;
+    }
+}
+
+/* Posicionamiento en Móvil (Bottom Nav) */
+@media (max-width: 768px) {
+    .nav-group {
+        flex: 1;
+        display: flex;
+        justify-content: center;
+    }
+
+    .nav-item-btn {
+        text-align: center;
+        padding: 8px 5px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        color: rgba(255,255,255,0.6);
+    }
+    
+    .nav-item-btn:hover, .nav-item-btn.active {
+        color: white;
+    }
+    
+    .nav-item-btn span {
+        font-size: 1.4rem;
+        margin-bottom: 4px;
+        margin-right: 0;
+    }
+
+    .user-tooltip-menu {
+        bottom: 100%; /* Encima del bottom nav */
+        left: 50%;
+        transform: translateX(-50%);
+        margin-bottom: 15px;
+        width: 220px;
+        z-index: 2100; /* Asegurar que esté por encima de todo */
+    }
+
+    /* Flechita apuntando hacia abajo */
+    .user-tooltip-menu::after {
+        content: '';
+        position: absolute;
+        bottom: -8px;
+        left: 50%;
+        transform: translateX(-50%);
+        border-left: 8px solid transparent;
+        border-right: 8px solid transparent;
+        border-top: 8px solid white;
+    }
+}

@@ -4,7 +4,7 @@
 USE tomodachi_pos;
 
 UPDATE users 
-SET password_hash = '$2y$10$.2GrwgJRr/LKmy9ME2AxP.w3ndbOfW8HiHr10ITOXru/9tPoIUNEC'
+SET password_hash = '$2y$10$rDGCkOinf6RJ2ywtMU6QYeeTNkqq4/soMpsxdF4wO9lqIRTrjfP2a'
 WHERE username = 'admin';
 
 -- Verificar actualización

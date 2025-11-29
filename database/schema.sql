@@ -183,7 +183,7 @@ INSERT INTO categories (category_name, description) VALUES
 
 -- Insertar usuario administrador (password: admin123)
 INSERT INTO users (store_id, username, password_hash, full_name, email, role, status) VALUES
-(1, 'admin', '$2y$10$.2GrwgJRr/LKmy9ME2AxP.w3ndbOfW8HiHr10ITOXru/9tPoIUNEC', 'Administrador', 'admin@tomodachi.com', 'admin', 'active');
+(1, 'admin', '$2y$10$rDGCkOinf6RJ2ywtMU6QYeeTNkqq4/soMpsxdF4wO9lqIRTrjfP2a', 'Administrador', 'admin@tomodachi.com', 'admin', 'active');
 
 -- Productos de ejemplo
 INSERT INTO products (category_id, product_name, description, barcode, price, cost, min_stock, status) VALUES

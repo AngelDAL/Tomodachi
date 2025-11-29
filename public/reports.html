@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="view-transition" content="same-origin">
     <title>Reportes - Tomodachi POS</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/dashboard.css">
 </head>
@@ -30,9 +31,22 @@
                 <a href="inventory.html" class="nav-item">
                     <span>📦</span> Inventario
                 </a>
-                <a href="reports.html" class="nav-item active">
-                    <span>📈</span> Reportes
-                </a>
+                <div class="nav-group user-nav-group">
+                    <button class="nav-item nav-item-btn active" id="userMenuBtn">
+                        <span><i class="fas fa-user-circle"></i></span> Usuario
+                    </button>
+                    <div class="user-tooltip-menu" id="userTooltipMenu">
+                        <a href="#" class="tooltip-item" onclick="showProfileSettings(); return false;">
+                            <i class="fas fa-cog"></i> Mi Perfil
+                        </a>
+                        <a href="reports.html" class="tooltip-item active" style="background-color: #f0f2f5; color: var(--primary-color);">
+                            <i class="fas fa-chart-bar"></i> Reportes
+                        </a>
+                        <a href="#" class="tooltip-item" onclick="logout(); return false;">
+                            <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                        </a>
+                    </div>
+                </div>
                 <a href="#" class="nav-item" id="logoutBtn">
                     <span>🚪</span> Cerrar Sesión
                 </a>
@@ -41,16 +55,6 @@
 
         <!-- Main Content -->
         <main class="main-content">
-            <header class="main-header">
-                <div class="header-left">
-                    <button class="sidebar-toggle" id="sidebarToggle" aria-label="Menú">☰</button>
-                    <h1>Reportes</h1>
-                </div>
-                <div class="user-info">
-                    <span id="userName">Usuario</span>
-                    <span id="userRole" class="badge"></span>
-                </div>
-            </header>
 
             <div class="dashboard-content">
                 <div class="welcome-message">

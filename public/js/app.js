@@ -61,7 +61,6 @@ function showNotification(message, type = 'info') {
 
 // Sidebar toggle (mobile)
 document.addEventListener('DOMContentLoaded', () => {
-    const toggleBtn = document.getElementById('sidebarToggle');
     const sidebar = document.getElementById('sidebar');
     const sidebarClose = document.querySelector('.sidebar-close');
     const overlay = document.getElementById('sidebarOverlay');
@@ -72,20 +71,6 @@ document.addEventListener('DOMContentLoaded', () => {
         overlay && overlay.classList.remove('show');
         body.classList.remove('no-scroll');
     };
-
-    if (toggleBtn && sidebar) {
-        toggleBtn.addEventListener('click', () => {
-            const isSmall = window.innerWidth <= 860;
-            sidebar.classList.toggle('open');
-            const isOpen = sidebar.classList.contains('open');
-            if (overlay && isSmall) {
-                overlay.classList.toggle('show', isOpen);
-            }
-            if (isSmall) {
-                body.classList.toggle('no-scroll', isOpen);
-            }
-        });
-    }
 
     // Botón de cerrar en el sidebar
     if (sidebarClose) {
@@ -156,4 +141,60 @@ function validateForm(formElement) {
     });
 
     return isValid;
+}
+
+// User Dropdown Toggle
+document.addEventListener('DOMContentLoaded', () => {
+    const userMenuToggle = document.getElementById('userMenuToggle');
+    const userDropdown = document.getElementById('userDropdown');
+    const logoutBtnMobile = document.getElementById('logoutBtnMobile');
+
+    if (userMenuToggle && userDropdown) {
+        userMenuToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            userDropdown.classList.toggle('show');
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!userMenuToggle.contains(e.target) && !userDropdown.contains(e.target)) {
+                userDropdown.classList.remove('show');
+            }
+        });
+    }
+
+    if (logoutBtnMobile) {
+        logoutBtnMobile.addEventListener('click', (e) => {
+            e.preventDefault();
+            logout();
+        });
+    }
+});
+
+// Lógica para el menú tooltip de usuario
+document.addEventListener('DOMContentLoaded', () => {
+    const userMenuBtn = document.getElementById('userMenuBtn');
+    const userTooltipMenu = document.getElementById('userTooltipMenu');
+
+    if (userMenuBtn && userTooltipMenu) {
+        userMenuBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            userTooltipMenu.classList.toggle('show');
+            userMenuBtn.classList.toggle('active');
+        });
+
+        // Cerrar al hacer clic fuera
+        document.addEventListener('click', (e) => {
+            if (!userMenuBtn.contains(e.target) && !userTooltipMenu.contains(e.target)) {
+                userTooltipMenu.classList.remove('show');
+                userMenuBtn.classList.remove('active');
+            }
+        });
+    }
+});
+
+// Función placeholder para ajustes de perfil
+function showProfileSettings() {
+    alert('Próximamente: Ajustes de perfil y empresa');
 }

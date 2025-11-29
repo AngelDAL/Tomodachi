@@ -1,0 +1,51 @@
+[PHP]
+; Configuración recomendada para Tomodachi POS
+
+; ==========================================
+; Extensiones Requeridas
+; ==========================================
+; Asegúrate de que estas extensiones estén habilitadas en tu servidor.
+; En Linux, usualmente se instalan con apt-get install php-mysql php-json etc.
+extension=pdo_mysql
+extension=json
+extension=session
+; extension=mbstring ; Recomendada para manejo de caracteres UTF-8
+; extension=gd       ; Recomendada si planeas manipular imágenes en el futuro
+
+; ==========================================
+; Configuración de Recursos
+; ==========================================
+memory_limit = 128M
+max_execution_time = 30
+
+; ==========================================
+; Configuración de Carga de Archivos
+; ==========================================
+; Necesario para subir imágenes de productos
+file_uploads = On
+upload_max_filesize = 10M
+post_max_size = 12M
+
+; ==========================================
+; Configuración de Errores
+; ==========================================
+; En desarrollo
+display_errors = On
+display_startup_errors = On
+error_reporting = E_ALL
+
+; En producción
+; display_errors = Off
+; display_startup_errors = Off
+; error_reporting = E_ALL & ~E_DEPRECATED & ~E_STRICT
+
+; ==========================================
+; Configuración Regional
+; ==========================================
+date.timezone = "America/Mexico_City"
+
+; ==========================================
+; Configuración de Sesiones
+; ==========================================
+session.gc_maxlifetime = 1440
+session.save_path = "/var/lib/php/sessions"

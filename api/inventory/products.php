@@ -10,28 +10,21 @@ require_once '../../config/constants.php';
 require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
 require_once '../../includes/Validator.class.php';
-
-// Inicializar sesión con parámetros consistentes
-if (session_status() === PHP_SESSION_NONE) {
-    session_name(SESSION_NAME);
-    session_set_cookie_params([
-        'lifetime' => SESSION_LIFETIME,
-        'path' => '/', // asegúramos que el cookie se envíe en rutas del proyecto
-        'httponly' => true,
-        'samesite' => 'Lax'
-    ]);
-    session_start();
-}
-if (!isset($_SESSION['user_id'])) { Response::unauthorized(); }
+require_once '../../includes/Auth.class.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
 try {
     $db = new Database();
+    $auth = new Auth($db);
+
+    if (!$auth->isLoggedIn()) { Response::unauthorized(); }
+    $currentUser = $auth->getCurrentUser();
+
     switch ($method) {
         case 'GET':
             $requested_store_id = isset($_GET['store_id']) ? (int)$_GET['store_id'] : 0;
-            $session_store_id = isset($_SESSION['store_id']) ? (int)$_SESSION['store_id'] : 0;
+            $session_store_id = (int)$currentUser['store_id'];
 
             // Seguridad: Validar que el usuario solo acceda a su propia tienda
             if ($requested_store_id > 0 && $requested_store_id !== $session_store_id) {
@@ -81,19 +74,21 @@ try {
             Response::success($products,'Listado productos');
             break;
         case 'POST':
-            if (!in_array($_SESSION['role'],[ROLE_ADMIN,ROLE_MANAGER])) { Response::error('Permisos insuficientes',403); }
+            if (!$auth->hasRole([ROLE_ADMIN,ROLE_MANAGER])) { Response::error('Permisos insuficientes',403); }
             $data=json_decode(file_get_contents('php://input'),true);
             if(!$data){ Response::validationError(['body'=>'JSON inválido']); }
             
             // Obtener store_id de la sesión
-            $store_id = isset($_SESSION['store_id']) ? (int)$_SESSION['store_id'] : 0;
+            $store_id = (int)$currentUser['store_id'];
             if ($store_id <= 0) { Response::error('Error de sesión: Tienda no identificada', 400); }
 
             $errors=[];
             $product_name=isset($data['product_name'])?Validator::sanitizeString($data['product_name']):'';
-            $category_id=isset($data['category_id'])?(int)$data['category_id']:null;
-            $barcode=isset($data['barcode'])?Validator::sanitizeString($data['barcode']):'';
-            $qr_code=isset($data['qr_code'])?Validator::sanitizeString($data['qr_code']):'';
+            // Fix: Convertir 0 o vacío a NULL para evitar error de llave foránea
+            $category_id = isset($data['category_id']) && is_numeric($data['category_id']) && (int)$data['category_id'] > 0 ? (int)$data['category_id'] : null;
+            
+            $barcode=isset($data['barcode']) && trim($data['barcode']) !== '' ? Validator::sanitizeString($data['barcode']) : null;
+            $qr_code=isset($data['qr_code']) && trim($data['qr_code']) !== '' ? Validator::sanitizeString($data['qr_code']) : null;
             $price=isset($data['price'])?$data['price']:null;
             $cost=isset($data['cost'])?$data['cost']:0;
             $min_stock=isset($data['min_stock'])?(int)$data['min_stock']:0;
@@ -121,11 +116,11 @@ try {
             Response::success($product,'Producto creado');
             break;
         case 'PUT':
-            if (!in_array($_SESSION['role'],[ROLE_ADMIN,ROLE_MANAGER])) { Response::error('Permisos insuficientes',403); }
+            if (!$auth->hasRole([ROLE_ADMIN,ROLE_MANAGER])) { Response::error('Permisos insuficientes',403); }
             $data=json_decode(file_get_contents('php://input'),true);
             if(!$data){ Response::validationError(['body'=>'JSON inválido']); }
             
-            $store_id = isset($_SESSION['store_id']) ? (int)$_SESSION['store_id'] : 0;
+            $store_id = (int)$currentUser['store_id'];
             $product_id=isset($data['product_id'])?(int)$data['product_id']:0;
             
             if($product_id<=0){ Response::validationError(['product_id'=>'Requerido']); }
@@ -139,7 +134,9 @@ try {
             if(isset($data['description'])){ $fields[]='description = ?'; $params[]=Validator::sanitizeString($data['description']); }
             
             if(isset($data['barcode'])){ 
-                $barcode=Validator::sanitizeString($data['barcode']); 
+                $val = Validator::sanitizeString($data['barcode']);
+                $barcode = ($val !== '') ? $val : null;
+                
                 // Validar duplicado en la misma tienda
                 if($barcode && $db->selectOne('SELECT product_id FROM products WHERE barcode = ? AND store_id = ? AND product_id <> ?',[$barcode, $store_id, $product_id])){ 
                     Response::validationError(['barcode'=>'Duplicado en esta tienda']); 
@@ -148,7 +145,9 @@ try {
             }
             
             if(isset($data['qr_code'])){ 
-                $qr=Validator::sanitizeString($data['qr_code']); 
+                $val = Validator::sanitizeString($data['qr_code']);
+                $qr = ($val !== '') ? $val : null;
+                
                 // Validar duplicado en la misma tienda
                 if($qr && $db->selectOne('SELECT product_id FROM products WHERE qr_code = ? AND store_id = ? AND product_id <> ?',[$qr, $store_id, $product_id])){ 
                     Response::validationError(['qr_code'=>'Duplicado en esta tienda']); 

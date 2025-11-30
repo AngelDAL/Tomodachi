@@ -82,6 +82,52 @@ function bindEvents() {
         });
     }
 
+    // Preview de imagen en modal Agregar Producto
+    const addProductImageInput = document.getElementById('addProductImage');
+    if (addProductImageInput) {
+        addProductImageInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            const preview = document.getElementById('addProductImagePreview');
+            const nameSpan = document.getElementById('addProductImageName');
+            
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = preview.querySelector('img');
+                    img.src = e.target.result;
+                    
+                    // Ocultar el nombre del archivo
+                    if (nameSpan) nameSpan.style.display = 'none';
+
+                    // Mostrar y estilizar la vista previa
+                    preview.style.display = 'block';
+                    preview.style.width = '100%';
+                    preview.style.maxWidth = '250px';
+                    preview.style.height = '250px';
+                    preview.style.objectFit = 'contain';
+                    preview.style.border = '2px dashed #ccc';
+                    preview.style.borderRadius = '8px';
+                    preview.style.margin = '15px auto'; // Centrado
+                    preview.style.padding = '5px';
+                    preview.style.background = '#f9f9f9';
+                    
+                    // Asegurar que el contenedor padre permita el centrado
+                    preview.parentElement.style.flexDirection = 'column';
+                    preview.parentElement.style.alignItems = 'center';
+                };
+                reader.readAsDataURL(file);
+            } else {
+                preview.style.display = 'none';
+                if (nameSpan) {
+                    nameSpan.textContent = '';
+                    nameSpan.style.display = 'inline';
+                }
+                // Restaurar estilos del padre si se cancela
+                preview.parentElement.style.flexDirection = 'row';
+            }
+        });
+    }
+
     // Modal para agregar producto
     const addProductBtn = document.getElementById('addProductBtn');
     const closeModalBtn = document.getElementById('closeModalBtn');
@@ -214,6 +260,11 @@ function closeAddProductModal() {
         modal.classList.remove('show');
         // Limpiar formulario
         document.getElementById('addProductForm')?.reset();
+        // Limpiar preview de imagen
+        const preview = document.getElementById('addProductImagePreview');
+        const nameSpan = document.getElementById('addProductImageName');
+        if (preview) preview.style.display = 'none';
+        if (nameSpan) nameSpan.textContent = '';
     }
 }
 
@@ -228,6 +279,7 @@ async function submitAddProduct() {
         category_id: formData.get('category_id'),
         sku: formData.get('sku'),
         barcode: formData.get('barcode'),
+        qr_code: formData.get('qr_code'),
         price: parseFloat(formData.get('price')),
         cost: parseFloat(formData.get('cost')) || 0,
         current_stock: parseInt(formData.get('stock')),
@@ -263,6 +315,13 @@ async function submitAddProduct() {
         const data = await response.json();
 
         if (data.success) {
+            // Si hay imagen seleccionada, subirla ahora
+            const imageInput = document.getElementById('addProductImage');
+            if (imageInput && imageInput.files[0]) {
+                const newProductId = data.data.product_id;
+                await uploadImageForNewProduct(newProductId, imageInput.files[0]);
+            }
+
             showNotification('✓ Producto agregado correctamente', 'success');
             closeAddProductModal();
 
@@ -277,6 +336,29 @@ async function submitAddProduct() {
         console.error('Error:', error);
         showNotification('✗ Error al agregar el producto', 'error');
     }
+}
+
+async function uploadImageForNewProduct(productId, file) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const response = await fetch('../api/inventory/upload_image.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        product_id: productId,
+                        image_base64: e.target.result
+                    })
+                });
+                resolve(true);
+            } catch (error) {
+                console.error('Error subiendo imagen inicial:', error);
+                resolve(false);
+            }
+        };
+        reader.readAsDataURL(file);
+    });
 }
 
 function showPreview(file) {
@@ -339,168 +421,8 @@ async function uploadImageAuto(file) {
     reader.readAsDataURL(file);
 }
 
-// Sistema simple y robusto de notificaciones
-const toastSystem = {
-    container: null,
-    activeToasts: new Map(),
-    queue: [],
-    isProcessing: false,
-    maxVisible: 3,
+// Sistema de notificaciones eliminado para usar el global de app.js (consistencia con sales.js)
 
-    init() {
-        if (this.container) return;
-
-        this.container = document.createElement('div');
-        this.container.id = 'toast-container';
-        this.container.style.cssText = `
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 10000;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            pointer-events: none;
-            width: 95%;
-            max-width: 500px;
-        `;
-        document.body.appendChild(this.container);
-    },
-
-    show(message, type = 'info') {
-        this.init();
-        this.queue.push({ message, type, id: Date.now() + Math.random() });
-        this.processQueue();
-    },
-
-    processQueue() {
-        if (this.isProcessing || this.queue.length === 0) return;
-
-        if (this.activeToasts.size >= this.maxVisible && this.queue.length > 0) {
-            // Remover el toast más antiguo
-            const firstId = this.activeToasts.keys().next().value;
-            this.removeToast(firstId, true);
-            return;
-        }
-
-        this.isProcessing = true;
-        const toastData = this.queue.shift();
-
-        setTimeout(() => {
-            this.displayToast(toastData);
-            this.isProcessing = false;
-            if (this.queue.length > 0) {
-                this.processQueue();
-            }
-        }, 100);
-    },
-
-    displayToast(toastData) {
-        const { message, type, id } = toastData;
-
-        const toast = document.createElement('div');
-        toast.id = `toast-${id}`;
-        toast.className = `toast toast-${type}`;
-        toast.textContent = message;
-        // Estilos base manejados por CSS, solo mantenemos los necesarios para la animación/posicionamiento dinámico si fuera el caso
-        // Pero en este caso, todo puede ir al CSS.
-        // Mantenemos solo lo mínimo indispensable o eliminamos el style.cssText si todo está en CSS.
-        // Dado que inventory.css no tiene la clase .toast base completa (solo los colores),
-        // añadiré la clase .toast al CSS en el siguiente paso o inyectaré estilos compatibles aquí.
-        // Mejor opción: Actualizar inventory.css con la clase .toast base y limpiar aquí.
-
-        // Por ahora, para asegurar compatibilidad inmediata sin tocar CSS de nuevo si no es necesario:
-        toast.style.cssText = `
-            padding: 12px 16px;
-            color: var(--white);
-            border-radius: var(--border-radius);
-            font-size: 0.9rem;
-            box-shadow: var(--shadow-md);
-            cursor: pointer;
-            user-select: none;
-            animation: toastSlideDown 0.3s ease-out;
-            opacity: 1;
-            pointer-events: auto;
-            margin-bottom: 10px;
-        `;
-        // El background color ya viene por la clase toast-{type} definida en inventory.css
-
-        this.container.appendChild(toast);
-        this.activeToasts.set(id, { element: toast, timeout: null });
-
-        // Click para cerrar
-        toast.addEventListener('click', () => {
-            this.removeToast(id);
-        });
-
-        // Auto-cerrar después de 4 segundos
-        const timeout = setTimeout(() => {
-            this.removeToast(id);
-        }, 4000);
-
-        const toastInfo = this.activeToasts.get(id);
-        if (toastInfo) toastInfo.timeout = timeout;
-
-        // Pausar al pasar mouse
-        toast.addEventListener('mouseenter', () => {
-            if (toastInfo && toastInfo.timeout) {
-                clearTimeout(toastInfo.timeout);
-                toastInfo.timeout = null;
-            }
-        });
-
-        // Reanudar al salir
-        toast.addEventListener('mouseleave', () => {
-            if (toastInfo && !toastInfo.timeout) {
-                toastInfo.timeout = setTimeout(() => {
-                    this.removeToast(id);
-                }, 2000);
-            }
-        });
-    },
-
-    removeToast(id, immediate = false) {
-        const toastInfo = this.activeToasts.get(id);
-        if (!toastInfo) return;
-
-        // Limpiar timeout
-        if (toastInfo.timeout) {
-            clearTimeout(toastInfo.timeout);
-        }
-
-        const element = toastInfo.element;
-
-        if (immediate) {
-            // Remover inmediatamente
-            if (element.parentElement) {
-                element.remove();
-            }
-            this.activeToasts.delete(id);
-        } else {
-            // Animar salida
-            element.style.animation = 'toastSlideUp 0.3s ease-out';
-            element.style.opacity = '0';
-
-            setTimeout(() => {
-                if (element.parentElement) {
-                    element.remove();
-                }
-                this.activeToasts.delete(id);
-
-                // Procesar siguiente en la cola si hay
-                if (this.queue.length > 0) {
-                    this.isProcessing = false;
-                    this.processQueue();
-                }
-            }, 300);
-        }
-    }
-};
-
-function showNotification(message, type = 'info') {
-    toastSystem.show(message, type);
-}
 
 async function uploadImage() {
     const productId = document.getElementById('productId')?.value;

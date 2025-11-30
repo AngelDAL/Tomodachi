@@ -8,16 +8,22 @@ require_once '../../config/constants.php';
 require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
 
-session_start();
-if (!isset($_SESSION['user_id'])) { Response::unauthorized(); }
+require_once '../../includes/Validator.class.php';
+require_once '../../includes/Auth.class.php';
 
-if ($_SERVER['REQUEST_METHOD'] !== 'GET') { Response::error('Método no permitido',405); }
+$method = $_SERVER['REQUEST_METHOD'];
+
+if ($method !== 'GET') { Response::error('Método no permitido',405); }
 
 try {
+    $db = new Database();
+    $auth = new Auth($db);
+
+    if (!$auth->isLoggedIn()) { Response::unauthorized(); }
+
     $store_id = isset($_GET['store_id']) ? (int)$_GET['store_id'] : 0;
     $date = isset($_GET['date']) ? $_GET['date'] : date('Y-m-d');
 
-    $db = new Database();
     $params=[];
     $sql='SELECT sale_id, store_id, user_id, register_id, sale_date, total, status, payment_method FROM sales WHERE DATE(sale_date) = ?';
     $params[]=$date;

@@ -8,13 +8,22 @@ require_once '../../config/constants.php';
 require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
 
-session_start();
-if (!isset($_SESSION['user_id'])) { Response::unauthorized(); }
-if (!in_array($_SESSION['role'],[ROLE_ADMIN,ROLE_MANAGER])) { Response::error('Permisos insuficientes',403); }
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') { Response::error('Método no permitido',405); }
+require_once '../../includes/Validator.class.php';
+require_once '../../includes/Auth.class.php';
+
+$method = $_SERVER['REQUEST_METHOD'];
+
+if ($method !== 'POST') { Response::error('Método no permitido',405); }
 
 try {
     $db = new Database();
+    $auth = new Auth($db);
+
+    if (!$auth->isLoggedIn()) { Response::unauthorized(); }
+    if (!$auth->hasRole([ROLE_ADMIN,ROLE_MANAGER])) { Response::error('Permisos insuficientes',403); }
+
+    $currentUser = $auth->getCurrentUser();
+
     $data = json_decode(file_get_contents('php://input'), true);
     if (!$data) { Response::validationError(['body'=>'JSON inválido']); }
     $sale_id = isset($data['sale_id']) ? (int)$data['sale_id'] : 0;
@@ -36,7 +45,7 @@ try {
                 $new_stock = $inv['current_stock'] + $it['quantity'];
                 $db->update('UPDATE inventory SET current_stock = ?, last_updated = NOW() WHERE inventory_id = ?',[$new_stock,$inv['inventory_id']]);
                 $db->insert('INSERT INTO inventory_movements (store_id, product_id, user_id, movement_type, quantity, previous_stock, new_stock, notes, created_at) VALUES (?,?,?,?,?,?,?,?,NOW())',[
-                    $sale['store_id'],$it['product_id'],$_SESSION['user_id'],MOVEMENT_RETURN,$it['quantity'],$inv['current_stock'],$new_stock,'Cancelación venta #'.$sale_id
+                    $sale['store_id'],$it['product_id'],$currentUser['user_id'],MOVEMENT_RETURN,$it['quantity'],$inv['current_stock'],$new_stock,'Cancelación venta #'.$sale_id
                 ]);
             }
         }
@@ -44,7 +53,7 @@ try {
         $db->update('UPDATE sales SET status = ? WHERE sale_id = ?',[SALE_CANCELLED,$sale_id]);
         // Movimiento caja negativo si fue en efectivo
         if (in_array($sale['payment_method'],[PAYMENT_CASH,PAYMENT_MIXED])) {
-            $db->insert('INSERT INTO cash_movements (register_id, user_id, movement_type, amount, description, created_at) VALUES (?,?,?,?,?,NOW())',[ $sale['register_id'], $_SESSION['user_id'], 'withdrawal', $sale['total'], 'Cancelación Venta #'.$sale_id ]);
+            $db->insert('INSERT INTO cash_movements (register_id, user_id, movement_type, amount, description, created_at) VALUES (?,?,?,?,?,NOW())',[ $sale['register_id'], $currentUser['user_id'], 'withdrawal', $sale['total'], 'Cancelación Venta #'.$sale_id ]);
         }
         $db->commit();
     } catch (Exception $e) {

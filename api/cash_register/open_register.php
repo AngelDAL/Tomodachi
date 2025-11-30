@@ -8,13 +8,22 @@ require_once '../../config/constants.php';
 require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
 
-session_start();
-if (!isset($_SESSION['user_id'])) { Response::unauthorized(); }
-if (!in_array($_SESSION['role'],[ROLE_ADMIN,ROLE_MANAGER,ROLE_CASHIER])) { /* rol no autorizado */ Response::unauthorized(); }
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') { Response::error('Método no permitido',405); }
+require_once '../../includes/Validator.class.php';
+require_once '../../includes/Auth.class.php';
+
+$method = $_SERVER['REQUEST_METHOD'];
+
+if ($method !== 'POST') { Response::error('Método no permitido',405); }
 
 try {
     $db = new Database();
+    $auth = new Auth($db);
+
+    if (!$auth->isLoggedIn()) { Response::unauthorized(); }
+    if (!$auth->hasRole([ROLE_ADMIN,ROLE_MANAGER,ROLE_CASHIER])) { Response::error('Permisos insuficientes',403); }
+
+    $currentUser = $auth->getCurrentUser();
+
     $data = json_decode(file_get_contents('php://input'), true);
     if (!$data) { Response::validationError(['body'=>'JSON inválido']); }
     $store_id = isset($data['store_id']) ? (int)$data['store_id'] : 0;
@@ -31,7 +40,7 @@ try {
     if ($open) { Response::error('Ya existe caja abierta',409); }
 
     $rid = $db->insert('INSERT INTO cash_registers (store_id, user_id, opening_date, initial_amount, status) VALUES (?,?,NOW(),?,?)',[
-        $store_id,$_SESSION['user_id'],$initial,REGISTER_OPEN
+        $store_id,$currentUser['user_id'],$initial,REGISTER_OPEN
     ]);
 
     Response::success(['register_id'=>$rid,'store_id'=>$store_id],'Caja abierta');

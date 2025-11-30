@@ -9,13 +9,22 @@ require_once '../../config/constants.php';
 require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
 
-session_start();
-if (!isset($_SESSION['user_id'])) { Response::unauthorized(); }
-if (!in_array($_SESSION['role'],[ROLE_ADMIN,ROLE_MANAGER,ROLE_CASHIER])) { Response::unauthorized(); }
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') { Response::error('Método no permitido',405); }
+require_once '../../includes/Validator.class.php';
+require_once '../../includes/Auth.class.php';
+
+$method = $_SERVER['REQUEST_METHOD'];
+
+if ($method !== 'POST') { Response::error('Método no permitido',405); }
 
 try {
     $db = new Database();
+    $auth = new Auth($db);
+
+    if (!$auth->isLoggedIn()) { Response::unauthorized(); }
+    if (!$auth->hasRole([ROLE_ADMIN,ROLE_MANAGER,ROLE_CASHIER])) { Response::error('Permisos insuficientes',403); }
+
+    $currentUser = $auth->getCurrentUser();
+
     $data = json_decode(file_get_contents('php://input'), true);
     if (!$data) { Response::validationError(['body'=>'JSON inválido']); }
 
@@ -44,7 +53,7 @@ try {
     if ($register['status'] !== REGISTER_OPEN) { Response::error('La caja no está abierta',409); }
 
     $mid = $db->insert('INSERT INTO cash_movements (register_id, user_id, movement_type, amount, description) VALUES (?,?,?,?,?)',[
-        $register_id, $_SESSION['user_id'], $movement_type, $amount, $description
+        $register_id, $currentUser['user_id'], $movement_type, $amount, $description
     ]);
 
     Response::success(['movement_id'=>$mid,'register_id'=>$register_id,'movement_type'=>$movement_type,'amount'=>$amount],'Movimiento registrado');

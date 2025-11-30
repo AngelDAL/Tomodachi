@@ -48,8 +48,12 @@ try {
     if ($errors) { Response::validationError($errors); }
 
     // Validar store
-    $store = $db->selectOne('SELECT store_id FROM stores WHERE store_id = ? AND status = ?',[$store_id,STATUS_ACTIVE]);
-    if (!$store) { Response::error('Tienda no válida',404); }
+    $storeInfo = $db->selectOne('SELECT store_id, settings FROM stores WHERE store_id = ? AND status = ?',[$store_id,STATUS_ACTIVE]);
+    if (!$storeInfo) { Response::error('Tienda no válida',404); }
+    
+    // Configuración de stock negativo
+    $storeSettings = $storeInfo['settings'] ? json_decode($storeInfo['settings'], true) : [];
+    $allowNegativeStock = isset($storeSettings['allow_negative_stock']) && $storeSettings['allow_negative_stock'];
 
     // Obtener caja abierta si no se pasa register_id
     if ($register_id<=0) {
@@ -78,8 +82,19 @@ try {
         $prod = $db->selectOne('SELECT product_id, status FROM products WHERE product_id = ? AND status = ?',[$pid,STATUS_ACTIVE]);
         if (!$prod) { Response::error('Producto inactivo o inexistente ID '.$pid,404); }
         $inv = $db->selectOne('SELECT inventory_id, current_stock FROM inventory WHERE store_id = ? AND product_id = ?',[$store_id,$pid]);
-        $stockActual = $inv ? (int)$inv['current_stock'] : 0;
-        if ($stockActual < $qty) { Response::error('Stock insuficiente producto ID '.$pid,409); }
+        
+        if (!$inv) {
+            // Si no existe registro de inventario, es un error de integridad de datos
+            Response::error('Error de datos: El producto ID '.$pid.' no tiene registro de inventario inicializado.', 500);
+        }
+
+        $stockActual = (int)$inv['current_stock'];
+        
+        // Validar stock solo si NO se permite stock negativo
+        if (!$allowNegativeStock && $stockActual < $qty) { 
+            Response::error('Stock insuficiente producto ID '.$pid,409); 
+        }
+        
         $lineSubtotal = $qty * $price;
         $subtotal += $lineSubtotal;
         $productsToUpdate[] = [

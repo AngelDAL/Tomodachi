@@ -11,14 +11,16 @@ require_once '../../config/constants.php';
 require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
 require_once '../../includes/Validator.class.php';
-
-session_start();
-if (!isset($_SESSION['user_id'])) { Response::unauthorized(); }
+require_once '../../includes/Auth.class.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
 try {
     $db = new Database();
+    $auth = new Auth($db);
+
+    if (!$auth->isLoggedIn()) { Response::unauthorized(); }
+    $currentUser = $auth->getCurrentUser();
 
     switch ($method) {
         case 'GET':
@@ -26,7 +28,7 @@ try {
             Response::success($categories,'Listado de categorías');
             break;
         case 'POST':
-            if (!in_array($_SESSION['role'],[ROLE_ADMIN,ROLE_MANAGER])) { Response::error('Permisos insuficientes',403); }
+            if (!$auth->hasRole([ROLE_ADMIN,ROLE_MANAGER])) { Response::error('Permisos insuficientes',403); }
             $data = json_decode(file_get_contents('php://input'), true);
             if (!$data) { Response::validationError(['body'=>'JSON inválido']); }
             $name = isset($data['category_name']) ? Validator::sanitizeString($data['category_name']) : '';
@@ -39,7 +41,7 @@ try {
             Response::success($cat,'Categoría creada');
             break;
         case 'PUT':
-            if (!in_array($_SESSION['role'],[ROLE_ADMIN,ROLE_MANAGER])) { Response::error('Permisos insuficientes',403); }
+            if (!$auth->hasRole([ROLE_ADMIN,ROLE_MANAGER])) { Response::error('Permisos insuficientes',403); }
             $data = json_decode(file_get_contents('php://input'), true);
             if (!$data) { Response::validationError(['body'=>'JSON inválido']); }
             $id = isset($data['category_id']) ? (int)$data['category_id'] : 0;
@@ -57,7 +59,7 @@ try {
             Response::success($cat,'Categoría actualizada');
             break;
         case 'DELETE':
-            if (!in_array($_SESSION['role'],[ROLE_ADMIN,ROLE_MANAGER])) { Response::error('Permisos insuficientes',403); }
+            if (!$auth->hasRole([ROLE_ADMIN,ROLE_MANAGER])) { Response::error('Permisos insuficientes',403); }
             $data = json_decode(file_get_contents('php://input'), true);
             if (!$data) { Response::validationError(['body'=>'JSON inválido']); }
             $id = isset($data['category_id']) ? (int)$data['category_id'] : 0;

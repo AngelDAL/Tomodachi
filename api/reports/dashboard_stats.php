@@ -17,25 +17,35 @@ try {
     }
     
     $conn = $db->getConnection();
+    $currentUser = $auth->getCurrentUser();
     
-    $store_id = $_SESSION['store_id'] ?? 1; // Default to store 1 if not set
+    $store_id = $currentUser['store_id'] ?? 1; // Default to store 1 if not set
     
-    // 1. Daily Sales & Profit
+    // 1. Daily Sales
     $stmt = $conn->prepare("
-        SELECT 
-            COALESCE(SUM(s.total), 0) as total_sales,
-            COALESCE(SUM(sd.quantity * COALESCE(p.cost, 0)), 0) as total_cost
+        SELECT COALESCE(SUM(total), 0) as total_sales
+        FROM sales
+        WHERE store_id = ? 
+        AND DATE(sale_date) = CURDATE() 
+        AND status = 'completed'
+    ");
+    $stmt->execute([$store_id]);
+    $dailySales = $stmt->fetch(PDO::FETCH_ASSOC)['total_sales'];
+
+    // 1.1 Daily Cost (for Profit)
+    $stmt = $conn->prepare("
+        SELECT COALESCE(SUM(sd.quantity * COALESCE(p.cost, 0)), 0) as total_cost
         FROM sales s
-        LEFT JOIN sale_details sd ON s.sale_id = sd.sale_id
-        LEFT JOIN products p ON sd.product_id = p.product_id
+        JOIN sale_details sd ON s.sale_id = sd.sale_id
+        JOIN products p ON sd.product_id = p.product_id
         WHERE s.store_id = ? 
         AND DATE(s.sale_date) = CURDATE() 
         AND s.status = 'completed'
     ");
     $stmt->execute([$store_id]);
-    $dailyStats = $stmt->fetch(PDO::FETCH_ASSOC);
-    $dailySales = $dailyStats['total_sales'];
-    $dailyProfit = $dailySales - $dailyStats['total_cost'];
+    $totalCost = $stmt->fetch(PDO::FETCH_ASSOC)['total_cost'];
+    
+    $dailyProfit = $dailySales - $totalCost;
     
     // 2. Transactions
     $stmt = $conn->prepare("
@@ -120,11 +130,26 @@ try {
     unset($sale); // Break reference
 
     // 6. Sales & Profit Chart Data (Last 7 days)
+    
+    // 6.1 Get Revenue per day (from sales table only)
+    $stmt = $conn->prepare("
+        SELECT 
+            DATE(sale_date) as date, 
+            SUM(total) as revenue
+        FROM sales
+        WHERE store_id = ?
+        AND sale_date >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+        AND status = 'completed'
+        GROUP BY DATE(sale_date)
+    ");
+    $stmt->execute([$store_id]);
+    $revenueData = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+
+    // 6.2 Get Cost per day
     $stmt = $conn->prepare("
         SELECT 
             DATE(s.sale_date) as date, 
-            SUM(s.total) as revenue,
-            SUM(sd.quantity * p.cost) as total_cost
+            SUM(sd.quantity * COALESCE(p.cost, 0)) as total_cost
         FROM sales s
         JOIN sale_details sd ON s.sale_id = sd.sale_id
         JOIN products p ON sd.product_id = p.product_id
@@ -132,10 +157,9 @@ try {
         AND s.sale_date >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
         AND s.status = 'completed'
         GROUP BY DATE(s.sale_date)
-        ORDER BY date ASC
     ");
     $stmt->execute([$store_id]);
-    $chartRawData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $costData = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
     
     // Fill in missing dates with 0
     $labels = [];
@@ -144,19 +168,9 @@ try {
     
     for ($i = 6; $i >= 0; $i--) {
         $date = date('Y-m-d', strtotime("-$i days"));
-        $found = false;
-        $revenue = 0;
-        $cost = 0;
         
-        foreach ($chartRawData as $row) {
-            if ($row['date'] == $date) {
-                $revenue = (float)$row['revenue'];
-                $cost = (float)$row['total_cost'];
-                $found = true;
-                break;
-            }
-        }
-        
+        $revenue = isset($revenueData[$date]) ? (float)$revenueData[$date] : 0;
+        $cost = isset($costData[$date]) ? (float)$costData[$date] : 0;
         $profit = $revenue - $cost;
         
         $labels[] = date('d/m', strtotime($date));

@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/inventory.css">
+    <script src="js/theme-init.js"></script>
 </head>
 <body>
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
@@ -30,13 +31,22 @@
                 <a href="inventory.html" class="nav-item active">
                     <span><i class="fas fa-box"></i></span> Inventario
                 </a>
-                <div class="nav-group user-nav-group">
-                    <button class="nav-item nav-item-btn" id="userMenuBtn">
-                        <span><i class="fas fa-user-circle"></i></span> Usuario
-                    </button>
-                    <div class="user-tooltip-menu" id="userTooltipMenu">
-                        <a href="#" class="tooltip-item" onclick="showProfileSettings(); return false;">
-                            <i class="fas fa-cog"></i> Mi Perfil
+                <a href="reports.html" class="nav-item desktop-only-nav">
+                    <span><i class="fas fa-chart-bar"></i></span> Reportes
+                </a>
+                
+                <div class="nav-group profile-nav-group">
+                    <a href="profile.html" class="nav-item" id="profileMenuBtn">
+                        <span class="profile-icon-container">
+                            <img src="assets/images/default-logo.png" alt="Store" class="nav-profile-img" id="navStoreLogo" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block'">
+                            <i class="fas fa-circle-user" style="display:none; font-size: 1.5rem;"></i>
+                        </span>
+                        <span class="nav-text">Mi Perfil</span>
+                    </a>
+                    
+                    <div class="user-tooltip-menu" id="profileTooltipMenu">
+                        <a href="profile.html" class="tooltip-item">
+                            <i class="fas fa-cog"></i> Configuración
                         </a>
                         <a href="reports.html" class="tooltip-item">
                             <i class="fas fa-chart-bar"></i> Reportes
@@ -127,6 +137,20 @@
                     <label for="productDescInput">Descripción</label>
                     <textarea id="productDescInput" name="description" placeholder="Describe el producto..." rows="3"></textarea>
                 </div>
+
+                <div class="form-group">
+                    <label>Imagen del Producto</label>
+                    <div class="image-input-wrapper" style="display: flex; align-items: center; gap: 15px;">
+                        <label for="addProductImage" class="btn-secondary" style="cursor: pointer; padding: 8px 15px; border-radius: 4px; background: #e0e0e0;">
+                            <i class="fas fa-camera"></i> Seleccionar
+                        </label>
+                        <input type="file" id="addProductImage" accept="image/*" style="display: none;">
+                        <div id="addProductImagePreview" style="width: 50px; height: 50px; border-radius: 4px; overflow: hidden; display: none; border: 1px solid #ddd;">
+                            <img src="" style="width: 100%; height: 100%; object-fit: cover;">
+                        </div>
+                        <span id="addProductImageName" style="font-size: 0.9em; color: #666;"></span>
+                    </div>
+                </div>
                 
                 <div class="form-row">
                     <div class="form-group">
@@ -141,9 +165,15 @@
                     </div>
                 </div>
                 
-                <div class="form-group">
-                    <label for="productBarcodeInput">Código de Barras</label>
-                    <input type="text" id="productBarcodeInput" name="barcode" placeholder="Escanea o ingresa">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="productBarcodeInput">Código de Barras</label>
+                        <input type="text" id="productBarcodeInput" name="barcode" placeholder="Escanea o ingresa">
+                    </div>
+                    <div class="form-group">
+                        <label for="productQRInput">Código QR</label>
+                        <input type="text" id="productQRInput" name="qr_code" placeholder="Escanea o ingresa">
+                    </div>
                 </div>
                 
                 <div class="form-row">

@@ -30,6 +30,8 @@ async function logout() {
         const response = await fetch('../api/auth/logout.php');
         const dataResponse = await response.json();
         if (dataResponse.success) {
+            // Limpiar configuración de tema cacheada
+            localStorage.removeItem('pos_theme_config');
             window.location.href = 'login.html';
         }
     } catch (error) {
@@ -194,30 +196,110 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Lógica para el menú tooltip de usuario
+// Lógica para el menú tooltip de usuario (Perfil)
 document.addEventListener('DOMContentLoaded', () => {
-    const userMenuBtn = document.getElementById('userMenuBtn');
-    const userTooltipMenu = document.getElementById('userTooltipMenu');
+    const profileMenuBtn = document.getElementById('profileMenuBtn');
+    const profileTooltipMenu = document.getElementById('profileTooltipMenu');
 
-    if (userMenuBtn && userTooltipMenu) {
-        userMenuBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            userTooltipMenu.classList.toggle('show');
-            userMenuBtn.classList.toggle('active');
+    if (profileMenuBtn && profileTooltipMenu) {
+        profileMenuBtn.addEventListener('click', (e) => {
+            // Solo activar el menú en vista móvil (<= 768px)
+            if (window.innerWidth <= 768) {
+                e.preventDefault();
+                e.stopPropagation();
+                profileTooltipMenu.classList.toggle('show');
+                profileMenuBtn.classList.toggle('active');
+            }
+            // En escritorio, el enlace funciona normalmente (va a profile.html)
         });
 
         // Cerrar al hacer clic fuera
         document.addEventListener('click', (e) => {
-            if (!userMenuBtn.contains(e.target) && !userTooltipMenu.contains(e.target)) {
-                userTooltipMenu.classList.remove('show');
-                userMenuBtn.classList.remove('active');
+            if (!profileMenuBtn.contains(e.target) && !profileTooltipMenu.contains(e.target)) {
+                profileTooltipMenu.classList.remove('show');
+                profileMenuBtn.classList.remove('active');
             }
         });
     }
+    
+    // Cargar configuración de la tienda (Logo y Tema)
+    loadStoreSettings();
 });
 
-// Función placeholder para ajustes de perfil
+async function loadStoreSettings() {
+    try {
+        const response = await fetch('../api/stores/settings.php');
+        const data = await response.json();
+        
+        if (data.success) {
+            const store = data.data;
+
+            // 1. Aplicar Logo
+            const logoImg = document.getElementById('navStoreLogo');
+            if (logoImg) {
+                if (store.logo_url) {
+                    logoImg.src = store.logo_url;
+                    // Asegurar que se muestre si estaba oculto por error o fallback previo
+                    logoImg.style.display = 'inline-block';
+                    if (logoImg.nextElementSibling) {
+                        logoImg.nextElementSibling.style.display = 'none';
+                    }
+                } else {
+                    // Fallback si no hay logo
+                    logoImg.style.display = 'none';
+                    if (logoImg.nextElementSibling) {
+                        logoImg.nextElementSibling.style.display = 'inline-block';
+                    }
+                }
+            }
+
+            // 2. Aplicar Tema (Variables CSS)
+            if (store.theme_config) {
+                applyTheme(store.theme_config);
+                // Guardar en caché para carga rápida
+                localStorage.setItem('pos_theme_config', JSON.stringify(store.theme_config));
+            }
+        }
+    } catch (error) {
+        console.error('Error cargando configuración de tienda:', error);
+    }
+}
+
+function applyTheme(themeConfig) {
+    if (!themeConfig) return;
+    
+    // Mapeo de claves JSON a variables CSS (si usamos nombres directos en el JSON, es más fácil)
+    // Asumimos que el JSON tiene claves como 'primary_color' o '--primary-color'
+    // En profile.js usamos input.name que es 'primary_color', 'secondary_color', etc.
+    // Pero en el HTML pusimos data-var="--primary-color".
+    // Vamos a iterar sobre las claves del objeto y mapear si es necesario, o usar un mapa fijo.
+    
+    const varMap = {
+        'primary_color': '--primary-color',
+        'secondary_color': '--secondary-color',
+        'success_color': '--success-color',
+        'danger_color': '--danger-color',
+        'warning_color': '--warning-color',
+        'info_color': '--info-color',
+        'dark_color': '--dark-color',
+        'bg_body': '--bg-body',
+        'text_color': '--text-color'
+    };
+
+    for (const [key, value] of Object.entries(themeConfig)) {
+        if (varMap[key] && value) {
+            document.documentElement.style.setProperty(varMap[key], value);
+            
+            // Calcular variantes oscuras/claras automáticamente si es necesario
+            if (key === 'primary_color') {
+                // Simple darken logic could go here if we wanted to generate --primary-dark automatically
+                // But for now, let's stick to what the user picked.
+            }
+        }
+    }
+}
+
+// Función para ir a ajustes de perfil
 function showProfileSettings() {
-    alert('Próximamente: Ajustes de perfil y empresa');
+    window.location.href = 'profile.html';
 }

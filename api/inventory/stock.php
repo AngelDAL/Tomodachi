@@ -9,26 +9,37 @@ require_once '../../config/constants.php';
 require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
 require_once '../../includes/Validator.class.php';
+require_once '../../includes/Auth.class.php';
 
-session_start();
-if (!isset($_SESSION['user_id'])) { Response::unauthorized(); }
-if (!in_array($_SESSION['role'],[ROLE_ADMIN,ROLE_MANAGER])) { Response::error('Permisos insuficientes',403); }
+$method = $_SERVER['REQUEST_METHOD'];
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') { Response::error('Método no permitido',405); }
+if ($method !== 'POST') { Response::error('Método no permitido',405); }
 
 try {
     $db = new Database();
+    $auth = new Auth($db);
+
+    if (!$auth->isLoggedIn()) { Response::unauthorized(); }
+    if (!$auth->hasRole([ROLE_ADMIN,ROLE_MANAGER])) { Response::error('Permisos insuficientes',403); }
+
+    $currentUser = $auth->getCurrentUser();
+
     $data = json_decode(file_get_contents('php://input'), true);
     if (!$data) { Response::validationError(['body'=>'JSON inválido']); }
 
-    $store_id = isset($data['store_id']) ? (int)$data['store_id'] : 0;
+    // Usar store_id del usuario actual para seguridad
+    $store_id = (int)$currentUser['store_id'];
+    
+    // Si el usuario es admin global (si existiera esa lógica) podría permitirse cambiar, 
+    // pero por ahora forzamos la tienda del usuario como en products.php
+    
     $product_id = isset($data['product_id']) ? (int)$data['product_id'] : 0;
     $movement_type = isset($data['movement_type']) ? Validator::sanitizeString($data['movement_type']) : '';
     $quantity = isset($data['quantity']) ? (int)$data['quantity'] : 0;
     $notes = isset($data['notes']) ? Validator::sanitizeString($data['notes']) : '';
 
     $errors=[];
-    if ($store_id<=0) $errors['store_id']='Requerido';
+    if ($store_id<=0) $errors['store_id']='Tienda no identificada';
     if ($product_id<=0) $errors['product_id']='Requerido';
     if (!in_array($movement_type,[MOVEMENT_ENTRY,MOVEMENT_EXIT,MOVEMENT_ADJUSTMENT,MOVEMENT_RETURN])) $errors['movement_type']='Tipo inválido';
     if ($quantity===0) $errors['quantity']='Cantidad debe ser distinta de 0';
@@ -36,8 +47,14 @@ try {
 
     $store = $db->selectOne('SELECT store_id FROM stores WHERE store_id = ? AND status = ?',[$store_id,STATUS_ACTIVE]);
     if (!$store) { Response::error('Tienda no válida',404); }
-    $product = $db->selectOne('SELECT product_id FROM products WHERE product_id = ? AND status = ?',[$product_id,STATUS_ACTIVE]);
-    if (!$product) { Response::error('Producto no válido',404); }
+    
+    // Verificar que el producto pertenezca a la tienda (o sea global pero accesible)
+    // En products.php se verifica: product_id = ? AND store_id = ?
+    // Pero los productos pueden ser globales? El esquema dice products tiene store_id.
+    // Así que debemos verificar que el producto sea de la tienda.
+    $product = $db->selectOne('SELECT product_id FROM products WHERE product_id = ? AND store_id = ? AND status = ?',[$product_id, $store_id, STATUS_ACTIVE]);
+    
+    if (!$product) { Response::error('Producto no válido o no pertenece a su tienda',404); }
 
     // Obtener stock actual (crear si no existe)
     $inv = $db->selectOne('SELECT inventory_id, current_stock FROM inventory WHERE store_id = ? AND product_id = ?',[$store_id,$product_id]);
@@ -69,7 +86,7 @@ try {
     try {
         $db->update('UPDATE inventory SET current_stock = ?, last_updated = NOW() WHERE inventory_id = ?',[$new_stock,$inv['inventory_id']]);
         $db->insert('INSERT INTO inventory_movements (store_id, product_id, user_id, movement_type, quantity, previous_stock, new_stock, notes, created_at) VALUES (?,?,?,?,?,?,?,?,NOW())',[
-            $store_id,$product_id,$_SESSION['user_id'],$movement_type,$quantity,$previous,$new_stock,$notes
+            $store_id,$product_id,$currentUser['user_id'],$movement_type,$quantity,$previous,$new_stock,$notes
         ]);
         $db->commit();
     } catch (Exception $e) {

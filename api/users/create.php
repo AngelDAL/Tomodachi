@@ -13,15 +13,17 @@ require_once '../../includes/Auth.class.php';
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Methods: POST');
 
-session_start();
-if (!isset($_SESSION['user_id'])) { Response::unauthorized(); }
-if ($_SESSION['role'] !== ROLE_ADMIN && $_SESSION['role'] !== ROLE_MANAGER) { Response::error('Permisos insuficientes',403); }
-
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') { Response::error('Método no permitido',405); }
 
 try {
     $db = new Database();
     $auth = new Auth($db);
+
+    if (!$auth->isLoggedIn()) { Response::unauthorized(); }
+    
+    // Solo administrador puede crear usuarios
+    if (!$auth->hasRole(ROLE_ADMIN)) { Response::error('Permisos insuficientes', 403); }
+
     $data = json_decode(file_get_contents('php://input'), true);
     if (!$data) { Response::validationError(['body'=>'JSON inválido']); }
 

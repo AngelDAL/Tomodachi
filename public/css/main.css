@@ -783,17 +783,20 @@ body {
 .form-group input.error {
     border-color: var(--danger-color);
 }
-
+.nav-text{
+    font-size: 1.2rem;
+}
 /* Notificaciones Modernas (Glassmorphism Black) */
 .notification {
     position: fixed;
     top: 20px;
-    right: 20px;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%) translateY(-150%);
     padding: 14px 24px;
     border-radius: 16px;
     color: rgba(255, 255, 255, 0.95);
     z-index: 9999;
-    transform: translateX(120%);
     transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
     
     /* Efecto Cristal Negro Elegante */
@@ -812,10 +815,11 @@ body {
     pointer-events: auto;
     max-width: 380px;
     min-width: 300px;
+    justify-content: center;
 }
 
 .notification.show {
-    transform: translateX(0);
+    transform: translateX(-50%) translateY(0);
     opacity: 1;
 }
 
@@ -1072,8 +1076,8 @@ table tr:hover {
 
     .nav-item {
         flex-direction: column;
-        padding: 8px 5px;
-        font-size: 0.7rem;
+        padding: 6px 2px;
+        font-size: 0.65rem;
         text-align: center;
         flex: 1;
         justify-content: center;
@@ -1106,8 +1110,8 @@ table tr:hover {
 
     .nav-item span {
         margin-right: 0;
-        margin-bottom: 4px;
-        font-size: 1.4rem;
+        margin-bottom: 3px;
+        font-size: 1.15rem;
         display: block;
     }
     
@@ -1219,28 +1223,43 @@ table tr:hover {
     }
 }
 
+/* Estilos para imagen de perfil en sidebar */
+.nav-profile-img {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-right: 10px;
+    border: 2px solid rgba(255,255,255,0.2);
+}
+
+.profile-icon-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 /* Posicionamiento en Escritorio (Sidebar lateral) */
 @media (min-width: 769px) {
     .user-tooltip-menu {
-        left: 100%; /* A la derecha del sidebar */
-        top: 0;
-        margin-left: 15px;
+        display: none !important; /* Ocultar tooltip en escritorio */
     }
     
-    /* Flechita apuntando a la izquierda */
-    .user-tooltip-menu::before {
-        content: '';
-        position: absolute;
-        left: -8px;
-        top: 20px;
-        border-top: 8px solid transparent;
-        border-bottom: 8px solid transparent;
-        border-right: 8px solid white;
+    .desktop-only-nav {
+        display: flex;
+    }
+    
+    .profile-nav-group {
+        /* En escritorio se comporta como un item normal */
     }
 }
 
 /* Posicionamiento en Móvil (Bottom Nav) */
 @media (max-width: 768px) {
+    .desktop-only-nav {
+        display: none !important; /* Ocultar Reportes en móvil */
+    }
+
     .nav-group {
         flex: 1;
         display: flex;
@@ -1267,6 +1286,46 @@ table tr:hover {
         margin-bottom: 4px;
         margin-right: 0;
     }
+    
+    /* Ajuste para imagen en móvil */
+    .profile-nav-group .nav-item .nav-text {
+        display: none !important;
+    }
+
+    .profile-nav-group .nav-item {
+        padding: 2px;
+        justify-content: center;
+    }
+
+    .nav-profile-img {
+        width: 48px;
+        height: 48px;
+        margin: 0;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid rgba(255,255,255,0.2);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        animation: logo-pulse 6s infinite ease-in-out;
+    }
+
+    @keyframes logo-pulse {
+        0%, 85% {
+            transform: scale(1);
+            box-shadow: 0 0 0 rgba(255,255,255,0);
+            border-color: rgba(255,255,255,0.2);
+        }
+        90% {
+            transform: scale(1.05);
+            border-color: rgba(255,255,255,0.6);
+            box-shadow: 0 0 10px rgba(255,255,255,0.2);
+        }
+        95% {
+            transform: scale(0.98);
+        }
+        100% {
+            transform: scale(1);
+        }
+    }
 
     .user-tooltip-menu {
         bottom: 100%; /* Encima del bottom nav */
@@ -1274,7 +1333,12 @@ table tr:hover {
         transform: translateX(-50%);
         margin-bottom: 15px;
         width: 220px;
-        z-index: 2100; /* Asegurar que esté por encima de todo */
+        z-index: 99999; /* Asegurar que esté por encima de todo */
+    }
+    
+    /* Permitir mostrar tooltip en móvil */
+    .user-tooltip-menu.show {
+        display: flex !important;
     }
 
     /* Flechita apuntando hacia abajo */

@@ -9,13 +9,20 @@ require_once '../../config/constants.php';
 require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
 
-session_start();
-if (!isset($_SESSION['user_id'])) { Response::unauthorized(); }
-if (!in_array($_SESSION['role'],[ROLE_ADMIN,ROLE_MANAGER,ROLE_CASHIER])) { Response::unauthorized(); }
-if ($_SERVER['REQUEST_METHOD'] !== 'GET') { Response::error('Método no permitido',405); }
+require_once '../../includes/Validator.class.php';
+require_once '../../includes/Auth.class.php';
+
+$method = $_SERVER['REQUEST_METHOD'];
+
+if ($method !== 'GET') { Response::error('Método no permitido',405); }
 
 try {
     $db = new Database();
+    $auth = new Auth($db);
+
+    if (!$auth->isLoggedIn()) { Response::unauthorized(); }
+    if (!$auth->hasRole([ROLE_ADMIN,ROLE_MANAGER,ROLE_CASHIER])) { Response::error('Permisos insuficientes',403); }
+
     $register_id = isset($_GET['register_id']) ? (int)$_GET['register_id'] : 0;
     $store_id = isset($_GET['store_id']) ? (int)$_GET['store_id'] : 0;
 

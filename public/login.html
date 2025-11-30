@@ -38,12 +38,16 @@
             </form>
 
             <div class="login-footer">
-                <p>Versión 1.0.0</p>
+                <p>¿No tienes cuenta? <a href="register.html" style="color: var(--primary-color); text-decoration: none;">Regístrate aquí</a></p>
+                <p style="margin-top: 10px; font-size: 0.8em;">Versión 1.0.0</p>
             </div>
         </div>
     </div>
 
     <script>
+        // Limpiar cualquier tema residual de sesiones anteriores
+        localStorage.removeItem('pos_theme_config');
+
         const loginForm = document.getElementById('loginForm');
         const errorMessage = document.getElementById('errorMessage');
 

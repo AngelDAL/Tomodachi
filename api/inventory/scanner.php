@@ -7,29 +7,24 @@ require_once '../../config/database.php';
 require_once '../../config/constants.php';
 require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
+require_once '../../includes/Auth.class.php';
 
-// Inicializar sesión con parámetros consistentes (Igual que en products.php)
-if (session_status() === PHP_SESSION_NONE) {
-    session_name(SESSION_NAME);
-    session_set_cookie_params([
-        'lifetime' => SESSION_LIFETIME,
-        'path' => '/',
-        'httponly' => true,
-        'samesite' => 'Lax'
-    ]);
-    session_start();
-}
+$method = $_SERVER['REQUEST_METHOD'];
 
-if (!isset($_SESSION['user_id'])) { Response::unauthorized(); }
-
-if ($_SERVER['REQUEST_METHOD'] !== 'GET') { Response::error('Método no permitido',405); }
+if ($method !== 'GET') { Response::error('Método no permitido',405); }
 
 try {
+    $db = new Database();
+    $auth = new Auth($db);
+
+    if (!$auth->isLoggedIn()) { Response::unauthorized(); }
+    $currentUser = $auth->getCurrentUser();
+
     // Aceptar 'barcode' (enviado por JS) o 'code'
     $code = isset($_GET['barcode']) ? trim($_GET['barcode']) : (isset($_GET['code']) ? trim($_GET['code']) : '');
     
     $requested_store_id = isset($_GET['store_id']) ? (int)$_GET['store_id'] : 0;
-    $session_store_id = isset($_SESSION['store_id']) ? (int)$_SESSION['store_id'] : 0;
+    $session_store_id = (int)$currentUser['store_id'];
 
     // Seguridad: Validar que el usuario solo acceda a su propia tienda
     if ($requested_store_id > 0 && $requested_store_id !== $session_store_id) {
@@ -39,8 +34,7 @@ try {
     
     if ($code==='') { Response::validationError(['barcode'=>'Requerido']); }
 
-    $db = new Database();
-    $params=[$code,$code];
+    $params=[];
     $sql='SELECT p.product_id, p.product_name, p.image_path, p.barcode, p.qr_code, p.price, p.min_stock, p.status';
     if ($store_id>0) { $sql.=', i.current_stock'; }
     $sql.=' FROM products p';
@@ -50,28 +44,24 @@ try {
     $sql.=' WHERE (p.barcode = ? OR p.qr_code = ?)';
     if ($store_id > 0) {
         $sql .= ' AND p.store_id = ?';
-        $params[] = $store_id;
+        // params se llenan en orden de aparición en query
     }
     $sql .= ' LIMIT 1';
 
-    // Reordenar params si store
-    // Orden esperado en params: [code, code, store_id (para join), store_id (para where)]
-    // Pero el array $params se fue llenando en orden:
-    // 1. code (inicial)
-    // 2. code (inicial)
-    // 3. store_id (si store_id > 0, para el JOIN)
-    // 4. store_id (si store_id > 0, para el WHERE)
-    // El orden en SQL es: JOIN ... ? ... WHERE (barcode=? OR qr=?) AND store_id=?
-    // Entonces el orden de params debe ser: [store_id (join), code, code, store_id (where)]
+    // Reconstruir params en orden correcto
+    // 1. store_id para JOIN (si existe)
+    // 2. barcode
+    // 3. qr_code (mismo valor)
+    // 4. store_id para WHERE (si existe)
     
     $finalParams = [];
     if ($store_id > 0) {
-        $finalParams[] = $store_id; // Para el JOIN
+        $finalParams[] = $store_id; // JOIN
     }
-    $finalParams[] = $code;
-    $finalParams[] = $code;
+    $finalParams[] = $code; // barcode
+    $finalParams[] = $code; // qr_code
     if ($store_id > 0) {
-        $finalParams[] = $store_id; // Para el WHERE
+        $finalParams[] = $store_id; // WHERE
     }
 
     $product=$db->selectOne($sql,$finalParams);

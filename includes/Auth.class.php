@@ -45,9 +45,10 @@ class Auth {
      * @return array|false Datos del usuario o false
      */
     public function login($username, $password) {
-        $sql = "SELECT user_id, username, password_hash, full_name, email, role, store_id, status 
-                FROM users 
-                WHERE username = ? AND status = ?";
+        $sql = "SELECT u.user_id, u.username, u.password_hash, u.full_name, u.email, u.role, u.store_id, u.status, s.logo_url 
+                FROM users u
+                LEFT JOIN stores s ON u.store_id = s.store_id
+                WHERE u.username = ? AND u.status = ?";
         
         $user = $this->db->selectOne($sql, [$username, STATUS_ACTIVE]);
         
@@ -58,6 +59,7 @@ class Auth {
             $_SESSION['full_name'] = $user['full_name'];
             $_SESSION['role'] = $user['role'];
             $_SESSION['store_id'] = $user['store_id'];
+            $_SESSION['logo_url'] = $user['logo_url'];
             $_SESSION['logged_in'] = true;
             
             // Actualizar último login
@@ -101,7 +103,8 @@ class Auth {
             'username' => $_SESSION['username'],
             'full_name' => $_SESSION['full_name'],
             'role' => $_SESSION['role'],
-            'store_id' => $_SESSION['store_id']
+            'store_id' => $_SESSION['store_id'],
+            'logo_url' => isset($_SESSION['logo_url']) ? $_SESSION['logo_url'] : null
         ];
     }
     

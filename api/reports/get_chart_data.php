@@ -17,27 +17,41 @@ try {
     }
     
     $conn = $db->getConnection();
-    $store_id = $_SESSION['store_id'] ?? 1;
+    $currentUser = $auth->getCurrentUser();
+    $store_id = $currentUser['store_id'] ?? 1;
     
     $startDate = $_GET['start_date'] ?? date('Y-m-d', strtotime('-6 days'));
     $endDate = $_GET['end_date'] ?? date('Y-m-d');
     
+    // 1. Get Revenue per day (sales table only)
+    $stmt = $conn->prepare("
+        SELECT 
+            DATE(sale_date) as date, 
+            SUM(total) as revenue
+        FROM sales
+        WHERE store_id = ?
+        AND DATE(sale_date) BETWEEN ? AND ?
+        AND status = 'completed'
+        GROUP BY DATE(sale_date)
+    ");
+    $stmt->execute([$store_id, $startDate, $endDate]);
+    $revenueData = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+
+    // 2. Get Cost per day
     $stmt = $conn->prepare("
         SELECT 
             DATE(s.sale_date) as date, 
-            SUM(s.total) as revenue,
             SUM(sd.quantity * COALESCE(p.cost, 0)) as total_cost
         FROM sales s
-        LEFT JOIN sale_details sd ON s.sale_id = sd.sale_id
-        LEFT JOIN products p ON sd.product_id = p.product_id
+        JOIN sale_details sd ON s.sale_id = sd.sale_id
+        JOIN products p ON sd.product_id = p.product_id
         WHERE s.store_id = ?
         AND DATE(s.sale_date) BETWEEN ? AND ?
         AND s.status = 'completed'
         GROUP BY DATE(s.sale_date)
-        ORDER BY date ASC
     ");
     $stmt->execute([$store_id, $startDate, $endDate]);
-    $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $costData = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
     
     // Fill gaps
     $labels = [];
@@ -49,18 +63,11 @@ try {
     
     while ($current <= $end) {
         $dateStr = date('Y-m-d', $current);
-        $dayData = null;
-        foreach ($data as $row) {
-            if ($row['date'] === $dateStr) {
-                $dayData = $row;
-                break;
-            }
-        }
+        
+        $rev = isset($revenueData[$dateStr]) ? (float)$revenueData[$dateStr] : 0;
+        $cost = isset($costData[$dateStr]) ? (float)$costData[$dateStr] : 0;
         
         $labels[] = date('d/m', $current);
-        $rev = $dayData ? (float)$dayData['revenue'] : 0;
-        $cost = $dayData ? (float)$dayData['total_cost'] : 0;
-        
         $revenue[] = $rev;
         $profit[] = $rev - $cost;
         

@@ -59,6 +59,15 @@ try {
         $fields[] = 'role = ?';
         $params[] = $data['role'];
     }
+    if (isset($data['show_onboarding'])) {
+        $fields[] = 'show_onboarding = ?';
+        $params[] = $data['show_onboarding'] ? 1 : 0;
+        
+        // Update session if updating self
+        if ($_SESSION['user_id'] == $user_id) {
+            $_SESSION['show_onboarding'] = (bool)$data['show_onboarding'];
+        }
+    }
 
     if (!$fields) { Response::error('Nada para actualizar',400); }
 

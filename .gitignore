@@ -15,6 +15,7 @@ Thumbs.db
 
 # Imágenes de productos (generadas dinámicamente)
 public/assets/images/products/
+public/assets/images/logos/
 
 # Archivos de IDE
 .vscode/

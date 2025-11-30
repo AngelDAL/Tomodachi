@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Perfil y Configuración - Tomodachi POS</title>
+    <title>Perfil y Configuración - Tomodachi</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/dashboard.css">
     <script src="js/theme-init.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         .profile-container {
             padding: 2rem;
@@ -34,6 +35,25 @@
             border-bottom-color: var(--primary-color);
             font-weight: bold;
         }
+        
+        @media (max-width: 768px) {
+            .tabs {
+                margin-bottom: 1.5rem;
+                overflow-x: auto;
+                white-space: nowrap;
+                display: flex;
+                gap: 5px;
+            }
+            .tab-btn {
+                padding: 0.8rem 1rem;
+                font-size: 0.9rem;
+                flex: 0 0 auto; /* Evitar que se encojan demasiado */
+            }
+            .profile-container {
+                padding: 1rem;
+            }
+        }
+
         .tab-content {
             display: none;
         }
@@ -80,6 +100,107 @@
         .badge-admin { background: #e3f2fd; color: #1976d2; }
         .badge-manager { background: #e8f5e9; color: #2e7d32; }
         .badge-cashier { background: #fff3e0; color: #f57c00; }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2100; /* Mayor que el navbar (2000) */
+            overflow-y: auto;
+        }
+        .modal-content {
+            background: white;
+            margin: 5% auto;
+            padding: 2rem;
+            border-radius: 8px;
+            position: relative;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 1rem;
+        }
+        .close {
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+        }
+        .close:hover {
+            color: #000;
+        }
+
+        /* Responsive Import Modal */
+        .import-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 2rem;
+        }
+        
+        .modal-footer-buttons {
+            margin-top: 2rem;
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            border-top: 1px solid #eee;
+            padding-top: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .modal {
+                padding: 0;
+                overflow: hidden;
+            }
+            .modal-content {
+                margin: 0;
+                width: 100% !important;
+                height: 100%;
+                border-radius: 0;
+                padding: 0;
+                display: flex;
+                flex-direction: column;
+                max-width: none !important;
+            }
+            .modal-header {
+                padding: 1rem;
+                margin-bottom: 0;
+                flex-shrink: 0;
+                border-bottom: 1px solid #eee;
+            }
+            .modal-body {
+                padding: 1rem;
+                overflow-y: auto;
+                flex-grow: 1;
+            }
+            .import-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            /* Ajustar botones en móvil para que sean más fáciles de tocar */
+            .modal-footer-buttons {
+                flex-direction: column;
+                gap: 0.5rem;
+                padding: 1rem;
+                margin-top: 0;
+                background: #fff;
+                border-top: 1px solid #eee;
+                flex-shrink: 0; /* Evitar que se encoja */
+                padding-bottom: max(1rem, env(safe-area-inset-bottom)); /* Safe area para móviles */
+            }
+            .modal-footer-buttons button {
+                width: 100%;
+                padding: 12px;
+                margin: 0;
+            }
+        }
     </style>
 </head>
 <body>
@@ -88,7 +209,7 @@
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <button class="sidebar-close" id="sidebarClose"><i class="fas fa-times"></i></button>
-                <h2>Tomodachi POS</h2>
+                <h2>Tomodachi</h2>
             </div>
             <nav class="sidebar-nav">
                 <a href="dashboard.html" class="nav-item">
@@ -175,6 +296,17 @@
                                 </div>
                             </div>
 
+                            <h4 style="margin-top: 2rem; margin-bottom: 1rem;">Preferencias</h4>
+                            <div class="form-group">
+                                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                                    <input type="checkbox" name="show_onboarding" id="showOnboarding" style="width: auto;">
+                                    <span>Mostrar tutorial de bienvenida</span>
+                                </label>
+                                <p style="font-size: 0.85rem; color: #666; margin-top: 5px; margin-left: 24px;">
+                                    Si se activa, se mostrarán guías de ayuda al navegar por el sistema.
+                                </p>
+                            </div>
+
                             <div style="margin-top: 2rem;">
                                 <button type="submit" class="btn btn-primary">Guardar Cambios</button>
                             </div>
@@ -223,6 +355,26 @@
                                         Si se activa, se podrán realizar ventas aunque el inventario sea 0 o menor.
                                     </p>
                                 </div>
+                            </div>
+
+                            <h4 style="margin-top: 2rem; margin-bottom: 1rem;">Importar Datos</h4>
+                            <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; border: 1px dashed #ccc;">
+                                <p style="margin-bottom: 1rem; color: #555; font-size: 0.95rem;">
+                                    <i class="fas fa-info-circle" style="color: var(--info-color);"></i> 
+                                    Si vienes de otro sistema, puedes importar tus productos desde un archivo Excel. 
+                                    Esto te ayudará a migrar rápidamente tus precios, códigos y niveles de stock.
+                                </p>
+                                <p style="margin-bottom: 1rem; font-size: 0.85rem; color: #666;">
+                                    El archivo debe tener encabezados en la primera fila. Las columnas detectadas automáticamente son: 
+                                    <strong>Nombre, Código, Precio, Costo, Stock</strong>.
+                                </p>
+                                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                                    <input type="file" id="importExcelInput" accept=".xlsx, .xls" class="form-control" style="max-width: 300px;">
+                                    <button type="button" class="btn btn-secondary" id="btnImportExcel">
+                                        <i class="fas fa-file-import"></i> Procesar e Importar
+                                    </button>
+                                </div>
+                                <div id="importStatus" style="margin-top: 10px; font-size: 0.9rem; font-weight: bold;"></div>
                             </div>
 
                             <h4 style="margin-top: 2rem; margin-bottom: 1rem;">Personalización (Tema)</h4>
@@ -370,6 +522,82 @@
                     <button type="submit" class="btn btn-primary">Crear</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Modal Importación Excel -->
+    <div id="importModal" class="modal">
+        <div class="modal-content" style="max-width: 900px; width: 95%;">
+            <div class="modal-header">
+                <h3>Asistente de Importación</h3>
+                <span class="close" onclick="closeImportModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 1rem; color: #666;">
+                    Asocia las columnas de tu archivo Excel con los campos del sistema.
+                </p>
+                
+                <div class="import-grid">
+                    <!-- Columna Izquierda: Mapeo -->
+                    <div style="background: #f9f9f9; padding: 1rem; border-radius: 8px;">
+                        <h4 style="margin-bottom: 1rem; font-size: 1rem;">Mapeo de Columnas</h4>
+                        <form id="mappingForm">
+                            <div class="form-group" style="margin-bottom: 10px;">
+                                <label style="font-size: 0.9rem;">Nombre del Producto <span style="color:red">*</span></label>
+                                <select id="map_name" class="column-select" style="width: 100%; padding: 5px;"></select>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 10px;">
+                                <label style="font-size: 0.9rem;">Código de Barras</label>
+                                <select id="map_barcode" class="column-select" style="width: 100%; padding: 5px;"></select>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 10px;">
+                                <label style="font-size: 0.9rem;">Precio Venta</label>
+                                <select id="map_price" class="column-select" style="width: 100%; padding: 5px;"></select>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 10px;">
+                                <label style="font-size: 0.9rem;">Costo Compra</label>
+                                <select id="map_cost" class="column-select" style="width: 100%; padding: 5px;"></select>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 10px;">
+                                <label style="font-size: 0.9rem;">Stock Actual</label>
+                                <select id="map_stock" class="column-select" style="width: 100%; padding: 5px;"></select>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 10px;">
+                                <label style="font-size: 0.9rem;">Descripción</label>
+                                <select id="map_description" class="column-select" style="width: 100%; padding: 5px;"></select>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Columna Derecha: Vista Previa -->
+                    <div>
+                        <h4 style="margin-bottom: 1rem; font-size: 1rem;">Vista Previa (Primeros 5 registros)</h4>
+                        <div style="overflow-x: auto; border: 1px solid #eee; border-radius: 4px;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                                <thead style="background: #f1f1f1;">
+                                    <tr>
+                                        <th style="padding: 8px; text-align: left;">Nombre</th>
+                                        <th style="padding: 8px; text-align: left;">Código</th>
+                                        <th style="padding: 8px; text-align: right;">Precio</th>
+                                        <th style="padding: 8px; text-align: right;">Stock</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="previewBody">
+                                    <!-- Rows generated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="importSummary" style="margin-top: 1rem; font-size: 0.9rem; color: #555;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer-buttons">
+                <button type="button" class="btn btn-secondary" onclick="closeImportModal()">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnConfirmImport" disabled>
+                    <i class="fas fa-check"></i> Confirmar e Importar
+                </button>
+            </div>
         </div>
     </div>
 

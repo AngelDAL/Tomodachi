@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="view-transition" content="same-origin">
-    <title>Reportes - Tomodachi POS</title>
+    <title>Reportes - Tomodachi</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/dashboard.css">
@@ -19,7 +19,7 @@
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <button class="sidebar-close" id="sidebarClose" aria-label="Cerrar menú">✕</button>
-                <h2>Tomodachi POS</h2>
+                <h2>Tomodachi</h2>
             </div>
 
             <nav class="sidebar-nav">
@@ -76,6 +76,7 @@
                                     <option value="sales">Historial de Ventas</option>
                                     <option value="inventory">Valoración de Inventario</option>
                                     <option value="top_products">Productos Más Vendidos</option>
+                                    <option value="inventory_movements">Movimientos de Inventario</option>
                                 </select>
                             </div>
                             <div class="filter-group date-group" id="startDateGroup">
@@ -119,12 +120,17 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script>
+        let currentUser = null;
+        let currentReportData = null;
+        let currentReportType = '';
+
         document.addEventListener('DOMContentLoaded', async () => {
             const session = await checkSession();
             if (!session) {
                 window.location.href = 'login.html';
                 return;
             }
+            currentUser = session;
 
             // document.getElementById('userName').textContent = session.full_name;
             // document.getElementById('userRole').textContent = session.role.toUpperCase();
@@ -173,15 +179,19 @@
 
                 if (!result.data || result.data.length === 0) {
                     resultsDiv.innerHTML = '<div class="empty-state"><i class="fas fa-search"></i><p>No se encontraron datos para el periodo seleccionado</p></div>';
+                    currentReportData = null;
                     return;
                 }
 
+                currentReportData = result.data;
+                currentReportType = type;
                 renderTable(type, result.data);
                 exportBtns.style.display = 'flex';
 
             } catch (error) {
                 console.error(error);
                 resultsDiv.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error: ${error.message}</p></div>`;
+                currentReportData = null;
             }
         }
 
@@ -283,6 +293,32 @@
                         </tr>
                     `;
                 });
+            } else if (type === 'inventory_movements') {
+                html += `
+                    <th>Fecha</th>
+                    <th>Producto</th>
+                    <th>Tipo</th>
+                    <th>Cant.</th>
+                    <th>Stock Ant.</th>
+                    <th>Stock Nuevo</th>
+                    <th>Usuario</th>
+                    <th>Notas</th>
+                </tr></thead><tbody>`;
+
+                data.forEach(row => {
+                    html += `
+                        <tr>
+                            <td data-label="Fecha">${new Date(row.created_at).toLocaleString()}</td>
+                            <td data-label="Producto">${row.product_name}</td>
+                            <td data-label="Tipo">${formatMovementType(row.movement_type)}</td>
+                            <td data-label="Cant.">${row.quantity}</td>
+                            <td data-label="Stock Ant.">${row.previous_stock}</td>
+                            <td data-label="Stock Nuevo">${row.new_stock}</td>
+                            <td data-label="Usuario">${row.username}</td>
+                            <td data-label="Notas">${row.notes || '-'}</td>
+                        </tr>
+                    `;
+                });
             }
 
             html += '</tbody></table>';
@@ -299,24 +335,319 @@
             return map[method] || method;
         }
 
+        function formatMovementType(type) {
+            const map = {
+                'entry': 'Entrada',
+                'exit': 'Salida',
+                'adjustment': 'Ajuste',
+                'sale': 'Venta',
+                'return': 'Devolución'
+            };
+            return map[type] || type;
+        }
+
+        function getReportSummary() {
+            let summary = {};
+            if (currentReportType === 'sales') {
+                let totalSales = 0;
+                let totalProfit = 0;
+                currentReportData.forEach(row => {
+                    totalSales += parseFloat(row.total);
+                    totalProfit += parseFloat(row.profit);
+                });
+                summary = {
+                    'Total Ventas': '$' + totalSales.toFixed(2),
+                    'Total Ganancia': '$' + totalProfit.toFixed(2),
+                    'Cantidad de Transacciones': currentReportData.length
+                };
+            } else if (currentReportType === 'inventory') {
+                let totalItems = currentReportData.length;
+                let totalStock = 0;
+                let totalCostVal = 0;
+                let totalPriceVal = 0;
+                currentReportData.forEach(row => {
+                    totalStock += parseInt(row.current_stock);
+                    totalCostVal += parseFloat(row.total_cost_value);
+                    totalPriceVal += parseFloat(row.total_price_value);
+                });
+                summary = {
+                    'Total Productos (Items)': totalItems,
+                    'Total Unidades en Stock': totalStock,
+                    'Valor Total Costo': '$' + totalCostVal.toFixed(2),
+                    'Valor Total Venta': '$' + totalPriceVal.toFixed(2)
+                };
+            } else if (currentReportType === 'top_products') {
+                let totalRevenue = 0;
+                let totalProfit = 0;
+                currentReportData.forEach(row => {
+                    totalRevenue += parseFloat(row.revenue);
+                    totalProfit += parseFloat(row.profit);
+                });
+                summary = {
+                    'Total Ingresos (Top)': '$' + totalRevenue.toFixed(2),
+                    'Total Ganancia (Top)': '$' + totalProfit.toFixed(2)
+                };
+            } else if (currentReportType === 'inventory_movements') {
+                let totalMoves = currentReportData.length;
+                let entries = 0;
+                let exits = 0;
+                currentReportData.forEach(row => {
+                    if (['entry', 'return'].includes(row.movement_type)) {
+                        entries += parseInt(row.quantity);
+                    } else {
+                        exits += parseInt(row.quantity);
+                    }
+                });
+                summary = {
+                    'Total Movimientos': totalMoves,
+                    'Total Unidades Entrantes': entries,
+                    'Total Unidades Salientes': exits
+                };
+            }
+            return summary;
+        }
+
         function exportExcel() {
-            const table = document.getElementById('reportTable');
-            const wb = XLSX.utils.table_to_book(table, {sheet: "Reporte"});
-            const type = document.getElementById('reportType').value;
-            XLSX.writeFile(wb, `Reporte_${type}_${new Date().toISOString().split('T')[0]}.xlsx`);
+            if (!currentReportData) return;
+            
+            const now = new Date();
+            const dateStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
+            const storeName = currentUser.store_name || 'Tomodachi';
+            const userName = currentUser.full_name || currentUser.username;
+            
+            let reportTitle = '';
+            switch(currentReportType) {
+                case 'sales': reportTitle = 'Reporte de Historial de Ventas'; break;
+                case 'inventory': reportTitle = 'Reporte de Valoración de Inventario'; break;
+                case 'top_products': reportTitle = 'Reporte de Productos Más Vendidos'; break;
+                case 'inventory_movements': reportTitle = 'Reporte de Movimientos de Inventario'; break;
+                default: reportTitle = 'Reporte del Sistema';
+            }
+
+            const summary = getReportSummary();
+            
+            const ws_data = [];
+            ws_data.push([storeName]);
+            ws_data.push([reportTitle]);
+            ws_data.push(['Generado por:', userName]);
+            ws_data.push(['Fecha:', dateStr]);
+            ws_data.push([]); 
+            
+            ws_data.push(['RESUMEN']);
+            for (const [key, value] of Object.entries(summary)) {
+                ws_data.push([key, value]);
+            }
+            ws_data.push([]); 
+
+            // Headers y Datos
+            if (currentReportType === 'sales') {
+                ws_data.push(['ID Venta', 'Fecha', 'Usuario', 'Método Pago', 'Total', 'Ganancia']);
+                currentReportData.forEach(row => {
+                    ws_data.push([
+                        '#' + row.sale_id,
+                        new Date(row.sale_date).toLocaleString(),
+                        row.username,
+                        formatPaymentMethod(row.payment_method),
+                        parseFloat(row.total).toFixed(2),
+                        parseFloat(row.profit).toFixed(2)
+                    ]);
+                });
+            } else if (currentReportType === 'inventory') {
+                ws_data.push(['Producto', 'Código', 'Stock', 'Costo Unit.', 'Precio Unit.', 'Valor Costo', 'Valor Venta']);
+                currentReportData.forEach(row => {
+                    ws_data.push([
+                        row.product_name,
+                        row.barcode || '-',
+                        row.current_stock,
+                        parseFloat(row.cost).toFixed(2),
+                        parseFloat(row.price).toFixed(2),
+                        parseFloat(row.total_cost_value).toFixed(2),
+                        parseFloat(row.total_price_value).toFixed(2)
+                    ]);
+                });
+            } else if (currentReportType === 'top_products') {
+                ws_data.push(['Producto', 'Código', 'Unidades Vendidas', 'Ingresos', 'Ganancia']);
+                currentReportData.forEach(row => {
+                    ws_data.push([
+                        row.product_name,
+                        row.barcode || '-',
+                        row.total_sold,
+                        parseFloat(row.revenue).toFixed(2),
+                        parseFloat(row.profit).toFixed(2)
+                    ]);
+                });
+            } else if (currentReportType === 'inventory_movements') {
+                ws_data.push(['Fecha', 'Producto', 'Tipo', 'Cant.', 'Stock Ant.', 'Stock Nuevo', 'Usuario', 'Notas']);
+                currentReportData.forEach(row => {
+                    ws_data.push([
+                        new Date(row.created_at).toLocaleString(),
+                        row.product_name,
+                        formatMovementType(row.movement_type),
+                        row.quantity,
+                        row.previous_stock,
+                        row.new_stock,
+                        row.username,
+                        row.notes || '-'
+                    ]);
+                });
+            }
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(ws_data);
+            XLSX.utils.book_append_sheet(wb, ws, "Reporte");
+            XLSX.writeFile(wb, `Reporte_${currentReportType}_${now.toISOString().split('T')[0]}.xlsx`);
+        }
+
+        function getThemeColors() {
+            const savedTheme = localStorage.getItem('pos_theme_config');
+            if (savedTheme) {
+                try {
+                    return JSON.parse(savedTheme);
+                } catch (e) {
+                    console.error('Error parsing theme config:', e);
+                }
+            }
+            return null;
+        }
+
+        function getContrastColor(hexColor) {
+            // Convert hex to RGB
+            const r = parseInt(hexColor.substr(1, 2), 16);
+            const g = parseInt(hexColor.substr(3, 2), 16);
+            const b = parseInt(hexColor.substr(5, 2), 16);
+            
+            // Calculate luminance
+            const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+            
+            // Return black or white based on luminance
+            return (yiq >= 128) ? '#000000' : '#FFFFFF';
         }
 
         function exportPDF() {
-            const element = document.getElementById('reportResults');
-            const type = document.getElementById('reportType').value;
+            if (!currentReportData) return;
+
+            const now = new Date();
+            const dateStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
+            const storeName = currentUser.store_name || 'Mi Negocio';
+            const userName = currentUser.full_name || currentUser.username;
+            const logoUrl = currentUser.logo_url || 'assets/images/default-logo.png';
+            
+            // Get theme colors
+            const theme = getThemeColors();
+            const primaryColor = theme && theme.primary_color ? theme.primary_color : '#333333';
+            const headerTextColor = getContrastColor(primaryColor);
+
+            let reportTitle = '';
+            switch(currentReportType) {
+                case 'sales': reportTitle = 'Reporte de Historial de Ventas'; break;
+                case 'inventory': reportTitle = 'Reporte de Valoración de Inventario'; break;
+                case 'top_products': reportTitle = 'Reporte de Productos Más Vendidos'; break;
+                case 'inventory_movements': reportTitle = 'Reporte de Movimientos de Inventario'; break;
+                default: reportTitle = 'Reporte del Sistema';
+            }
+
+            const summary = getReportSummary();
+            let summaryHtml = `<div style="margin-bottom: 20px; padding: 10px; background: #f8f9fa; border-radius: 5px; border-left: 5px solid ${primaryColor};"><h3>Resumen</h3><ul style="list-style: none; padding: 0;">`;
+            for (const [key, value] of Object.entries(summary)) {
+                summaryHtml += `<li style="margin-bottom: 5px;"><strong>${key}:</strong> ${value}</li>`;
+            }
+            summaryHtml += '</ul></div>';
+
+            // Construir tabla limpia para PDF
+            let tableHtml = `<table style="width: 100%; border-collapse: collapse; font-size: 12px;"><thead><tr style="background-color: ${primaryColor}; color: ${headerTextColor}; font-weight: bold;">`;
+            
+            if (currentReportType === 'sales') {
+                tableHtml += '<th style="padding: 8px;">ID</th><th style="padding: 8px;">Fecha</th><th style="padding: 8px;">Usuario</th><th style="padding: 8px;">Método</th><th style="padding: 8px;">Total</th><th style="padding: 8px;">Ganancia</th></tr></thead><tbody>';
+                currentReportData.forEach((row, index) => {
+                    const bg = index % 2 === 0 ? '#fff' : '#f2f2f2';
+                    tableHtml += `<tr style="background-color: ${bg};">
+                        <td style="padding: 8px; border: 1px solid #ddd;">#${row.sale_id}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">${new Date(row.sale_date).toLocaleString()}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">${row.username}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">${formatPaymentMethod(row.payment_method)}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">$${parseFloat(row.total).toFixed(2)}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">$${parseFloat(row.profit).toFixed(2)}</td>
+                    </tr>`;
+                });
+            } else if (currentReportType === 'inventory') {
+                tableHtml += '<th style="padding: 8px;">Img</th><th style="padding: 8px;">Producto</th><th style="padding: 8px;">Código</th><th style="padding: 8px;">Stock</th><th style="padding: 8px;">Costo</th><th style="padding: 8px;">Precio</th><th style="padding: 8px;">V. Costo</th><th style="padding: 8px;">V. Venta</th></tr></thead><tbody>';
+                currentReportData.forEach((row, index) => {
+                    const bg = index % 2 === 0 ? '#fff' : '#f2f2f2';
+                    const imgHtml = row.image_path ? `<img src="${row.image_path}" style="width: 30px; height: 30px; object-fit: cover;">` : '<span style="color: #ccc;">-</span>';
+                    tableHtml += `<tr style="background-color: ${bg};">
+                        <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${imgHtml}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">${row.product_name}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">${row.barcode || '-'}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">${row.current_stock}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">$${parseFloat(row.cost).toFixed(2)}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">$${parseFloat(row.price).toFixed(2)}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">$${parseFloat(row.total_cost_value).toFixed(2)}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">$${parseFloat(row.total_price_value).toFixed(2)}</td>
+                    </tr>`;
+                });
+            } else if (currentReportType === 'top_products') {
+                tableHtml += '<th style="padding: 8px;">Img</th><th style="padding: 8px;">Producto</th><th style="padding: 8px;">Código</th><th style="padding: 8px;">Unidades</th><th style="padding: 8px;">Ingresos</th><th style="padding: 8px;">Ganancia</th></tr></thead><tbody>';
+                currentReportData.forEach((row, index) => {
+                    const bg = index % 2 === 0 ? '#fff' : '#f2f2f2';
+                    const imgHtml = row.image_path ? `<img src="${row.image_path}" style="width: 30px; height: 30px; object-fit: cover;">` : '<span style="color: #ccc;">-</span>';
+                    tableHtml += `<tr style="background-color: ${bg};">
+                        <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${imgHtml}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">${row.product_name}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">${row.barcode || '-'}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">${row.total_sold}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">$${parseFloat(row.revenue).toFixed(2)}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">$${parseFloat(row.profit).toFixed(2)}</td>
+                    </tr>`;
+                });
+            } else if (currentReportType === 'inventory_movements') {
+                tableHtml += '<th style="padding: 8px;">Img</th><th style="padding: 8px;">Fecha</th><th style="padding: 8px;">Producto</th><th style="padding: 8px;">Tipo</th><th style="padding: 8px;">Cant.</th><th style="padding: 8px;">Stock Ant.</th><th style="padding: 8px;">Stock Nuevo</th><th style="padding: 8px;">Usuario</th><th style="padding: 8px;">Notas</th></tr></thead><tbody>';
+                currentReportData.forEach((row, index) => {
+                    const bg = index % 2 === 0 ? '#fff' : '#f2f2f2';
+                    const imgHtml = row.image_path ? `<img src="${row.image_path}" style="width: 30px; height: 30px; object-fit: cover;">` : '<span style="color: #ccc;">-</span>';
+                    tableHtml += `<tr style="background-color: ${bg};">
+                        <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${imgHtml}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">${new Date(row.created_at).toLocaleString()}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">${row.product_name}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">${formatMovementType(row.movement_type)}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">${row.quantity}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">${row.previous_stock}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">${row.new_stock}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">${row.username}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">${row.notes || '-'}</td>
+                    </tr>`;
+                });
+            }
+            tableHtml += '</tbody></table>';
+
+            // Contenedor temporal para el PDF
+            const container = document.createElement('div');
+            container.innerHTML = `
+                <div style="padding: 20px; font-family: Arial, sans-serif;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid ${primaryColor}; padding-bottom: 10px;">
+                        <div>
+                            <h1 style="margin: 0; color: ${primaryColor};">${storeName}</h1>
+                            <h3 style="margin: 5px 0; color: #666;">${reportTitle}</h3>
+                        </div>
+                        <img src="${logoUrl}" style="max-height: 60px; max-width: 150px;" onerror="this.style.display='none'">
+                    </div>
+                    <div style="margin-bottom: 20px; font-size: 12px; color: #555;">
+                        <p style="margin: 2px 0;"><strong>Generado por:</strong> ${userName}</p>
+                        <p style="margin: 2px 0;"><strong>Fecha:</strong> ${dateStr}</p>
+                    </div>
+                    ${summaryHtml}
+                    ${tableHtml}
+                </div>
+            `;
+
             const opt = {
                 margin: 10,
-                filename: `Reporte_${type}_${new Date().toISOString().split('T')[0]}.pdf`,
+                filename: `Reporte_${currentReportType}_${now.toISOString().split('T')[0]}.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2 },
+                html2canvas: { scale: 2, useCORS: true },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
             };
-            html2pdf().set(opt).from(element).save();
+            
+            html2pdf().set(opt).from(container).save();
         }
     </script>
 </body>

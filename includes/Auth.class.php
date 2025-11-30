@@ -45,7 +45,7 @@ class Auth {
      * @return array|false Datos del usuario o false
      */
     public function login($username, $password) {
-        $sql = "SELECT u.user_id, u.username, u.password_hash, u.full_name, u.email, u.role, u.store_id, u.status, s.logo_url 
+        $sql = "SELECT u.user_id, u.username, u.password_hash, u.full_name, u.email, u.role, u.store_id, u.status, u.show_onboarding, s.logo_url, s.store_name 
                 FROM users u
                 LEFT JOIN stores s ON u.store_id = s.store_id
                 WHERE u.username = ? AND u.status = ?";
@@ -60,6 +60,8 @@ class Auth {
             $_SESSION['role'] = $user['role'];
             $_SESSION['store_id'] = $user['store_id'];
             $_SESSION['logo_url'] = $user['logo_url'];
+            $_SESSION['store_name'] = $user['store_name'];
+            $_SESSION['show_onboarding'] = (bool)$user['show_onboarding'];
             $_SESSION['logged_in'] = true;
             
             // Actualizar último login
@@ -104,7 +106,9 @@ class Auth {
             'full_name' => $_SESSION['full_name'],
             'role' => $_SESSION['role'],
             'store_id' => $_SESSION['store_id'],
-            'logo_url' => isset($_SESSION['logo_url']) ? $_SESSION['logo_url'] : null
+            'logo_url' => isset($_SESSION['logo_url']) ? $_SESSION['logo_url'] : null,
+            'store_name' => isset($_SESSION['store_name']) ? $_SESSION['store_name'] : null,
+            'show_onboarding' => isset($_SESSION['show_onboarding']) ? $_SESSION['show_onboarding'] : true
         ];
     }
     

@@ -57,6 +57,7 @@ try {
             SELECT 
                 p.product_name, 
                 p.barcode, 
+                p.image_path,
                 i.current_stock, 
                 p.cost, 
                 p.price, 
@@ -79,6 +80,7 @@ try {
             SELECT 
                 p.product_name,
                 p.barcode,
+                p.image_path,
                 SUM(sd.quantity) as total_sold,
                 SUM(sd.total) as revenue,
                 (SUM(sd.total) - SUM(sd.quantity * IFNULL(p.cost, 0))) as profit
@@ -90,6 +92,34 @@ try {
             AND s.status = 'completed'
             GROUP BY p.product_id
             ORDER BY total_sold DESC
+        ");
+        $stmt->execute([$store_id, $start_date, $end_date]);
+        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode(['success' => true, 'data' => $data]);
+        exit;
+    }
+
+    if ($type === 'inventory_movements') {
+        // Inventory Movements Report
+        $stmt = $conn->prepare("
+            SELECT 
+                im.movement_id,
+                im.created_at,
+                p.product_name,
+                p.barcode,
+                p.image_path,
+                u.username,
+                im.movement_type,
+                im.quantity,
+                im.previous_stock,
+                im.new_stock,
+                im.notes
+            FROM inventory_movements im
+            JOIN products p ON im.product_id = p.product_id
+            JOIN users u ON im.user_id = u.user_id
+            WHERE im.store_id = ?
+            AND DATE(im.created_at) BETWEEN ? AND ?
+            ORDER BY im.created_at DESC
         ");
         $stmt->execute([$store_id, $start_date, $end_date]);
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);

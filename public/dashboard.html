@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="view-transition" content="same-origin">
-    <title>Dashboard - Tomodachi POS</title>
+    <title>Dashboard - Tomodachi</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/dashboard.css">
@@ -18,7 +18,7 @@
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <button class="sidebar-close" id="sidebarClose" aria-label="Cerrar menú"><i class="fas fa-times"></i></button>
-                <h2>Tomodachi POS</h2>
+                <h2>Tomodachi</h2>
             </div>
             
             <nav class="sidebar-nav">
@@ -159,6 +159,7 @@
     </div>
     
     <script src="js/app.js"></script>
+    <script src="js/tour.js"></script>
     <script src="js/dashboard.js"></script>
     <script>
         // Verificar sesión al cargar
@@ -168,6 +169,11 @@
             if (!session) {
                 window.location.href = 'login.html';
                 return;
+            }
+            
+            // Iniciar Tour si corresponde
+            if (window.TourSystem) {
+                window.TourSystem.init(session);
             }
             
             // Mostrar info del usuario

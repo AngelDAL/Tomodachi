@@ -49,6 +49,20 @@ try {
     $user = $auth->login($username, $password);
     
     if ($user) {
+        // Handle Remember Me
+        if (isset($data['remember']) && $data['remember'] === true) {
+            $params = session_get_cookie_params();
+            setcookie(
+                session_name(),
+                session_id(),
+                time() + (365 * 24 * 60 * 60), // 1 year permanent
+                $params['path'],
+                $params['domain'],
+                $params['secure'],
+                $params['httponly']
+            );
+        }
+
         Response::success([
             'user' => $user,
             'session' => $auth->getCurrentUser()

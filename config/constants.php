@@ -6,10 +6,10 @@
 
 // Versión del sistema
 define('APP_VERSION', '1.0.0');
-define('APP_NAME', 'Tomodachi POS');
+define('APP_NAME', 'Tomodachi');
 
 // Configuración de sesión
-define('SESSION_LIFETIME', 3600); // 1 hora en segundos
+define('SESSION_LIFETIME', 86400); // 24 horas en segundos
 define('SESSION_NAME', 'tomodachi_session');
 
 // Roles de usuario

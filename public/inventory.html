@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="view-transition" content="same-origin">
-    <title>Inventario - Tomodachi POS</title>
+    <title>Inventario - Tomodachi</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/dashboard.css">
@@ -18,7 +18,7 @@
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <button class="sidebar-close" id="sidebarClose" aria-label="Cerrar menú"><i class="fas fa-times"></i></button>
-                <h2>Tomodachi POS</h2>
+                <h2>Tomodachi</h2>
             </div>
             
             <nav class="sidebar-nav">
@@ -72,15 +72,15 @@
                         <div class="search-section">
                             <div class="search-header">
                                 <h3><i class="fas fa-magnifying-glass"></i> Buscar Productos</h3>
-                                <span class="search-hint" title="Busca mientras escribes o escanea un código de barras">
-                                    <i class="fas fa-circle-info"></i>
-                                    <span class="hint-text">Escribe nombre, código o escanea QR/código de barras</span>
-                                </span>
                             </div>
                         <div class="search-bar">
                             <div class="search-input-wrapper">
                                 <i class="fas fa-search search-icon"></i>
                                 <input type="text" id="searchInput" placeholder="Nombre, código, SKU..." aria-label="Buscar productos" class="search-input">
+                                <span class="search-hint" title="Busca mientras escribes o escanea un código de barras">
+                                    <i class="fas fa-circle-info"></i>
+                                    <span class="hint-text">Escribe nombre, código o escanea QR/código de barras</span>
+                                </span>
                                 <span class="search-loading" id="searchLoading" style="display: none;">
                                     <i class="fas fa-spinner fa-spin"></i>
                                 </span>
@@ -354,6 +354,7 @@
     </div>
     
     <script src="js/app.js"></script>
+    <script src="js/tour.js"></script>
     <script src="js/inventory.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
@@ -361,6 +362,11 @@
             if (!session) {
                 window.location.href = 'login.html';
                 return;
+            }
+            
+            // Iniciar Tour
+            if (window.TourSystem) {
+                window.TourSystem.init(session);
             }
 
             const userNameEl = document.getElementById('userName');

@@ -83,6 +83,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         e.preventDefault();
         await logout();
     });
+
+    // Excel Import
+    const btnImport = document.getElementById('btnImportExcel');
+    if (btnImport) {
+        btnImport.addEventListener('click', handleImportExcel);
+    }
+    
+    // Auto-open import modal on file selection
+    const fileInput = document.getElementById('importExcelInput');
+    if (fileInput) {
+        fileInput.addEventListener('change', handleImportExcel);
+    }
 });
 
 function switchTab(tabId) {
@@ -106,6 +118,12 @@ async function loadProfile() {
             form.email.value = user.email || '';
             form.phone.value = user.phone || '';
             document.getElementById('userRoleDisplay').value = user.role.toUpperCase();
+            
+            // Onboarding setting
+            const onboardingCheck = document.getElementById('showOnboarding');
+            if (onboardingCheck) {
+                onboardingCheck.checked = user.show_onboarding !== undefined ? !!Number(user.show_onboarding) : true;
+            }
         }
     } catch (error) {
         console.error('Error loading profile:', error);
@@ -116,6 +134,9 @@ document.getElementById('profileForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
     const data = Object.fromEntries(formData.entries());
+    
+    // Handle checkbox explicitly
+    data.show_onboarding = document.getElementById('showOnboarding').checked;
     
     try {
         const res = await fetch('../api/users/profile.php', {
@@ -325,3 +346,201 @@ async function deleteUser(userId) {
         showNotification('Error al eliminar', 'error');
     }
 }
+
+let importedData = [];
+let excelHeaders = [];
+
+async function handleImportExcel() {
+    const fileInput = document.getElementById('importExcelInput');
+    const statusDiv = document.getElementById('importStatus');
+    
+    if (!fileInput.files || fileInput.files.length === 0) {
+        showNotification('Por favor selecciona un archivo Excel', 'error');
+        return;
+    }
+    
+    const file = fileInput.files[0];
+    statusDiv.innerHTML = '<span style="color: blue;">Leyendo archivo...</span>';
+    
+    const reader = new FileReader();
+    
+    reader.onload = async (e) => {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            
+            // Convertir a JSON (array de arrays)
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+            
+            if (jsonData.length < 2) {
+                statusDiv.innerHTML = '<span style="color: red;">El archivo parece estar vacío o sin datos.</span>';
+                return;
+            }
+            
+            // Guardar headers y datos
+            excelHeaders = jsonData[0].map(h => String(h).trim());
+            importedData = jsonData.slice(1); // Remove header row
+            
+            // Abrir modal y configurar mapeo
+            setupImportModal();
+            statusDiv.innerHTML = ''; // Clear status
+            
+        } catch (error) {
+            console.error(error);
+            statusDiv.innerHTML = '<span style="color: red;">Error al procesar el archivo.</span>';
+        }
+    };
+    
+    reader.readAsArrayBuffer(file);
+}
+
+function setupImportModal() {
+    const modal = document.getElementById('importModal');
+    const selects = document.querySelectorAll('.column-select');
+    
+    // Llenar selects con headers del Excel
+    selects.forEach(select => {
+        select.innerHTML = '<option value="-1">-- Ignorar --</option>';
+        excelHeaders.forEach((header, index) => {
+            const option = document.createElement('option');
+            option.value = index;
+            option.textContent = header;
+            select.appendChild(option);
+        });
+        
+        // Auto-detectar
+        const field = select.id.replace('map_', '');
+        const headerIndex = detectColumn(field, excelHeaders);
+        if (headerIndex !== -1) {
+            select.value = headerIndex;
+        }
+        
+        // Event listener para actualizar preview
+        select.onchange = updateImportPreview;
+    });
+    
+    modal.style.display = 'block';
+    updateImportPreview();
+}
+
+function detectColumn(field, headers) {
+    const lowerHeaders = headers.map(h => h.toLowerCase());
+    let index = -1;
+    
+    if (field === 'name') {
+        index = lowerHeaders.findIndex(h => h.includes('nombre') || h.includes('producto') || h.includes('name') || h.includes('descrip'));
+    } else if (field === 'barcode') {
+        index = lowerHeaders.findIndex(h => h.includes('cod') || h.includes('bar') || h.includes('sku'));
+    } else if (field === 'price') {
+        index = lowerHeaders.findIndex(h => h.includes('precio') || h.includes('venta') || h.includes('price'));
+    } else if (field === 'cost') {
+        index = lowerHeaders.findIndex(h => h.includes('costo') || h.includes('compra') || h.includes('cost'));
+    } else if (field === 'stock') {
+        index = lowerHeaders.findIndex(h => h.includes('stock') || h.includes('cant') || h.includes('exist'));
+    } else if (field === 'description') {
+        index = lowerHeaders.findIndex(h => h.includes('detal') || h.includes('nota'));
+    }
+    
+    return index;
+}
+
+function updateImportPreview() {
+    const map = {
+        name: parseInt(document.getElementById('map_name').value),
+        barcode: parseInt(document.getElementById('map_barcode').value),
+        price: parseInt(document.getElementById('map_price').value),
+        cost: parseInt(document.getElementById('map_cost').value),
+        stock: parseInt(document.getElementById('map_stock').value)
+    };
+    
+    const tbody = document.getElementById('previewBody');
+    tbody.innerHTML = '';
+    
+    // Validar si tenemos nombre (obligatorio)
+    const btnConfirm = document.getElementById('btnConfirmImport');
+    if (map.name === -1) {
+        btnConfirm.disabled = true;
+        document.getElementById('importSummary').textContent = 'Selecciona al menos la columna "Nombre" para continuar.';
+    } else {
+        btnConfirm.disabled = false;
+        document.getElementById('importSummary').textContent = `Se importarán ${importedData.length} registros.`;
+    }
+    
+    // Mostrar primeros 5
+    const previewData = importedData.slice(0, 5);
+    previewData.forEach(row => {
+        const tr = document.createElement('tr');
+        
+        const name = map.name !== -1 ? (row[map.name] || '') : '-';
+        const code = map.barcode !== -1 ? (row[map.barcode] || '') : '-';
+        const price = map.price !== -1 ? (row[map.price] || '0') : '-';
+        const stock = map.stock !== -1 ? (row[map.stock] || '0') : '-';
+        
+        tr.innerHTML = `
+            <td style="padding: 8px;">${name}</td>
+            <td style="padding: 8px;">${code}</td>
+            <td style="padding: 8px; text-align: right;">${price}</td>
+            <td style="padding: 8px; text-align: right;">${stock}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function closeImportModal() {
+    document.getElementById('importModal').style.display = 'none';
+    document.getElementById('importExcelInput').value = ''; // Reset input
+}
+
+// Event listener for confirm button
+document.getElementById('btnConfirmImport').addEventListener('click', async () => {
+    const map = {
+        name: parseInt(document.getElementById('map_name').value),
+        barcode: parseInt(document.getElementById('map_barcode').value),
+        price: parseInt(document.getElementById('map_price').value),
+        cost: parseInt(document.getElementById('map_cost').value),
+        stock: parseInt(document.getElementById('map_stock').value),
+        description: parseInt(document.getElementById('map_description').value)
+    };
+    
+    if (map.name === -1) return;
+    
+    const btn = document.getElementById('btnConfirmImport');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+    
+    try {
+        const products = importedData.map(row => ({
+            name: map.name !== -1 ? row[map.name] : '',
+            barcode: map.barcode !== -1 ? row[map.barcode] : '',
+            price: map.price !== -1 ? row[map.price] : 0,
+            cost: map.cost !== -1 ? row[map.cost] : 0,
+            stock: map.stock !== -1 ? row[map.stock] : 0,
+            description: map.description !== -1 ? row[map.description] : ''
+        })).filter(p => p.name && String(p.name).trim() !== '');
+        
+        const res = await fetch('../api/stores/import_data.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ products })
+        });
+        
+        const result = await res.json();
+        
+        if (result.success) {
+            showNotification(`Importación exitosa: ${result.data.inserted} nuevos, ${result.data.updated} actualizados.`, 'success');
+            closeImportModal();
+        } else {
+            showNotification(result.message, 'error');
+        }
+    } catch (error) {
+        console.error(error);
+        showNotification('Error al enviar datos', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+});
+

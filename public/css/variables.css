@@ -1,16 +1,16 @@
 :root {
-    /* Brand Colors */
-    --primary-color: #4c77af;
-    --primary-dark: #4577a0;
-    --primary-darker: #2e647d;
-    --primary-light: #e8f5e9;
-    --primary-lighter: #f0f8f5;
-    --primary-shadow: rgba(46, 125, 50, 0.22);
+    /* Brand Colors - Mexican Pink Theme */
+    --primary-color: #E3057A;
+    --primary-dark: #B0045F;
+    --primary-darker: #800345;
+    --primary-light: #FCE4F0;
+    --primary-lighter: #FEF2F8;
+    --primary-shadow: rgba(227, 5, 122, 0.22);
 
-    --secondary-color: #2196F3;
-    --secondary-dark: #1976d2;
-    --secondary-darker: #0d47a1;
-    --secondary-light: #e3f2fd;
+    --secondary-color: #4a4a4a;
+    --secondary-dark: #333333;
+    --secondary-darker: #1a1a1a;
+    --secondary-light: #f5f5f5;
 
     /* Status Colors */
     --success-color: #4CAF50;
@@ -45,7 +45,7 @@
     --border-light: #eeeeee;
     --border-lighter: #eaeaea;
     --border-input: #b0bec5;
-    --border-focus: #4CAF50;
+    --border-focus: #E3057A;
 
     /* Layout */
     --sidebar-width: 250px;

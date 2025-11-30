@@ -65,17 +65,59 @@
 
         <!-- Main Content -->
         <main class="main-content">
-
             <div class="dashboard-content">
-                <div class="welcome-message">
-                    <h2>Módulo de Reportes</h2>
-                    <p>En construcción - Próximamente disponible</p>
+                <div class="reports-container">
+                    <div class="reports-header">
+                        <h2>Generador de Reportes</h2>
+                        <div class="report-filters">
+                            <div class="filter-group">
+                                <label>Tipo de Reporte</label>
+                                <select id="reportType" class="form-control" onchange="toggleDateInputs()">
+                                    <option value="sales">Historial de Ventas</option>
+                                    <option value="inventory">Valoración de Inventario</option>
+                                    <option value="top_products">Productos Más Vendidos</option>
+                                </select>
+                            </div>
+                            <div class="filter-group date-group" id="startDateGroup">
+                                <label>Desde</label>
+                                <input type="date" id="startDate" class="form-control">
+                            </div>
+                            <div class="filter-group date-group" id="endDateGroup">
+                                <label>Hasta</label>
+                                <input type="date" id="endDate" class="form-control">
+                            </div>
+                            <div class="filter-group" style="flex: 0 0 auto;">
+                                <label>&nbsp;</label>
+                                <button class="btn-primary" onclick="generateReport()">
+                                    <i class="fas fa-search"></i> Generar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="report-actions" style="display:none;" id="exportButtons">
+                        <button class="btn-secondary" onclick="exportExcel()">
+                            <i class="fas fa-file-excel"></i> Excel
+                        </button>
+                        <button class="btn-secondary" onclick="exportPDF()">
+                            <i class="fas fa-file-pdf"></i> PDF
+                        </button>
+                    </div>
+
+                    <div class="report-results" id="reportResults">
+                        <div class="empty-state">
+                            <i class="fas fa-chart-pie"></i>
+                            <p>Seleccione un tipo de reporte y genere los resultados</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>
     </div>
 
     <script src="js/app.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             const session = await checkSession();
@@ -84,14 +126,198 @@
                 return;
             }
 
-            document.getElementById('userName').textContent = session.full_name;
-            document.getElementById('userRole').textContent = session.role.toUpperCase();
+            // document.getElementById('userName').textContent = session.full_name;
+            // document.getElementById('userRole').textContent = session.role.toUpperCase();
+            
+            // Set default dates (current month)
+            const now = new Date();
+            const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+            const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            
+            document.getElementById('startDate').valueAsDate = firstDay;
+            document.getElementById('endDate').valueAsDate = lastDay;
         });
 
         document.getElementById('logoutBtn').addEventListener('click', async (e) => {
             e.preventDefault();
             await logout();
         });
+
+        function toggleDateInputs() {
+            const type = document.getElementById('reportType').value;
+            const display = type === 'inventory' ? 'none' : 'block';
+            document.getElementById('startDateGroup').style.display = display;
+            document.getElementById('endDateGroup').style.display = display;
+        }
+
+        async function generateReport() {
+            const type = document.getElementById('reportType').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const resultsDiv = document.getElementById('reportResults');
+            const exportBtns = document.getElementById('exportButtons');
+
+            resultsDiv.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Generando reporte...</p></div>';
+            exportBtns.style.display = 'none';
+
+            try {
+                let url = `../api/reports/dashboard_stats.php?type=${type}`;
+                if (type !== 'inventory') {
+                    url += `&start_date=${startDate}&end_date=${endDate}`;
+                }
+
+                const response = await fetch(url);
+                const result = await response.json();
+
+                if (!result.success) throw new Error(result.message);
+
+                if (!result.data || result.data.length === 0) {
+                    resultsDiv.innerHTML = '<div class="empty-state"><i class="fas fa-search"></i><p>No se encontraron datos para el periodo seleccionado</p></div>';
+                    return;
+                }
+
+                renderTable(type, result.data);
+                exportBtns.style.display = 'flex';
+
+            } catch (error) {
+                console.error(error);
+                resultsDiv.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error: ${error.message}</p></div>`;
+            }
+        }
+
+        function renderTable(type, data) {
+            let html = '<table class="dashboard-table" id="reportTable"><thead><tr>';
+            
+            if (type === 'sales') {
+                html += `
+                    <th>ID Venta</th>
+                    <th>Fecha</th>
+                    <th>Usuario</th>
+                    <th>Método Pago</th>
+                    <th>Total</th>
+                    <th>Ganancia</th>
+                </tr></thead><tbody>`;
+                
+                let totalSales = 0;
+                let totalProfit = 0;
+
+                data.forEach(row => {
+                    totalSales += parseFloat(row.total);
+                    totalProfit += parseFloat(row.profit);
+                    html += `
+                        <tr>
+                            <td data-label="ID Venta">#${row.sale_id}</td>
+                            <td data-label="Fecha">${new Date(row.sale_date).toLocaleString()}</td>
+                            <td data-label="Usuario">${row.username}</td>
+                            <td data-label="Método Pago">${formatPaymentMethod(row.payment_method)}</td>
+                            <td data-label="Total">$${parseFloat(row.total).toFixed(2)}</td>
+                            <td data-label="Ganancia" style="color: ${row.profit >= 0 ? 'green' : 'red'}">$${parseFloat(row.profit).toFixed(2)}</td>
+                        </tr>
+                    `;
+                });
+                
+                // Footer row
+                html += `
+                    <tr style="background-color: #f8f9fa; font-weight: bold;">
+                        <td colspan="4" style="text-align: right;">TOTALES:</td>
+                        <td>$${totalSales.toFixed(2)}</td>
+                        <td>$${totalProfit.toFixed(2)}</td>
+                    </tr>
+                `;
+
+            } else if (type === 'inventory') {
+                html += `
+                    <th>Producto</th>
+                    <th>Código</th>
+                    <th>Stock</th>
+                    <th>Costo Unit.</th>
+                    <th>Precio Unit.</th>
+                    <th>Valor Costo</th>
+                    <th>Valor Venta</th>
+                </tr></thead><tbody>`;
+                
+                let totalCostVal = 0;
+                let totalPriceVal = 0;
+
+                data.forEach(row => {
+                    totalCostVal += parseFloat(row.total_cost_value);
+                    totalPriceVal += parseFloat(row.total_price_value);
+                    html += `
+                        <tr>
+                            <td data-label="Producto">${row.product_name}</td>
+                            <td data-label="Código">${row.barcode || '-'}</td>
+                            <td data-label="Stock">${row.current_stock}</td>
+                            <td data-label="Costo">$${parseFloat(row.cost).toFixed(2)}</td>
+                            <td data-label="Precio">$${parseFloat(row.price).toFixed(2)}</td>
+                            <td data-label="Valor Costo">$${parseFloat(row.total_cost_value).toFixed(2)}</td>
+                            <td data-label="Valor Venta">$${parseFloat(row.total_price_value).toFixed(2)}</td>
+                        </tr>
+                    `;
+                });
+
+                html += `
+                    <tr style="background-color: #f8f9fa; font-weight: bold;">
+                        <td colspan="5" style="text-align: right;">TOTALES:</td>
+                        <td>$${totalCostVal.toFixed(2)}</td>
+                        <td>$${totalPriceVal.toFixed(2)}</td>
+                    </tr>
+                `;
+
+            } else if (type === 'top_products') {
+                html += `
+                    <th>Producto</th>
+                    <th>Código</th>
+                    <th>Unidades Vendidas</th>
+                    <th>Ingresos</th>
+                    <th>Ganancia</th>
+                </tr></thead><tbody>`;
+
+                data.forEach(row => {
+                    html += `
+                        <tr>
+                            <td data-label="Producto">${row.product_name}</td>
+                            <td data-label="Código">${row.barcode || '-'}</td>
+                            <td data-label="Unidades">${row.total_sold}</td>
+                            <td data-label="Ingresos">$${parseFloat(row.revenue).toFixed(2)}</td>
+                            <td data-label="Ganancia">$${parseFloat(row.profit).toFixed(2)}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            html += '</tbody></table>';
+            document.getElementById('reportResults').innerHTML = html;
+        }
+
+        function formatPaymentMethod(method) {
+            const map = {
+                'cash': 'Efectivo',
+                'card': 'Tarjeta',
+                'transfer': 'Transferencia',
+                'mixed': 'Mixto'
+            };
+            return map[method] || method;
+        }
+
+        function exportExcel() {
+            const table = document.getElementById('reportTable');
+            const wb = XLSX.utils.table_to_book(table, {sheet: "Reporte"});
+            const type = document.getElementById('reportType').value;
+            XLSX.writeFile(wb, `Reporte_${type}_${new Date().toISOString().split('T')[0]}.xlsx`);
+        }
+
+        function exportPDF() {
+            const element = document.getElementById('reportResults');
+            const type = document.getElementById('reportType').value;
+            const opt = {
+                margin: 10,
+                filename: `Reporte_${type}_${new Date().toISOString().split('T')[0]}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+            };
+            html2pdf().set(opt).from(element).save();
+        }
     </script>
 </body>
 

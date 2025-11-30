@@ -21,6 +21,82 @@ try {
     
     $store_id = $currentUser['store_id'] ?? 1; // Default to store 1 if not set
     
+    $type = $_GET['type'] ?? 'dashboard';
+    $start_date = $_GET['start_date'] ?? date('Y-m-01');
+    $end_date = $_GET['end_date'] ?? date('Y-m-t');
+
+    if ($type === 'sales') {
+        // Sales Report
+        $stmt = $conn->prepare("
+            SELECT 
+                s.sale_id, 
+                s.sale_date, 
+                u.username, 
+                s.payment_method, 
+                s.total, 
+                (s.total - SUM(sd.quantity * IFNULL(p.cost, 0))) as profit
+            FROM sales s
+            JOIN users u ON s.user_id = u.user_id
+            JOIN sale_details sd ON s.sale_id = sd.sale_id
+            LEFT JOIN products p ON sd.product_id = p.product_id
+            WHERE s.store_id = ? 
+            AND DATE(s.sale_date) BETWEEN ? AND ?
+            AND s.status = 'completed'
+            GROUP BY s.sale_id
+            ORDER BY s.sale_date DESC
+        ");
+        $stmt->execute([$store_id, $start_date, $end_date]);
+        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode(['success' => true, 'data' => $data]);
+        exit;
+    }
+    
+    if ($type === 'inventory') {
+        // Inventory Report
+        $stmt = $conn->prepare("
+            SELECT 
+                p.product_name, 
+                p.barcode, 
+                i.current_stock, 
+                p.cost, 
+                p.price, 
+                (i.current_stock * p.cost) as total_cost_value, 
+                (i.current_stock * p.price) as total_price_value
+            FROM inventory i
+            JOIN products p ON i.product_id = p.product_id
+            WHERE i.store_id = ?
+            ORDER BY p.product_name ASC
+        ");
+        $stmt->execute([$store_id]);
+        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode(['success' => true, 'data' => $data]);
+        exit;
+    }
+
+    if ($type === 'top_products') {
+        // Top Products Report
+        $stmt = $conn->prepare("
+            SELECT 
+                p.product_name,
+                p.barcode,
+                SUM(sd.quantity) as total_sold,
+                SUM(sd.total) as revenue,
+                (SUM(sd.total) - SUM(sd.quantity * IFNULL(p.cost, 0))) as profit
+            FROM sale_details sd
+            JOIN sales s ON sd.sale_id = s.sale_id
+            JOIN products p ON sd.product_id = p.product_id
+            WHERE s.store_id = ?
+            AND DATE(s.sale_date) BETWEEN ? AND ?
+            AND s.status = 'completed'
+            GROUP BY p.product_id
+            ORDER BY total_sold DESC
+        ");
+        $stmt->execute([$store_id, $start_date, $end_date]);
+        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode(['success' => true, 'data' => $data]);
+        exit;
+    }
+    
     // 1. Daily Sales
     $stmt = $conn->prepare("
         SELECT COALESCE(SUM(total), 0) as total_sales

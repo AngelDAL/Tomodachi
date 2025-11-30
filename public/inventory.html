@@ -332,15 +332,21 @@
                 window.location.href = 'login.html';
                 return;
             }
-            
-            document.getElementById('userName').textContent = session.full_name;
-            document.getElementById('userRole').textContent = session.role.toUpperCase();
+
+            const userNameEl = document.getElementById('userName');
+            const userRoleEl = document.getElementById('userRole');
+
+            if (userNameEl) userNameEl.textContent = session.full_name || '';
+            if (userRoleEl) userRoleEl.textContent = (session.role || '').toUpperCase();
         });
-        
-        document.getElementById('logoutBtn').addEventListener('click', async (e) => {
-            e.preventDefault();
-            await logout();
-        });
+
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                await logout();
+            });
+        }
     </script>
 </body>
 </html>

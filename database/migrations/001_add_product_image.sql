@@ -1,4 +1,5 @@
 -- Migración: agregar columna para imagen de producto
+USE tomodachi_pos;
 ALTER TABLE products ADD COLUMN image_path VARCHAR(255) NULL AFTER description;
 
 -- Nota: Ejecutar esta migración en la base de datos existente.

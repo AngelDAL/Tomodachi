@@ -1970,7 +1970,7 @@
 }
 
 /* ==========================================================================
-   STICKY CHECKOUT HEADER (FIXED SIZE)
+   STICKY CHECKOUT HEADER (FIXED SIZE & LAYOUT FIXES)
    ========================================================================== */
 
 /* Estado Base (Fijo y Compacto) */
@@ -1983,20 +1983,146 @@
     padding-bottom: 0;
 }
 
-.checkout-header {
-    padding: 8px 12px; /* Tamaño intermedio fijo */
+/* Override fuerte para anular estilos de .cart-footer si existen */
+.checkout-header.cart-footer {
+    position: relative !important;
+    bottom: auto !important;
+    right: auto !important;
+    height: auto !important;
+    width: 100% !important;
+    border-top: none !important;
+    padding: 8px 16px;
     background: #fcfcfc;
     border-bottom: 1px solid #e0e0e0;
+    overflow: visible !important; /* Permitir que sombras o elementos sobresalgan si es necesario */
+    display: block !important; /* Resetear display flex del footer */
+}
+
+.checkout-group {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    width: 100%;
+    max-width: 100%;
+    flex-wrap: wrap;
+}
+
+.checkout-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 80px;
 }
 
 .checkout-label {
-    font-size: 0.65rem; /* Tamaño intermedio fijo */
+    font-size: 0.65rem;
     margin-bottom: 2px;
     opacity: 0.9;
+    white-space: nowrap;
 }
 
 .checkout-label i {
     font-size: 0.8rem;
+}
+
+.total-value, 
+.change-value {
+    font-size: 1.2rem;
+    font-weight: 700;
+    padding: 2px 0;
+    white-space: nowrap;
+}
+
+.received-item .checkout-input {
+    font-size: 1.2rem;
+    width: 100px;
+    text-align: center;
+    padding: 2px 0;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid #ddd;
+    border-radius: 0;
+}
+
+.received-item .checkout-input:focus {
+    border-bottom-color: var(--primary-color);
+    background: white;
+}
+
+/* Botón finalizar */
+.checkout-group .btn-finalize-sale {
+    padding: 8px 20px;
+    font-size: 1rem;
+    min-width: 120px;
+    height: 40px;
+    box-shadow: 0 2px 5px rgba(46, 125, 50, 0.2);
+    margin-left: auto;
+    white-space: nowrap;
+    display: inline-flex !important; /* Asegurar visibilidad */
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+/* Ajustes Responsive Compactos */
+@media (max-width: 768px) {
+    .checkout-group {
+        gap: 10px;
+    }
+    
+    .checkout-item {
+        min-width: 60px;
+    }
+}
+
+@media (max-width: 640px) {
+    .checkout-header.cart-footer {
+        padding: 8px 10px;
+    }
+
+    .checkout-group {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: auto auto;
+        gap: 8px 12px;
+        justify-items: center;
+    }
+
+    .checkout-item {
+        grid-row: 1;
+        width: 100%;
+    }
+
+    .checkout-group .btn-finalize-sale {
+        grid-row: 2;
+        grid-column: 1 / -1;
+        width: 100%;
+        margin: 4px 0 0 0;
+        height: 42px;
+    }
+
+    .total-value, 
+    .change-value,
+    .received-item .checkout-input {
+        font-size: 1.1rem;
+    }
+    
+    .search-section {
+        padding: 8px 10px;
+    }
+}
+
+@media (max-width: 380px) {
+    .checkout-label span {
+        display: none;
+    }
+    
+    .checkout-label i {
+        font-size: 1rem;
+        margin: 0;
+    }
 }
 
 .total-value, 
@@ -2045,3 +2171,38 @@
         padding: 8px 10px;
     }
 }
+/* Animación de producto añadido */
+@keyframes itemAddedPulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7); }
+    50% { transform: scale(0.95); box-shadow: 0 0 0 10px rgba(76, 175, 80, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+}
+
+.item-added-feedback {
+    animation: itemAddedPulse 0.5s ease-out;
+    border-color: var(--primary-color) !important;
+    background-color: rgba(76, 175, 80, 0.1) !important;
+    position: relative;
+    overflow: hidden;
+}
+
+.item-added-feedback::after {
+    content: "\f00c"; /* FontAwesome check */
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2rem;
+    color: var(--primary-color);
+    opacity: 0;
+    animation: checkFadeIn 0.5s ease-out;
+}
+
+@keyframes checkFadeIn {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+    50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+}
+

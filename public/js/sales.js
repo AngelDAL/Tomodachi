@@ -197,15 +197,22 @@ async function searchProducts(term) {
 
     Array.from(searchResults.querySelectorAll('.gallery-item')).forEach(el => {
       el.addEventListener('click', () => {
+        // Feedback visual
+        el.classList.add('item-added-feedback');
+
         addProductToCart({
           product_id: parseInt(el.getAttribute('data-id')),
           product_name: el.querySelector('.g-name').textContent,
           unit_price: parseFloat(el.getAttribute('data-price')),
           image_path: el.getAttribute('data-image')
         });
-        searchInput.value = '';
-        searchResults.classList.add('hidden');
-        productGallery.style.display = 'grid';
+        
+        // Pequeño delay para apreciar el feedback antes de cerrar resultados
+        setTimeout(() => {
+            searchInput.value = '';
+            searchResults.classList.add('hidden');
+            productGallery.style.display = 'grid';
+        }, 250);
       });
     });
   } catch (e) {
@@ -589,6 +596,10 @@ async function loadGallery() {
 
       Array.from(productGallery.querySelectorAll('.gallery-item')).forEach(el => {
         el.addEventListener('click', () => {
+          // Feedback visual
+          el.classList.add('item-added-feedback');
+          setTimeout(() => el.classList.remove('item-added-feedback'), 500);
+
           addProductToCart({
             product_id: parseInt(el.getAttribute('data-id')),
             product_name: el.querySelector('.g-name').textContent,

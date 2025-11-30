@@ -133,7 +133,7 @@ function bindEvents() {
 
     if (closeDetailsBtn) closeDetailsBtn.addEventListener('click', closeProductDetails);
     if (cancelEditBtn) cancelEditBtn.addEventListener('click', closeProductDetails);
-    
+
     if (editForm) {
         editForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -409,7 +409,7 @@ const toastSystem = {
         // Dado que inventory.css no tiene la clase .toast base completa (solo los colores),
         // añadiré la clase .toast al CSS en el siguiente paso o inyectaré estilos compatibles aquí.
         // Mejor opción: Actualizar inventory.css con la clase .toast base y limpiar aquí.
-        
+
         // Por ahora, para asegurar compatibilidad inmediata sin tocar CSS de nuevo si no es necesario:
         toast.style.cssText = `
             padding: 12px 16px;
@@ -575,9 +575,9 @@ async function loadCategories() {
 function populateCategorySelects() {
     const addSelect = document.getElementById('productCategoryInput');
     const editSelect = document.getElementById('editProductCategory');
-    
+
     const options = categories.map(c => `<option value="${c.category_id}">${escapeHtml(c.category_name)}</option>`).join('');
-    
+
     if (addSelect) addSelect.innerHTML = '<option value="">Seleccionar categoría...</option>' + options;
     if (editSelect) editSelect.innerHTML = '<option value="">Sin categoría</option>' + options;
 }
@@ -626,7 +626,7 @@ function openProductDetails(productId) {
     if (!product) return;
 
     currentEditingProduct = productId;
-    
+
     // Llenar formulario
     document.getElementById('editProductId').value = product.product_id;
     document.getElementById('editProductName').value = product.product_name;
@@ -673,15 +673,15 @@ function updateProfitDisplay(price, cost) {
 
     const profit = price - cost;
     const margin = price > 0 ? (profit / price) * 100 : 0;
-    
+
     const profitEl = document.getElementById('detailProfitDisplay');
-    
+
     document.getElementById('detailPriceDisplay').textContent = '$' + price.toFixed(2);
     document.getElementById('detailCostDisplay').textContent = '$' + cost.toFixed(2);
-    
+
     profitEl.textContent = '$' + profit.toFixed(2);
     profitEl.className = profit >= 0 ? 'profit-positive' : 'profit-negative';
-    
+
     document.getElementById('detailMarginDisplay').textContent = margin.toFixed(1) + '%';
 }
 
@@ -691,7 +691,7 @@ async function submitEditProduct() {
 
     const formData = new FormData(form);
     const newStock = parseInt(formData.get('current_stock'));
-    
+
     const productData = {
         product_id: currentEditingProduct,
         product_name: formData.get('product_name'),
@@ -707,7 +707,7 @@ async function submitEditProduct() {
 
     try {
         showNotification('Guardando cambios...', 'info');
-        
+
         // 1. Actualizar datos del producto
         const response = await fetch('../api/inventory/products.php', {
             method: 'PUT',
@@ -737,7 +737,7 @@ async function submitEditProduct() {
                     notes: 'Ajuste desde edición de producto'
                 })
             });
-            
+
             const stockData = await stockResponse.json();
             if (!stockData.success) {
                 showNotification('Producto guardado, pero error al actualizar stock: ' + stockData.message, 'warning');

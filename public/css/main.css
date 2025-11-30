@@ -784,37 +784,96 @@ body {
     border-color: var(--danger-color);
 }
 
-/* Notificaciones */
+/* Notificaciones Modernas (Glassmorphism Black) */
 .notification {
     position: fixed;
     top: 20px;
     right: 20px;
-    padding: 15px 20px;
-    border-radius: 4px;
-    color: white;
+    padding: 14px 24px;
+    border-radius: 16px;
+    color: rgba(255, 255, 255, 0.95);
     z-index: 9999;
-    transform: translateX(400px);
-    transition: transform 0.3s;
+    transform: translateX(120%);
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
+    
+    /* Efecto Cristal Negro Elegante */
+    background: rgba(18, 18, 18, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+    
+    font-size: 0.95rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    opacity: 0;
+    pointer-events: auto;
+    max-width: 380px;
+    min-width: 300px;
 }
 
 .notification.show {
     transform: translateX(0);
+    opacity: 1;
 }
 
+/* Acentos de color sutiles (Borde izquierdo) */
 .notification-success {
-    background-color: var(--success-color);
+    border-left: 4px solid #2ecc71;
 }
 
 .notification-error {
-    background-color: var(--danger-color);
+    border-left: 4px solid #e74c3c;
 }
 
 .notification-info {
-    background-color: var(--secondary-color);
+    border-left: 4px solid #3498db;
 }
 
 .notification-warning {
-    background-color: var(--warning-color);
+    border-left: 4px solid #f1c40f;
+}
+
+/* Iconos FontAwesome */
+.notification-success::before { content: '\f00c'; font-family: "Font Awesome 6 Free"; font-weight: 900; color: #2ecc71; font-size: 1.1rem; }
+.notification-error::before { content: '\f00d'; font-family: "Font Awesome 6 Free"; font-weight: 900; color: #e74c3c; font-size: 1.1rem; }
+.notification-info::before { content: '\f129'; font-family: "Font Awesome 6 Free"; font-weight: 900; color: #3498db; font-size: 1.1rem; }
+.notification-warning::before { content: '\f12a'; font-family: "Font Awesome 6 Free"; font-weight: 900; color: #f1c40f; font-size: 1.1rem; }
+
+/* Responsive Notificaciones (Móvil) */
+@media (max-width: 768px) {
+    .notification {
+        top: auto;
+        bottom: 90px; /* Encima del navbar inferior */
+        left: 50%;
+        right: auto;
+        /* Centrado perfecto */
+        transform: translateX(-50%) translateY(20px);
+        
+        width: auto;
+        min-width: 280px;
+        max-width: 90%;
+        justify-content: center;
+        text-align: center;
+        border-radius: 50px;
+        padding: 12px 24px;
+        
+        /* Ajuste de bordes para móvil (simetría) */
+        border-left: 1px solid rgba(255, 255, 255, 0.08);
+        border-bottom: 3px solid;
+    }
+
+    .notification.show {
+        transform: translateX(-50%) translateY(0);
+    }
+    
+    /* Colores de borde inferior en móvil */
+    .notification-success { border-bottom-color: #2ecc71; }
+    .notification-error { border-bottom-color: #e74c3c; }
+    .notification-info { border-bottom-color: #3498db; }
+    .notification-warning { border-bottom-color: #f1c40f; }
 }
 
 /* Tabla */

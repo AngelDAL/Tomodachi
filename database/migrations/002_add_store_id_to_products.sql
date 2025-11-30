@@ -1,4 +1,6 @@
 -- 1. Agregar columna (con valor por defecto 1 para evitar problemas de integridad iniciales)
+
+USE tomodachi_pos;
 ALTER TABLE products ADD COLUMN store_id INT NOT NULL DEFAULT 1 AFTER product_id;
 
 -- 2. Asegurar que los datos sean válidos (asignar a tienda 1) ANTES de crear la restricción

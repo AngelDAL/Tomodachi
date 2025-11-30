@@ -41,22 +41,45 @@ async function logout() {
  * Mostrar notificación
  */
 function showNotification(message, type = 'info') {
+    // Eliminar notificaciones previas para evitar acumulación excesiva en móvil
+    const existing = document.querySelectorAll('.notification');
+    existing.forEach(n => {
+        n.classList.remove('show');
+        setTimeout(() => n.remove(), 300);
+    });
+
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
-    notification.textContent = message;
+    // Limpiar mensaje de prefijos si ya vienen con iconos del CSS
+    const cleanMessage = message.replace(/^[✓✕ℹ⚠]\s?/, '');
+    notification.textContent = cleanMessage;
 
     document.body.appendChild(notification);
 
-    setTimeout(() => {
-        notification.classList.add('show');
-    }, 100);
+    // Forzar reflow
+    notification.offsetHeight;
 
     setTimeout(() => {
+        notification.classList.add('show');
+    }, 10);
+
+    // Ocultar al pasar el mouse (hover)
+    notification.addEventListener('mouseenter', () => {
         notification.classList.remove('show');
         setTimeout(() => {
-            document.body.removeChild(notification);
+            if (notification.parentNode) notification.parentNode.removeChild(notification);
         }, 300);
-    }, 3000);
+    });
+
+    // Auto ocultar
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.classList.remove('show');
+            setTimeout(() => {
+                if (notification.parentNode) document.body.removeChild(notification);
+            }, 300);
+        }
+    }, 3500);
 }
 
 // Sidebar toggle (mobile)

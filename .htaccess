@@ -6,9 +6,15 @@
 </FilesMatch>
 
 # Proteger archivos sensibles
-<FilesMatch "\.(sql|log)$">
+<FilesMatch "\.(sql|log|txt|md)$">
     Require all denied
 </FilesMatch>
+
+# Proteger directorios del sistema (No accesibles vía navegador)
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^(config|includes|database)/ - [F,L]
+</IfModule>
 
 # Configuración de PHP (para PHP 8.x)
 <IfModule mod_php.c>

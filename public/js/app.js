@@ -259,6 +259,11 @@ async function loadStoreSettings() {
                 // Guardar en caché para carga rápida
                 localStorage.setItem('pos_theme_config', JSON.stringify(store.theme_config));
             }
+
+            // 3. Guardar nombre de la tienda para uso global (ej. tickets)
+            if (store.store_name) {
+                localStorage.setItem('tomodachi_store_name', store.store_name);
+            }
         }
     } catch (error) {
         console.error('Error cargando configuración de tienda:', error);
@@ -303,3 +308,24 @@ function applyTheme(themeConfig) {
 function showProfileSettings() {
     window.location.href = 'profile.html';
 }
+
+/**
+ * Sistema de Soporte
+ */
+function initSupport() {
+    // Seleccionar todos los botones de soporte (sidebar y móvil)
+    const btns = document.querySelectorAll('#supportBtn, .js-support-btn');
+    
+    btns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            // Simplificación: Abrir cliente de correo directo
+            window.location.href = 'mailto:contacto@baburu.shop?subject=Soporte Tomodachi POS';
+        });
+    });
+}
+
+// Inicializar soporte al cargar
+document.addEventListener('DOMContentLoaded', () => {
+    initSupport();
+});

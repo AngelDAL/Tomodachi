@@ -77,10 +77,18 @@ try {
     foreach ($items as $idx=>$it) {
         $pid = isset($it['product_id']) ? (int)$it['product_id'] : 0;
         $qty = isset($it['quantity']) ? (int)$it['quantity'] : 0;
-        $price = isset($it['price']) ? (float)$it['price'] : 0.0;
-        if ($pid<=0 || $qty<=0 || $price<0) { Response::validationError(['items'=>'Datos inválidos en item índice '.$idx]); }
-        $prod = $db->selectOne('SELECT product_id, status FROM products WHERE product_id = ? AND status = ?',[$pid,STATUS_ACTIVE]);
+        // SEGURIDAD: Ignoramos el precio enviado por el frontend y usamos el de la BD
+        // $price = isset($it['price']) ? (float)$it['price'] : 0.0; 
+        
+        if ($pid<=0 || $qty<=0) { Response::validationError(['items'=>'Datos inválidos en item índice '.$idx]); }
+        
+        // Obtenemos precio real de la base de datos
+        $prod = $db->selectOne('SELECT product_id, status, price FROM products WHERE product_id = ? AND status = ?',[$pid,STATUS_ACTIVE]);
+        
         if (!$prod) { Response::error('Producto inactivo o inexistente ID '.$pid,404); }
+        
+        $price = (float)$prod['price']; // Precio blindado
+        
         $inv = $db->selectOne('SELECT inventory_id, current_stock FROM inventory WHERE store_id = ? AND product_id = ?',[$store_id,$pid]);
         
         if (!$inv) {

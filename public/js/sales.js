@@ -60,6 +60,19 @@ function initPOS() {
 
   // Ahora vinculamos eventos
   bindEvents();
+  
+  // Persistencia: Cargar carrito guardado
+  const savedCart = localStorage.getItem('tomodachi_cart');
+  if (savedCart) {
+    try {
+      CART = JSON.parse(savedCart);
+      renderCart();
+    } catch (e) {
+      console.error('Error cargando carrito guardado', e);
+      localStorage.removeItem('tomodachi_cart');
+    }
+  }
+
   loadGallery();
 }
 
@@ -240,11 +253,15 @@ function addProductToCart(prod) {
       nxn_pay: 0
     });
   }
+  playSound('Sound2.mp3');
   renderCart();
   showNotification('Producto añadido', 'success');
 }
 
 function renderCart() {
+  // Persistencia: Guardar carrito
+  localStorage.setItem('tomodachi_cart', JSON.stringify(CART));
+
   if (!cartBody || !emptyCartMsg) return;
 
   if (!CART.length) {
@@ -321,6 +338,7 @@ function renderCart() {
       btn.addEventListener('click', () => {
         const id = parseInt(btn.getAttribute('data-id'));
         CART = CART.filter(i => i.product_id !== id);
+        playSound('Sound3.mp3');
         renderCart();
       });
     });
@@ -557,8 +575,22 @@ async function finalizeSale() {
     const res = await fetch('../api/sales/create_sale.php', { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' }, credentials: 'include' });
     const resData = await res.json();
     if (resData.success) {
+      playSound('Sound7.mp3');
       showNotification('Venta registrada', 'success');
+      
+      // Imprimir ticket si está habilitado
+      const printEnabled = document.getElementById('printTicketCheckbox') && document.getElementById('printTicketCheckbox').checked;
+      if (printEnabled) {
+        printTicket({
+          items: [...CART],
+          total: CART.reduce((s, i) => s + i.subtotal, 0), // Usar subtotal calculado
+          date: new Date().toLocaleString(),
+          sale_id: resData.sale_id || '---'
+        });
+      }
+
       CART = [];
+      localStorage.removeItem('tomodachi_cart'); // Limpiar persistencia
       renderCart();
       if (discountInput) discountInput.value = '0';
       if (taxInput) taxInput.value = '0';
@@ -738,3 +770,65 @@ window.probarEfectosVisuales = probarEfectosVisuales;
 
 // Exponer fetchByCode globalmente
 window.fetchByCode = fetchByCode;
+
+function playSound(filename) {
+  const audio = new Audio('assets/sound/' + filename);
+  audio.play().catch(e => console.warn('Error playing sound:', e));
+}
+
+function printTicket(data) {
+  const win = window.open('', 'PrintTicket', 'width=400,height=600');
+  if (!win) {
+    showNotification('Habilita pop-ups para imprimir ticket', 'warning');
+    return;
+  }
+  
+  const storeName = localStorage.getItem('tomodachi_store_name') || 'Tomodachi Store';
+
+  const itemsHtml = data.items.map(item => `
+    <tr>
+      <td style="padding: 5px 0;">${item.quantity} x ${item.product_name}</td>
+      <td style="text-align: right;">$${(item.unit_price * item.quantity).toFixed(2)}</td>
+    </tr>
+  `).join('');
+
+  const html = `
+    <html>
+    <head>
+      <title>Ticket de Venta</title>
+      <style>
+        body { font-family: 'Courier New', monospace; font-size: 12px; margin: 0; padding: 20px; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .header h2 { margin: 0; font-size: 16px; }
+        table { width: 100%; border-collapse: collapse; }
+        .total { margin-top: 10px; border-top: 1px dashed #000; padding-top: 10px; text-align: right; font-weight: bold; font-size: 14px; }
+        .footer { margin-top: 20px; text-align: center; font-size: 10px; }
+        .powered-by { font-size: 8px; color: #888; margin-top: 5px; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h2>${storeName}</h2>
+        <p>Fecha: ${data.date}</p>
+        <p>Venta #: ${data.sale_id}</p>
+      </div>
+      <table>
+        ${itemsHtml}
+      </table>
+      <div class="total">
+        TOTAL: $${data.total.toFixed(2)}
+      </div>
+      <div class="footer">
+        <p>¡Gracias por su compra!</p>
+        <p class="powered-by">Tomodachi powered by Baburu</p>
+      </div>
+      <script>
+        window.onload = function() { window.print(); window.close(); }
+      </script>
+    </body>
+    </html>
+  `;
+  
+  win.document.write(html);
+  win.document.close();
+}

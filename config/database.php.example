@@ -1,0 +1,35 @@
+<?php
+/**
+ * Configuración de conexión a la base de datos (PLANTILLA)
+ * Tomodachi POS System
+ * 
+ * Instrucciones:
+ * 1. Copie este archivo y renómbrelo a 'database.php'
+ * 2. Configure las credenciales de su base de datos
+ * 3. En producción, asegúrese de que DEBUG_MODE esté en false
+ */
+
+// Configuración de base de datos
+define('DB_HOST', 'localhost');
+define('DB_NAME', 'tomodachi_pos');
+define('DB_USER', 'tu_usuario');     // Cambiar por usuario real
+define('DB_PASS', 'tu_contraseña');  // Cambiar por contraseña real
+define('DB_CHARSET', 'utf8mb4');
+
+// Configuración de zona horaria
+date_default_timezone_set('America/Mexico_City');
+
+// Modo de Depuración
+// true: Muestra errores en pantalla (Solo para desarrollo)
+// false: Oculta errores y los registra en log (Para producción)
+define('DEBUG_MODE', false);
+
+if (DEBUG_MODE) {
+    error_reporting(E_ALL);
+    ini_set('display_errors', 1);
+} else {
+    error_reporting(0);
+    ini_set('display_errors', 0);
+    // Opcional: Configurar ruta de log de errores
+    // ini_set('error_log', __DIR__ . '/../logs/php-error.log');
+}

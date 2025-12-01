@@ -1,18 +1,21 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iniciar Sesión - Tomodachi</title>
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- Custom CSS -->
     <link rel="stylesheet" href="css/login.css">
 </head>
+
 <body>
-    
+
     <div class="split-screen">
         <!-- Left Side: Image & Branding -->
         <div class="left-pane">
@@ -29,16 +32,17 @@
             <!-- Decorative SVG Waves -->
             <div class="waves-container">
                 <svg class="waves" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-                viewBox="0 24 150 28" preserveAspectRatio="none" shape-rendering="auto">
-                <defs>
-                <path id="gentle-wave" d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v44h-352z" />
-                </defs>
-                <g class="parallax">
-                <use xlink:href="#gentle-wave" x="48" y="0" fill="rgba(255,255,255,0.7)" />
-                <use xlink:href="#gentle-wave" x="48" y="3" fill="rgba(255,255,255,0.5)" />
-                <use xlink:href="#gentle-wave" x="48" y="5" fill="rgba(255,255,255,0.3)" />
-                <use xlink:href="#gentle-wave" x="48" y="7" fill="#fff" />
-                </g>
+                    viewBox="0 24 150 28" preserveAspectRatio="none" shape-rendering="auto">
+                    <defs>
+                        <path id="gentle-wave"
+                            d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v44h-352z" />
+                    </defs>
+                    <g class="parallax">
+                        <use xlink:href="#gentle-wave" x="48" y="0" fill="rgba(255,255,255,0.7)" />
+                        <use xlink:href="#gentle-wave" x="48" y="3" fill="rgba(255,255,255,0.5)" />
+                        <use xlink:href="#gentle-wave" x="48" y="5" fill="rgba(255,255,255,0.3)" />
+                        <use xlink:href="#gentle-wave" x="48" y="7" fill="#fff" />
+                    </g>
                 </svg>
             </div>
         </div>
@@ -49,7 +53,7 @@
                 <div class="mobile-header">
                     <h2>Tomodachi</h2>
                 </div>
-                
+
                 <div class="form-header">
                     <h3>Bienvenido de nuevo</h3>
                     <p>Ingresa tus credenciales para acceder</p>
@@ -61,7 +65,8 @@
                             <i class="fas fa-user"></i>
                         </div>
                         <div class="input-wrapper">
-                            <input type="text" id="username" name="username" required autocomplete="username" placeholder=" ">
+                            <input type="text" id="username" name="username" required autocomplete="username"
+                                placeholder=" ">
                             <label for="username">Usuario</label>
                         </div>
                     </div>
@@ -71,7 +76,8 @@
                             <i class="fas fa-lock"></i>
                         </div>
                         <div class="input-wrapper">
-                            <input type="password" id="password" name="password" required autocomplete="current-password" placeholder=" ">
+                            <input type="password" id="password" name="password" required
+                                autocomplete="current-password" placeholder=" ">
                             <label for="password">Contraseña</label>
                             <button type="button" class="toggle-password" onclick="togglePasswordVisibility()">
                                 <i class="fas fa-eye"></i>
@@ -115,7 +121,7 @@
         function togglePasswordVisibility() {
             const passwordInput = document.getElementById('password');
             const icon = document.querySelector('.toggle-password i');
-            
+
             if (passwordInput.type === 'password') {
                 passwordInput.type = 'text';
                 icon.classList.remove('fa-eye');
@@ -129,7 +135,7 @@
 
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             // Animation feedback
             const btn = loginForm.querySelector('.btn-login');
             const originalContent = btn.innerHTML;
@@ -148,7 +154,7 @@
                     body: JSON.stringify({ username, password, remember })
                 });
                 const data = await response.json();
-                
+
                 if (data.success) {
                     btn.innerHTML = '<i class="fas fa-check"></i> ¡Éxito!';
                     btn.style.background = '#48bb78';
@@ -172,7 +178,7 @@
             const span = errorMessage.querySelector('span');
             span.textContent = message;
             errorMessage.classList.add('show');
-            
+
             // Shake animation
             errorMessage.style.animation = 'none';
             errorMessage.offsetHeight; /* trigger reflow */
@@ -184,4 +190,5 @@
         }
     </script>
 </body>
+
 </html>

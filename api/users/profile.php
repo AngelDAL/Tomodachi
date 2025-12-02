@@ -25,7 +25,7 @@ $user_id = $auth->getCurrentUser()['user_id'];
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     try {
         $user = $db->selectOne(
-            'SELECT user_id, username, full_name, email, phone, role, store_id, status, created_at 
+            'SELECT user_id, username, full_name, email, phone, role, store_id, status, show_onboarding, created_at 
              FROM users WHERE user_id = ?', 
             [$user_id]
         );
@@ -77,6 +77,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             }
         }
 
+        $show_onboarding = isset($data['show_onboarding']) ? (int)$data['show_onboarding'] : 1;
+
         // Verificar contraseña actual si se va a cambiar
         if (!empty($password)) {
             if (!password_verify($current_password, $currentUser['password_hash'])) {
@@ -84,18 +86,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             }
             $newHash = Auth::hashPassword($password);
             $db->update(
-                'UPDATE users SET full_name = ?, email = ?, phone = ?, password_hash = ? WHERE user_id = ?',
-                [$full_name, $email, $phone, $newHash, $user_id]
+                'UPDATE users SET full_name = ?, email = ?, phone = ?, password_hash = ?, show_onboarding = ? WHERE user_id = ?',
+                [$full_name, $email, $phone, $newHash, $show_onboarding, $user_id]
             );
         } else {
             $db->update(
-                'UPDATE users SET full_name = ?, email = ?, phone = ? WHERE user_id = ?',
-                [$full_name, $email, $phone, $user_id]
+                'UPDATE users SET full_name = ?, email = ?, phone = ?, show_onboarding = ? WHERE user_id = ?',
+                [$full_name, $email, $phone, $show_onboarding, $user_id]
             );
         }
 
-        // Actualizar sesión si es necesario (nombre)
+        // Actualizar sesión si es necesario (nombre y onboarding)
         $_SESSION['full_name'] = $full_name;
+        $_SESSION['show_onboarding'] = (bool)$show_onboarding;
 
         Response::success(null, 'Perfil actualizado correctamente');
 

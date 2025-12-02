@@ -19,6 +19,7 @@ window.TourSystem = {
     user: null,
     
     init: function(user) {
+        console.log('TourSystem init. User onboarding:', user ? user.show_onboarding : 'no user');
         this.user = user;
         // Si el usuario desactivó el onboarding, no hacemos nada
         if (!user || !user.show_onboarding || user.show_onboarding == 0) return;
@@ -42,8 +43,7 @@ window.TourSystem = {
         const pageName = path.split('/').pop();
         const storageKey = 'tomodachi_tour_seen_' + pageName;
 
-        // Si ya vio el tour de esta página, no mostrarlo de nuevo automáticamente
-        // A menos que queramos un botón de "Ayuda" que lo fuerce.
+        // Verificar si ya se vio este tutorial específico
         if (localStorage.getItem(storageKey)) return;
 
         let steps = [];
@@ -78,8 +78,28 @@ window.TourSystem = {
                 prevBtnText: 'Anterior',
                 doneBtnText: 'Entendido',
                 onDestroyed: () => {
-                    // Marcar como visto
+                    // Marcar este tutorial específico como visto
                     localStorage.setItem(storageKey, 'true');
+
+                    // Verificar si se han completado los 3 tutoriales principales
+                    const seenDashboard = localStorage.getItem('tomodachi_tour_seen_dashboard.html');
+                    const seenSales = localStorage.getItem('tomodachi_tour_seen_sales.html');
+                    const seenInventory = localStorage.getItem('tomodachi_tour_seen_inventory.html');
+
+                    if (seenDashboard && seenSales && seenInventory) {
+                        // Solo si los 3 están vistos, desactivar en base de datos globalmente
+                        fetch('../api/users/complete_onboarding.php', { method: 'POST' })
+                            .then(res => res.json())
+                            .then(data => {
+                                if(data.success) {
+                                    console.log('Todos los tutoriales completados. Onboarding desactivado en BD');
+                                    if (this.user) this.user.show_onboarding = false;
+                                }
+                            })
+                            .catch(err => console.error('Error desactivando onboarding', err));
+                    } else {
+                        console.log('Tutorial completado. Faltan otros para desactivar onboarding global.');
+                    }
                 }
             });
 

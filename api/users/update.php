@@ -29,14 +29,14 @@ try {
 
     $currentUser = $auth->getCurrentUser();
 
-    // Solo admin o el mismo usuario puede actualizar
-    if (!$auth->hasRole([ROLE_ADMIN]) && $currentUser['user_id'] != $user_id) { Response::error('Permisos insuficientes',403); }
+    // Solo admin, super_admin o el mismo usuario puede actualizar
+    if (!$auth->hasRole([ROLE_ADMIN, ROLE_SUPER_ADMIN]) && $currentUser['user_id'] != $user_id) { Response::error('Permisos insuficientes',403); }
 
     $user = $db->selectOne('SELECT user_id, store_id FROM users WHERE user_id = ?',[$user_id]);
     if (!$user) { Response::notFound('Usuario no existe'); }
 
-    // Si es admin intentando editar otro usuario, verificar que sea de su tienda
-    if ($currentUser['user_id'] != $user_id && $user['store_id'] != $currentUser['store_id']) {
+    // Si es admin intentando editar otro usuario, verificar que sea de su tienda. Super Admin puede todo.
+    if ($currentUser['role'] !== ROLE_SUPER_ADMIN && $currentUser['user_id'] != $user_id && $user['store_id'] != $currentUser['store_id']) {
         Response::error('No tiene permiso para modificar usuarios de otra tienda', 403);
     }
 
@@ -62,8 +62,12 @@ try {
         $fields[] = 'status = ?';
         $params[] = $data['status'];
     }
-    if (isset($data['role']) && $auth->hasRole([ROLE_ADMIN])) {
-        if (!in_array($data['role'],[ROLE_ADMIN,ROLE_MANAGER,ROLE_CASHIER])) { Response::validationError(['role'=>'Rol inválido']); }
+    if (isset($data['role']) && $auth->hasRole([ROLE_ADMIN, ROLE_SUPER_ADMIN])) {
+        $allowed_roles = [ROLE_ADMIN, ROLE_MANAGER, ROLE_CASHIER];
+        if ($auth->hasRole(ROLE_SUPER_ADMIN)) {
+            $allowed_roles[] = ROLE_SUPER_ADMIN;
+        }
+        if (!in_array($data['role'], $allowed_roles)) { Response::validationError(['role'=>'Rol inválido']); }
         $fields[] = 'role = ?';
         $params[] = $data['role'];
     }

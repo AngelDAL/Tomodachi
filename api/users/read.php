@@ -22,14 +22,22 @@ try {
     $store_id = isset($_GET['store_id']) ? (int)$_GET['store_id'] : 0;
 
     if ($store_id > 0) {
-        // Validar acceso: si no es admin debe coincidir con su store
-        if ($currentUser['role'] !== ROLE_ADMIN && $currentUser['store_id'] != $store_id) {
-            Response::error('Acceso restringido',403);
+        // Validar acceso: Super Admin puede ver cualquiera. Otros solo su tienda.
+        if ($currentUser['role'] !== ROLE_SUPER_ADMIN && $currentUser['store_id'] != $store_id) {
+            Response::error('Acceso restringido', 403);
         }
         $users = $db->select('SELECT user_id, username, full_name, email, role, store_id, status FROM users WHERE store_id = ?',[$store_id]);
     } else {
-        if ($currentUser['role'] !== ROLE_ADMIN) { Response::error('Solo admin puede ver todos',403); }
-        $users = $db->select('SELECT user_id, username, full_name, email, role, store_id, status FROM users',[]);
+        // Solo Super Admin puede ver todos los usuarios de todas las tiendas
+        if ($currentUser['role'] !== ROLE_SUPER_ADMIN) { 
+            Response::error('Solo Super Admin puede ver todos los usuarios', 403); 
+        }
+        // Obtener también el nombre de la tienda para mostrarlo
+        $sql = "SELECT u.user_id, u.username, u.full_name, u.email, u.role, u.store_id, u.status, s.store_name 
+                FROM users u 
+                LEFT JOIN stores s ON u.store_id = s.store_id
+                ORDER BY u.store_id, u.username";
+        $users = $db->select($sql, []);
     }
 
     Response::success($users,'Listado usuarios');

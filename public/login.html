@@ -247,7 +247,11 @@
                     btn.innerHTML = '<i class="fas fa-check"></i> ¡Éxito!';
                     btn.style.background = '#48bb78';
                     setTimeout(() => {
-                        window.location.href = 'dashboard.html';
+                        if (data.data.user.role === 'super_admin') {
+                            window.location.href = 'super_admin.html';
+                        } else {
+                            window.location.href = 'dashboard.html';
+                        }
                     }, 500);
                 } else {
                     showError(data.message);

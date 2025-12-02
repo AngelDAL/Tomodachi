@@ -13,6 +13,7 @@ define('SESSION_LIFETIME', 86400); // 24 horas en segundos
 define('SESSION_NAME', 'tomodachi_session');
 
 // Roles de usuario
+define('ROLE_SUPER_ADMIN', 'super_admin');
 define('ROLE_ADMIN', 'admin');
 define('ROLE_MANAGER', 'manager');
 define('ROLE_CASHIER', 'cashier');

@@ -82,25 +82,17 @@ try {
         
         if ($pid<=0 || $qty<=0) { Response::validationError(['items'=>'Datos inválidos en item índice '.$idx]); }
         
-        // Obtenemos precio real de la base de datos
-        $prod = $db->selectOne('SELECT product_id, status, price FROM products WHERE product_id = ? AND status = ?',[$pid,STATUS_ACTIVE]);
+        // Obtenemos precio real de la base de datos y stock
+        $prod = $db->selectOne('SELECT product_id, product_name, status, price, current_stock FROM products WHERE product_id = ? AND status = ?',[$pid,STATUS_ACTIVE]);
         
         if (!$prod) { Response::error('Producto inactivo o inexistente ID '.$pid,404); }
         
         $price = (float)$prod['price']; // Precio blindado
-        
-        $inv = $db->selectOne('SELECT inventory_id, current_stock FROM inventory WHERE store_id = ? AND product_id = ?',[$store_id,$pid]);
-        
-        if (!$inv) {
-            // Si no existe registro de inventario, es un error de integridad de datos
-            Response::error('Error de datos: El producto ID '.$pid.' no tiene registro de inventario inicializado.', 500);
-        }
-
-        $stockActual = (int)$inv['current_stock'];
+        $stockActual = (int)$prod['current_stock'];
         
         // Validar stock solo si NO se permite stock negativo
         if (!$allowNegativeStock && $stockActual < $qty) { 
-            Response::error('Stock insuficiente producto ID '.$pid,409); 
+            Response::error("Stock insuficiente para el producto '{$prod['product_name']}'. (Puede activar 'Stock negativo' en Configuración de Tienda si lo requiere)",409); 
         }
         
         $lineSubtotal = $qty * $price;
@@ -109,7 +101,6 @@ try {
             'product_id'=>$pid,
             'quantity'=>$qty,
             'price'=>$price,
-            'inventory_id'=>$inv['inventory_id'],
             'previous_stock'=>$stockActual,
             'new_stock'=>$stockActual - $qty
         ];
@@ -127,8 +118,8 @@ try {
         ]);
 
         foreach ($productsToUpdate as $p) {
-            // Actualizar inventario
-            $db->update('UPDATE inventory SET current_stock = ?, last_updated = NOW() WHERE inventory_id = ?',[$p['new_stock'],$p['inventory_id']]);
+            // Actualizar inventario en tabla products
+            $db->update('UPDATE products SET current_stock = ?, updated_at = NOW() WHERE product_id = ?',[$p['new_stock'],$p['product_id']]);
             // Movimiento inventario tipo sale
             $db->insert('INSERT INTO inventory_movements (store_id, product_id, user_id, movement_type, quantity, previous_stock, new_stock, notes, created_at) VALUES (?,?,?,?,?,?,?,?,NOW())',[
                 $store_id,$p['product_id'],$user['user_id'],MOVEMENT_SALE,$p['quantity'],$p['previous_stock'],$p['new_stock'],'Venta #'.$sale_id

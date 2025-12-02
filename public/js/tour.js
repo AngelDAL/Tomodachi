@@ -53,21 +53,20 @@ window.TourSystem = {
                 { element: '.welcome-header', popover: { title: 'Bienvenido a Tomodachi', description: 'Este es tu panel principal donde verás un resumen de tu negocio.' } },
                 { element: '.stats-grid', popover: { title: 'Estadísticas en tiempo real', description: 'Visualiza ventas, ganancias y productos bajos en stock al instante.' } },
                 { element: '.quick-actions', popover: { title: 'Accesos Rápidos', description: 'Botones para las tareas más comunes: Vender, Inventario, etc.' } },
-                { element: '#sidebar-toggle', popover: { title: 'Menú Lateral', description: 'Expande o contrae el menú para tener más espacio.' } }
             ];
         } else if (pageName.includes('sales.html')) {
              steps = [
-                { element: '.search-box', popover: { title: 'Paso 1: Buscar Producto', description: 'Escanea el código de barras o escribe el nombre del producto aquí para agregarlo.' } },
-                { element: '#productGallery', popover: { title: 'Paso 2: Catálogo Visual', description: 'También puedes seleccionar productos directamente desde esta galería haciendo clic en ellos.' } },
-                { element: '#cartHandle', popover: { title: 'Paso 3: Ver Carrito', description: 'Haz clic aquí para ver los productos agregados, cambiar cantidades o aplicar descuentos.' } },
-                { element: '#btnCheckout', popover: { title: 'Paso 4: Finalizar Venta', description: 'Presiona este botón (o F9) para procesar el pago y completar la venta.' } }
+                { element: '.search-box', popover: { title: 'Este es tu Punto de venta', description: 'Escanea el código de barras o escribe el nombre del producto aquí para agregarlo al carrito.' } },
+                { element: '#productGallery', popover: { title: 'Catálogo de productos', description: 'En esta sección podrás ver tus productos, registralos y los podrás ver aqui' } },
+                { element: '#cartHandle', popover: { title: 'Ver Carrito', description: 'Haz clic aquí para ver los productos agregados, cambiar cantidades o aplicar descuentos.' } },
+                { element: '#btnCheckout', popover: { title: 'Finalizar Venta', description: 'Presiona este botón para procesar el pago y completar la venta.' } }
             ];
         } else if (pageName.includes('inventory.html')) {
             steps = [
                { element: '.inventory-header', popover: { title: 'Gestión de Inventario', description: 'Aquí administras todo tu catálogo de productos.' } },
                { element: '#addProductBtn', popover: { title: 'Paso 1: Registrar Producto', description: 'Haz clic aquí para abrir el formulario y crear un nuevo producto.' } },
                { element: '.inventory-table-container', popover: { title: 'Paso 2: Administrar Lista', description: 'Tus productos aparecerán aquí. Usa los botones de Editar (lápiz) para modificar precios o stock.' } },
-               { element: '#btnImportExcel', popover: { title: 'Opción: Importación Masiva', description: 'Si tienes muchos productos, usa esta opción para cargarlos desde un archivo Excel.' } }
+               { element: '#btnImportExcel', popover: { title: 'Opción: Importación Masiva', description: 'Si tienes muchos productos, usa esta opción para cargarlos desde un archivo Excel. (Esta en Configuracion de empresa)' } }
            ];
        }
 

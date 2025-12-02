@@ -10,6 +10,9 @@ CREATE TABLE stores (
     store_name VARCHAR(100) NOT NULL,
     address VARCHAR(255),
     phone VARCHAR(20),
+    theme_config TEXT NULL,
+    settings TEXT NULL,
+    logo_url VARCHAR(255) NULL,
     status ENUM('active', 'inactive') DEFAULT 'active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -24,8 +27,10 @@ CREATE TABLE users (
     password_hash VARCHAR(255) NOT NULL,
     full_name VARCHAR(100) NOT NULL,
     email VARCHAR(100),
+    phone VARCHAR(20) NULL,
     role ENUM('admin', 'manager', 'cashier') NOT NULL,
     status ENUM('active', 'inactive') DEFAULT 'active',
+    show_onboarding TINYINT(1) DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_login TIMESTAMP NULL,
     FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE RESTRICT,
@@ -37,43 +42,38 @@ CREATE TABLE users (
 -- Tabla: categories (Categorías de productos)
 CREATE TABLE categories (
     category_id INT AUTO_INCREMENT PRIMARY KEY,
+    store_id INT NOT NULL DEFAULT 1,
     category_name VARCHAR(100) NOT NULL,
     description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE,
+    INDEX idx_store (store_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabla: products (Productos)
 CREATE TABLE products (
     product_id INT AUTO_INCREMENT PRIMARY KEY,
-    category_id INT,
+    store_id INT NOT NULL,
+    category_id INT DEFAULT NULL,
     product_name VARCHAR(150) NOT NULL,
     description TEXT,
-    barcode VARCHAR(50) UNIQUE,
-    qr_code VARCHAR(100) UNIQUE,
+    image_path VARCHAR(255) NULL,
+    barcode VARCHAR(50),
+    qr_code VARCHAR(100),
     price DECIMAL(10,2) NOT NULL,
     cost DECIMAL(10,2) DEFAULT 0.00,
+    current_stock INT DEFAULT 0,
     min_stock INT DEFAULT 0,
     status ENUM('active', 'inactive') DEFAULT 'active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (category_id) REFERENCES categories(category_id) ON DELETE SET NULL,
-    INDEX idx_barcode (barcode),
-    INDEX idx_qr_code (qr_code),
-    INDEX idx_product_name (product_name),
-    INDEX idx_status (status)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Tabla: inventory (Inventario por tienda)
-CREATE TABLE inventory (
-    inventory_id INT AUTO_INCREMENT PRIMARY KEY,
-    store_id INT NOT NULL,
-    product_id INT NOT NULL,
-    current_stock INT DEFAULT 0,
-    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE,
-    FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE CASCADE,
-    UNIQUE KEY unique_store_product (store_id, product_id),
-    INDEX idx_stock (current_stock)
+    UNIQUE KEY unique_store_barcode (store_id, barcode),
+    UNIQUE KEY unique_store_qr_code (store_id, qr_code),
+    INDEX idx_product_name (product_name),
+    INDEX idx_status (status),
+    INDEX idx_store (store_id),
+    INDEX idx_category (category_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabla: inventory_movements (Movimientos de inventario)
@@ -175,30 +175,21 @@ INSERT INTO stores (store_name, address, phone, status) VALUES
 ('Tienda Principal', 'Calle Principal #123, Ciudad', '555-1234', 'active');
 
 -- Insertar categorías de ejemplo
-INSERT INTO categories (category_name, description) VALUES
-('Bebidas', 'Bebidas frías y calientes'),
-('Snacks', 'Botanas y dulces'),
-('Abarrotes', 'Productos de despensa'),
-('Lácteos', 'Productos lácteos y derivados');
+INSERT INTO categories (store_id, category_name, description) VALUES
+(1, 'Bebidas', 'Bebidas frías y calientes'),
+(1, 'Snacks', 'Botanas y dulces'),
+(1, 'Abarrotes', 'Productos de despensa'),
+(1, 'Lácteos', 'Productos lácteos y derivados');
 
 -- Insertar usuario administrador (password: admin123)
 INSERT INTO users (store_id, username, password_hash, full_name, email, role, status) VALUES
 (1, 'admin', '$2y$10$rDGCkOinf6RJ2ywtMU6QYeeTNkqq4/soMpsxdF4wO9lqIRTrjfP2a', 'Administrador', 'admin@tomodachi.com', 'admin', 'active');
 
 -- Productos de ejemplo
-INSERT INTO products (category_id, product_name, description, barcode, price, cost, min_stock, status) VALUES
-(1, 'Coca Cola 600ml', 'Refresco de cola', '7501234567890', 15.50, 10.00, 20, 'active'),
-(1, 'Agua Natural 1L', 'Agua purificada', '7501234567891', 10.00, 6.00, 30, 'active'),
-(2, 'Sabritas Original 45g', 'Papas fritas', '7501234567892', 18.00, 12.00, 25, 'active'),
-(2, 'Galletas Marías', 'Galletas tradicionales', '7501234567893', 12.00, 8.00, 20, 'active'),
-(3, 'Arroz 1kg', 'Arroz blanco', '7501234567894', 25.00, 18.00, 15, 'active'),
-(4, 'Leche Entera 1L', 'Leche pasteurizada', '7501234567895', 22.00, 16.00, 20, 'active');
-
--- Inventario inicial para la tienda principal
-INSERT INTO inventory (store_id, product_id, current_stock) VALUES
-(1, 1, 50),
-(1, 2, 60),
-(1, 3, 40),
-(1, 4, 35),
-(1, 5, 30),
-(1, 6, 45);
+INSERT INTO products (store_id, category_id, product_name, description, barcode, price, cost, current_stock, min_stock, status) VALUES
+(1, 1, 'Coca Cola 600ml', 'Refresco de cola', '7501234567890', 15.50, 10.00, 50, 20, 'active'),
+(1, 1, 'Agua Natural 1L', 'Agua purificada', '7501234567891', 10.00, 6.00, 60, 30, 'active'),
+(1, 2, 'Sabritas Original 45g', 'Papas fritas', '7501234567892', 18.00, 12.00, 40, 25, 'active'),
+(1, 2, 'Galletas Marías', 'Galletas tradicionales', '7501234567893', 12.00, 8.00, 35, 20, 'active'),
+(1, 3, 'Arroz 1kg', 'Arroz blanco', '7501234567894', 25.00, 18.00, 30, 15, 'active'),
+(1, 4, 'Leche Entera 1L', 'Leche pasteurizada', '7501234567895', 22.00, 16.00, 45, 20, 'active');

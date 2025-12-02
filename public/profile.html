@@ -83,15 +83,6 @@
             border-radius: 4px;
             border: 1px solid #ddd;
         }
-        .users-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        .users-table th, .users-table td {
-            padding: 1rem;
-            text-align: left;
-            border-bottom: 1px solid #eee;
-        }
         .badge {
             padding: 0.25rem 0.5rem;
             border-radius: 4px;
@@ -367,95 +358,150 @@
                             </div>
 
                             <h4 style="margin-top: 2rem; margin-bottom: 1rem;">Importar Datos</h4>
-                            <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; border: 1px dashed #ccc;">
-                                <p style="margin-bottom: 1rem; color: #555; font-size: 0.95rem;">
-                                    <i class="fas fa-info-circle" style="color: var(--info-color);"></i> 
-                                    Si vienes de otro sistema, puedes importar tus productos desde un archivo Excel. 
-                                    Esto te ayudará a migrar rápidamente tus precios, códigos y niveles de stock.
-                                </p>
-                                <p style="margin-bottom: 1rem; font-size: 0.85rem; color: #666;">
-                                    El archivo debe tener encabezados en la primera fila. Las columnas detectadas automáticamente son: 
-                                    <strong>Nombre, Código, Precio, Costo, Stock</strong>.
-                                </p>
-                                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                                    <input type="file" id="importExcelInput" accept=".xlsx, .xls" class="form-control" style="max-width: 300px;">
-                                    <button type="button" class="btn btn-secondary" id="btnImportExcel">
-                                        <i class="fas fa-file-import"></i> Procesar e Importar
-                                    </button>
+                            <div style="background: #f8f9fa; padding: 2rem; border-radius: 8px; border: 1px dashed #ccc; text-align: center;">
+                                <div style="font-size: 3rem; color: var(--primary-color); margin-bottom: 1rem;">
+                                    <i class="fas fa-file-excel"></i>
                                 </div>
+                                <h5 style="margin-bottom: 0.5rem; font-size: 1.2rem;">¿Tienes tus productos en un Excel?</h5>
+                                <p style="margin-bottom: 1.5rem; color: #666; max-width: 600px; margin-left: auto; margin-right: auto;">
+                                    Si vienes de otro sistema o tienes un inventario previo, usa nuestra herramienta de importación para cargar todos tus productos, precios y existencias en segundos.
+                                </p>
+                                <button type="button" class="btn btn-primary" onclick="openImportGuide()">
+                                    <i class="fas fa-magic"></i> Iniciar Asistente de Importación
+                                </button>
+                                <!-- Hidden input -->
+                                <input type="file" id="importExcelInput" accept=".xlsx, .xls" style="display: none;">
                                 <div id="importStatus" style="margin-top: 10px; font-size: 0.9rem; font-weight: bold;"></div>
                             </div>
 
                             <h4 style="margin-top: 2rem; margin-bottom: 1rem;">Personalización (Tema)</h4>
                             <p style="margin-bottom: 1rem; color: #666; font-size: 0.9rem;">Personaliza los colores de tu tienda. Los cambios se verán reflejado en tiempo real.</p>
                             
-                            <div class="form-grid" id="themeControls">
-                                <!-- Brand Colors -->
-                                <div class="form-group">
-                                    <label>Color Primario</label>
-                                    <div class="color-picker-group">
-                                        <input type="color" name="primary_color" data-var="--primary-color" value="#4c77af">
-                                        <input type="text" readonly style="width: 80px; font-size: 0.8rem;">
+                            <div class="theme-customizer-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+                                <!-- Controles de Color -->
+                                <div class="form-grid" id="themeControls" style="grid-template-columns: 1fr;">
+                                    <h5 style="margin-bottom: 1rem; color: #555;">Paleta de Colores</h5>
+                                    
+                                    <!-- Brand Colors -->
+                                    <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                                        <label style="margin: 0;">Color Primario</label>
+                                        <div class="color-picker-group">
+                                            <input type="color" name="primary_color" data-var="--primary-color" value="#4c77af" style="cursor: pointer;">
+                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid #ddd; border-radius: 4px; padding: 2px;">
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="form-group">
-                                    <label>Color Secundario</label>
-                                    <div class="color-picker-group">
-                                        <input type="color" name="secondary_color" data-var="--secondary-color" value="#2196F3">
-                                        <input type="text" readonly style="width: 80px; font-size: 0.8rem;">
+                                    <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                                        <label style="margin: 0;">Color Secundario</label>
+                                        <div class="color-picker-group">
+                                            <input type="color" name="secondary_color" data-var="--secondary-color" value="#2196F3" style="cursor: pointer;">
+                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid #ddd; border-radius: 4px; padding: 2px;">
+                                        </div>
+                                    </div>
+
+                                    <h5 style="margin: 1rem 0 0.5rem; color: #555;">Estados</h5>
+                                    <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                                        <label style="margin: 0;">Éxito</label>
+                                        <div class="color-picker-group">
+                                            <input type="color" name="success_color" data-var="--success-color" value="#4CAF50" style="cursor: pointer;">
+                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid #ddd; border-radius: 4px; padding: 2px;">
+                                        </div>
+                                    </div>
+                                    <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                                        <label style="margin: 0;">Peligro / Error</label>
+                                        <div class="color-picker-group">
+                                            <input type="color" name="danger_color" data-var="--danger-color" value="#f44336" style="cursor: pointer;">
+                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid #ddd; border-radius: 4px; padding: 2px;">
+                                        </div>
+                                    </div>
+                                    <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                                        <label style="margin: 0;">Advertencia</label>
+                                        <div class="color-picker-group">
+                                            <input type="color" name="warning_color" data-var="--warning-color" value="#ff9800" style="cursor: pointer;">
+                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid #ddd; border-radius: 4px; padding: 2px;">
+                                        </div>
+                                    </div>
+                                    <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                                        <label style="margin: 0;">Información</label>
+                                        <div class="color-picker-group">
+                                            <input type="color" name="info_color" data-var="--info-color" value="#2196F3" style="cursor: pointer;">
+                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid #ddd; border-radius: 4px; padding: 2px;">
+                                        </div>
+                                    </div>
+
+                                    <h5 style="margin: 1rem 0 0.5rem; color: #555;">Interfaz</h5>
+                                    <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                                        <label style="margin: 0;">Barra Lateral (Oscuro)</label>
+                                        <div class="color-picker-group">
+                                            <input type="color" name="dark_color" data-var="--dark-color" value="#333333" style="cursor: pointer;">
+                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid #ddd; border-radius: 4px; padding: 2px;">
+                                        </div>
+                                    </div>
+                                    <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                                        <label style="margin: 0;">Fondo Principal</label>
+                                        <div class="color-picker-group">
+                                            <input type="color" name="bg_body" data-var="--bg-body" value="#f4f7f6" style="cursor: pointer;">
+                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid #ddd; border-radius: 4px; padding: 2px;">
+                                        </div>
+                                    </div>
+                                    <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                                        <label style="margin: 0;">Texto Principal</label>
+                                        <div class="color-picker-group">
+                                            <input type="color" name="text_color" data-var="--text-color" value="#333333" style="cursor: pointer;">
+                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid #ddd; border-radius: 4px; padding: 2px;">
+                                        </div>
                                     </div>
                                 </div>
 
-                                <!-- Status Colors -->
-                                <div class="form-group">
-                                    <label>Color Éxito</label>
-                                    <div class="color-picker-group">
-                                        <input type="color" name="success_color" data-var="--success-color" value="#4CAF50">
-                                        <input type="text" readonly style="width: 80px; font-size: 0.8rem;">
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label>Color Peligro</label>
-                                    <div class="color-picker-group">
-                                        <input type="color" name="danger_color" data-var="--danger-color" value="#f44336">
-                                        <input type="text" readonly style="width: 80px; font-size: 0.8rem;">
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label>Color Advertencia</label>
-                                    <div class="color-picker-group">
-                                        <input type="color" name="warning_color" data-var="--warning-color" value="#ff9800">
-                                        <input type="text" readonly style="width: 80px; font-size: 0.8rem;">
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label>Color Info</label>
-                                    <div class="color-picker-group">
-                                        <input type="color" name="info_color" data-var="--info-color" value="#2196F3">
-                                        <input type="text" readonly style="width: 80px; font-size: 0.8rem;">
-                                    </div>
-                                </div>
+                                <!-- Panel de Vista Previa -->
+                                <div class="preview-panel">
+                                    <h5 style="margin-bottom: 1rem; color: #555;">Vista Previa de Componentes</h5>
+                                    <div style="background: var(--bg-body); padding: 1.5rem; border: 1px solid #ddd; border-radius: 8px; box-shadow: inset 0 0 10px rgba(0,0,0,0.05);">
+                                        
+                                        <!-- Navbar Simulado -->
+                                        <div style="background: var(--dark-color); color: white; padding: 10px 15px; border-radius: 4px; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+                                            <span style="font-weight: bold;">Tomodachi POS</span>
+                                            <div style="display: flex; gap: 10px;">
+                                                <span style="opacity: 0.8; font-size: 0.8rem;">Inicio</span>
+                                                <span style="opacity: 0.8; font-size: 0.8rem;">Ventas</span>
+                                            </div>
+                                        </div>
 
-                                <!-- UI Colors -->
-                                <div class="form-group">
-                                    <label>Color Oscuro (Sidebar)</label>
-                                    <div class="color-picker-group">
-                                        <input type="color" name="dark_color" data-var="--dark-color" value="#333333">
-                                        <input type="text" readonly style="width: 80px; font-size: 0.8rem;">
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label>Fondo Principal</label>
-                                    <div class="color-picker-group">
-                                        <input type="color" name="bg_body" data-var="--bg-body" value="#f4f7f6">
-                                        <input type="text" readonly style="width: 80px; font-size: 0.8rem;">
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label>Texto Principal</label>
-                                    <div class="color-picker-group">
-                                        <input type="color" name="text_color" data-var="--text-color" value="#333333">
-                                        <input type="text" readonly style="width: 80px; font-size: 0.8rem;">
+                                        <!-- Botones -->
+                                        <div style="margin-bottom: 1.5rem;">
+                                            <h6 style="color: var(--text-color); margin-bottom: 0.5rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;">Botones</h6>
+                                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                                <button type="button" class="btn" style="background: var(--primary-color); color: white; border: none; padding: 8px 16px; border-radius: 4px;">Primario</button>
+                                                <button type="button" class="btn" style="background: var(--secondary-color); color: white; border: none; padding: 8px 16px; border-radius: 4px;">Secundario</button>
+                                                <button type="button" class="btn" style="background: white; color: var(--text-color); border: 1px solid #ccc; padding: 8px 16px; border-radius: 4px;">Neutro</button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Alertas / Badges -->
+                                        <div style="margin-bottom: 1.5rem;">
+                                            <h6 style="color: var(--text-color); margin-bottom: 0.5rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;">Estados y Alertas</h6>
+                                            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
+                                                <span style="background: var(--success-color); color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">Completado</span>
+                                                <span style="background: var(--warning-color); color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">Pendiente</span>
+                                                <span style="background: var(--danger-color); color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">Cancelado</span>
+                                            </div>
+                                            <div style="background: rgba(33, 150, 243, 0.1); border-left: 4px solid var(--info-color); padding: 10px; border-radius: 0 4px 4px 0;">
+                                                <p style="color: var(--text-color); margin: 0; font-size: 0.9rem;">Este es un mensaje de información del sistema.</p>
+                                            </div>
+                                        </div>
+
+                                        <!-- Tarjeta -->
+                                        <div>
+                                            <h6 style="color: var(--text-color); margin-bottom: 0.5rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;">Tarjetas</h6>
+                                            <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 3px solid var(--primary-color);">
+                                                <h4 style="color: var(--text-color); margin-top: 0; margin-bottom: 5px;">Producto Ejemplo</h4>
+                                                <p style="color: #666; font-size: 0.9rem; margin-bottom: 10px;">Descripción breve del producto.</p>
+                                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                                    <span style="font-weight: bold; color: var(--primary-color);">$150.00</span>
+                                                    <button style="background: var(--success-color); color: white; border: none; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center;"><i class="fas fa-plus"></i></button>
+                                                </div>
+                                            </div>
+                                        </div>
+
                                     </div>
                                 </div>
                             </div>
@@ -475,7 +521,7 @@
                             <button class="btn btn-primary" onclick="showCreateUserModal()"><i class="fas fa-plus"></i> Nuevo Usuario</button>
                         </div>
                         <div class="table-responsive">
-                            <table class="users-table">
+                            <table class="dashboard-table">
                                 <thead>
                                     <tr>
                                         <th>Usuario</th>
@@ -531,6 +577,74 @@
                     <button type="submit" class="btn btn-primary">Crear</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Modal Guía de Importación -->
+    <div id="importGuideModal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-dolly"></i> Asistente de Migración de Datos</h3>
+                <span class="close" onclick="closeImportGuide()">&times;</span>
+            </div>
+            <div class="modal-body" style="text-align: center;">
+                <p style="font-size: 1.1rem; color: #444; margin-bottom: 2rem;">
+                    Sigue estos 3 sencillos pasos para cargar tu inventario:
+                </p>
+                
+                <div class="steps-container" style="display: flex; justify-content: space-around; margin-bottom: 3rem; flex-wrap: wrap; gap: 20px;">
+                    <div class="step-item" style="flex: 1; min-width: 200px;">
+                        <div style="width: 60px; height: 60px; background: #e3f2fd; color: #1976d2; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin: 0 auto 1rem;">
+                            <i class="fas fa-file-csv"></i>
+                        </div>
+                        <h4 style="margin-bottom: 0.5rem;">1. Prepara tu Excel</h4>
+                        <p style="font-size: 0.9rem; color: #666;">
+                            Asegúrate que tu archivo tenga encabezados como: 
+                            <strong>Nombre, Código, Precio, Costo, Stock</strong>.
+                        </p>
+                    </div>
+                    
+                    <div class="step-arrow" style="display: flex; align-items: center; color: #ccc; font-size: 1.5rem;">
+                        <i class="fas fa-chevron-right"></i>
+                    </div>
+
+                    <div class="step-item" style="flex: 1; min-width: 200px;">
+                        <div style="width: 60px; height: 60px; background: #e8f5e9; color: #2e7d32; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin: 0 auto 1rem;">
+                            <i class="fas fa-upload"></i>
+                        </div>
+                        <h4 style="margin-bottom: 0.5rem;">2. Sube el Archivo</h4>
+                        <p style="font-size: 0.9rem; color: #666;">
+                            Selecciona el archivo .xlsx o .xls desde tu dispositivo.
+                        </p>
+                    </div>
+
+                    <div class="step-arrow" style="display: flex; align-items: center; color: #ccc; font-size: 1.5rem;">
+                        <i class="fas fa-chevron-right"></i>
+                    </div>
+
+                    <div class="step-item" style="flex: 1; min-width: 200px;">
+                        <div style="width: 60px; height: 60px; background: #fff3e0; color: #f57c00; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin: 0 auto 1rem;">
+                            <i class="fas fa-check-double"></i>
+                        </div>
+                        <h4 style="margin-bottom: 0.5rem;">3. Confirma</h4>
+                        <p style="font-size: 0.9rem; color: #666;">
+                            Verifica que las columnas coincidan y confirma la importación.
+                        </p>
+                    </div>
+                </div>
+
+                <div style="background: #f0f7ff; padding: 1rem; border-radius: 8px; margin-bottom: 2rem; text-align: left; border-left: 4px solid #2196F3;">
+                    <h5 style="margin-bottom: 0.5rem; color: #1565c0;"><i class="fas fa-lightbulb"></i> Tip Pro:</h5>
+                    <p style="margin: 0; font-size: 0.9rem;">
+                        No te preocupes por el orden de las columnas, el sistema te permitirá elegir qué columna corresponde a cada dato en el siguiente paso.
+                    </p>
+                </div>
+
+                <button type="button" class="btn btn-primary btn-lg" style="padding: 12px 30px; font-size: 1.1rem;" onclick="triggerFileInput()">
+                    <i class="fas fa-folder-open"></i> Seleccionar Archivo Excel
+                </button>
+                <div id="guideStatus" style="margin-top: 1rem;"></div>
+            </div>
         </div>
     </div>
 
@@ -606,6 +720,24 @@
                 <button type="button" class="btn btn-primary" id="btnConfirmImport" disabled>
                     <i class="fas fa-check"></i> Confirmar e Importar
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para confirmar cambio de estado de usuario -->
+    <div id="toggleUserStatusModal" class="modal">
+        <div class="modal-content" style="max-width: 350px; text-align: center; padding: 25px;">
+            <div class="modal-header" style="justify-content: center; border-bottom: none; padding-bottom: 0;">
+                <div id="toggleUserIconContainer" style="width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
+                    <i id="toggleUserIcon" class="fas fa-exclamation-triangle" style="font-size: 30px;"></i>
+                </div>
+            </div>
+            <h2 id="toggleUserTitle" style="margin-bottom: 10px; color: #333; font-size: 1.2rem;">¿Confirmar acción?</h2>
+            <p id="toggleUserMsg" style="color: #666; margin-bottom: 25px; font-size: 0.95rem;">...</p>
+            
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button type="button" class="btn-secondary" onclick="closeToggleUserStatusModal()" style="min-width: 100px;">Cancelar</button>
+                <button type="button" id="confirmToggleUserBtn" class="btn-danger" style="min-width: 100px;">Confirmar</button>
             </div>
         </div>
     </div>

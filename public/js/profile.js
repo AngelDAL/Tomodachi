@@ -43,6 +43,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 }
             });
+
+            // Inicializar valor de texto si está vacío
+            if (!textInput.value) {
+                textInput.value = input.value;
+            }
         });
     }
 
@@ -56,25 +61,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             const formData = new FormData();
             formData.append('logo', file);
 
-            try {
-                const res = await fetch('../api/stores/upload_logo.php', {
-                    method: 'POST',
-                    body: formData
-                });
-                const result = await res.json();
-                if (result.success) {
-                    document.getElementById('companyLogoPreview').src = result.data.logo_url;
-                    // Actualizar también el logo del navbar
-                    const navLogo = document.getElementById('navStoreLogo');
-                    if (navLogo) navLogo.src = result.data.logo_url;
-                    showNotification('Logo actualizado correctamente', 'success');
-                } else {
-                    showNotification(result.message || 'Error al subir logo', 'error');
-                }
-            } catch (error) {
-                console.error(error);
-                showNotification('Error de conexión al subir logo', 'error');
+            // try {
+            const res = await fetch('../api/stores/upload_logo.php', {
+                method: 'POST',
+                body: formData
+            });
+            const result = await res.json();
+            if (result.success) {
+                document.getElementById('companyLogoPreview').src = result.data.logo_url;
+                // Actualizar también el logo del navbar
+                const navLogo = document.getElementById('navStoreLogo');
+                if (navLogo) navLogo.src = result.data.logo_url;
+                showNotification('Logo actualizado correctamente', 'success');
+            } else {
+                showNotification(result.message || 'Error al subir logo', 'error');
             }
+            // } catch (error) {
+            //     console.error(error);
+            //     showNotification('Error de conexión al subir logo', 'error');
+            // }
         });
     }
 
@@ -85,22 +90,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // Excel Import
-    const btnImport = document.getElementById('btnImportExcel');
-    if (btnImport) {
-        btnImport.addEventListener('click', handleImportExcel);
-    }
-    
+    // const btnImport = document.getElementById('btnImportExcel'); // Removed old button logic
+    // if (btnImport) {
+    //    btnImport.addEventListener('click', handleImportExcel);
+    // }
+
     // Auto-open import modal on file selection
     const fileInput = document.getElementById('importExcelInput');
     if (fileInput) {
         fileInput.addEventListener('change', handleImportExcel);
+    }
+
+    // Close guide modal when clicking outside
+    const guideModal = document.getElementById('importGuideModal');
+    if (guideModal) {
+        guideModal.addEventListener('click', (e) => {
+            if (e.target === guideModal) {
+                closeImportGuide();
+            }
+        });
     }
 });
 
 function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-    
+
     document.getElementById(tabId).classList.add('active');
     // Encontrar el botón correspondiente (un poco hacky pero funciona)
     const btn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick').includes(tabId));
@@ -118,7 +133,7 @@ async function loadProfile() {
             form.email.value = user.email || '';
             form.phone.value = user.phone || '';
             document.getElementById('userRoleDisplay').value = user.role.toUpperCase();
-            
+
             // Onboarding setting
             const onboardingCheck = document.getElementById('showOnboarding');
             if (onboardingCheck) {
@@ -134,10 +149,10 @@ document.getElementById('profileForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
     const data = Object.fromEntries(formData.entries());
-    
+
     // Handle checkbox explicitly
     data.show_onboarding = document.getElementById('showOnboarding').checked;
-    
+
     try {
         const res = await fetch('../api/users/profile.php', {
             method: 'POST',
@@ -167,7 +182,7 @@ async function loadCompanySettings() {
             form.store_name.value = store.store_name;
             form.phone.value = store.phone || '';
             form.address.value = store.address || '';
-            
+
             if (store.logo_url) {
                 document.getElementById('companyLogoPreview').src = store.logo_url;
             }
@@ -181,14 +196,14 @@ async function loadCompanySettings() {
             if (store.theme_config) {
                 const themeControls = document.getElementById('themeControls');
                 const inputs = themeControls.querySelectorAll('input[type="color"]');
-                
+
                 inputs.forEach(input => {
                     const cssVar = input.getAttribute('data-var');
                     // Quitamos '--' para buscar en el objeto JSON (ej: primary-color)
                     // O asumimos que guardamos con el nombre de la variable completo o una clave mapeada.
                     // Vamos a usar el 'name' del input como clave en el JSON.
-                    const key = input.name; 
-                    
+                    const key = input.name;
+
                     if (store.theme_config[key]) {
                         const color = store.theme_config[key];
                         input.value = color;
@@ -216,7 +231,7 @@ async function loadCompanySettings() {
 document.getElementById('companyForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
-    
+
     // Recolectar configuración de tema
     const themeConfig = {};
     const themeControls = document.getElementById('themeControls');
@@ -237,7 +252,7 @@ document.getElementById('companyForm').addEventListener('submit', async (e) => {
         theme_config: themeConfig,
         settings: settings
     };
-    
+
     try {
         const res = await fetch('../api/stores/settings.php', {
             method: 'POST',
@@ -265,20 +280,25 @@ async function loadUsers() {
         const session = await checkSession();
         const res = await fetch(`../api/users/read.php?store_id=${session.store_id}`);
         const data = await res.json();
-        
+
         if (data.success) {
             const tbody = document.getElementById('usersList');
             tbody.innerHTML = '';
             data.data.forEach(user => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td>${user.username}</td>
-                    <td>${user.full_name}</td>
-                    <td>${user.email || '-'}</td>
-                    <td><span class="badge badge-${user.role}">${user.role}</span></td>
-                    <td>${user.status}</td>
-                    <td>
-                        ${user.role !== 'admin' ? `<button class="btn-icon" onclick="deleteUser(${user.user_id})"><i class="fas fa-trash"></i></button>` : ''}
+                    <td data-label="Usuario">${user.username}</td>
+                    <td data-label="Nombre">${user.full_name}</td>
+                    <td data-label="Email">${user.email || '-'}</td>
+                    <td data-label="Rol"><span class="badge badge-${user.role}">${user.role}</span></td>
+                    <td data-label="Estado"><span class="badge badge-${user.status === 'active' ? 'success' : 'danger'}">${user.status === 'active' ? 'Activo' : 'Inactivo'}</span></td>
+                    <td data-label="Acciones">
+                        ${user.role !== 'admin' ? 
+                            (user.status === 'active' 
+                                ? `<button class="btn-icon" onclick="confirmToggleUserStatus(${user.user_id}, 'inactive')" title="Desactivar"><i class="fas fa-trash"></i></button>`
+                                : `<button class="btn-icon" onclick="confirmToggleUserStatus(${user.user_id}, 'active')" title="Activar" style="color: var(--success-color);"><i class="fas fa-check-circle"></i></button>`
+                            ) 
+                        : ''}
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -301,7 +321,7 @@ document.getElementById('createUserForm').addEventListener('submit', async (e) =
     e.preventDefault();
     const formData = new FormData(e.target);
     const data = Object.fromEntries(formData.entries());
-    
+
     // Necesitamos store_id
     const session = await checkSession();
     data.store_id = session.store_id;
@@ -326,80 +346,163 @@ document.getElementById('createUserForm').addEventListener('submit', async (e) =
     }
 });
 
-async function deleteUser(userId) {
-    if (!confirm('¿Estás seguro de eliminar este usuario?')) return;
+let userToToggleId = null;
+let newStatusToSet = null;
+
+function confirmToggleUserStatus(userId, newStatus) {
+    userToToggleId = userId;
+    newStatusToSet = newStatus;
     
-    try {
-        const res = await fetch('../api/users/delete.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId })
-        });
-        const result = await res.json();
-        if (result.success) {
-            loadUsers();
-            showNotification('Usuario eliminado', 'success');
-        } else {
-            showNotification(result.message, 'error');
-        }
-    } catch (error) {
-        showNotification('Error al eliminar', 'error');
+    const modal = document.getElementById('toggleUserStatusModal');
+    const title = document.getElementById('toggleUserTitle');
+    const msg = document.getElementById('toggleUserMsg');
+    const iconContainer = document.getElementById('toggleUserIconContainer');
+    const icon = document.getElementById('toggleUserIcon');
+    const confirmBtn = document.getElementById('confirmToggleUserBtn');
+
+    if (newStatus === 'inactive') {
+        title.textContent = '¿Desactivar usuario?';
+        msg.textContent = 'El usuario perderá acceso al sistema.';
+        iconContainer.style.background = '#fee2e2';
+        icon.className = 'fas fa-exclamation-triangle';
+        icon.style.color = '#dc2626';
+        confirmBtn.className = 'btn-danger';
+        confirmBtn.textContent = 'Sí, desactivar';
+    } else {
+        title.textContent = '¿Activar usuario?';
+        msg.textContent = 'El usuario recuperará acceso al sistema.';
+        iconContainer.style.background = '#dcfce7';
+        icon.className = 'fas fa-check-circle';
+        icon.style.color = '#16a34a';
+        confirmBtn.className = 'btn-save'; // o btn-primary
+        confirmBtn.textContent = 'Sí, activar';
     }
+
+    if (modal) modal.style.display = 'block';
+}
+
+function closeToggleUserStatusModal() {
+    const modal = document.getElementById('toggleUserStatusModal');
+    if (modal) modal.style.display = 'none';
+    userToToggleId = null;
+    newStatusToSet = null;
+}
+
+// Event listener para confirmar cambio de estado
+const confirmToggleBtn = document.getElementById('confirmToggleUserBtn');
+if (confirmToggleBtn) {
+    confirmToggleBtn.addEventListener('click', async () => {
+        if (!userToToggleId || !newStatusToSet) return;
+        
+        try {
+            // Usamos update.php para cambiar el estado
+            const res = await fetch('../api/users/update.php', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    user_id: userToToggleId,
+                    status: newStatusToSet
+                })
+            });
+            const result = await res.json();
+            if (result.success) {
+                loadUsers();
+                showNotification(newStatusToSet === 'active' ? 'Usuario activado' : 'Usuario desactivado', 'success');
+                closeToggleUserStatusModal();
+            } else {
+                showNotification(result.message || 'Error al cambiar estado', 'error');
+            }
+        } catch (error) {
+            console.error(error);
+            showNotification('Error de conexión', 'error');
+        }
+    });
+}
+
+// Cerrar modal al hacer clic fuera
+const toggleUserStatusModal = document.getElementById('toggleUserStatusModal');
+if (toggleUserStatusModal) {
+    toggleUserStatusModal.addEventListener('click', (e) => {
+        if (e.target === toggleUserStatusModal) closeToggleUserStatusModal();
+    });
+}
+
+// Funciones para el Asistente de Importación
+function openImportGuide() {
+    document.getElementById('importGuideModal').style.display = 'block';
+}
+
+function closeImportGuide() {
+    document.getElementById('importGuideModal').style.display = 'none';
+}
+
+function triggerFileInput() {
+    document.getElementById('importExcelInput').click();
 }
 
 let importedData = [];
 let excelHeaders = [];
 
 async function handleImportExcel() {
+    // Cerrar la guía si está abierta
+    closeImportGuide();
+
     const fileInput = document.getElementById('importExcelInput');
     const statusDiv = document.getElementById('importStatus');
-    
+
     if (!fileInput.files || fileInput.files.length === 0) {
         showNotification('Por favor selecciona un archivo Excel', 'error');
         return;
     }
-    
+
     const file = fileInput.files[0];
-    statusDiv.innerHTML = '<span style="color: blue;">Leyendo archivo...</span>';
-    
+    // Mostrar estado en el modal de guía si está visible, o en el panel principal
+    const guideStatus = document.getElementById('guideStatus');
+    if (guideStatus && document.getElementById('importGuideModal').style.display === 'block') {
+        guideStatus.innerHTML = '<span style="color: blue;">Leyendo archivo...</span>';
+    } else {
+        statusDiv.innerHTML = '<span style="color: blue;">Leyendo archivo...</span>';
+    }
+
     const reader = new FileReader();
-    
+
     reader.onload = async (e) => {
         try {
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, { type: 'array' });
             const firstSheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[firstSheetName];
-            
+
             // Convertir a JSON (array de arrays)
             const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-            
+
             if (jsonData.length < 2) {
-                statusDiv.innerHTML = '<span style="color: red;">El archivo parece estar vacío o sin datos.</span>';
+                showNotification('El archivo parece estar vacío o sin datos.', 'error');
                 return;
             }
-            
+
             // Guardar headers y datos
             excelHeaders = jsonData[0].map(h => String(h).trim());
             importedData = jsonData.slice(1); // Remove header row
-            
+
             // Abrir modal y configurar mapeo
             setupImportModal();
             statusDiv.innerHTML = ''; // Clear status
-            
+            if (guideStatus) guideStatus.innerHTML = '';
+
         } catch (error) {
             console.error(error);
-            statusDiv.innerHTML = '<span style="color: red;">Error al procesar el archivo.</span>';
+            showNotification('Error al procesar el archivo.', 'error');
         }
     };
-    
+
     reader.readAsArrayBuffer(file);
 }
 
 function setupImportModal() {
     const modal = document.getElementById('importModal');
     const selects = document.querySelectorAll('.column-select');
-    
+
     // Llenar selects con headers del Excel
     selects.forEach(select => {
         select.innerHTML = '<option value="-1">-- Ignorar --</option>';
@@ -409,18 +512,18 @@ function setupImportModal() {
             option.textContent = header;
             select.appendChild(option);
         });
-        
+
         // Auto-detectar
         const field = select.id.replace('map_', '');
         const headerIndex = detectColumn(field, excelHeaders);
         if (headerIndex !== -1) {
             select.value = headerIndex;
         }
-        
+
         // Event listener para actualizar preview
         select.onchange = updateImportPreview;
     });
-    
+
     modal.style.display = 'block';
     updateImportPreview();
 }
@@ -428,7 +531,7 @@ function setupImportModal() {
 function detectColumn(field, headers) {
     const lowerHeaders = headers.map(h => h.toLowerCase());
     let index = -1;
-    
+
     if (field === 'name') {
         index = lowerHeaders.findIndex(h => h.includes('nombre') || h.includes('producto') || h.includes('name') || h.includes('descrip'));
     } else if (field === 'barcode') {
@@ -442,7 +545,7 @@ function detectColumn(field, headers) {
     } else if (field === 'description') {
         index = lowerHeaders.findIndex(h => h.includes('detal') || h.includes('nota'));
     }
-    
+
     return index;
 }
 
@@ -454,10 +557,10 @@ function updateImportPreview() {
         cost: parseInt(document.getElementById('map_cost').value),
         stock: parseInt(document.getElementById('map_stock').value)
     };
-    
+
     const tbody = document.getElementById('previewBody');
     tbody.innerHTML = '';
-    
+
     // Validar si tenemos nombre (obligatorio)
     const btnConfirm = document.getElementById('btnConfirmImport');
     if (map.name === -1) {
@@ -467,17 +570,17 @@ function updateImportPreview() {
         btnConfirm.disabled = false;
         document.getElementById('importSummary').textContent = `Se importarán ${importedData.length} registros.`;
     }
-    
+
     // Mostrar primeros 5
     const previewData = importedData.slice(0, 5);
     previewData.forEach(row => {
         const tr = document.createElement('tr');
-        
+
         const name = map.name !== -1 ? (row[map.name] || '') : '-';
         const code = map.barcode !== -1 ? (row[map.barcode] || '') : '-';
         const price = map.price !== -1 ? (row[map.price] || '0') : '-';
         const stock = map.stock !== -1 ? (row[map.stock] || '0') : '-';
-        
+
         tr.innerHTML = `
             <td style="padding: 8px;">${name}</td>
             <td style="padding: 8px;">${code}</td>
@@ -503,14 +606,14 @@ document.getElementById('btnConfirmImport').addEventListener('click', async () =
         stock: parseInt(document.getElementById('map_stock').value),
         description: parseInt(document.getElementById('map_description').value)
     };
-    
+
     if (map.name === -1) return;
-    
+
     const btn = document.getElementById('btnConfirmImport');
     const originalText = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
-    
+
     try {
         const products = importedData.map(row => ({
             name: map.name !== -1 ? row[map.name] : '',
@@ -520,15 +623,15 @@ document.getElementById('btnConfirmImport').addEventListener('click', async () =
             stock: map.stock !== -1 ? row[map.stock] : 0,
             description: map.description !== -1 ? row[map.description] : ''
         })).filter(p => p.name && String(p.name).trim() !== '');
-        
+
         const res = await fetch('../api/stores/import_data.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ products })
         });
-        
+
         const result = await res.json();
-        
+
         if (result.success) {
             showNotification(`Importación exitosa: ${result.data.inserted} nuevos, ${result.data.updated} actualizados.`, 'success');
             closeImportModal();

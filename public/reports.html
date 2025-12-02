@@ -579,12 +579,10 @@
                     </tr>`;
                 });
             } else if (currentReportType === 'inventory') {
-                tableHtml += '<th style="padding: 8px;">Img</th><th style="padding: 8px;">Producto</th><th style="padding: 8px;">Código</th><th style="padding: 8px;">Stock</th><th style="padding: 8px;">Costo</th><th style="padding: 8px;">Precio</th><th style="padding: 8px;">V. Costo</th><th style="padding: 8px;">V. Venta</th></tr></thead><tbody>';
+                tableHtml += '<th style="padding: 8px;">Producto</th><th style="padding: 8px;">Código</th><th style="padding: 8px;">Stock</th><th style="padding: 8px;">Costo</th><th style="padding: 8px;">Precio</th><th style="padding: 8px;">V. Costo</th><th style="padding: 8px;">V. Venta</th></tr></thead><tbody>';
                 currentReportData.forEach((row, index) => {
                     const bg = index % 2 === 0 ? '#fff' : '#f2f2f2';
-                    const imgHtml = row.image_path ? `<img src="${row.image_path}" style="width: 30px; height: 30px; object-fit: cover;">` : '<span style="color: #ccc;">-</span>';
                     tableHtml += `<tr style="background-color: ${bg};">
-                        <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${imgHtml}</td>
                         <td style="padding: 8px; border: 1px solid #ddd;">${row.product_name}</td>
                         <td style="padding: 8px; border: 1px solid #ddd;">${row.barcode || '-'}</td>
                         <td style="padding: 8px; border: 1px solid #ddd;">${row.current_stock}</td>
@@ -595,12 +593,10 @@
                     </tr>`;
                 });
             } else if (currentReportType === 'top_products') {
-                tableHtml += '<th style="padding: 8px;">Img</th><th style="padding: 8px;">Producto</th><th style="padding: 8px;">Código</th><th style="padding: 8px;">Unidades</th><th style="padding: 8px;">Ingresos</th><th style="padding: 8px;">Ganancia</th></tr></thead><tbody>';
+                tableHtml += '<th style="padding: 8px;">Producto</th><th style="padding: 8px;">Código</th><th style="padding: 8px;">Unidades</th><th style="padding: 8px;">Ingresos</th><th style="padding: 8px;">Ganancia</th></tr></thead><tbody>';
                 currentReportData.forEach((row, index) => {
                     const bg = index % 2 === 0 ? '#fff' : '#f2f2f2';
-                    const imgHtml = row.image_path ? `<img src="${row.image_path}" style="width: 30px; height: 30px; object-fit: cover;">` : '<span style="color: #ccc;">-</span>';
                     tableHtml += `<tr style="background-color: ${bg};">
-                        <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${imgHtml}</td>
                         <td style="padding: 8px; border: 1px solid #ddd;">${row.product_name}</td>
                         <td style="padding: 8px; border: 1px solid #ddd;">${row.barcode || '-'}</td>
                         <td style="padding: 8px; border: 1px solid #ddd;">${row.total_sold}</td>
@@ -609,12 +605,10 @@
                     </tr>`;
                 });
             } else if (currentReportType === 'inventory_movements') {
-                tableHtml += '<th style="padding: 8px;">Img</th><th style="padding: 8px;">Fecha</th><th style="padding: 8px;">Producto</th><th style="padding: 8px;">Tipo</th><th style="padding: 8px;">Cant.</th><th style="padding: 8px;">Stock Ant.</th><th style="padding: 8px;">Stock Nuevo</th><th style="padding: 8px;">Usuario</th><th style="padding: 8px;">Notas</th></tr></thead><tbody>';
+                tableHtml += '<th style="padding: 8px;">Fecha</th><th style="padding: 8px;">Producto</th><th style="padding: 8px;">Tipo</th><th style="padding: 8px;">Cant.</th><th style="padding: 8px;">Stock Ant.</th><th style="padding: 8px;">Stock Nuevo</th><th style="padding: 8px;">Usuario</th><th style="padding: 8px;">Notas</th></tr></thead><tbody>';
                 currentReportData.forEach((row, index) => {
                     const bg = index % 2 === 0 ? '#fff' : '#f2f2f2';
-                    const imgHtml = row.image_path ? `<img src="${row.image_path}" style="width: 30px; height: 30px; object-fit: cover;">` : '<span style="color: #ccc;">-</span>';
                     tableHtml += `<tr style="background-color: ${bg};">
-                        <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${imgHtml}</td>
                         <td style="padding: 8px; border: 1px solid #ddd;">${new Date(row.created_at).toLocaleString()}</td>
                         <td style="padding: 8px; border: 1px solid #ddd;">${row.product_name}</td>
                         <td style="padding: 8px; border: 1px solid #ddd;">${formatMovementType(row.movement_type)}</td>
@@ -653,7 +647,7 @@
                 filename: `Reporte_${currentReportType}_${now.toISOString().split('T')[0]}.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { scale: 2, useCORS: true },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
             
             html2pdf().set(opt).from(container).save();

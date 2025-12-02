@@ -22,9 +22,11 @@ try {
     if (!$auth->isLoggedIn()) { Response::unauthorized(); }
     $currentUser = $auth->getCurrentUser();
 
+    $store_id = $currentUser['store_id'];
+
     switch ($method) {
         case 'GET':
-            $categories = $db->select('SELECT category_id, category_name, description, created_at FROM categories ORDER BY category_name ASC');
+            $categories = $db->select('SELECT category_id, category_name, description, created_at FROM categories WHERE store_id = ? ORDER BY category_name ASC', [$store_id]);
             Response::success($categories,'Listado de categorías');
             break;
         case 'POST':
@@ -36,7 +38,8 @@ try {
             $errors = [];
             if (!Validator::required($name)) { $errors['category_name']='Requerido'; }
             if ($errors) { Response::validationError($errors); }
-            $id = $db->insert('INSERT INTO categories (category_name, description, created_at) VALUES (?,?,NOW())',[$name,$desc]);
+            
+            $id = $db->insert('INSERT INTO categories (store_id, category_name, description, created_at) VALUES (?,?,?,NOW())',[$store_id, $name, $desc]);
             $cat = $db->selectOne('SELECT category_id, category_name, description, created_at FROM categories WHERE category_id = ?',[$id]);
             Response::success($cat,'Categoría creada');
             break;
@@ -46,8 +49,11 @@ try {
             if (!$data) { Response::validationError(['body'=>'JSON inválido']); }
             $id = isset($data['category_id']) ? (int)$data['category_id'] : 0;
             if ($id<=0) { Response::validationError(['category_id'=>'Requerido']); }
-            $exists = $db->selectOne('SELECT category_id FROM categories WHERE category_id = ?',[$id]);
-            if (!$exists) { Response::notFound('Categoría no existe'); }
+            
+            // Verificar que pertenezca a la tienda
+            $exists = $db->selectOne('SELECT category_id FROM categories WHERE category_id = ? AND store_id = ?',[$id, $store_id]);
+            if (!$exists) { Response::notFound('Categoría no existe o no pertenece a su tienda'); }
+            
             $fields=[];$params=[];
             if (isset($data['category_name'])) { $fields[]='category_name = ?'; $params[]=Validator::sanitizeString($data['category_name']); }
             if (isset($data['description'])) { $fields[]='description = ?'; $params[]=Validator::sanitizeString($data['description']); }
@@ -64,10 +70,15 @@ try {
             if (!$data) { Response::validationError(['body'=>'JSON inválido']); }
             $id = isset($data['category_id']) ? (int)$data['category_id'] : 0;
             if ($id<=0) { Response::validationError(['category_id'=>'Requerido']); }
-            $used = $db->selectOne('SELECT product_id FROM products WHERE category_id = ? LIMIT 1',[$id]);
-            if ($used) { Response::error('La categoría tiene productos asociados',409); }
+            
+            // Verificar que pertenezca a la tienda
+            $exists = $db->selectOne('SELECT category_id FROM categories WHERE category_id = ? AND store_id = ?',[$id, $store_id]);
+            if (!$exists) { Response::notFound('Categoría no existe o no pertenece a su tienda'); }
+
+            // Desvincular productos (set category_id = NULL)
+            $db->update('UPDATE products SET category_id = NULL WHERE category_id = ? AND store_id = ?', [$id, $store_id]);
+            
             $deleted = $db->delete('DELETE FROM categories WHERE category_id = ?',[$id]);
-            if ($deleted===0) { Response::notFound('Categoría no existe'); }
             Response::success(['category_id'=>$id],'Categoría eliminada');
             break;
         default:

@@ -48,22 +48,12 @@ try {
     $store = $db->selectOne('SELECT store_id FROM stores WHERE store_id = ? AND status = ?',[$store_id,STATUS_ACTIVE]);
     if (!$store) { Response::error('Tienda no válida',404); }
     
-    // Verificar que el producto pertenezca a la tienda (o sea global pero accesible)
-    // En products.php se verifica: product_id = ? AND store_id = ?
-    // Pero los productos pueden ser globales? El esquema dice products tiene store_id.
-    // Así que debemos verificar que el producto sea de la tienda.
-    $product = $db->selectOne('SELECT product_id FROM products WHERE product_id = ? AND store_id = ? AND status = ?',[$product_id, $store_id, STATUS_ACTIVE]);
+    // Verificar que el producto pertenezca a la tienda
+    $product = $db->selectOne('SELECT product_id, current_stock FROM products WHERE product_id = ? AND store_id = ? AND status = ?',[$product_id, $store_id, STATUS_ACTIVE]);
     
     if (!$product) { Response::error('Producto no válido o no pertenece a su tienda',404); }
 
-    // Obtener stock actual (crear si no existe)
-    $inv = $db->selectOne('SELECT inventory_id, current_stock FROM inventory WHERE store_id = ? AND product_id = ?',[$store_id,$product_id]);
-    if (!$inv) {
-        $inv_id = $db->insert('INSERT INTO inventory (store_id, product_id, current_stock, last_updated) VALUES (?,?,0,NOW())',[$store_id,$product_id]);
-        $inv = ['inventory_id'=>$inv_id,'current_stock'=>0];
-    }
-
-    $previous = (int)$inv['current_stock'];
+    $previous = (int)$product['current_stock'];
     $new_stock = $previous;
 
     switch ($movement_type) {
@@ -84,7 +74,7 @@ try {
     // Transacción
     $db->beginTransaction();
     try {
-        $db->update('UPDATE inventory SET current_stock = ?, last_updated = NOW() WHERE inventory_id = ?',[$new_stock,$inv['inventory_id']]);
+        $db->update('UPDATE products SET current_stock = ?, updated_at = NOW() WHERE product_id = ?',[$new_stock,$product_id]);
         $db->insert('INSERT INTO inventory_movements (store_id, product_id, user_id, movement_type, quantity, previous_stock, new_stock, notes, created_at) VALUES (?,?,?,?,?,?,?,?,NOW())',[
             $store_id,$product_id,$currentUser['user_id'],$movement_type,$quantity,$previous,$new_stock,$notes
         ]);

@@ -27,11 +27,11 @@
                 </div>
                 <h1>Tomodachi</h1>
                 <p class="tagline">Gestiona tus negocio de una forma Baburosa!.</p>
-                <p class="powered-by" style="font-size: 0.8rem; opacity: 0.8; margin-top: 0.5rem;">Powered by Baburu</p>
+                <p class="powered-by desktop-only" style="font-size: 0.8rem; opacity: 0.8; margin-top: 0.5rem;">Powered by Baburu</p>
             </div>
             
             <!-- Legal / Privacy Disclaimer Trigger -->
-            <div class="legal-disclaimer">
+            <div class="legal-disclaimer desktop-only">
                 <button id="openPrivacyBtn" class="privacy-link">
                     <i class="fas fa-shield-alt"></i> Privacidad y Responsabilidad
                 </button>
@@ -116,6 +116,14 @@
                     <p>¿No tienes una cuenta? <a href="register.html">Regístrate ahora</a></p>
                 </div>
             </div>
+
+            <!-- Mobile Footer -->
+            <div class="mobile-footer mobile-only">
+                <button id="openPrivacyBtnMobile" class="privacy-link-mobile">
+                    <i class="fas fa-shield-alt"></i> Privacidad y Responsabilidad
+                </button>
+                <p class="powered-by-mobile">Powered by Baburu</p>
+            </div>
         </div>
     </div>
 
@@ -131,7 +139,7 @@
                     <h3><i class="fas fa-lock"></i> 1. Privacidad de Datos</h3>
                     <p>En <strong>Tomodachi</strong>, la privacidad de su negocio es nuestra prioridad. Queremos garantizarle que:</p>
                     <ul>
-                        <li><strong>Cero Monitoreo:</strong> No rastreamos, analizamos, ni almacenamos información sobre sus precios, inventarios, ventas o estrategias comerciales.</li>
+                        <li><strong>Cero Monitoreo:</strong> No rastreamos, analizamos, ni almacenamos externamente información sobre sus precios, inventarios, ventas o estrategias comerciales.</li>
                     </ul>
                 </div>
 
@@ -165,13 +173,17 @@
         // Modal Logic
         const privacyModal = document.getElementById('privacyModal');
         const openPrivacyBtn = document.getElementById('openPrivacyBtn');
+        const openPrivacyBtnMobile = document.getElementById('openPrivacyBtnMobile');
         const closePrivacyBtn = document.getElementById('closePrivacyBtn');
         const closeModalIcon = document.querySelector('.close-modal-btn');
 
-        openPrivacyBtn.addEventListener('click', () => {
+        function openModal() {
             privacyModal.showModal();
             privacyModal.classList.add('open');
-        });
+        }
+
+        if (openPrivacyBtn) openPrivacyBtn.addEventListener('click', openModal);
+        if (openPrivacyBtnMobile) openPrivacyBtnMobile.addEventListener('click', openModal);
 
         function closePrivacyModal() {
             privacyModal.classList.remove('open');

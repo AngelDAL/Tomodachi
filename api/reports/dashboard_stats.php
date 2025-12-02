@@ -58,14 +58,13 @@ try {
                 p.product_name, 
                 p.barcode, 
                 p.image_path,
-                i.current_stock, 
+                p.current_stock, 
                 p.cost, 
                 p.price, 
-                (i.current_stock * p.cost) as total_cost_value, 
-                (i.current_stock * p.price) as total_price_value
-            FROM inventory i
-            JOIN products p ON i.product_id = p.product_id
-            WHERE i.store_id = ?
+                (p.current_stock * p.cost) as total_cost_value, 
+                (p.current_stock * p.price) as total_price_value
+            FROM products p
+            WHERE p.store_id = ?
             ORDER BY p.product_name ASC
         ");
         $stmt->execute([$store_id]);
@@ -166,13 +165,12 @@ try {
     
     // 3. Low Stock List
     $stmt = $conn->prepare("
-        SELECT p.product_name, i.current_stock, p.min_stock
-        FROM inventory i
-        JOIN products p ON i.product_id = p.product_id
-        WHERE i.store_id = ? 
-        AND i.current_stock <= p.min_stock
+        SELECT p.product_name, p.current_stock, p.min_stock
+        FROM products p
+        WHERE p.store_id = ? 
+        AND p.current_stock <= p.min_stock
         AND p.status = 'active'
-        ORDER BY i.current_stock ASC
+        ORDER BY p.current_stock ASC
         LIMIT 10
     ");
     $stmt->execute([$store_id]);

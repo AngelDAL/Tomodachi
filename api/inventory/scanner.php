@@ -35,29 +35,22 @@ try {
     if ($code==='') { Response::validationError(['barcode'=>'Requerido']); }
 
     $params=[];
-    $sql='SELECT p.product_id, p.product_name, p.image_path, p.barcode, p.qr_code, p.price, p.min_stock, p.status';
-    if ($store_id>0) { $sql.=', i.current_stock'; }
+    $sql='SELECT p.product_id, p.product_name, p.image_path, p.barcode, p.qr_code, p.price, p.min_stock, p.status, p.current_stock';
     $sql.=' FROM products p';
-    if ($store_id>0) { $sql.=' LEFT JOIN inventory i ON i.product_id = p.product_id AND i.store_id = ?'; $params[]=$store_id; }
     
     // FILTRO POR TIENDA (CRÍTICO)
     $sql.=' WHERE (p.barcode = ? OR p.qr_code = ?)';
     if ($store_id > 0) {
         $sql .= ' AND p.store_id = ?';
-        // params se llenan en orden de aparición en query
     }
     $sql .= ' LIMIT 1';
 
     // Reconstruir params en orden correcto
-    // 1. store_id para JOIN (si existe)
-    // 2. barcode
-    // 3. qr_code (mismo valor)
-    // 4. store_id para WHERE (si existe)
+    // 1. barcode
+    // 2. qr_code (mismo valor)
+    // 3. store_id para WHERE (si existe)
     
     $finalParams = [];
-    if ($store_id > 0) {
-        $finalParams[] = $store_id; // JOIN
-    }
     $finalParams[] = $code; // barcode
     $finalParams[] = $code; // qr_code
     if ($store_id > 0) {

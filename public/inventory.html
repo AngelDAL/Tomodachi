@@ -100,9 +100,14 @@
                         </div>
                     </div>
                     
-                    <button type="button" id="addProductBtn" class="btn-add-product" title="Agregar nuevo producto">
-                        <i class="fas fa-plus"></i> Nuevo Producto
-                    </button>
+                    <div style="display: flex; gap: 10px;">
+                        <button type="button" id="manageCategoriesBtn" class="btn-secondary" title="Gestionar Categorías" style="white-space: nowrap;">
+                            <i class="fas fa-tags"></i> Categorías
+                        </button>
+                        <button type="button" id="addProductBtn" class="btn-add-product" title="Agregar nuevo producto">
+                            <i class="fas fa-plus"></i> Nuevo Producto
+                        </button>
+                    </div>
                     
                     <div class="image-upload" style="display: none;">
                         <div class="upload-header">
@@ -342,7 +347,7 @@
                             <div class="form-row">
                                 <div class="form-group">
                                     <label for="editProductStock">Stock Actual</label>
-                                    <input type="number" id="editProductStock" name="current_stock" min="0">
+                                    <input type="number" id="editProductStock" name="current_stock" >
                                 </div>
                                 <div class="form-group">
                                     <label for="editProductMinStock">Stock Mínimo</label>
@@ -358,6 +363,36 @@
                         <button type="submit" class="btn-save">Guardar Cambios</button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal para gestionar categorías -->
+    <div id="categoriesModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2><i class="fas fa-tags"></i> Gestionar Categorías</h2>
+                <button type="button" class="modal-close" id="closeCategoriesModalBtn" aria-label="Cerrar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="addCategoryForm" class="form-row" style="align-items: flex-end; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 20px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="newCategoryName">Nueva Categoría</label>
+                        <input type="text" id="newCategoryName" placeholder="Nombre de la categoría" required>
+                    </div>
+                    <button type="submit" class="btn-save" style="height: 42px; margin-bottom: 0; width: auto;">
+                        <i class="fas fa-plus"></i> Agregar
+                    </button>
+                </form>
+                
+                <div class="categories-list-container">
+                    <h3>Categorías Existentes</h3>
+                    <ul id="categoriesList" class="simple-list" style="list-style: none; padding: 0; max-height: 300px; overflow-y: auto;">
+                        <!-- Items injected by JS -->
+                    </ul>
+                </div>
             </div>
         </div>
     </div>

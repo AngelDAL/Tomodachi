@@ -40,12 +40,12 @@ try {
     try {
         // Devolver stock
         foreach ($items as $it) {
-            $inv = $db->selectOne('SELECT inventory_id, current_stock FROM inventory WHERE store_id = ? AND product_id = ?',[$sale['store_id'],$it['product_id']]);
-            if ($inv) {
-                $new_stock = $inv['current_stock'] + $it['quantity'];
-                $db->update('UPDATE inventory SET current_stock = ?, last_updated = NOW() WHERE inventory_id = ?',[$new_stock,$inv['inventory_id']]);
+            $prod = $db->selectOne('SELECT product_id, current_stock FROM products WHERE product_id = ? AND store_id = ?',[$it['product_id'], $sale['store_id']]);
+            if ($prod) {
+                $new_stock = $prod['current_stock'] + $it['quantity'];
+                $db->update('UPDATE products SET current_stock = ?, updated_at = NOW() WHERE product_id = ?',[$new_stock,$it['product_id']]);
                 $db->insert('INSERT INTO inventory_movements (store_id, product_id, user_id, movement_type, quantity, previous_stock, new_stock, notes, created_at) VALUES (?,?,?,?,?,?,?,?,NOW())',[
-                    $sale['store_id'],$it['product_id'],$currentUser['user_id'],MOVEMENT_RETURN,$it['quantity'],$inv['current_stock'],$new_stock,'Cancelación venta #'.$sale_id
+                    $sale['store_id'],$it['product_id'],$currentUser['user_id'],MOVEMENT_RETURN,$it['quantity'],$prod['current_stock'],$new_stock,'Cancelación venta #'.$sale_id
                 ]);
             }
         }

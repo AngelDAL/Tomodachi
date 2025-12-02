@@ -128,6 +128,84 @@ function bindEvents() {
         });
     }
 
+    // Subida automática de imagen en Detalle de Producto
+    const detailImageInput = document.getElementById('detailImageInput');
+    if (detailImageInput) {
+        detailImageInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            const productId = document.getElementById('editProductId').value;
+            
+            if (file && productId) {
+                // Mostrar preview inmediato
+                const img = document.getElementById('detailImage');
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    img.src = e.target.result;
+                    img.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+
+                // Subir al servidor
+                try {
+                    // Convertir a base64 para enviar
+                    const base64Reader = new FileReader();
+                    base64Reader.onload = async (e) => {
+                        const base64Data = e.target.result;
+                        
+                        const response = await fetch('../api/inventory/upload_image.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                product_id: productId,
+                                image_base64: base64Data
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        if (data.success) {
+                            showNotification('✓ Imagen actualizada correctamente', 'success');
+                            // Actualizar lista de productos en segundo plano
+                            loadProducts();
+                        } else {
+                            showNotification('✗ Error al actualizar imagen: ' + (data.message || 'Desconocido'), 'error');
+                        }
+                    };
+                    base64Reader.readAsDataURL(file);
+                } catch (error) {
+                    console.error('Error subiendo imagen:', error);
+                    showNotification('✗ Error de conexión al subir imagen', 'error');
+                }
+            }
+        });
+    }
+
+    // Modal para gestionar categorías
+    const manageCategoriesBtn = document.getElementById('manageCategoriesBtn');
+    const closeCategoriesModalBtn = document.getElementById('closeCategoriesModalBtn');
+    const addCategoryForm = document.getElementById('addCategoryForm');
+    const categoriesModal = document.getElementById('categoriesModal');
+
+    if (manageCategoriesBtn) {
+        manageCategoriesBtn.addEventListener('click', openCategoriesModal);
+    }
+
+    if (closeCategoriesModalBtn) {
+        closeCategoriesModalBtn.addEventListener('click', closeCategoriesModal);
+    }
+
+    if (addCategoryForm) {
+        addCategoryForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await submitAddCategory();
+        });
+    }
+
+    if (categoriesModal) {
+        categoriesModal.addEventListener('click', (e) => {
+            if (e.target === categoriesModal) closeCategoriesModal();
+        });
+    }
+
     // Modal para agregar producto
     const addProductBtn = document.getElementById('addProductBtn');
     const closeModalBtn = document.getElementById('closeModalBtn');
@@ -173,7 +251,7 @@ function bindEvents() {
     const closeDetailsBtn = document.getElementById('closeDetailsModalBtn');
     const cancelEditBtn = document.getElementById('cancelEditBtn');
     const editForm = document.getElementById('editProductForm');
-    const detailImageInput = document.getElementById('detailImageInput');
+    // detailImageInput ya declarado arriba
     const editCostInput = document.getElementById('editProductCost');
     const editPriceInput = document.getElementById('editProductPrice');
 
@@ -187,12 +265,7 @@ function bindEvents() {
         });
     }
 
-    if (detailImageInput) {
-        detailImageInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) uploadImageFromDetails(file);
-        });
-    }
+    // Listener de imagen eliminado (ya manejado arriba)
 
     // Recalcular ganancia en tiempo real
     if (editCostInput && editPriceInput) {
@@ -282,7 +355,7 @@ async function submitAddProduct() {
         qr_code: formData.get('qr_code'),
         price: parseFloat(formData.get('price')),
         cost: parseFloat(formData.get('cost')) || 0,
-        current_stock: parseInt(formData.get('stock')),
+        stock: parseInt(formData.get('stock')),
         min_stock: parseInt(formData.get('min_stock')) || 0
         // store_id eliminado, el backend lo toma de la sesión
     };
@@ -295,11 +368,6 @@ async function submitAddProduct() {
 
     if (isNaN(productData.price) || productData.price < 0) {
         showNotification('El precio debe ser un número válido', 'error');
-        return;
-    }
-
-    if (isNaN(productData.current_stock) || productData.current_stock < 0) {
-        showNotification('El stock debe ser un número válido', 'error');
         return;
     }
 
@@ -812,4 +880,124 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// Funciones para gestión de categorías
+function openCategoriesModal() {
+    const modal = document.getElementById('categoriesModal');
+    if (modal) {
+        modal.classList.add('show');
+        renderCategoriesList();
+        setTimeout(() => document.getElementById('newCategoryName')?.focus(), 100);
+    }
+}
+
+function closeCategoriesModal() {
+    const modal = document.getElementById('categoriesModal');
+    if (modal) {
+        modal.classList.remove('show');
+        document.getElementById('addCategoryForm')?.reset();
+    }
+}
+
+function renderCategoriesList() {
+    const list = document.getElementById('categoriesList');
+    if (!list) return;
+    
+    if (categories.length === 0) {
+        list.innerHTML = '<li style="padding: 10px; text-align: center; color: #999;">No hay categorías registradas</li>';
+        return;
+    }
+    
+    list.innerHTML = categories.map(cat => `
+        <li style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee;">
+            <span>${escapeHtml(cat.category_name)}</span>
+            <div class="actions-container" style="display: flex; align-items: center;">
+                <button type="button" id="btn-del-${cat.category_id}" class="btn-danger" style="padding: 2px 8px; font-size: 0.8em;" onclick="showDeleteConfirm(${cat.category_id})">
+                    <i class="fas fa-trash"></i>
+                </button>
+                <div id="confirm-del-${cat.category_id}" style="display: none; gap: 5px; align-items: center;">
+                    <span style="font-size: 0.8em; color: #d9534f; margin-right: 5px;">¿Borrar?</span>
+                    <button type="button" class="btn-danger" style="padding: 2px 6px; font-size: 0.8em; background: #d9534f;" onclick="executeDeleteCategory(${cat.category_id})" title="Sí, borrar">
+                        <i class="fas fa-check"></i>
+                    </button>
+                    <button type="button" class="btn-secondary" style="padding: 2px 6px; font-size: 0.8em;" onclick="cancelDeleteCategory(${cat.category_id})" title="Cancelar">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        </li>
+    `).join('');
+}
+
+function showDeleteConfirm(id) {
+    const btn = document.getElementById(`btn-del-${id}`);
+    const confirmDiv = document.getElementById(`confirm-del-${id}`);
+    if (btn && confirmDiv) {
+        btn.style.display = 'none';
+        confirmDiv.style.display = 'flex';
+    }
+}
+
+function cancelDeleteCategory(id) {
+    const btn = document.getElementById(`btn-del-${id}`);
+    const confirmDiv = document.getElementById(`confirm-del-${id}`);
+    if (btn && confirmDiv) {
+        btn.style.display = 'inline-block';
+        confirmDiv.style.display = 'none';
+    }
+}
+
+async function submitAddCategory() {
+    const nameInput = document.getElementById('newCategoryName');
+    const name = nameInput.value.trim();
+    
+    if (!name) return;
+    
+    try {
+        const response = await fetch('../api/inventory/categories.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ category_name: name })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showNotification('Categoría agregada', 'success');
+            nameInput.value = '';
+            await loadCategories(); // Recargar categorías del servidor
+            renderCategoriesList(); // Actualizar lista en modal
+        } else {
+            showNotification(data.message || 'Error al agregar categoría', 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showNotification('Error de conexión', 'error');
+    }
+}
+
+async function executeDeleteCategory(id) {
+    try {
+        const response = await fetch('../api/inventory/categories.php', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ category_id: id })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showNotification('Categoría eliminada', 'success');
+            await loadCategories();
+            renderCategoriesList();
+        } else {
+            showNotification(data.message || 'Error al eliminar', 'error');
+            cancelDeleteCategory(id); // Restaurar botón si falla
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showNotification('Error de conexión', 'error');
+        cancelDeleteCategory(id);
+    }
 }

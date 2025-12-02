@@ -41,17 +41,9 @@ try {
             
             $search = isset($_GET['search']) ? trim($_GET['search']) : '';
             $params=[];
-            $sql = 'SELECT p.product_id, p.product_name, p.description, p.image_path, p.barcode, p.qr_code, p.price, p.cost, p.min_stock, p.status, p.category_id, c.category_name';
-            if ($store_id>0) {
-                $sql .= ', i.current_stock';
-            }
+            // Removed JOIN with inventory, selecting current_stock directly from products
+            $sql = 'SELECT p.product_id, p.product_name, p.description, p.image_path, p.barcode, p.qr_code, p.price, p.cost, p.min_stock, p.status, p.category_id, c.category_name, p.current_stock';
             $sql .= ' FROM products p LEFT JOIN categories c ON p.category_id = c.category_id';
-            
-            // JOIN con inventario
-            if ($store_id>0) { 
-                $sql .= ' LEFT JOIN inventory i ON i.product_id = p.product_id AND i.store_id = ?'; 
-                $params[]=$store_id; 
-            }
             
             $conditions=[];
             
@@ -92,10 +84,23 @@ try {
             $price=isset($data['price'])?$data['price']:null;
             $cost=isset($data['cost'])?$data['cost']:0;
             $min_stock=isset($data['min_stock'])?(int)$data['min_stock']:0;
+            $initial_stock=isset($data['stock'])?(int)$data['stock']:0; // Capturar stock inicial
             $description=isset($data['description'])?Validator::sanitizeString($data['description']):'';
             
             if(!Validator::required($product_name)){$errors['product_name']='Requerido';}
-            if($category_id && !$db->selectOne('SELECT category_id FROM categories WHERE category_id = ?',[$category_id])){$errors['category_id']='No existe';}
+            
+            // Fix: Validar category_id y convertir a NULL si no es válido o es 0
+            if ($category_id) {
+                $catExists = $db->selectOne('SELECT category_id FROM categories WHERE category_id = ?', [$category_id]);
+                if (!$catExists) {
+                    // Opción A: Error estricto
+                    // $errors['category_id']='No existe';
+                    // Opción B: Asignar NULL silenciosamente (más robusto para evitar error 1452)
+                    $category_id = null;
+                }
+            } else {
+                $category_id = null;
+            }
             
             // Validar duplicados SOLO dentro de la misma tienda
             if($barcode && $db->selectOne('SELECT product_id FROM products WHERE barcode = ? AND store_id = ?',[$barcode, $store_id])){$errors['barcode']='Duplicado en esta tienda';}
@@ -105,14 +110,18 @@ try {
             if(!Validator::validatePrice($cost)){$errors['cost']='Costo inválido';}
             if($errors){ Response::validationError($errors); }
             
-            $id=$db->insert('INSERT INTO products (store_id, category_id, product_name, description, barcode, qr_code, price, cost, min_stock, status, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,NOW(),NOW())',[
-                $store_id, $category_id,$product_name,$description,$barcode,$qr_code,$price,$cost,$min_stock,STATUS_ACTIVE
+            $id=$db->insert('INSERT INTO products (store_id, category_id, product_name, description, barcode, qr_code, price, cost, current_stock, min_stock, status, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,NOW(),NOW())',[
+                $store_id, $category_id,$product_name,$description,$barcode,$qr_code,$price,$cost,$initial_stock,$min_stock,STATUS_ACTIVE
             ]);
             
-            // Crear entrada inicial en inventario para esta tienda
-            $db->insert('INSERT INTO inventory (store_id, product_id, current_stock) VALUES (?, ?, 0)', [$store_id, $id]);
+            // Registrar movimiento inicial si el stock > 0
+            if ($initial_stock > 0) {
+                $user_id = (int)$currentUser['user_id'];
+                $db->insert('INSERT INTO inventory_movements (store_id, product_id, user_id, movement_type, quantity, previous_stock, new_stock, notes, created_at) VALUES (?, ?, ?, "adjustment", ?, 0, ?, "Stock inicial", NOW())', 
+                    [$store_id, $id, $user_id, $initial_stock, $initial_stock]);
+            }
 
-            $product=$db->selectOne('SELECT product_id, product_name, image_path, barcode, qr_code, price, cost, min_stock, status FROM products WHERE product_id = ?',[$id]);
+            $product=$db->selectOne('SELECT product_id, product_name, image_path, barcode, qr_code, price, cost, current_stock, min_stock, status FROM products WHERE product_id = ?',[$id]);
             Response::success($product,'Producto creado');
             break;
         case 'PUT':
@@ -170,7 +179,7 @@ try {
             $params[]=$store_id;
             
             $db->update($sql,$params);
-            $product=$db->selectOne('SELECT product_id, product_name, image_path, barcode, qr_code, price, cost, min_stock, status FROM products WHERE product_id = ?',[$product_id]);
+            $product=$db->selectOne('SELECT product_id, product_name, image_path, barcode, qr_code, price, cost, current_stock, min_stock, status FROM products WHERE product_id = ?',[$product_id]);
             Response::success($product,'Producto actualizado');
             break;
         default:

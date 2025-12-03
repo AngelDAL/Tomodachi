@@ -201,6 +201,26 @@ function renderSalesChart(chartData) {
         salesChart.destroy();
     }
 
+    // Get colors from CSS variables
+    const styles = getComputedStyle(document.documentElement);
+    const primaryColor = styles.getPropertyValue('--primary-color').trim();
+    const secondaryColor = styles.getPropertyValue('--secondary-color').trim();
+
+    // Helper to convert hex to rgba
+    const hexToRgba = (hex, alpha) => {
+        let r = 0, g = 0, b = 0;
+        if (hex.length === 4) {
+            r = parseInt(hex[1] + hex[1], 16);
+            g = parseInt(hex[2] + hex[2], 16);
+            b = parseInt(hex[3] + hex[3], 16);
+        } else if (hex.length === 7) {
+            r = parseInt(hex.slice(1, 3), 16);
+            g = parseInt(hex.slice(3, 5), 16);
+            b = parseInt(hex.slice(5, 7), 16);
+        }
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    };
+
     salesChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -209,25 +229,25 @@ function renderSalesChart(chartData) {
                 {
                     label: 'Ventas',
                     data: chartData.revenue,
-                    borderColor: '#3498db',
-                    backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                    borderColor: primaryColor,
+                    backgroundColor: hexToRgba(primaryColor, 0.1),
                     borderWidth: 2,
                     fill: true,
                     tension: 0.4,
                     pointBackgroundColor: '#fff',
-                    pointBorderColor: '#3498db',
+                    pointBorderColor: primaryColor,
                     pointRadius: 4
                 },
                 {
                     label: 'Ganancia',
                     data: chartData.profit,
-                    borderColor: '#27ae60',
-                    backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                    borderColor: secondaryColor,
+                    backgroundColor: hexToRgba(secondaryColor, 0.1),
                     borderWidth: 2,
                     fill: true,
                     tension: 0.4,
                     pointBackgroundColor: '#fff',
-                    pointBorderColor: '#27ae60',
+                    pointBorderColor: secondaryColor,
                     pointRadius: 4
                 }
             ]

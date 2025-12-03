@@ -49,7 +49,7 @@ try {
 
     // Validaciones
     if (!Validator::required($store_name)) { $errors['store_name'] = 'Nombre de empresa requerido'; }
-    if (!Validator::required($full_name)) { $errors['full_name'] = 'Nombre completo requerido'; }
+    if (!Validator::required($full_name)) { $errors['full_name'] = 'Nombre requerido'; }
     if (!Validator::required($username)) { $errors['username'] = 'Usuario requerido'; }
     if (!Validator::required($email)) { $errors['email'] = 'Email requerido'; }
     if (!Validator::validateEmail($email)) { $errors['email'] = 'Email inválido'; }

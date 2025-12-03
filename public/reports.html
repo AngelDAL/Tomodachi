@@ -566,7 +566,7 @@
             let tableHtml = `<table style="width: 100%; border-collapse: collapse; font-size: 12px;"><thead><tr style="background-color: ${primaryColor}; color: ${headerTextColor}; font-weight: bold;">`;
             
             if (currentReportType === 'sales') {
-                tableHtml += '<th style="padding: 8px;">ID</th><th style="padding: 8px;">Fecha</th><th style="padding: 8px;">Usuario</th><th style="padding: 8px;">Método</th><th style="padding: 8px;">Total</th><th style="padding: 8px;">Ganancia</th></tr></thead><tbody>';
+                tableHtml += '<th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+';">ID</th><th style="padding: 8px; '+`background-color: ${primaryColor}; color: ${headerTextColor};`+'; ">Fecha</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Usuario</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Método</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Total</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Ganancia</th></tr></thead><tbody>';
                 currentReportData.forEach((row, index) => {
                     const bg = index % 2 === 0 ? '#fff' : '#f2f2f2';
                     tableHtml += `<tr style="background-color: ${bg};">
@@ -579,7 +579,7 @@
                     </tr>`;
                 });
             } else if (currentReportType === 'inventory') {
-                tableHtml += '<th style="padding: 8px;">Producto</th><th style="padding: 8px;">Código</th><th style="padding: 8px;">Stock</th><th style="padding: 8px;">Costo</th><th style="padding: 8px;">Precio</th><th style="padding: 8px;">V. Costo</th><th style="padding: 8px;">V. Venta</th></tr></thead><tbody>';
+                tableHtml += '<th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Producto</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Código</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Stock</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Costo</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Precio</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">V. Costo</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">V. Venta</th></tr></thead><tbody>';
                 currentReportData.forEach((row, index) => {
                     const bg = index % 2 === 0 ? '#fff' : '#f2f2f2';
                     tableHtml += `<tr style="background-color: ${bg};">
@@ -593,7 +593,7 @@
                     </tr>`;
                 });
             } else if (currentReportType === 'top_products') {
-                tableHtml += '<th style="padding: 8px;">Producto</th><th style="padding: 8px;">Código</th><th style="padding: 8px;">Unidades</th><th style="padding: 8px;">Ingresos</th><th style="padding: 8px;">Ganancia</th></tr></thead><tbody>';
+                tableHtml += '<th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Producto</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Código</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Unidades</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Ingresos</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Ganancia</th></tr></thead><tbody>';
                 currentReportData.forEach((row, index) => {
                     const bg = index % 2 === 0 ? '#fff' : '#f2f2f2';
                     tableHtml += `<tr style="background-color: ${bg};">
@@ -605,7 +605,7 @@
                     </tr>`;
                 });
             } else if (currentReportType === 'inventory_movements') {
-                tableHtml += '<th style="padding: 8px;">Fecha</th><th style="padding: 8px;">Producto</th><th style="padding: 8px;">Tipo</th><th style="padding: 8px;">Cant.</th><th style="padding: 8px;">Stock Ant.</th><th style="padding: 8px;">Stock Nuevo</th><th style="padding: 8px;">Usuario</th><th style="padding: 8px;">Notas</th></tr></thead><tbody>';
+                tableHtml += '<th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Fecha</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Producto</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Tipo</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Cant.</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Stock Ant.</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Stock Nuevo</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Usuario</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Notas</th></tr></thead><tbody>';
                 currentReportData.forEach((row, index) => {
                     const bg = index % 2 === 0 ? '#fff' : '#f2f2f2';
                     tableHtml += `<tr style="background-color: ${bg};">

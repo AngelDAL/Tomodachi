@@ -676,3 +676,44 @@ dialog.privacy-modal.close .modal-wrapper {
         opacity: 0.8;
     }
 }
+
+/* Logo Animation */
+.logo-svg {
+    width: 60%;
+    height: 60%;
+    /* Initial fill animation */
+    -webkit-mask-image: linear-gradient(to top, black 50%, transparent 60%);
+    mask-image: linear-gradient(to top, black 50%, transparent 60%);
+    -webkit-mask-size: 100% 250%;
+    mask-size: 100% 250%;
+    -webkit-mask-position: 0 100%;
+    mask-position: 0 100%;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    
+    /* Combine animations: fillUp runs once, rotateStep runs infinitely after a delay */
+    animation: fillUp 2.5s ease-out forwards, rotateStep 40s ease-in-out 2.5s infinite;
+}
+
+@keyframes fillUp {
+    0% { 
+        -webkit-mask-position: 0 0%; 
+        mask-position: 0 0%;
+    }
+    100% { 
+        -webkit-mask-position: 0 100%; 
+        mask-position: 0 100%;
+    }
+}
+
+@keyframes rotateStep {
+    0% { transform: rotate(0deg); }
+    22.5% { transform: rotate(0deg); } /* Hold 0deg for ~9s */
+    25% { transform: rotate(90deg); } /* Rotate to 90deg over ~1s */
+    47.5% { transform: rotate(90deg); } /* Hold 90deg */
+    50% { transform: rotate(180deg); } /* Rotate to 180deg */
+    72.5% { transform: rotate(180deg); } /* Hold 180deg */
+    75% { transform: rotate(270deg); } /* Rotate to 270deg */
+    97.5% { transform: rotate(270deg); } /* Hold 270deg */
+    100% { transform: rotate(360deg); } /* Rotate to 360deg */
+}

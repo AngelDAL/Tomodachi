@@ -1002,22 +1002,33 @@ async function executeDeleteCategory(id) {
     }
 }
 
+function playSound(filename) {
+    const audio = new Audio('assets/sound/' + filename);
+    audio.play().catch(e => console.warn('Error playing sound:', e));
+}
+
 // Función global para el escáner (requerida por scanner.js)
 window.fetchByCode = function(code) {
     if (!code) return;
     
-    // Normalizar código
-    code = code.trim();
+    // Normalizar código para búsqueda
+    const searchCode = String(code).trim().toLowerCase();
+    
+    console.log('Escáner detectó:', code);
     
     // Buscar en productos cargados
-    const product = products.find(p => 
-        (p.barcode && p.barcode === code) || 
-        (p.sku && p.sku === code) || 
-        (p.qr_code && p.qr_code === code)
-    );
+    // Aseguramos conversión a string para evitar fallos de tipo
+    const product = products.find(p => {
+        const barcode = p.barcode ? String(p.barcode).trim().toLowerCase() : '';
+        const sku = p.sku ? String(p.sku).trim().toLowerCase() : '';
+        const qr = p.qr_code ? String(p.qr_code).trim().toLowerCase() : '';
+        
+        return barcode === searchCode || sku === searchCode || qr === searchCode;
+    });
     
     if (product) {
         // Producto encontrado
+        playSound('Sound2.mp3');
         showNotification('Producto encontrado: ' + product.product_name, 'success');
         
         // Detener escáner si está activo
@@ -1027,6 +1038,7 @@ window.fetchByCode = function(code) {
         openProductDetails(product.product_id);
     } else {
         // Producto no encontrado -> Crear nuevo
+        playSound('Sound3.mp3'); // Sonido de alerta
         showNotification('Producto no encontrado. Creando nuevo...', 'info');
         
         // Detener escáner
@@ -1039,10 +1051,14 @@ window.fetchByCode = function(code) {
         setTimeout(() => {
             const barcodeInput = document.getElementById('productBarcodeInput');
             if (barcodeInput) {
-                barcodeInput.value = code;
+                barcodeInput.value = code; // Usar código original
                 // Resaltar que se llenó automáticamente
                 barcodeInput.style.backgroundColor = '#e8f0fe';
                 setTimeout(() => barcodeInput.style.backgroundColor = '', 2000);
+                
+                // Enfocar nombre
+                const nameInput = document.getElementById('productNameInput');
+                if (nameInput) nameInput.focus();
             }
         }, 300);
     }

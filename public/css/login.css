@@ -607,9 +607,9 @@ dialog.privacy-modal.close .modal-wrapper {
         background: var(--white);
         border-top-left-radius: 20px;
         border-top-right-radius: 20px;
-        margin-top: -20px; /* Overlap slightly */
+        margin-top: -40px; /* Overlap slightly */
         z-index: 10;
-        padding-top: 2rem;
+        padding-top: 1rem;
     }
 
     .login-wrapper {

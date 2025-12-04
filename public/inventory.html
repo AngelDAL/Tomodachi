@@ -86,6 +86,9 @@
                             <div class="search-input-wrapper">
                                 <i class="fas fa-search search-icon"></i>
                                 <input type="text" id="searchInput" placeholder="Nombre, código, SKU..." aria-label="Buscar productos" class="search-input">
+                                <button id="toggleScannerBtn" type="button" class="btn-scanner-icon" title="Escanear código de barras" style="background: none; border: none; cursor: pointer; color: var(--text-muted); margin-right: 5px;">
+                                    <i class="fas fa-barcode" style="font-size: 1.2rem;"></i>
+                                </button>
                                 <span class="search-hint" title="Busca mientras escribes o escanea un código de barras">
                                     <i class="fas fa-circle-info"></i>
                                     <span class="hint-text">Escribe nombre, código o escanea QR/código de barras</span>
@@ -93,6 +96,9 @@
                                 <span class="search-loading" id="searchLoading" style="display: none;">
                                     <i class="fas fa-spinner fa-spin"></i>
                                 </span>
+                            </div>
+                            <div id="scannerContainer" class="scanner-container hidden" style="margin-top: 10px;">
+                                <div id="qr-reader" style="width:100%;"></div>
                             </div>
                         </div>
                         <div class="search-info" id="searchInfo" style="display: none;">
@@ -123,7 +129,7 @@
                 </section>
 
                 <!-- Lista de productos -->
-                <section class="inv-products">
+                <section class="inv-products products-main">
                     <div id="uploadPreview"></div>
                     <div id="invResults" class="products-grid"></div>
                 </section>
@@ -398,6 +404,8 @@
     </div>
     
     <script src="js/app.js"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="js/scanner.js"></script>
     <script src="js/tour.js"></script>
     <script src="js/inventory.js"></script>
     <script>

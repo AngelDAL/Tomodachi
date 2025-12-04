@@ -1001,3 +1001,49 @@ async function executeDeleteCategory(id) {
         cancelDeleteCategory(id);
     }
 }
+
+// Función global para el escáner (requerida por scanner.js)
+window.fetchByCode = function(code) {
+    if (!code) return;
+    
+    // Normalizar código
+    code = code.trim();
+    
+    // Buscar en productos cargados
+    const product = products.find(p => 
+        (p.barcode && p.barcode === code) || 
+        (p.sku && p.sku === code) || 
+        (p.qr_code && p.qr_code === code)
+    );
+    
+    if (product) {
+        // Producto encontrado
+        showNotification('Producto encontrado: ' + product.product_name, 'success');
+        
+        // Detener escáner si está activo
+        if (window.stopScanner) window.stopScanner();
+        
+        // Abrir detalles
+        openProductDetails(product.product_id);
+    } else {
+        // Producto no encontrado -> Crear nuevo
+        showNotification('Producto no encontrado. Creando nuevo...', 'info');
+        
+        // Detener escáner
+        if (window.stopScanner) window.stopScanner();
+        
+        // Abrir modal de agregar
+        openAddProductModal();
+        
+        // Prellenar código de barras
+        setTimeout(() => {
+            const barcodeInput = document.getElementById('productBarcodeInput');
+            if (barcodeInput) {
+                barcodeInput.value = code;
+                // Resaltar que se llenó automáticamente
+                barcodeInput.style.backgroundColor = '#e8f0fe';
+                setTimeout(() => barcodeInput.style.backgroundColor = '', 2000);
+            }
+        }, 300);
+    }
+};

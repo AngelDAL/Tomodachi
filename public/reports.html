@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/dashboard.css">
     <script src="js/theme-init.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 
 <body>
@@ -86,6 +87,7 @@
                                     <option value="inventory">Valoración de Inventario</option>
                                     <option value="top_products">Productos Más Vendidos</option>
                                     <option value="inventory_movements">Movimientos de Inventario</option>
+                                    <option value="qr_labels">Impresión de Etiquetas QR</option>
                                 </select>
                             </div>
                             <div class="filter-group date-group" id="startDateGroup">
@@ -160,7 +162,7 @@
 
         function toggleDateInputs() {
             const type = document.getElementById('reportType').value;
-            const display = type === 'inventory' ? 'none' : 'block';
+            const display = (type === 'inventory' || type === 'qr_labels') ? 'none' : 'block';
             document.getElementById('startDateGroup').style.display = display;
             document.getElementById('endDateGroup').style.display = display;
         }
@@ -171,6 +173,11 @@
             const endDate = document.getElementById('endDate').value;
             const resultsDiv = document.getElementById('reportResults');
             const exportBtns = document.getElementById('exportButtons');
+
+            if (type === 'qr_labels') {
+                renderQRLabelGenerator();
+                return;
+            }
 
             resultsDiv.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Generando reporte...</p></div>';
             exportBtns.style.display = 'none';
@@ -651,6 +658,541 @@
             };
             
             html2pdf().set(opt).from(container).save();
+        }
+
+                // --- QR Label Generator Logic ---
+        let allProducts = [];
+        let qrLabelList = [];
+        let currentQRSize = 3.5; // Default size in cm
+
+        async function renderQRLabelGenerator() {
+            currentReportType = 'qr_labels';
+            const resultsDiv = document.getElementById('reportResults');
+            document.getElementById('exportButtons').style.display = 'none';
+            
+            resultsDiv.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Cargando productos...</p></div>';
+
+            if (allProducts.length === 0) {
+                try {
+                    const response = await fetch('../api/inventory/products.php');
+                    const result = await response.json();
+                    if (result.success) {
+                        allProducts = result.data;
+                    } else {
+                        throw new Error(result.message || 'Error cargando productos');
+                    }
+                } catch (error) {
+                    resultsDiv.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error: ${error.message}</p></div>`;
+                    return;
+                }
+            }
+
+            let html = `
+                <style>
+                    .qr-product-grid {
+                        display: grid;
+                        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+                        gap: 15px;
+                        max-height: 500px;
+                        overflow-y: auto;
+                        padding: 5px;
+                        margin-bottom: 20px;
+                    }
+                    .qr-product-card {
+                        border: 1px solid #eee;
+                        border-radius: 8px;
+                        padding: 10px;
+                        text-align: center;
+                        cursor: pointer;
+                        transition: all 0.2s;
+                        background: white;
+                        position: relative;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                    }
+                    .qr-product-card:hover {
+                        transform: translateY(-3px);
+                        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+                        border-color: var(--primary-color);
+                    }
+                    .qr-product-card.no-qr {
+                        background: #f8f9fa;
+                        opacity: 0.9;
+                        border: 1px dashed #ccc;
+                    }
+                    .qr-product-card.no-qr:hover {
+                        border-color: #666;
+                        background: #f0f0f0;
+                    }
+                    .qr-product-img {
+                        width: 100px;
+                        height: 100px;
+                        object-fit: contain;
+                        margin-bottom: 10px;
+                        border-radius: 4px;
+                    }
+                    .qr-product-name {
+                        font-weight: 600;
+                        font-size: 0.9rem;
+                        margin-bottom: 5px;
+                        line-height: 1.3;
+                        display: -webkit-box;
+                        -webkit-line-clamp: 2;
+                        -webkit-box-orient: vertical;
+                        overflow: hidden;
+                    }
+                    .qr-product-stock {
+                        font-size: 0.8rem;
+                        color: #666;
+                        margin-top: auto;
+                    }
+                    .qr-status-badge {
+                        position: absolute;
+                        top: 8px;
+                        right: 8px;
+                        background: #eee;
+                        color: #666;
+                        font-size: 10px;
+                        padding: 3px 6px;
+                        border-radius: 4px;
+                        font-weight: bold;
+                    }
+                    .qr-modal {
+                        display: none;
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: rgba(0,0,0,0.5);
+                        z-index: 2000;
+                        align-items: center;
+                        justify-content: center;
+                    }
+                    .qr-modal.show {
+                        display: flex;
+                    }
+                    .qr-modal-content {
+                        background: white;
+                        padding: 25px;
+                        border-radius: 10px;
+                        width: 90%;
+                        max-width: 400px;
+                        box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+                    }
+                </style>
+
+                <div class="qr-generator-container" style="padding: 20px;">
+                    <div class="qr-controls" style="display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; align-items: flex-end;">
+                        <div class="form-group" style="flex: 3; min-width: 300px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: bold;">
+                                <i class="fas fa-search"></i> Buscar Producto
+                            </label>
+                            <input type="text" id="qrProductSearch" class="form-control" placeholder="Filtrar por nombre, código..." oninput="filterProductGrid(this.value)">
+                        </div>
+                        <div class="form-group" style="flex: 1; min-width: 150px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Tamaño Etiquetas (cm)</label>
+                            <input type="number" id="qrGlobalSize" class="form-control" value="${currentQRSize}" min="1" max="20" step="0.1" onchange="updateGlobalSize(this.value)">
+                        </div>
+                    </div>
+
+                    <div id="qrProductGrid" class="qr-product-grid">
+                        <!-- Grid items will be injected here -->
+                    </div>
+
+                    <div class="qr-list-container" style="margin-bottom: 20px; margin-top: 30px;">
+                        <h3 style="margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                            <i class="fas fa-print"></i> Lista de Impresión
+                        </h3>
+                        <table class="dashboard-table" id="qrListTable">
+                            <thead>
+                                <tr>
+                                    <th>Imagen</th>
+                                    <th>Producto</th>
+                                    <th>Stock</th>
+                                    <th>Tamaño</th>
+                                    <th>Cantidad</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="qrListBody">
+                                <tr><td colspan="6" style="text-align: center; color: #999;">Seleccione productos del grid para agregar a la lista</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="qr-actions" style="text-align: right;">
+                        <button class="btn-secondary" onclick="clearQRList()">
+                            <i class="fas fa-trash"></i> Limpiar Lista
+                        </button>
+                        <button class="btn-primary" onclick="printQRLabels()">
+                            <i class="fas fa-print"></i> Imprimir Etiquetas
+                        </button>
+                    </div>
+                    
+                    <div id="printArea" style="position: absolute; left: -9999px;"></div>
+                </div>
+
+                <!-- Modal para asignar QR -->
+                <div id="assignQRModal" class="qr-modal">
+                    <div class="qr-modal-content">
+                        <h3 style="margin-top: 0; margin-bottom: 15px;">Asignar Código QR/Barras</h3>
+                        <p id="assignQRProductName" style="color: #666; margin-bottom: 20px;"></p>
+                        <input type="hidden" id="assignQRProductId">
+                        
+                        <div class="form-group" style="margin-bottom: 20px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Código</label>
+                            <input type="text" id="assignQRInput" class="form-control" placeholder="Escanee o escriba el código">
+                            <small style="color: #999;">Puede usar un lector de código de barras</small>
+                        </div>
+
+                        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                            <button class="btn-secondary" onclick="closeAssignQRModal()">Cancelar</button>
+                            <button class="btn-primary" onclick="saveProductQR()">Guardar</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            resultsDiv.innerHTML = html;
+            renderProductGrid(allProducts);
+            updateQRListTable();
+        }
+
+        function renderProductGrid(products) {
+            const grid = document.getElementById('qrProductGrid');
+            if (!grid) return;
+
+            if (products.length === 0) {
+                grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 20px; color: #999;">No se encontraron productos</div>';
+                return;
+            }
+
+            grid.innerHTML = products.map(p => {
+                const hasCode = p.barcode || p.qr_code;
+                const imgUrl = p.image_url ? p.image_url : 'assets/images/default-product.png';
+                const stock = p.current_stock !== null ? p.current_stock : 0;
+                
+                return `
+                    <div class="qr-product-card ${!hasCode ? 'no-qr' : ''}" onclick="${hasCode ? `addToQRListFromGrid(${p.product_id})` : `openAssignQRModal(${p.product_id})`}">
+                        ${!hasCode ? '<span class="qr-status-badge">Sin QR asignado</span>' : ''}
+                        <img src="${imgUrl}" class="qr-product-img" alt="${p.product_name}">
+                        <div class="qr-product-name" title="${p.product_name}">${p.product_name}</div>
+                        <div class="qr-product-stock">Stock: ${stock}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function filterProductGrid(term) {
+            term = term.toLowerCase().trim();
+            if (!term) {
+                renderProductGrid(allProducts);
+                return;
+            }
+            
+            const filtered = allProducts.filter(p => 
+                p.product_name.toLowerCase().includes(term) || 
+                (p.barcode && p.barcode.toLowerCase().includes(term)) ||
+                (p.qr_code && p.qr_code.toLowerCase().includes(term))
+            );
+            renderProductGrid(filtered);
+        }
+
+        function updateGlobalSize(val) {
+            currentQRSize = parseFloat(val);
+        }
+
+        function addToQRListFromGrid(productId) {
+            const product = allProducts.find(p => p.product_id == productId);
+            if (!product) return;
+
+            const codeToUse = product.barcode || product.qr_code;
+            if (!codeToUse) return;
+
+            // Check if already in list
+            const existingItem = qrLabelList.find(item => item.product.product_id == product.product_id);
+            
+            if (existingItem) {
+                existingItem.quantity++;
+                showNotification(`Cantidad aumentada: ${product.product_name}`, 'info');
+            } else {
+                qrLabelList.push({
+                    id: Date.now(),
+                    product: product,
+                    code: codeToUse,
+                    sizeCm: currentQRSize,
+                    quantity: 1
+                });
+                showNotification(`Agregado: ${product.product_name}`, 'success');
+            }
+            
+            updateQRListTable();
+        }
+
+        function updateItemQuantity(id, newQty) {
+            const item = qrLabelList.find(i => i.id === id);
+            if (item) {
+                item.quantity = parseInt(newQty);
+                if (item.quantity < 1) item.quantity = 1;
+            }
+        }
+
+        function removeFromQRList(id) {
+            qrLabelList = qrLabelList.filter(item => item.id !== id);
+            updateQRListTable();
+        }
+
+        function clearQRList() {
+            qrLabelList = [];
+            updateQRListTable();
+            showNotification('Lista limpiada', 'info');
+        }
+
+        function updateQRListTable() {
+            const tbody = document.getElementById('qrListBody');
+            if (!tbody) return;
+
+            if (qrLabelList.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #999;">Seleccione productos del grid para agregar a la lista</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = qrLabelList.map(item => {
+                const imgUrl = item.product.image_url ? item.product.image_url : 'assets/images/default-product.png';
+                return `
+                <tr>
+                    <td><img src="${imgUrl}" alt="img" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;"></td>
+                    <td>
+                        <div style="font-weight: bold;">${item.product.product_name}</div>
+                        <div style="font-size: 0.85em; color: #666;">${item.code}</div>
+                    </td>
+                    <td>${item.product.current_stock}</td>
+                    <td>${item.sizeCm} cm</td>
+                    <td>
+                        <input type="number" class="form-control" style="width: 80px; padding: 5px;" 
+                               value="${item.quantity}" min="1" 
+                               onchange="updateItemQuantity(${item.id}, this.value)">
+                    </td>
+                    <td>
+                        <button class="btn-icon" onclick="removeFromQRList(${item.id})" style="color: #dc3545;">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `}).join('');
+        }
+
+        // --- Assign QR Modal Logic ---
+        function openAssignQRModal(productId) {
+            const product = allProducts.find(p => p.product_id == productId);
+            if (!product) return;
+
+            document.getElementById('assignQRProductId').value = productId;
+            document.getElementById('assignQRProductName').textContent = product.product_name;
+            document.getElementById('assignQRInput').value = '';
+            
+            const modal = document.getElementById('assignQRModal');
+            modal.classList.add('show');
+            
+            setTimeout(() => document.getElementById('assignQRInput').focus(), 100);
+        }
+
+        function closeAssignQRModal() {
+            document.getElementById('assignQRModal').classList.remove('show');
+        }
+
+        async function saveProductQR() {
+            const productId = document.getElementById('assignQRProductId').value;
+            const code = document.getElementById('assignQRInput').value.trim();
+            
+            if (!code) {
+                showNotification('Por favor ingrese un código', 'warning');
+                return;
+            }
+
+            const product = allProducts.find(p => p.product_id == productId);
+            if (!product) return;
+
+            // Prepare update data (we need to send all required fields or the API might complain if it expects full object)
+            // Based on inventory.js, it sends a full object. Let's try to construct it from existing data.
+            const updateData = {
+                product_id: product.product_id,
+                product_name: product.product_name,
+                description: product.description || '',
+                category_id: product.category_id,
+                status: product.status || 'active',
+                barcode: code, // Updating this
+                qr_code: product.qr_code || code, // Also update QR code field if empty
+                price: parseFloat(product.price),
+                cost: parseFloat(product.cost),
+                min_stock: parseInt(product.min_stock || 0)
+            };
+
+            try {
+                const response = await fetch('../api/inventory/products.php', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updateData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showNotification('Código asignado correctamente', 'success');
+                    
+                    // Update local data
+                    product.barcode = code;
+                    if (!product.qr_code) product.qr_code = code;
+                    
+                    // Refresh grid
+                    const searchTerm = document.getElementById('qrProductSearch').value;
+                    filterProductGrid(searchTerm);
+                    
+                    closeAssignQRModal();
+                } else {
+                    throw new Error(result.message || 'Error al guardar');
+                }
+            } catch (error) {
+                console.error(error);
+                showNotification('Error: ' + error.message, 'error');
+            }
+        }
+
+        function printQRLabels() {
+            if (qrLabelList.length === 0) {
+                showNotification('Agregue productos a la lista primero.', 'warning');
+                return;
+            }
+
+            const printArea = document.getElementById('printArea');
+            printArea.innerHTML = '';
+            
+            const printContainer = document.createElement('div');
+            printContainer.style.width = '100%';
+            printContainer.style.display = 'flex';
+            printContainer.style.flexWrap = 'wrap';
+            printContainer.style.gap = '0';
+            
+            qrLabelList.forEach(item => {
+                // Generamos el QR con alta resolución interna
+                const qrResolution = 256; 
+
+                for (let i = 0; i < item.quantity; i++) {
+                    const label = document.createElement('div');
+                    label.className = 'qr-label';
+                    
+                    // Dimensiones exactas dadas por el usuario
+                    label.style.width = `${item.sizeCm}cm`;
+                    label.style.height = `${item.sizeCm}cm`;
+                    
+                    // Layout Flexbox para ocupar todo el espacio
+                    label.style.display = 'flex';
+                    label.style.flexDirection = 'column';
+                    label.style.alignItems = 'center';
+                    label.style.justifyContent = 'center';
+                    label.style.boxSizing = 'border-box';
+                    label.style.padding = '2px';
+                    label.style.border = '1px dotted #ccc'; // Guía de corte
+                    label.style.pageBreakInside = 'avoid';
+                    label.style.overflow = 'hidden';
+                    label.style.margin = '0'; // Sin margen externo para aprovechar hoja
+
+                    // Contenedor QR - Ocupa el espacio disponible
+                    const qrDiv = document.createElement('div');
+                    qrDiv.className = 'qr-code-container';
+                    qrDiv.style.flex = '1';
+                    qrDiv.style.width = '100%';
+                    qrDiv.style.display = 'flex';
+                    qrDiv.style.alignItems = 'center';
+                    qrDiv.style.justifyContent = 'center';
+                    qrDiv.style.overflow = 'hidden';
+                    qrDiv.style.minHeight = '0'; // Importante para flexbox anidado
+                    
+                    new QRCode(qrDiv, {
+                        text: item.code,
+                        width: qrResolution,
+                        height: qrResolution,
+                        correctLevel : QRCode.CorrectLevel.H
+                    });
+
+                    // Contenedor Texto - Fijo abajo
+                    const textDiv = document.createElement('div');
+                    textDiv.style.textAlign = 'center';
+                    textDiv.style.fontSize = '8px'; // Letra pequeña
+                    textDiv.style.width = '100%';
+                    textDiv.style.whiteSpace = 'nowrap';
+                    textDiv.style.overflow = 'hidden';
+                    textDiv.style.textOverflow = 'ellipsis';
+                    textDiv.style.marginTop = '1px';
+                    textDiv.style.flexShrink = '0'; // No encoger el texto
+                    textDiv.innerText = item.product.product_name;
+
+                    label.appendChild(qrDiv);
+                    label.appendChild(textDiv);
+                    printContainer.appendChild(label);
+                }
+            });
+
+            printArea.appendChild(printContainer);
+
+            // Esperar a que se generen los QR
+            setTimeout(() => {
+                // Limpiar duplicados (canvas + img) que genera la librería qrcode.js
+                const qrContainers = printContainer.querySelectorAll('.qr-code-container');
+                
+                qrContainers.forEach(container => {
+                    const canvas = container.querySelector('canvas');
+                    // Si hay canvas, creamos una imagen limpia desde él y borramos todo lo demás
+                    if (canvas) {
+                        const img = document.createElement('img');
+                        img.src = canvas.toDataURL();
+                        img.style.width = '100%';
+                        img.style.height = '100%';
+                        img.style.objectFit = 'contain';
+                        img.style.display = 'block';
+                        
+                        container.innerHTML = ''; // Borra canvas y posible img oculta duplicada
+                        container.appendChild(img);
+                    } else {
+                        // Si no hay canvas, buscamos la imagen generada
+                        const img = container.querySelector('img');
+                        if (img) {
+                            img.style.width = '100%';
+                            img.style.height = '100%';
+                            img.style.objectFit = 'contain';
+                            img.style.display = 'block';
+                        }
+                    }
+                });
+                
+                const printWindow = window.open('', '', 'height=600,width=800');
+                printWindow.document.write('<html><head><title>Imprimir Etiquetas QR</title>');
+                printWindow.document.write('<style>');
+                printWindow.document.write(`
+                    body { margin: 0; padding: 10px; font-family: sans-serif; }
+                    .qr-label { 
+                        float: left;
+                        box-sizing: border-box;
+                        page-break-inside: avoid;
+                    }
+                    @media print {
+                        @page { margin: 0.5cm; }
+                        .qr-label { 
+                            border: 1px dotted #ddd; 
+                        }
+                    }
+                `);
+                printWindow.document.write('</style></head><body>');
+                printWindow.document.write(printContainer.innerHTML);
+                printWindow.document.write('</body></html>');
+                printWindow.document.close();
+                printWindow.focus();
+                setTimeout(() => {
+                    printWindow.print();
+                }, 500);
+            }, 500);
         }
     </script>
 </body>

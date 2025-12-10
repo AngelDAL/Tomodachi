@@ -642,7 +642,7 @@ async function loadCategoriesAndProducts() {
     renderGallery(getFilteredProducts());
     
     // Bind interactions
-    bindCategoryDrag();
+    // bindCategoryDrag(); // Deshabilitado por problemas de UX en escritorio
     bindGallerySwipe();
   } catch (e) {
     console.error(e);
@@ -713,7 +713,7 @@ function renderCategoryBar() {
 
   Array.from(categoryBar.querySelectorAll('.category-pill')).forEach(el => {
     el.addEventListener('click', () => {
-      if (isCatDragging) return; // si estaba arrastrando, no ejecutar clic
+      // if (isCatDragging) return; // Deshabilitado check de drag
       const id = el.getAttribute('data-id');
       const newId = id ? id : null;
       
@@ -818,50 +818,8 @@ function scrollToActiveCategoryPill() {
 }
 
 function bindCategoryDrag() {
-  if (!categoryBar || categoryBar.dataset.dragBound === '1') return;
-
-  categoryBar.dataset.dragBound = '1';
-
-  categoryBar.addEventListener('pointerdown', (e) => {
-    isCatDragging = false;
-    catDragStartX = e.clientX;
-    catScrollStart = categoryBar.scrollLeft;
-    // No capturamos inmediatamente para permitir clics normales
-  });
-
-  categoryBar.addEventListener('pointermove', (e) => {
-    if (catDragStartX === null) return;
-    const dx = e.clientX - catDragStartX;
-    
-    // Solo iniciar drag si se mueve más de 5px
-    if (Math.abs(dx) > 5) {
-        if (!isCatDragging) {
-            isCatDragging = true;
-            try {
-                categoryBar.setPointerCapture(e.pointerId);
-            } catch(err) {
-                // Ignorar si falla la captura
-            }
-        }
-        categoryBar.scrollLeft = catScrollStart - dx;
-    }
-  });
-
-  const endDrag = (e) => {
-    if (isCatDragging) {
-        try {
-            if (categoryBar.hasPointerCapture && categoryBar.hasPointerCapture(e.pointerId)) {
-                categoryBar.releasePointerCapture(e.pointerId);
-            }
-        } catch(err) {}
-    }
-    catDragStartX = null;
-    setTimeout(() => { isCatDragging = false; }, 50);
-  };
-
-  categoryBar.addEventListener('pointerup', endDrag);
-  categoryBar.addEventListener('pointerleave', endDrag);
-  categoryBar.addEventListener('pointercancel', endDrag);
+  // Función deshabilitada para simplificar la interacción y evitar conflictos con clics
+  return;
 }
 
 // Funcionalidad de escáner

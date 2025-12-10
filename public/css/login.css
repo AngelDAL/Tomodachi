@@ -20,7 +20,7 @@
 }
 
 body {
-    font-family: 'Poppins', sans-serif;
+    font-family: 'Google Sans Flex', sans-serif;
     background-color: var(--bg-light);
     color: var(--text-color);
     height: 100vh;
@@ -136,7 +136,7 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    font-family: 'Poppins', sans-serif;
+    font-family: 'Google Sans Flex', sans-serif;
 }
 
 .privacy-link:hover {
@@ -657,13 +657,11 @@ dialog.privacy-modal.close .modal-wrapper {
         font-size: 0.85rem;
         cursor: pointer;
         transition: all 0.3s ease;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        font-family: 'Poppins', sans-serif;
-    }
-
-    .privacy-link-mobile:hover {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Google Sans Flex', sans-serif;
+}    .privacy-link-mobile:hover {
         background: var(--bg-light);
         color: var(--primary-color);
         border-color: var(--primary-color);

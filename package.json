@@ -1,0 +1,23 @@
+{
+  "name": "tomodachi",
+  "version": "1.0.0",
+  "description": "Sistema de Punto de Venta (POS) web, open source, diseñado para pequeñas y medianas empresas. Permite la gestión de inventarios, ventas, usuarios y múltiples tiendas.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@fontsource/poppins": "^5.2.7",
+    "@fortawesome/fontawesome-free": "^6.5.1",
+    "animejs": "^3.2.1",
+    "chart.js": "^4.5.1",
+    "html2pdf.js": "^0.12.1",
+    "html5-qrcode": "^2.3.8",
+    "qrcodejs": "^1.0.0",
+    "xlsx": "^0.18.5"
+  }
+}

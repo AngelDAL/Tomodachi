@@ -3,6 +3,13 @@
  */
 let CART = [];
 let CURRENT_STORE_ID = null;
+let allProducts = [];
+let allCategories = [];
+let activeCategoryId = null;
+let categoryBar;
+let isCatDragging = false;
+let catDragStartX = null;
+let catScrollStart = 0;
 
 // Variables globales para elementos DOM
 let searchInput, searchResults, cartBody, emptyCartMsg;
@@ -36,6 +43,7 @@ function initPOS() {
   cartPanel = document.getElementById('cartPanel');
   closeCartBtn = document.getElementById('closeCartBtn');
   productGallery = document.getElementById('productGallery');
+  categoryBar = document.getElementById('categoryBar');
   cartHandleBtn = document.getElementById('cartHandle');
   panelTotalEl = document.getElementById('panelTotal');
 
@@ -73,7 +81,7 @@ function initPOS() {
     }
   }
 
-  loadGallery();
+  loadCategoriesAndProducts();
 }
 
 function bindEvents() {
@@ -612,36 +620,248 @@ function escapeHtml(str) {
   return str.replace(/[&<>"']/g, function (m) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', '\'': '&#39;' }[m]); });
 }
 
-// Galería de productos
-async function loadGallery() {
+// Galería de productos + categorías
+async function loadCategoriesAndProducts() {
   try {
-    // Eliminado store_id de los parámetros, el backend usa la sesión
-    const res = await fetch('../api/inventory/products.php');
-    const resData = await res.json();
-    if (resData.success) {
-      const list = resData.data || [];
-      productGallery.innerHTML = list.map(p => `<div class="gallery-item" data-id="${p.product_id}" data-price="${p.price}" data-image="${p.image_path || ''}" title="${escapeHtml(p.product_name)}">
+    const [catRes, prodRes] = await Promise.all([
+      fetch('../api/inventory/categories.php'),
+      fetch('../api/inventory/products.php')
+    ]);
+
+    const catData = await catRes.json();
+    const prodData = await prodRes.json();
+
+    if (catData.success) {
+      allCategories = catData.data || [];
+    }
+    if (prodData.success) {
+      allProducts = prodData.data || [];
+    }
+
+    renderCategoryBar();
+    renderGallery(getFilteredProducts());
+    
+    // Bind interactions
+    bindCategoryDrag();
+    bindGallerySwipe();
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+function getFilteredProducts() {
+  if (!activeCategoryId) return allProducts;
+  return allProducts.filter(p => String(p.category_id || '') === String(activeCategoryId));
+}
+
+function renderGallery(list, animate = false) {
+  if (!productGallery) return;
+  
+  // Limpiar clases de animación CSS antiguas
+  productGallery.classList.remove('slide-in-left', 'slide-in-right');
+
+  if (!list || list.length === 0) {
+    productGallery.innerHTML = '<div class="empty-cart" style="grid-column: 1/-1;">No hay productos para esta categoría</div>';
+    return;
+  }
+
+  // Renderizar items (ocultos si se va a animar)
+  productGallery.innerHTML = list.map(p => `<div class="gallery-item" data-id="${p.product_id}" data-price="${p.price}" data-image="${p.image_path || ''}" title="${escapeHtml(p.product_name)}" style="opacity: ${animate ? 0 : 1};">
         <div class="img-wrap">${p.image_path ? `<img src="/${p.image_path}" alt="img">` : '<span class="no-img">Sin imagen</span>'}</div>
         <div class="g-name">${escapeHtml(p.product_name)}</div>
         <div class="g-price">${formatCurrency(p.price)}</div>
       </div>`).join('');
 
-      Array.from(productGallery.querySelectorAll('.gallery-item')).forEach(el => {
-        el.addEventListener('click', () => {
-          // Feedback visual
-          el.classList.add('item-added-feedback');
-          setTimeout(() => el.classList.remove('item-added-feedback'), 500);
+  Array.from(productGallery.querySelectorAll('.gallery-item')).forEach(el => {
+    el.addEventListener('click', () => {
+      if (isCatDragging) return; // evita clics fantasma tras arrastrar barra
+      el.classList.add('item-added-feedback');
+      setTimeout(() => el.classList.remove('item-added-feedback'), 500);
 
-          addProductToCart({
-            product_id: parseInt(el.getAttribute('data-id')),
-            product_name: el.querySelector('.g-name').textContent,
-            unit_price: parseFloat(el.getAttribute('data-price')),
-            image_path: el.getAttribute('data-image')
-          });
-        });
+      addProductToCart({
+        product_id: parseInt(el.getAttribute('data-id')),
+        product_name: el.querySelector('.g-name').textContent,
+        unit_price: parseFloat(el.getAttribute('data-price')),
+        image_path: el.getAttribute('data-image')
       });
+    });
+  });
+
+  // Ejecutar animación de entrada con anime.js
+  if (animate && typeof anime !== 'undefined') {
+      anime({
+          targets: '.gallery-item',
+          opacity: [0, 1],
+          translateY: [20, 0],
+          scale: [0.95, 1],
+          delay: anime.stagger(40), // Retraso escalonado entre elementos
+          duration: 400,
+          easing: 'easeOutQuad'
+      });
+  }
+}
+
+function renderCategoryBar() {
+  if (!categoryBar) return;
+  const pills = [{ category_id: null, category_name: 'Todos', icon_class: 'fa-border-all' }, ...allCategories];
+  categoryBar.innerHTML = pills.map(cat => `
+    <button class="category-pill ${(!activeCategoryId && cat.category_id === null) || (String(activeCategoryId) === String(cat.category_id)) ? 'active' : ''}" data-id="${cat.category_id === null ? '' : cat.category_id}">
+      <i class="fas ${cat.icon_class || 'fa-tag'}"></i>
+      <span class="cat-label">${escapeHtml(cat.category_name)}</span>
+    </button>
+  `).join('');
+
+  Array.from(categoryBar.querySelectorAll('.category-pill')).forEach(el => {
+    el.addEventListener('click', () => {
+      if (isCatDragging) return; // si estaba arrastrando, no ejecutar clic
+      const id = el.getAttribute('data-id');
+      const newId = id ? id : null;
+      
+      // Determinar dirección para animación
+      let direction = 'next';
+      const currentIdx = getCategoryIndex(activeCategoryId);
+      const newIdx = getCategoryIndex(newId);
+      
+      if (newIdx < currentIdx) direction = 'prev';
+      
+      setActiveCategory(newId, direction);
+      el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    });
+  });
+}
+
+function getCategoryIndex(id) {
+    // null es index 0
+    if (id === null) return 0;
+    // Buscar en allCategories
+    const idx = allCategories.findIndex(c => String(c.category_id) === String(id));
+    return idx === -1 ? 0 : idx + 1; // +1 porque 'Todos' es 0
+}
+
+function setActiveCategory(id, direction = 'none') {
+  // Si es la misma categoría, no hacer nada
+  if (String(activeCategoryId) === String(id)) return;
+
+  const updateState = () => {
+      activeCategoryId = id;
+      renderCategoryBar();
+      renderGallery(getFilteredProducts(), true);
+      scrollToActiveCategoryPill();
+  };
+
+  // Si hay items y anime.js está disponible, animar salida
+  const currentItems = document.querySelectorAll('.gallery-item');
+  if (typeof anime !== 'undefined' && currentItems.length > 0) {
+      anime({
+          targets: '.gallery-item',
+          opacity: [1, 0],
+          scale: [1, 0.9],
+          duration: 150,
+          easing: 'easeInQuad',
+          complete: updateState
+      });
+  } else {
+      updateState();
+  }
+}
+
+function bindGallerySwipe() {
+    if (!productGallery || productGallery.dataset.swipeBound === '1') return;
+    productGallery.dataset.swipeBound = '1';
+
+    let touchStartX = 0;
+    let touchEndX = 0;
+    const minSwipeDistance = 50;
+
+    productGallery.addEventListener('touchstart', e => {
+        touchStartX = e.changedTouches[0].screenX;
+    }, { passive: true });
+
+    productGallery.addEventListener('touchend', e => {
+        touchEndX = e.changedTouches[0].screenX;
+        handleSwipe();
+    }, { passive: true });
+
+    function handleSwipe() {
+        const distance = touchEndX - touchStartX;
+        
+        if (Math.abs(distance) < minSwipeDistance) return;
+
+        const currentIdx = getCategoryIndex(activeCategoryId);
+        const totalCats = allCategories.length + 1; // +1 por 'Todos'
+
+        if (distance < 0) {
+            // Swipe Left -> Next Category
+            if (currentIdx < totalCats - 1) {
+                const nextIdx = currentIdx + 1;
+                const nextId = nextIdx === 0 ? null : allCategories[nextIdx - 1].category_id;
+                setActiveCategory(nextId, 'next');
+            }
+        } else {
+            // Swipe Right -> Prev Category
+            if (currentIdx > 0) {
+                const prevIdx = currentIdx - 1;
+                const prevId = prevIdx === 0 ? null : allCategories[prevIdx - 1].category_id;
+                setActiveCategory(prevId, 'prev');
+            }
+        }
     }
-  } catch (e) { console.error(e); }
+}
+
+function scrollToActiveCategoryPill() {
+    setTimeout(() => {
+        const activePill = categoryBar.querySelector('.category-pill.active');
+        if (activePill) {
+            activePill.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        }
+    }, 50);
+}
+
+function bindCategoryDrag() {
+  if (!categoryBar || categoryBar.dataset.dragBound === '1') return;
+
+  categoryBar.dataset.dragBound = '1';
+
+  categoryBar.addEventListener('pointerdown', (e) => {
+    isCatDragging = false;
+    catDragStartX = e.clientX;
+    catScrollStart = categoryBar.scrollLeft;
+    // No capturamos inmediatamente para permitir clics normales
+  });
+
+  categoryBar.addEventListener('pointermove', (e) => {
+    if (catDragStartX === null) return;
+    const dx = e.clientX - catDragStartX;
+    
+    // Solo iniciar drag si se mueve más de 5px
+    if (Math.abs(dx) > 5) {
+        if (!isCatDragging) {
+            isCatDragging = true;
+            try {
+                categoryBar.setPointerCapture(e.pointerId);
+            } catch(err) {
+                // Ignorar si falla la captura
+            }
+        }
+        categoryBar.scrollLeft = catScrollStart - dx;
+    }
+  });
+
+  const endDrag = (e) => {
+    if (isCatDragging) {
+        try {
+            if (categoryBar.hasPointerCapture && categoryBar.hasPointerCapture(e.pointerId)) {
+                categoryBar.releasePointerCapture(e.pointerId);
+            }
+        } catch(err) {}
+    }
+    catDragStartX = null;
+    setTimeout(() => { isCatDragging = false; }, 50);
+  };
+
+  categoryBar.addEventListener('pointerup', endDrag);
+  categoryBar.addEventListener('pointerleave', endDrag);
+  categoryBar.addEventListener('pointercancel', endDrag);
 }
 
 // Funcionalidad de escáner

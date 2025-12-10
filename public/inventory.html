@@ -383,13 +383,31 @@
                 </button>
             </div>
             <div class="modal-body">
-                <form id="addCategoryForm" class="form-row" style="align-items: flex-end; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 20px;">
-                    <div class="form-group" style="flex: 1;">
-                        <label for="newCategoryName">Nueva Categoría</label>
-                        <input type="text" id="newCategoryName" placeholder="Nombre de la categoría" required>
+                <form id="addCategoryForm" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 20px;">
+                    <div class="form-group">
+                        <label for="newCategoryName">Nombre de la Categoría</label>
+                        <input type="text" id="newCategoryName" placeholder="Ej: Bebidas" required style="width: 100%;">
                     </div>
-                    <button type="submit" class="btn-save" style="height: 42px; margin-bottom: 0; width: auto;">
-                        <i class="fas fa-plus"></i> Agregar
+
+                    <div class="form-group">
+                        <label>Seleccionar Icono</label>
+                        <input type="hidden" id="newCategoryIcon">
+                        <div class="icon-picker-box">
+                            <div class="icon-picker-header">
+                                <div id="iconPreviewContainer" class="icon-preview-large hidden">
+                                    <i id="iconPreviewIcon" class="fas fa-tag"></i>
+                                </div>
+                                <div class="icon-picker-search-row" style="flex: 1;">
+                                    <input type="text" id="newCategoryIconSearch" class="form-control" placeholder="Buscar icono (es/en)..." aria-label="Buscar icono">
+                                    <span class="icon-picked" id="newCategoryIconSelected">Ninguno seleccionado</span>
+                                </div>
+                            </div>
+                            <div id="newCategoryIconList" class="icon-options-grid" aria-label="Opciones de iconos"></div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-save" style="width: 100%;">
+                        <i class="fas fa-plus"></i> Agregar Categoría
                     </button>
                 </form>
                 

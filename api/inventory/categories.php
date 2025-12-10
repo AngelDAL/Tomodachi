@@ -26,7 +26,7 @@ try {
 
     switch ($method) {
         case 'GET':
-            $categories = $db->select('SELECT category_id, category_name, description, created_at FROM categories WHERE store_id = ? ORDER BY category_name ASC', [$store_id]);
+            $categories = $db->select('SELECT category_id, category_name, description, icon_class, created_at FROM categories WHERE store_id = ? ORDER BY category_name ASC', [$store_id]);
             Response::success($categories,'Listado de categorías');
             break;
         case 'POST':
@@ -35,12 +35,14 @@ try {
             if (!$data) { Response::validationError(['body'=>'JSON inválido']); }
             $name = isset($data['category_name']) ? Validator::sanitizeString($data['category_name']) : '';
             $desc = isset($data['description']) ? Validator::sanitizeString($data['description']) : '';
+            $icon = isset($data['icon_class']) ? Validator::sanitizeString($data['icon_class']) : null;
+
             $errors = [];
             if (!Validator::required($name)) { $errors['category_name']='Requerido'; }
             if ($errors) { Response::validationError($errors); }
             
-            $id = $db->insert('INSERT INTO categories (store_id, category_name, description, created_at) VALUES (?,?,?,NOW())',[$store_id, $name, $desc]);
-            $cat = $db->selectOne('SELECT category_id, category_name, description, created_at FROM categories WHERE category_id = ?',[$id]);
+            $id = $db->insert('INSERT INTO categories (store_id, category_name, description, icon_class, created_at) VALUES (?,?,?,?,NOW())',[$store_id, $name, $desc, $icon]);
+            $cat = $db->selectOne('SELECT category_id, category_name, description, icon_class, created_at FROM categories WHERE category_id = ?',[$id]);
             Response::success($cat,'Categoría creada');
             break;
         case 'PUT':
@@ -57,11 +59,12 @@ try {
             $fields=[];$params=[];
             if (isset($data['category_name'])) { $fields[]='category_name = ?'; $params[]=Validator::sanitizeString($data['category_name']); }
             if (isset($data['description'])) { $fields[]='description = ?'; $params[]=Validator::sanitizeString($data['description']); }
+            if (array_key_exists('icon_class', $data)) { $fields[]='icon_class = ?'; $params[]=$data['icon_class'] ? Validator::sanitizeString($data['icon_class']) : null; }
             if (!$fields) { Response::error('Nada para actualizar',400); }
             $params[]=$id;
             $sql='UPDATE categories SET '.implode(', ',$fields).' WHERE category_id = ?';
             $db->update($sql,$params);
-            $cat=$db->selectOne('SELECT category_id, category_name, description, created_at FROM categories WHERE category_id = ?',[$id]);
+            $cat=$db->selectOne('SELECT category_id, category_name, description, icon_class, created_at FROM categories WHERE category_id = ?',[$id]);
             Response::success($cat,'Categoría actualizada');
             break;
         case 'DELETE':

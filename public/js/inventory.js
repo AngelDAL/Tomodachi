@@ -8,6 +8,50 @@ let currentFilter = '';
 let selectedFile = null;
 let storeId = 1;
 let currentEditingProduct = null;
+const ICON_CATALOG = [
+    { class: 'fa-tag', es: 'Etiqueta', en: 'Tag' },
+    { class: 'fa-tags', es: 'Etiquetas', en: 'Tags' },
+    { class: 'fa-box', es: 'Caja', en: 'Box' },
+    { class: 'fa-box-open', es: 'Caja abierta', en: 'Box open' },
+    { class: 'fa-bag-shopping', es: 'Bolsa de compras', en: 'Shopping bag' },
+    { class: 'fa-basket-shopping', es: 'Canasta', en: 'Basket' },
+    { class: 'fa-mug-hot', es: 'Bebida caliente', en: 'Hot drink' },
+    { class: 'fa-wine-bottle', es: 'Vino', en: 'Wine bottle' },
+    { class: 'fa-beer-mug-empty', es: 'Cerveza', en: 'Beer' },
+    { class: 'fa-bottle-water', es: 'Botella de agua', en: 'Water bottle' },
+    { class: 'fa-cookie-bite', es: 'Galleta', en: 'Cookie' },
+    { class: 'fa-ice-cream', es: 'Helado', en: 'Ice cream' },
+    { class: 'fa-apple-whole', es: 'Fruta', en: 'Fruit' },
+    { class: 'fa-bread-slice', es: 'Pan', en: 'Bread' },
+    { class: 'fa-cheese', es: 'Queso', en: 'Cheese' },
+    { class: 'fa-drumstick-bite', es: 'Pollo', en: 'Chicken' },
+    { class: 'fa-fish', es: 'Pescado', en: 'Fish' },
+    { class: 'fa-cow', es: 'Lácteos', en: 'Dairy' },
+    { class: 'fa-seedling', es: 'Orgánico', en: 'Organic' },
+    { class: 'fa-carrot', es: 'Verdura', en: 'Vegetable' },
+    { class: 'fa-pepper-hot', es: 'Picante', en: 'Spicy' },
+    { class: 'fa-burger', es: 'Hamburguesa', en: 'Burger' },
+    { class: 'fa-pizza-slice', es: 'Pizza', en: 'Pizza' },
+    { class: 'fa-bowl-food', es: 'Comida', en: 'Food bowl' },
+    { class: 'fa-mitten', es: 'Ropa', en: 'Clothing' },
+    { class: 'fa-shirt', es: 'Camiseta', en: 'Shirt' },
+    { class: 'fa-hat-cowboy', es: 'Sombrero', en: 'Hat' },
+    { class: 'fa-shoe-prints', es: 'Zapatos', en: 'Shoes' },
+    { class: 'fa-laptop', es: 'Tecnología', en: 'Laptop' },
+    { class: 'fa-mobile-screen', es: 'Celular', en: 'Phone' },
+    { class: 'fa-plug', es: 'Electrónica', en: 'Electronics' },
+    { class: 'fa-tv', es: 'Televisión', en: 'TV' },
+    { class: 'fa-lightbulb', es: 'Hogar', en: 'Home' },
+    { class: 'fa-soap', es: 'Limpieza', en: 'Cleaning' },
+    { class: 'fa-screwdriver-wrench', es: 'Ferretería', en: 'Hardware' },
+    { class: 'fa-car', es: 'Auto', en: 'Car' },
+    { class: 'fa-paw', es: 'Mascotas', en: 'Pets' },
+    { class: 'fa-book', es: 'Libros', en: 'Books' },
+    { class: 'fa-gamepad', es: 'Juegos', en: 'Games' },
+    { class: 'fa-gift', es: 'Regalos', en: 'Gifts' },
+    { class: 'fa-leaf', es: 'Verde', en: 'Green' },
+    { class: 'fa-cube', es: 'Genérico', en: 'Generic' }
+];
 
 // Sistema de debouncing para búsqueda
 let searchTimeout = null;
@@ -28,6 +72,16 @@ function initInventory() {
     bindEvents();
     loadCategories();
     loadProducts();
+
+    // Inicializar picker de iconos para creación de categoría
+        setupIconPicker({
+            hiddenInput: document.getElementById('newCategoryIcon'),
+            searchInput: document.getElementById('newCategoryIconSearch'),
+            list: document.getElementById('newCategoryIconList'),
+            selectedLabel: document.getElementById('newCategoryIconSelected'),
+            previewContainer: document.getElementById('iconPreviewContainer'),
+            previewIcon: document.getElementById('iconPreviewIcon')
+        });
 }
 
 function bindEvents() {
@@ -910,10 +964,15 @@ function renderCategoriesList() {
     }
     
     list.innerHTML = categories.map(cat => `
-        <li style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee;">
-            <span>${escapeHtml(cat.category_name)}</span>
+        <li style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; gap: 15px;">
+            <div style="display: flex; align-items: center; gap: 15px; flex: 1;">
+                <div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: #f8f9fa; border-radius: 8px; color: var(--primary-color); flex-shrink: 0;">
+                    <i class="fas ${cat.icon_class || 'fa-tag'}" style="font-size: 1.2rem;"></i>
+                </div>
+                <div style="font-weight: 600; font-size: 1rem;">${escapeHtml(cat.category_name)}</div>
+            </div>
             <div class="actions-container" style="display: flex; align-items: center;">
-                <button type="button" id="btn-del-${cat.category_id}" class="btn-danger" style="padding: 2px 8px; font-size: 0.8em;" onclick="showDeleteConfirm(${cat.category_id})">
+                <button type="button" id="btn-del-${cat.category_id}" class="btn-danger" style="padding: 6px 10px; font-size: 0.9em;" onclick="showDeleteConfirm(${cat.category_id})" title="Eliminar categoría">
                     <i class="fas fa-trash"></i>
                 </button>
                 <div id="confirm-del-${cat.category_id}" style="display: none; gap: 5px; align-items: center;">
@@ -929,6 +988,8 @@ function renderCategoriesList() {
         </li>
     `).join('');
 }
+
+
 
 function showDeleteConfirm(id) {
     const btn = document.getElementById(`btn-del-${id}`);
@@ -950,7 +1011,9 @@ function cancelDeleteCategory(id) {
 
 async function submitAddCategory() {
     const nameInput = document.getElementById('newCategoryName');
+    const iconInput = document.getElementById('newCategoryIcon');
     const name = nameInput.value.trim();
+    const icon = iconInput ? iconInput.value.trim() : '';
     
     if (!name) return;
     
@@ -958,7 +1021,7 @@ async function submitAddCategory() {
         const response = await fetch('../api/inventory/categories.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ category_name: name })
+            body: JSON.stringify({ category_name: name, icon_class: icon || null })
         });
         
         const data = await response.json();
@@ -966,8 +1029,16 @@ async function submitAddCategory() {
         if (data.success) {
             showNotification('Categoría agregada', 'success');
             nameInput.value = '';
+            if (iconInput) iconInput.value = '';
             await loadCategories(); // Recargar categorías del servidor
             renderCategoriesList(); // Actualizar lista en modal
+            // Reiniciar sugerencias
+            setupIconPicker({
+                hiddenInput: iconInput,
+                searchInput: document.getElementById('newCategoryIconSearch'),
+                list: document.getElementById('newCategoryIconList'),
+                selectedLabel: document.getElementById('newCategoryIconSelected')
+            });
         } else {
             showNotification(data.message || 'Error al agregar categoría', 'error');
         }
@@ -1005,6 +1076,71 @@ async function executeDeleteCategory(id) {
 function playSound(filename) {
     const audio = new Audio('assets/sound/' + filename);
     audio.play().catch(e => console.warn('Error playing sound:', e));
+}
+
+function setupIconPicker({ hiddenInput, searchInput, list, selectedLabel, previewContainer, previewIcon }) {
+    if (!hiddenInput || !list) return;
+
+    const updatePreview = (iconClass) => {
+        if (previewContainer && previewIcon && iconClass) {
+            previewIcon.className = `fas ${iconClass}`;
+            previewContainer.classList.remove('hidden');
+        } else if (previewContainer) {
+            previewContainer.classList.add('hidden');
+        }
+    };
+
+    const renderList = (term = '') => {
+        const q = term.toLowerCase().trim();
+        const filtered = ICON_CATALOG.filter(icon =>
+            icon.class.toLowerCase().includes(q) ||
+            (icon.es && icon.es.toLowerCase().includes(q)) ||
+            (icon.en && icon.en.toLowerCase().includes(q))
+        );
+
+        if (!filtered.length) {
+            list.innerHTML = '<div class="icon-empty">Sin coincidencias</div>';
+            list.style.display = 'grid';
+            return;
+        }
+
+        list.innerHTML = filtered.map(icon => `
+            <button type="button" class="icon-card" data-class="${icon.class}">
+                <i class="fas ${icon.class}"></i>
+                <span class="icon-es">${icon.es}</span>
+            </button>
+        `).join('');
+        list.style.display = 'grid';
+
+        list.querySelectorAll('.icon-card').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const val = btn.getAttribute('data-class');
+                hiddenInput.value = val;
+                if (selectedLabel) {
+                    selectedLabel.textContent = 'Icono seleccionado: ' + ICON_CATALOG.find(i => i.class === val)?.es;
+                }
+                list.querySelectorAll('.icon-card').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                updatePreview(val);
+            });
+        });
+
+        // resaltar seleccionado actual
+        if (hiddenInput.value) {
+            const current = list.querySelector(`[data-class="${hiddenInput.value}"]`);
+            if (current) current.classList.add('selected');
+            updatePreview(hiddenInput.value);
+        } else {
+            updatePreview(null);
+        }
+    };
+
+    const initialTerm = searchInput ? searchInput.value : '';
+    renderList(initialTerm);
+
+    if (searchInput) {
+        searchInput.addEventListener('input', () => renderList(searchInput.value));
+    }
 }
 
 // Función global para el escáner (requerida por scanner.js)

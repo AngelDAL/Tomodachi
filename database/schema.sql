@@ -45,6 +45,7 @@ CREATE TABLE categories (
     store_id INT NOT NULL DEFAULT 1,
     category_name VARCHAR(100) NOT NULL,
     description TEXT,
+    icon_class VARCHAR(80) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE,
     INDEX idx_store (store_id)
@@ -175,11 +176,11 @@ INSERT INTO stores (store_name, address, phone, status) VALUES
 ('Tienda Principal', 'Calle Principal #123, Ciudad', '555-1234', 'active');
 
 -- Insertar categorías de ejemplo
-INSERT INTO categories (store_id, category_name, description) VALUES
-(1, 'Bebidas', 'Bebidas frías y calientes'),
-(1, 'Snacks', 'Botanas y dulces'),
-(1, 'Abarrotes', 'Productos de despensa'),
-(1, 'Lácteos', 'Productos lácteos y derivados');
+INSERT INTO categories (store_id, category_name, description, icon_class) VALUES
+(1, 'Bebidas', 'Bebidas frías y calientes', 'fa-mug-hot'),
+(1, 'Snacks', 'Botanas y dulces', 'fa-cookie-bite'),
+(1, 'Abarrotes', 'Productos de despensa', 'fa-basket-shopping'),
+(1, 'Lácteos', 'Productos lácteos y derivados', 'fa-cheese');
 
 -- Insertar usuario administrador (password: admin123)
 INSERT INTO users (store_id, username, password_hash, full_name, email, role, status) VALUES

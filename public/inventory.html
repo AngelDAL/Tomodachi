@@ -167,7 +167,7 @@
                         <label for="addProductImage" class="btn-secondary" style="cursor: pointer; padding: 8px 15px; border-radius: 4px; background: #e0e0e0;">
                             <i class="fas fa-camera"></i> Seleccionar
                         </label>
-                        <button type="button" class="btn-secondary" onclick="openAIModal('add')" style="padding: 8px 15px; border-radius: 4px; background: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; cursor: pointer;">
+                        <button type="button" class="btn-secondary" onclick="openAIModal('add')" style="display: none; padding: 8px 15px; border-radius: 4px; background: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; cursor: pointer;">
                             <i class="fas fa-wand-magic-sparkles"></i> Crear con IA
                         </button>
                         <input type="file" id="addProductImage" accept="image/*" style="display: none;">
@@ -253,7 +253,7 @@
                                 <img id="detailImage" src="" alt="Producto" class="detail-img">
                                 <div class="image-overlay">
                                     <label for="detailImageInput" class="btn-change-image"><i class="fas fa-camera"></i> Cambiar Imagen</label>
-                                    <button type="button" class="btn-change-image" onclick="openAIModal('edit')" style="margin-top: 5px; background: rgba(255,255,255,0.9); color: var(--primary-color); border: none; padding: 8px 15px; border-radius: 20px; cursor: pointer; font-weight: 500;">
+                                    <button type="button" class="btn-change-image" onclick="openAIModal('edit')" style="display: none; margin-top: 5px; background: rgba(255,255,255,0.9); color: var(--primary-color); border: none; padding: 8px 15px; border-radius: 20px; cursor: pointer; font-weight: 500;">
                                         <i class="fas fa-wand-magic-sparkles"></i> Mejorar con IA
                                     </button>
                                     <input type="file" id="detailImageInput" accept="image/*" class="hidden">

@@ -636,7 +636,7 @@
     flex-shrink: 0;
 }
 
-.cart-tab-btn {
+.panel-tab-btn {
     flex: 1;
     padding: 12px;
     background: transparent;
@@ -655,12 +655,12 @@
 }
 
 
-.cart-tab-btn:hover {
+.panel-tab-btn:hover {
     color: var(--text-color);
     background: var(--bg-hover);
 }
 
-.cart-tab-btn.active {
+.panel-tab-btn.active {
     color: var(--primary-color);
     border-bottom-color: var(--primary-color);
 }

@@ -184,11 +184,27 @@ function bindEvents() {
     window.addEventListener('touchend', onUp);
   }
 
-  // Pestañas del carrito
+  // Pestañas del carrito (Venta 1, 2, 3, 4)
   document.querySelectorAll('.cart-tab-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const tabName = btn.getAttribute('data-tab');
       switchCartTab(tabName);
+    });
+  });
+
+  // Pestañas internas del panel (Productos / Ajustes)
+  document.querySelectorAll('.panel-tab-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        const tabId = btn.getAttribute('data-tab');
+        
+        // Update buttons
+        document.querySelectorAll('.panel-tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        
+        // Update content
+        document.querySelectorAll('.cart-tab-content').forEach(c => c.classList.remove('active'));
+        const content = document.getElementById(`tab-${tabId}`);
+        if(content) content.classList.add('active');
     });
   });
 

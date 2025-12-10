@@ -2,6 +2,9 @@
  * Lógica de Punto de Venta (Carrito y Venta) - Versión Simplificada
  */
 let CART = [];
+let MULTI_CARTS = { '1': [], '2': [], '3': [], '4': [] }; // Soporte para múltiples carritos
+let CURRENT_TAB = '1';
+
 let CURRENT_STORE_ID = null;
 let allProducts = [];
 let allCategories = [];
@@ -10,6 +13,7 @@ let categoryBar;
 let isCatDragging = false;
 let catDragStartX = null;
 let catScrollStart = 0;
+let PARKED_SALES = []; // Nueva variable para ventas suspendidas
 
 // Variables globales para elementos DOM
 let searchInput, searchResults, cartBody, emptyCartMsg;
@@ -69,16 +73,61 @@ function initPOS() {
   // Ahora vinculamos eventos
   bindEvents();
   
-  // Persistencia: Cargar carrito guardado
-  const savedCart = localStorage.getItem('tomodachi_cart');
-  if (savedCart) {
+  // Inyectar interfaz de pestañas si no existe
+  injectCartTabsUI();
+  injectHistorySidebar();
+  
+  // Inyectar Sidebar de Historial
+  // injectHistorySidebar(); // Ya llamado arriba
+  
+  // Persistencia: Cargar carritos guardados (Sistema Multi-Tab)
+  const savedCarts = localStorage.getItem('tomodachi_multi_carts');
+  if (savedCarts) {
     try {
-      CART = JSON.parse(savedCart);
-      renderCart();
+      MULTI_CARTS = JSON.parse(savedCarts);
     } catch (e) {
-      console.error('Error cargando carrito guardado', e);
-      localStorage.removeItem('tomodachi_cart');
+      console.error('Error cargando carritos guardados', e);
+      localStorage.removeItem('tomodachi_multi_carts');
     }
+  } else {
+      // Migración: Si existe un carrito antiguo simple, moverlo al tab 1
+      const oldCart = localStorage.getItem('tomodachi_cart');
+      if (oldCart) {
+          try {
+              MULTI_CARTS['1'] = JSON.parse(oldCart);
+              localStorage.removeItem('tomodachi_cart');
+          } catch(e) {}
+      }
+  }
+
+  // Recuperar pestaña activa
+  const savedTab = localStorage.getItem('tomodachi_current_tab');
+  if (savedTab && MULTI_CARTS[savedTab]) {
+      CURRENT_TAB = savedTab;
+  }
+
+  // Inicializar carrito actual
+  CART = MULTI_CARTS[CURRENT_TAB] || [];
+  
+  // Actualizar UI inicial de pestañas
+  document.querySelectorAll('.cart-tab-btn').forEach(btn => {
+      const t = btn.getAttribute('data-tab');
+      if(t === CURRENT_TAB) btn.classList.add('active');
+      else btn.classList.remove('active');
+      updateTabBadge(t);
+  });
+
+  renderCart();
+
+  // Cargar ventas suspendidas
+  const savedParked = localStorage.getItem('tomodachi_parked_sales');
+  if (savedParked) {
+      try {
+          PARKED_SALES = JSON.parse(savedParked);
+          updateParkedSalesIndicator();
+      } catch (e) {
+          console.error('Error cargando ventas suspendidas', e);
+      }
   }
 
   loadCategoriesAndProducts();
@@ -167,11 +216,47 @@ function bindEvents() {
       if (el) el.addEventListener('input', updateModalPreview);
   });
 
+  // Global Hotkeys
+  document.addEventListener('keydown', (e) => {
+      if (e.key === 'F2') { // F2: Enfocar búsqueda
+          e.preventDefault();
+          if(searchInput) searchInput.focus();
+      }
+      if (e.key === 'F4') { // F4: Cobrar / Finalizar
+          e.preventDefault();
+          if(finalizeSaleBtn && !finalizeSaleBtn.disabled) finalizeSaleBtn.click();
+      }
+      if (e.key === 'F7') { // F7: Suspender venta
+          e.preventDefault();
+          parkCurrentSale();
+      }
+      if (e.key === 'Escape') { // ESC: Cerrar modales o limpiar búsqueda
+          if(itemOptionsModal && !itemOptionsModal.classList.contains('hidden')) {
+              closeItemOptions();
+          } else if (document.activeElement === searchInput) {
+              searchInput.value = '';
+              searchInput.blur();
+              if(searchResults) searchResults.classList.add('hidden');
+              if(productGallery) productGallery.style.display = 'grid';
+          }
+      }
+  });
+
   // Eliminado auto-cierre al hacer click fuera: el usuario controla con botones
 }
 
 function switchCartTab(tabName) {
-  // Cambiar botones activos
+  if (tabName === CURRENT_TAB) return;
+
+  // Guardar estado actual (por seguridad, aunque renderCart lo mantiene)
+  MULTI_CARTS[CURRENT_TAB] = [...CART];
+
+  // Cambiar contexto
+  CURRENT_TAB = tabName;
+  localStorage.setItem('tomodachi_current_tab', CURRENT_TAB);
+  CART = MULTI_CARTS[CURRENT_TAB] || [];
+
+  // Actualizar UI Botones
   document.querySelectorAll('.cart-tab-btn').forEach(btn => {
     btn.classList.remove('active');
     if (btn.getAttribute('data-tab') === tabName) {
@@ -179,20 +264,21 @@ function switchCartTab(tabName) {
     }
   });
 
-  // Cambiar contenido visible
-  document.querySelectorAll('.cart-tab-content').forEach(content => {
-    content.classList.remove('active');
-  });
-  const tabContent = document.getElementById(`tab-${tabName}`);
-  if (tabContent) {
-    tabContent.classList.add('active');
-  }
+  // Limpiar inputs de pago al cambiar de venta
+  if (discountInput) discountInput.value = '';
+  if (taxInput) taxInput.value = '';
+  if (checkoutReceivedInput) checkoutReceivedInput.value = '';
+  if (typeof resetMoneyCounts === 'function') resetMoneyCounts(true);
+
+  // Renderizar el nuevo carrito
+  renderCart();
 }
 
 async function searchProducts(term) {
   try {
     // Eliminado store_id de los parámetros, el backend usa la sesión
     const res = await fetch('../api/inventory/products.php?search=' + term, { method: 'GET', headers: { 'Content-Type': 'application/json' }, credentials: 'include' });
+    if (!await checkSessionStatus(res)) return; // Verificar sesión
     const resData = await res.json();
     if (!resData.success) { return; }
     const list = resData.data || [];
@@ -206,7 +292,7 @@ async function searchProducts(term) {
 
     // Renderizar resultados con el mismo estilo que la galería principal
     searchResults.innerHTML = list.map((p, index) => `
-      <div class="gallery-item" data-id="${p.product_id}" data-price="${p.price}" data-image="${p.image_path || ''}" title="${escapeHtml(p.product_name)}" style="animation-delay: ${Math.min(index * 0.05, 0.5)}s">
+      <div class="gallery-item" data-id="${p.product_id}" data-price="${p.price}" data-stock="${p.stock_quantity !== undefined ? p.stock_quantity : ''}" data-image="${p.image_path || ''}" title="${escapeHtml(p.product_name)}" style="animation-delay: ${Math.min(index * 0.05, 0.5)}s">
         <div class="img-wrap">${p.image_path ? `<img src="/${p.image_path}" alt="img">` : '<span class="no-img">Sin imagen</span>'}</div>
         <div class="g-name">${escapeHtml(p.product_name)}</div>
         <div class="g-price">${formatCurrency(p.price)}</div>
@@ -225,7 +311,8 @@ async function searchProducts(term) {
           product_id: parseInt(el.getAttribute('data-id')),
           product_name: el.querySelector('.g-name').textContent,
           unit_price: parseFloat(el.getAttribute('data-price')),
-          image_path: el.getAttribute('data-image')
+          image_path: el.getAttribute('data-image'),
+          stock_quantity: parseInt(el.getAttribute('data-stock')) // Asumiendo que viene en data-stock o similar, si no, undefined
         });
         
         // Pequeño delay para apreciar el feedback antes de cerrar resultados
@@ -243,6 +330,18 @@ async function searchProducts(term) {
 
 function addProductToCart(prod) {
   const existing = CART.find(i => i.product_id === prod.product_id);
+  
+  // Validación de Stock
+  const currentQty = existing ? existing.quantity : 0;
+  // Si prod.stock_quantity es undefined o null, asumimos infinito o no controlado
+  const maxStock = (prod.stock_quantity !== undefined && prod.stock_quantity !== null && prod.stock_quantity !== '') ? parseInt(prod.stock_quantity) : null;
+  
+  if (maxStock !== null && (currentQty + 1) > maxStock) {
+      showNotification(`Stock insuficiente. Disponible: ${maxStock}`, 'error');
+      playSound('Error.mp3'); 
+      return;
+  }
+
   if (existing) {
     existing.quantity += 1;
     recalcItemPrice(existing);
@@ -258,7 +357,8 @@ function addProductToCart(prod) {
       discount_type: 'none',
       discount_value: 0,
       nxn_buy: 0,
-      nxn_pay: 0
+      nxn_pay: 0,
+      stock_quantity: maxStock // Guardar referencia del stock
     });
   }
   playSound('Sound2.mp3');
@@ -267,8 +367,12 @@ function addProductToCart(prod) {
 }
 
 function renderCart() {
-  // Persistencia: Guardar carrito
-  localStorage.setItem('tomodachi_cart', JSON.stringify(CART));
+  // Persistencia: Guardar estado multi-carrito
+  MULTI_CARTS[CURRENT_TAB] = CART;
+  localStorage.setItem('tomodachi_multi_carts', JSON.stringify(MULTI_CARTS));
+  
+  // Actualizar badge de la pestaña actual
+  updateTabBadge(CURRENT_TAB);
 
   if (!cartBody || !emptyCartMsg) return;
 
@@ -361,6 +465,350 @@ function renderCart() {
   }
   recalcTotals();
 }
+
+// Helper para badges de pestañas
+function updateTabBadge(tabId) {
+    const btn = document.querySelector(`.cart-tab-btn[data-tab="${tabId}"]`);
+    if (!btn) return;
+    
+    const items = MULTI_CARTS[tabId] || [];
+    const count = items.reduce((s, i) => s + i.quantity, 0);
+    
+    let badge = btn.querySelector('.tab-badge');
+    if (badge) {
+        if (count > 0) {
+            badge.textContent = count;
+            badge.style.display = 'inline-block';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+}
+
+function injectCartTabsUI() {
+    // Evitar duplicados
+    if (document.getElementById('cartTabsContainer')) return;
+
+    const cartPanel = document.getElementById('cartPanel');
+    // Si no hay panel lateral, buscar contenedor principal del carrito
+    const targetContainer = cartPanel || document.getElementById('cartBody')?.closest('.col-md-4') || document.querySelector('.cart-section');
+    
+    if (!targetContainer) return;
+
+    const tabsContainer = document.createElement('div');
+    tabsContainer.id = 'cartTabsContainer';
+    
+    // Estilos CSS inyectados
+    const style = document.createElement('style');
+    style.textContent = `
+        #cartTabsContainer {
+            display: flex;
+            width: 100%;
+            background: #f8f9fa;
+            padding: 10px 10px 0;
+            border-bottom: 1px solid #dee2e6;
+            gap: 5px;
+            overflow-x: auto;
+            scrollbar-width: none; /* Firefox */
+        }
+        #cartTabsContainer::-webkit-scrollbar { display: none; } /* Chrome/Safari */
+        
+        .cart-tab-btn {
+            flex: 1;
+            min-width: 60px;
+            padding: 12px 5px;
+            border: 1px solid transparent;
+            background: #e9ecef;
+            color: #6c757d;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            position: relative;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            outline: none;
+        }
+        .cart-tab-btn:hover { background: #dee2e6; }
+        
+        .cart-tab-btn.active {
+            background: #fff;
+            color: var(--primary-color, #2e7d32);
+            border-color: #dee2e6;
+            border-bottom-color: #fff;
+            margin-bottom: -1px;
+            box-shadow: 0 -2px 4px rgba(0,0,0,0.02);
+            font-weight: 700;
+            z-index: 2;
+        }
+        
+        .cart-tab-btn .tab-icon { font-size: 1.1rem; }
+        .cart-tab-btn .tab-label { display: inline-block; }
+        
+        /* Badge de contador */
+        .tab-badge {
+            background: #dc3545;
+            color: white;
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 10px;
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            display: none;
+            min-width: 18px;
+            text-align: center;
+            line-height: 1.2;
+            box-shadow: 0 2px 2px rgba(0,0,0,0.1);
+        }
+
+        /* Ajustes Móvil */
+        @media (max-width: 768px) {
+            .cart-tab-btn .tab-label { display: none; }
+            .cart-tab-btn { padding: 10px 5px; }
+            .cart-tab-btn .tab-icon { font-size: 1.2rem; margin: 0; }
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Generar botones de carritos
+    ['1', '2', '3', '4'].forEach(num => {
+        const btn = document.createElement('button');
+        btn.className = 'cart-tab-btn';
+        btn.setAttribute('data-tab', num);
+        btn.innerHTML = `
+            <i class="fas fa-shopping-cart tab-icon"></i>
+            <span class="tab-label">Venta ${num}</span>
+            <span class="tab-badge">0</span>
+        `;
+        btn.onclick = () => switchCartTab(num);
+        tabsContainer.appendChild(btn);
+    });
+
+
+
+    // Insertar en el DOM y reestructurar para vistas
+    const header = targetContainer.querySelector('.cart-header') || targetContainer.querySelector('h2') || targetContainer.querySelector('.card-header');
+    
+    if (header) {
+        header.parentNode.insertBefore(tabsContainer, header.nextSibling);
+    } else {
+        targetContainer.insertBefore(tabsContainer, targetContainer.firstChild);
+    }
+
+
+}
+
+function injectHistorySidebar() {
+    if (document.getElementById('historyHandle')) return;
+
+    // 1. Crear Botón Flotante (Handle)
+    const historyHandle = document.createElement('button');
+    historyHandle.id = 'historyHandle';
+    historyHandle.className = 'cart-handle history-handle'; // Reutiliza estilos base
+    historyHandle.setAttribute('aria-label', 'Abrir historial');
+    historyHandle.innerHTML = '<i class="fas fa-history"></i>';
+    
+    // Estilos específicos para diferenciarlo y posicionarlo
+    // Inicialmente oculto fuera de pantalla (translateX)
+    historyHandle.style.cssText = `
+        top: 59%; /* Debajo del carrito */
+        background: #6c757d; /* Color sutil (gris) */
+        transform: translateX(120%); /* Oculto a la derecha */
+        transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        display: flex; /* Siempre flex, controlamos visibilidad con transform */
+        z-index: 1049;
+    `;
+    
+    // 2. Crear Panel Lateral
+    const historyPanel = document.createElement('aside');
+    historyPanel.id = 'historyPanel';
+    historyPanel.className = 'cart-side-panel'; // Reutiliza estilos base
+    historyPanel.setAttribute('aria-label', 'Historial de Ventas');
+    historyPanel.setAttribute('aria-hidden', 'true');
+    historyPanel.style.zIndex = '1051'; // Un poco más alto que el carrito por si acaso
+    
+    historyPanel.innerHTML = `
+        <div class="cart-side-header" style="background: #f8f9fa; color: #333; border-bottom: 1px solid #dee2e6;">
+            <h2>Historial</h2>
+            <button class="close-cart" id="closeHistoryBtn" aria-label="Cerrar historial"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="historyPanelBody" style="flex: 1; overflow-y: auto; padding: 10px;">
+            <!-- Contenido dinámico -->
+        </div>
+    `;
+
+    // Insertar en el DOM
+    document.body.appendChild(historyHandle);
+    document.body.appendChild(historyPanel);
+
+    // 3. Lógica de Toggle
+    const cartPanel = document.getElementById('cartPanel');
+    const cartHandle = document.getElementById('cartHandle');
+
+    function toggleHistory(forceOpen = null) {
+        const isOpen = historyPanel.classList.contains('open');
+        const shouldOpen = forceOpen !== null ? forceOpen : !isOpen;
+
+        if (shouldOpen) {
+            // Cerrar carrito si está abierto
+            if (cartPanel && cartPanel.classList.contains('open')) {
+                cartPanel.classList.remove('open');
+                cartPanel.setAttribute('aria-hidden', 'true');
+            }
+            
+            historyPanel.classList.add('open');
+            historyPanel.setAttribute('aria-hidden', 'false');
+            renderHistoryView(); // Cargar datos al abrir
+        } else {
+            historyPanel.classList.remove('open');
+            historyPanel.setAttribute('aria-hidden', 'true');
+            
+            // REQUERIMIENTO: Al cerrar historial, volver a abrir el carrito
+            if (cartPanel) {
+                cartPanel.classList.add('open');
+                cartPanel.setAttribute('aria-hidden', 'false');
+            }
+        }
+    }
+
+    // Event Listeners
+    historyHandle.onclick = () => toggleHistory();
+    document.getElementById('closeHistoryBtn').onclick = () => toggleHistory(false);
+
+    // Observador para mostrar/ocultar el botón de historial según el estado del carrito
+    // Usamos MutationObserver para detectar cambios en la clase 'open' del cartPanel
+    if (cartPanel) {
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                    const isCartOpen = cartPanel.classList.contains('open');
+                    const isHistoryOpen = historyPanel.classList.contains('open');
+                    
+                    // Mostrar botón si el carrito está abierto O si el historial está abierto
+                    if (isCartOpen || isHistoryOpen) {
+                        historyHandle.style.transform = 'translateX(0)';
+                    } else {
+                        // Ocultar botón si ambos están cerrados
+                        historyHandle.style.transform = 'translateX(120%)';
+                    }
+                }
+            });
+        });
+        observer.observe(cartPanel, { attributes: true });
+        // También observar el panel de historial para mantener el botón visible
+        const historyObserver = new MutationObserver((mutations) => {
+             mutations.forEach((mutation) => {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                    const isCartOpen = cartPanel.classList.contains('open');
+                    const isHistoryOpen = historyPanel.classList.contains('open');
+                    
+                    if (isCartOpen || isHistoryOpen) {
+                        historyHandle.style.transform = 'translateX(0)';
+                    } else {
+                        historyHandle.style.transform = 'translateX(120%)';
+                    }
+                }
+            });
+        });
+        historyObserver.observe(historyPanel, { attributes: true });
+    }
+    
+    // Estilos CSS extra
+    const style = document.createElement('style');
+    style.textContent = `
+        .history-item-card {
+            background: #fff;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            transition: transform 0.2s;
+        }
+        .history-item-card:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
+        .h-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; color: #555; }
+        .h-id { font-weight: bold; color: #333; }
+        .h-details { font-size: 0.85rem; color: #777; margin-bottom: 8px; display: flex; justify-content: space-between; }
+        .h-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #eee; padding-top: 8px; }
+        .h-total { font-size: 1.1rem; font-weight: bold; color: var(--primary-color, #2e7d32); }
+        .btn-reprint { background: #f0f0f0; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; color: #333; }
+        .btn-reprint:hover { background: #e0e0e0; }
+    `;
+    document.head.appendChild(style);
+}
+
+function renderHistoryView() {
+    const container = document.getElementById('historyPanelBody');
+    if(!container) return;
+    
+    // Cargar datos
+    const saved = localStorage.getItem('tomodachi_recent_sales');
+    let sales = [];
+    try { sales = JSON.parse(saved) || []; } catch(e) {}
+    
+    let html = '';
+    
+    if (sales.length === 0) {
+        html += '<div class="empty-cart" style="text-align: center; padding: 20px; color: #999;">No hay ventas recientes registradas en este dispositivo.</div>';
+    } else {
+        html += sales.map((s, idx) => `
+            <div class="history-item-card">
+                <div class="h-header">
+                    <span class="h-id">Venta #${s.sale_id}</span>
+                    <span class="h-date">${s.date}</span>
+                </div>
+                <div class="h-details">
+                    <span>${s.items.length} productos</span>
+                    <span>${s.cashier ? 'Por: ' + s.cashier : (s.customer || 'Cliente General')}</span>
+                </div>
+                <div class="h-footer">
+                    <span class="h-total">${formatCurrency(s.total)}</span>
+                    <button onclick="reprintTicketFromHistory(${idx})" class="btn-reprint" title="Reimprimir Ticket"><i class="fas fa-print"></i></button>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    container.innerHTML = html;
+}
+
+// ==========================================
+// CONTROLES EXTRA (Historial)
+// ==========================================
+
+let RECENT_SALES = [];
+
+function saveSaleToHistory(saleData) {
+    // Cargar historial existente
+    const saved = localStorage.getItem('tomodachi_recent_sales');
+    if (saved) {
+        try { RECENT_SALES = JSON.parse(saved); } catch(e) {}
+    }
+    
+    // Añadir nueva venta al inicio
+    RECENT_SALES.unshift(saleData);
+    
+    // Mantener solo las últimas 10 ventas
+    if (RECENT_SALES.length > 10) RECENT_SALES = RECENT_SALES.slice(0, 10);
+    
+    localStorage.setItem('tomodachi_recent_sales', JSON.stringify(RECENT_SALES));
+}
+
+// Función global para el onclick del HTML inyectado
+window.reprintTicketFromHistory = function(index) {
+    // Recargar desde storage por si acaso
+    const saved = localStorage.getItem('tomodachi_recent_sales');
+    let sales = [];
+    try { sales = JSON.parse(saved) || []; } catch(e) {}
+    
+    if (sales[index]) {
+        printTicket(sales[index]);
+    }
+};
 
 // ==========================================
 // MODAL & DISCOUNT LOGIC
@@ -505,6 +953,7 @@ function recalcTotals() {
   if (panelTotalEl) {
     panelTotalEl.textContent = formatCurrency(total);
   }
+  renderQuickCashButtons(); // Actualizar botones de pago rápido
   recalcChange();
 }
 
@@ -581,28 +1030,42 @@ async function finalizeSale() {
 
   try {
     const res = await fetch('../api/sales/create_sale.php', { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' }, credentials: 'include' });
+    if (!await checkSessionStatus(res)) { finalizeSaleBtn.disabled = false; return; }
     const resData = await res.json();
     if (resData.success) {
       playSound('Sound7.mp3');
       showNotification('Venta registrada', 'success');
       
+      // Preparar datos para ticket
+      const ticketData = {
+          items: [...CART],
+          total: CART.reduce((s, i) => s + i.subtotal, 0),
+          date: new Date().toLocaleString(),
+          sale_id: resData.sale_id || '---',
+          cashier: resData.cashier_name || 'Cajero'
+      };
+      
+      // Guardar en historial local
+      saveSaleToHistory(ticketData);
+
       // Imprimir ticket si está habilitado
       const printEnabled = document.getElementById('printTicketCheckbox') && document.getElementById('printTicketCheckbox').checked;
       if (printEnabled) {
-        printTicket({
-          items: [...CART],
-          total: CART.reduce((s, i) => s + i.subtotal, 0), // Usar subtotal calculado
-          date: new Date().toLocaleString(),
-          sale_id: resData.sale_id || '---'
-        });
+        printTicket(ticketData);
       }
 
       CART = [];
-      localStorage.removeItem('tomodachi_cart'); // Limpiar persistencia
+      MULTI_CARTS[CURRENT_TAB] = []; // Limpiar del storage global
+      localStorage.setItem('tomodachi_multi_carts', JSON.stringify(MULTI_CARTS));
+      
       renderCart();
       if (discountInput) discountInput.value = '0';
       if (taxInput) taxInput.value = '0';
       if (checkoutReceivedInput) checkoutReceivedInput.value = '0';
+      
+      // Resetear contadores de dinero visuales
+      if (typeof resetMoneyCounts === 'function') resetMoneyCounts(true);
+
       // Mantener panel abierto; solo se cierra manualmente
     } else {
       showNotification(resData.message || 'Error venta', 'error');
@@ -627,6 +1090,8 @@ async function loadCategoriesAndProducts() {
       fetch('../api/inventory/categories.php'),
       fetch('../api/inventory/products.php')
     ]);
+
+    if (!await checkSessionStatus(catRes) || !await checkSessionStatus(prodRes)) return;
 
     const catData = await catRes.json();
     const prodData = await prodRes.json();
@@ -666,7 +1131,7 @@ function renderGallery(list, animate = false) {
   }
 
   // Renderizar items (ocultos si se va a animar)
-  productGallery.innerHTML = list.map(p => `<div class="gallery-item" data-id="${p.product_id}" data-price="${p.price}" data-image="${p.image_path || ''}" title="${escapeHtml(p.product_name)}" style="opacity: ${animate ? 0 : 1};">
+  productGallery.innerHTML = list.map(p => `<div class="gallery-item" data-id="${p.product_id}" data-price="${p.price}" data-stock="${p.stock_quantity !== undefined ? p.stock_quantity : ''}" data-image="${p.image_path || ''}" title="${escapeHtml(p.product_name)}" style="opacity: ${animate ? 0 : 1};">
         <div class="img-wrap">${p.image_path ? `<img src="/${p.image_path}" alt="img">` : '<span class="no-img">Sin imagen</span>'}</div>
         <div class="g-name">${escapeHtml(p.product_name)}</div>
         <div class="g-price">${formatCurrency(p.price)}</div>
@@ -682,7 +1147,8 @@ function renderGallery(list, animate = false) {
         product_id: parseInt(el.getAttribute('data-id')),
         product_name: el.querySelector('.g-name').textContent,
         unit_price: parseFloat(el.getAttribute('data-price')),
-        image_path: el.getAttribute('data-image')
+        image_path: el.getAttribute('data-image'),
+        stock_quantity: parseInt(el.getAttribute('data-stock'))
       });
     });
   });
@@ -827,6 +1293,7 @@ async function fetchByCode(code) {
   try {
     // Eliminado store_id de los parámetros, el backend usa la sesión
     const res = await fetch('../api/inventory/scanner.php?barcode=' + code, { method: 'GET', headers: { 'Content-Type': 'application/json' }, credentials: 'include' });
+    if (!await checkSessionStatus(res)) return;
     const resData = await res.json();
     if (resData.success && resData.data) {
       const p = resData.data;
@@ -834,7 +1301,8 @@ async function fetchByCode(code) {
         product_id: p.product_id, 
         product_name: p.product_name, 
         unit_price: parseFloat(p.price),
-        image_path: p.image_path 
+        image_path: p.image_path,
+        stock_quantity: p.stock_quantity // Asegurar que el backend lo envíe
       });
       showScannedProductOverlay(p);
       showNotification('Producto añadido', 'success');
@@ -1009,4 +1477,620 @@ function printTicket(data) {
   
   win.document.write(html);
   win.document.close();
+}
+
+// ==========================================
+// NUEVAS IMPLEMENTACIONES (Park Sale, Quick Cash, Session Check)
+// ==========================================
+
+async function checkSessionStatus(response) {
+    if (response.status === 401 || response.status === 403) {
+        showNotification('La sesión ha expirado. Redirigiendo...', 'error');
+        setTimeout(() => window.location.href = '/login.php', 2000);
+        return false;
+    }
+    return true;
+}
+
+function parkCurrentSale() {
+    if (CART.length === 0) return showNotification('El carrito está vacío', 'warning');
+    
+    const saleData = {
+        id: Date.now(),
+        timestamp: new Date().toLocaleString(),
+        items: [...CART],
+        total: CART.reduce((s, i) => s + i.subtotal, 0)
+    };
+    
+    PARKED_SALES.push(saleData);
+    localStorage.setItem('tomodachi_parked_sales', JSON.stringify(PARKED_SALES));
+    
+    CART = [];
+    // localStorage.removeItem('tomodachi_cart'); // Ya no se usa
+    renderCart();
+    updateParkedSalesIndicator();
+    showNotification('Venta suspendida/guardada', 'success');
+}
+
+function restoreParkedSale(id) {
+    const index = PARKED_SALES.findIndex(s => s.id === id);
+    if (index === -1) return;
+    
+    if (CART.length > 0) {
+        if(!confirm('Hay productos en el carrito actual. ¿Deseas sobrescribirlos?')) return;
+    }
+    
+    CART = [...PARKED_SALES[index].items];
+    PARKED_SALES.splice(index, 1);
+    localStorage.setItem('tomodachi_parked_sales', JSON.stringify(PARKED_SALES));
+    
+    renderCart();
+    updateParkedSalesIndicator();
+    showNotification('Venta recuperada', 'success');
+}
+
+function updateParkedSalesIndicator() {
+    // Buscar o crear el indicador
+    let indicator = document.getElementById('parkedSalesBtn');
+    
+    if (!indicator) {
+        // Intentar inyectarlo en la barra superior o cerca del carrito
+        const target = document.querySelector('.cart-header') || document.getElementById('cartPanel');
+        if (target) {
+            indicator = document.createElement('button');
+            indicator.id = 'parkedSalesBtn';
+            indicator.className = 'btn-parked-sales';
+            indicator.style.cssText = 'margin: 5px; padding: 5px 10px; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; display: none; font-size: 0.8rem;';
+            indicator.onclick = showParkedSalesList;
+            
+            if(target.classList.contains('cart-header')) {
+                 target.appendChild(indicator);
+            } else {
+                 target.insertBefore(indicator, target.firstChild);
+            }
+        }
+    }
+
+    if(indicator) {
+        indicator.textContent = `Suspendidas (${PARKED_SALES.length})`;
+        indicator.style.display = PARKED_SALES.length > 0 ? 'inline-block' : 'none';
+    }
+}
+
+function showParkedSalesList() {
+    if (PARKED_SALES.length === 0) return;
+    
+    // Crear un modal simple dinámicamente
+    const modalId = 'parkedSalesModal';
+    let modal = document.getElementById(modalId);
+    
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = modalId;
+        modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; display: flex; justify-content: center; align-items: center;';
+        document.body.appendChild(modal);
+        
+        modal.addEventListener('click', (e) => {
+            if(e.target === modal) modal.style.display = 'none';
+        });
+    }
+    
+    const listHtml = PARKED_SALES.map(s => `
+        <div style="background: #f5f5f5; padding: 10px; margin-bottom: 10px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <strong>${s.timestamp}</strong><br>
+                ${s.items.length} items - Total: ${formatCurrency(s.total)}
+            </div>
+            <button onclick="restoreParkedSale(${s.id}); document.getElementById('${modalId}').style.display='none';" style="background: #4caf50; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">Recuperar</button>
+        </div>
+    `).join('');
+    
+    modal.innerHTML = `
+        <div style="background: white; padding: 20px; border-radius: 8px; max-width: 400px; width: 90%; max-height: 80vh; overflow-y: auto;">
+            <h3 style="margin-top: 0;">Ventas Suspendidas</h3>
+            ${listHtml}
+            <button onclick="document.getElementById('${modalId}').style.display='none'" style="margin-top: 10px; width: 100%; padding: 8px;">Cerrar</button>
+        </div>
+    `;
+    
+    modal.style.display = 'flex';
+}
+
+// ==========================================
+// SISTEMA DE PAGO RÁPIDO (Billetes y Monedas)
+// ==========================================
+
+let moneyCounts = {};
+
+function renderQuickCashButtons() {
+    const input = document.getElementById('checkoutReceived');
+    if (!input) return;
+
+    // Asegurar que el input tenga un wrapper para posicionar el botón
+    let wrapper = document.getElementById('money-input-wrapper');
+    if (!wrapper) {
+        // Crear wrapper alrededor del input existente
+        wrapper = document.createElement('div');
+        wrapper.id = 'money-input-wrapper';
+        wrapper.style.cssText = 'position: relative; display: flex; align-items: stretch; width: 100%;';
+        
+        // Mover el input dentro del wrapper
+        input.parentNode.insertBefore(wrapper, input);
+        wrapper.appendChild(input);
+        
+        // Ajustar estilo del input
+        input.style.flex = '1';
+        input.style.borderTopRightRadius = '0';
+        input.style.borderBottomRightRadius = '0';
+
+        // Botón para abrir el panel
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'money-panel-toggle';
+        btn.innerHTML = '<i class="fas fa-money-bill-wave"></i>';
+        btn.title = "Seleccionar billetes/monedas";
+        btn.onclick = toggleMoneyPanel;
+        btn.style.cssText = 'padding: 0 15px; background: var(--primary-color, #4CAF50); color: white; border: none; border-top-right-radius: 4px; border-bottom-right-radius: 4px; cursor: pointer; font-size: 1.1rem;';
+        
+        wrapper.appendChild(btn);
+
+        // Listener para limpiar contadores si se escribe manualmente
+        input.addEventListener('input', (e) => {
+            if (e.isTrusted) { // Solo si es evento de usuario real
+                resetMoneyCounts(false); // false = no borrar input, solo visuales
+                // Ocultar panel al escribir
+                const panel = document.getElementById('money-panel-tooltip');
+                const overlay = document.getElementById('money-panel-overlay');
+                if (panel) panel.classList.remove('active');
+                if (overlay) overlay.classList.remove('active');
+            }
+        });
+        
+        injectMoneyPanelStyles();
+    }
+}
+
+function injectMoneyPanelStyles() {
+    if (document.getElementById('money-panel-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'money-panel-styles';
+    style.textContent = `
+        /* Estilos comunes */
+        .money-panel-tooltip {
+            background: white;
+            border: 1px solid #ddd;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            border-radius: 8px;
+            padding: 15px;
+            z-index: 1000;
+        }
+        
+        /* Escritorio */
+        @media (min-width: 769px) {
+            .money-panel-tooltip {
+                position: absolute;
+                width: 340px;
+                display: none;
+                animation: fadeIn 0.2s ease-out;
+            }
+            .money-panel-tooltip.active {
+                display: block;
+            }
+            /* Flechas */
+            .money-panel-tooltip::after {
+                content: '';
+                position: absolute;
+                right: 15px;
+                border-width: 8px;
+                border-style: solid;
+            }
+            .money-panel-tooltip.pos-top::after {
+                top: 100%;
+                border-color: white transparent transparent transparent;
+            }
+            .money-panel-tooltip.pos-bottom::after {
+                bottom: 100%;
+                border-color: transparent transparent white transparent;
+            }
+        }
+
+        /* Móvil */
+        @media (max-width: 768px) {
+            .money-panel-tooltip {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                width: 100%;
+                border-radius: 20px 20px 0 0;
+                border: none;
+                box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
+                padding: 20px;
+                z-index: 9999;
+                transform: translateY(100%);
+                transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+                display: block !important;
+            }
+            .money-panel-tooltip.active {
+                transform: translateY(0);
+            }
+            
+            .money-panel-overlay {
+                position: fixed;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.5);
+                z-index: 9998;
+                opacity: 0;
+                visibility: hidden;
+                transition: opacity 0.3s;
+            }
+            .money-panel-overlay.active {
+                opacity: 1;
+                visibility: visible;
+            }
+            
+            /* Ajustes grid móvil */
+            .money-grid { gap: 12px; }
+            .money-btn { height: 55px; font-size: 1.2rem; }
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .money-section { margin-bottom: 15px; }
+        .money-section-title { font-size: 0.75rem; color: #888; margin-bottom: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        .money-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        
+        .money-btn {
+            position: relative;
+            border: 1px solid #e0e0e0;
+            background: #fff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #333;
+            transition: all 0.1s;
+            user-select: none;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .money-btn:active { transform: scale(0.96); }
+        .money-btn:hover { background: #f9f9f9; border-color: #ccc; }
+        
+        /* Billetes */
+        .money-btn.bill {
+            height: 45px;
+            border-radius: 4px;
+            background: linear-gradient(135deg, #fdfbf7 0%, #f4f1ea 100%);
+            color: #2e7d32;
+            border-color: #c8e6c9;
+            font-family: 'Courier New', monospace;
+            font-size: 1.1rem;
+        }
+        .money-btn.bill::before {
+            content: '';
+            position: absolute;
+            left: 3px; top: 3px; bottom: 3px; right: 3px;
+            border: 1px dashed #a5d6a7;
+            border-radius: 2px;
+            pointer-events: none;
+        }
+        
+        /* Monedas */
+        .money-btn.coin {
+            height: 50px;
+            width: 50px;
+            border-radius: 50%;
+            margin: 0 auto;
+            background: radial-gradient(circle at 30% 30%, #fff 0%, #ffd700 100%);
+            border: 2px solid #d4af37;
+            color: #8a6e22;
+            font-size: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .money-btn.coin.silver {
+            border-color: #bdc3c7;
+            background: radial-gradient(circle at 30% 30%, #fff 0%, #bdc3c7 100%);
+            color: #555;
+        }
+        .money-btn.coin.copper {
+            border-color: #d35400;
+            background: radial-gradient(circle at 30% 30%, #fff 0%, #e67e22 100%);
+            color: #a04000;
+        }
+        
+        .money-count-badge {
+            position: absolute;
+            bottom: -6px;
+            right: -6px;
+            background: #d32f2f;
+            color: white;
+            border-radius: 50%;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 4px;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            z-index: 2;
+            font-weight: bold;
+        }
+
+        .money-remove-btn {
+            position: absolute;
+            bottom: -6px;
+            left: -6px;
+            background: rgba(0, 0, 0, 0.05);
+            color: #777;
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            cursor: pointer;
+            z-index: 3;
+            transition: all 0.2s;
+        }
+        .money-remove-btn:hover { 
+            background: rgba(211, 47, 47, 0.1);
+            color: #d32f2f;
+            border-color: #d32f2f;
+            transform: scale(1.1); 
+        }
+        .money-remove-btn:active { transform: scale(0.9); }
+        
+        .money-actions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #eee;
+        }
+        .btn-money-action {
+            font-size: 0.8rem;
+            padding: 6px 12px;
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            color: #555;
+        }
+        .btn-money-action:hover { background: #eee; }
+        .btn-money-action.clear { color: #d32f2f; border-color: #ffcdd2; background: #ffebee; }
+        .btn-money-action.clear:hover { background: #ffcdd2; }
+    `;
+    document.head.appendChild(style);
+}
+
+function toggleMoneyPanel(e) {
+    if(e) e.stopPropagation();
+    let panel = document.getElementById('money-panel-tooltip');
+    if (!panel) {
+        createMoneyPanel();
+        panel = document.getElementById('money-panel-tooltip');
+    }
+    
+    const isMobile = window.innerWidth <= 768;
+    const overlay = document.getElementById('money-panel-overlay');
+
+    if (panel.classList.contains('active')) {
+        // Cerrar
+        panel.classList.remove('active');
+        if(overlay) overlay.classList.remove('active');
+    } else {
+        // Abrir
+        panel.classList.add('active');
+        if (isMobile) {
+            if(overlay) overlay.classList.add('active');
+            // Limpiar estilos inline de posicionamiento absoluto
+            panel.style.top = '';
+            panel.style.left = '';
+        } else {
+            positionMoneyPanel(panel);
+        }
+    }
+}
+
+function positionMoneyPanel(panel) {
+    const wrapper = document.getElementById('money-input-wrapper');
+    if (!wrapper || !panel) return;
+
+    // Resetear estilos para medir correctamente
+    panel.style.top = '';
+    panel.style.bottom = '';
+    panel.style.left = '';
+    panel.style.right = '';
+    panel.classList.remove('pos-top', 'pos-bottom');
+
+    const rect = wrapper.getBoundingClientRect();
+    const panelRect = panel.getBoundingClientRect();
+    const scrollY = window.scrollY || window.pageYOffset;
+    const scrollX = window.scrollX || window.pageXOffset;
+    
+    const spaceAbove = rect.top;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const margin = 10;
+
+    // Decidir posición vertical (Preferir arriba, si no cabe, abajo)
+    if (spaceAbove > panelRect.height + margin || spaceAbove > spaceBelow) {
+        // Mostrar Arriba (Coordenadas absolutas al documento)
+        panel.style.top = (rect.top + scrollY - panelRect.height - margin) + 'px';
+        panel.classList.add('pos-top');
+    } else {
+        // Mostrar Abajo
+        panel.style.top = (rect.bottom + scrollY + margin) + 'px';
+        panel.classList.add('pos-bottom');
+    }
+
+    // Ajuste Horizontal (Alinear a la derecha del input)
+    let leftPos = rect.right + scrollX - panelRect.width;
+    
+    // Si se sale por la izquierda, alinear a la izquierda
+    if (leftPos < 10) {
+        leftPos = rect.left + scrollX;
+    }
+    
+    panel.style.left = leftPos + 'px';
+}
+
+function createMoneyPanel() {
+    const wrapper = document.getElementById('money-input-wrapper');
+    if (!wrapper) return;
+
+    // Overlay para móvil
+    let overlay = document.getElementById('money-panel-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'money-panel-overlay';
+        overlay.className = 'money-panel-overlay';
+        document.body.appendChild(overlay);
+        overlay.addEventListener('click', () => {
+             const panel = document.getElementById('money-panel-tooltip');
+             if(panel) panel.classList.remove('active');
+             overlay.classList.remove('active');
+        });
+    }
+
+    const panel = document.createElement('div');
+    panel.id = 'money-panel-tooltip';
+    panel.className = 'money-panel-tooltip';
+    
+    // Definición de dinero
+    const coins = [1, 2, 5, 10];
+    const bills = [20, 50, 100, 200, 500, 1000];
+    
+    let html = `
+        <div class="money-panel-header" style="text-align: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
+            <div style="font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Total Acumulado</div>
+            <div id="money-panel-total" style="font-size: 2.2rem; font-weight: 800; color: var(--primary-color, #2e7d32); line-height: 1.2; margin-top: 5px;">$0.00</div>
+        </div>
+
+        <div class="money-section">
+            <div class="money-section-title">Billetes</div>
+            <div class="money-grid">
+                ${bills.map(val => `
+                    <div class="money-btn bill" onclick="addMoney(${val})" data-val="${val}">
+                        $${val}
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+        <div class="money-section">
+            <div class="money-section-title">Monedas</div>
+            <div class="money-grid" style="grid-template-columns: repeat(4, 1fr);">
+                ${coins.map(val => `
+                    <div class="money-btn coin ${val < 5 ? 'silver' : ''}" onclick="addMoney(${val})" data-val="${val}">
+                        $${val}
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+        <div class="money-actions">
+            <button class="btn-money-action clear" onclick="resetMoneyCounts(true)">Limpiar</button>
+            <button class="btn-money-action" onclick="document.getElementById('money-panel-tooltip').classList.remove('active'); document.getElementById('money-panel-overlay').classList.remove('active');">Cerrar</button>
+        </div>
+    `;
+    
+    panel.innerHTML = html;
+    // IMPORTANTE: Añadir al body para evitar problemas de z-index y overflow
+    document.body.appendChild(panel);
+    
+    // Listener global para cerrar en escritorio (clic fuera)
+    document.addEventListener('click', function closeMoneyPanel(e) {
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile) return; // En móvil usamos el overlay
+
+        if (panel.classList.contains('active') && 
+            !panel.contains(e.target) && 
+            !e.target.closest('.money-panel-toggle')) {
+            panel.classList.remove('active');
+        }
+    });
+    
+    // Restaurar badges si había estado
+    updateMoneyBadges();
+}
+
+// Exponer globalmente para los onlick del HTML inyectado
+window.addMoney = function(amount) {
+    if (!moneyCounts[amount]) moneyCounts[amount] = 0;
+    moneyCounts[amount]++;
+    
+    updateMoneyInput();
+    updateMoneyBadges();
+};
+
+window.removeMoney = function(amount) {
+    if (moneyCounts[amount] && moneyCounts[amount] > 0) {
+        moneyCounts[amount]--;
+        if (moneyCounts[amount] === 0) delete moneyCounts[amount];
+        updateMoneyInput();
+        updateMoneyBadges();
+    }
+};
+
+window.resetMoneyCounts = function(clearInput = true) {
+    moneyCounts = {};
+    updateMoneyBadges();
+    if (clearInput && checkoutReceivedInput) {
+        checkoutReceivedInput.value = '';
+        recalcChange();
+    }
+    updateMoneyPanelTotal(0);
+};
+
+function updateMoneyInput() {
+    let total = 0;
+    for (const [val, count] of Object.entries(moneyCounts)) {
+        total += parseInt(val) * count;
+    }
+    
+    if (checkoutReceivedInput) {
+        checkoutReceivedInput.value = total;
+        recalcChange();
+    }
+    updateMoneyPanelTotal(total);
+}
+
+function updateMoneyPanelTotal(total) {
+    const el = document.getElementById('money-panel-total');
+    if (el) el.textContent = formatCurrency(total);
+}
+
+function updateMoneyBadges() {
+    const panel = document.getElementById('money-panel-tooltip');
+    if (!panel) return;
+    
+    // Limpiar badges y botones de restar existentes
+    panel.querySelectorAll('.money-count-badge, .money-remove-btn').forEach(el => el.remove());
+    
+    // Añadir nuevos
+    for (const [val, count] of Object.entries(moneyCounts)) {
+        if (count > 0) {
+            const btn = panel.querySelector(`.money-btn[data-val="${val}"]`);
+            if (btn) {
+                // Badge de cantidad
+                const badge = document.createElement('div');
+                badge.className = 'money-count-badge';
+                badge.textContent = count;
+                btn.appendChild(badge);
+
+                // Botón de restar
+                const removeBtn = document.createElement('div');
+                removeBtn.className = 'money-remove-btn';
+                removeBtn.innerHTML = '<i class="fas fa-minus"></i>';
+                removeBtn.title = "Restar uno";
+                removeBtn.onclick = (e) => { 
+                    e.stopPropagation(); // Evitar que dispare el addMoney del padre
+                    removeMoney(val); 
+                };
+                btn.appendChild(removeBtn);
+            }
+        }
+    }
 }

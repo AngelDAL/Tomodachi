@@ -84,7 +84,18 @@ function showNotification(message, type = 'info') {
     }, 3500);
 }
 
-// Sidebar toggle (mobile)
+function toggleFullScreenGlobal() {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(e => {
+            console.log(e);
+            showNotification('No se pudo activar pantalla completa', 'warning');
+        });
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        }
+    }
+}
 document.addEventListener('DOMContentLoaded', () => {
     const sidebar = document.getElementById('sidebar');
     const sidebarClose = document.querySelector('.sidebar-close');
@@ -104,6 +115,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (overlay) {
         overlay.addEventListener('click', closeSidebar);
+    }
+
+    // Inyectar opción de Pantalla Completa en el menú de perfil
+    const profileMenu = document.getElementById('profileTooltipMenu');
+    if (profileMenu && !document.getElementById('fullscreenToggleBtn')) {
+        const fsLink = document.createElement('a');
+        fsLink.href = '#';
+        fsLink.className = 'tooltip-item';
+        fsLink.id = 'fullscreenToggleBtn';
+        fsLink.innerHTML = '<i class="fas fa-expand"></i> Pantalla Completa';
+        fsLink.onclick = (e) => {
+            e.preventDefault();
+            toggleFullScreenGlobal();
+        };
+        
+        // Insertar antes de "Cerrar Sesión" (último elemento)
+        if (profileMenu.lastElementChild) {
+            profileMenu.insertBefore(fsLink, profileMenu.lastElementChild);
+        } else {
+            profileMenu.appendChild(fsLink);
+        }
     }
 
     // Cerrar sidebar al hacer clic en un nav-item

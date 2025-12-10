@@ -167,6 +167,9 @@
                         <label for="addProductImage" class="btn-secondary" style="cursor: pointer; padding: 8px 15px; border-radius: 4px; background: #e0e0e0;">
                             <i class="fas fa-camera"></i> Seleccionar
                         </label>
+                        <button type="button" class="btn-secondary" onclick="openAIModal('add')" style="padding: 8px 15px; border-radius: 4px; background: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; cursor: pointer;">
+                            <i class="fas fa-wand-magic-sparkles"></i> Crear con IA
+                        </button>
                         <input type="file" id="addProductImage" accept="image/*" style="display: none;">
                         <div id="addProductImagePreview" style="width: 50px; height: 50px; border-radius: 4px; overflow: hidden; display: none; border: 1px solid #ddd;">
                             <img src="" style="width: 100%; height: 100%; object-fit: cover;">
@@ -250,6 +253,9 @@
                                 <img id="detailImage" src="" alt="Producto" class="detail-img">
                                 <div class="image-overlay">
                                     <label for="detailImageInput" class="btn-change-image"><i class="fas fa-camera"></i> Cambiar Imagen</label>
+                                    <button type="button" class="btn-change-image" onclick="openAIModal('edit')" style="margin-top: 5px; background: rgba(255,255,255,0.9); color: var(--primary-color); border: none; padding: 8px 15px; border-radius: 20px; cursor: pointer; font-weight: 500;">
+                                        <i class="fas fa-wand-magic-sparkles"></i> Mejorar con IA
+                                    </button>
                                     <input type="file" id="detailImageInput" accept="image/*" class="hidden">
                                 </div>
                             </div>
@@ -424,6 +430,165 @@
         </div>
     </div>
     
+    <!-- Modal IA Enhancer -->
+    <div id="aiModal" class="modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h2><i class="fas fa-wand-magic-sparkles"></i> Estudio Fotográfico IA</h2>
+                <button class="close-modal" onclick="closeAIModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="ai-workspace">
+                    <div class="ai-column source-column">
+                        <h3>1. Imagen Original</h3>
+                        <div class="image-upload-area" id="aiUploadArea" onclick="document.getElementById('aiImageInput').click()">
+                            <img id="aiOriginalPreview" src="" alt="Vista previa" style="display:none; max-width: 100%; max-height: 250px; border-radius: 8px;">
+                            <div class="upload-placeholder" id="aiUploadPlaceholder">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <p>Arrastra o selecciona una foto</p>
+                            </div>
+                            <input type="file" id="aiImageInput" accept="image/*" hidden>
+                        </div>
+                        <button class="btn-secondary" onclick="document.getElementById('aiImageInput').click()" style="width: 100%; margin-top: 10px;">
+                            <i class="fas fa-camera"></i> Subir / Tomar Foto
+                        </button>
+                    </div>
+
+                    <div class="ai-column settings-column">
+                        <h3>2. Configuración IA</h3>
+                        
+                        <div class="ai-tabs" style="display: flex; gap: 5px; margin-bottom: 15px; background: #eee; padding: 4px; border-radius: 8px;">
+                            <button class="ai-tab active" onclick="switchAIMode('enhance')" style="flex: 1; border: none; background: white; padding: 8px; border-radius: 6px; cursor: pointer; font-weight: 600; color: var(--primary-color); box-shadow: 0 2px 4px rgba(0,0,0,0.1);">Mejorar</button>
+                            <button class="ai-tab" onclick="switchAIMode('studio')" style="flex: 1; border: none; background: transparent; padding: 8px; border-radius: 6px; cursor: pointer; font-weight: 600; color: #666;">Estudio</button>
+                        </div>
+
+                        <!-- MODO MEJORAR (Original) -->
+                        <div id="modeEnhance" class="ai-mode-content">
+                            <div class="form-group">
+                                <label>Análisis Automático (Gemini)</label>
+                                <div id="aiAnalysisStatus" class="status-badge status-waiting">Esperando imagen...</div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="aiPrompt">Prompt (Instrucciones para la IA)</label>
+                                <textarea id="aiPrompt" class="form-control" rows="4" placeholder="Describe cómo quieres que se vea la imagen..."></textarea>
+                                <small class="text-muted">Puedes editar la sugerencia de la IA.</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Nivel de Creatividad IA:</label>
+                                <div class="strength-controls">
+                                    <button type="button" class="btn-strength" data-value="0.75" onclick="selectStrength(this)">
+                                        <i class="fas fa-feather"></i> Sutil
+                                    </button>
+                                    <button type="button" class="btn-strength active" data-value="0.55" onclick="selectStrength(this)">
+                                        <i class="fas fa-magic"></i> Moderado
+                                    </button>
+                                    <button type="button" class="btn-strength" data-value="0.25" onclick="selectStrength(this)">
+                                        <i class="fas fa-bolt"></i> Alto
+                                    </button>
+                                </div>
+                                <input type="hidden" id="aiStrength" value="0.55">
+                                <small class="text-muted" id="strengthDesc">Mejora la calidad manteniendo la forma original.</small>
+                            </div>
+
+                            <button id="btnGenerateAI" class="btn-primary" onclick="generateAIImage()" disabled style="width: 100%; margin-top: 20px;">
+                                <i class="fas fa-magic"></i> Generar Versión Pro
+                            </button>
+                        </div>
+
+                        <!-- MODO ESTUDIO (Nuevo) -->
+                        <div id="modeStudio" class="ai-mode-content" style="display:none;">
+                            <div class="form-group">
+                                <label>Tipo de Fondo</label>
+                                <select id="studioBgType" class="form-control" onchange="toggleStudioOptions()" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ddd;">
+                                    <option value="generate">Generar Escenario (IA)</option>
+                                    <option value="white">Fondo Blanco / Transparente</option>
+                                </select>
+                            </div>
+
+                            <!-- Opciones Generar -->
+                            <div id="studioGenerateOptions">
+                                <div class="form-group">
+                                    <label>Prompt del Escenario</label>
+                                    <textarea id="studioPrompt" class="form-control" rows="3" placeholder="Ej: Mesa de madera rústica, luz natural, desenfoque..."></textarea>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <button class="btn-secondary" onclick="generateBackgroundPreview()" style="width:100%; margin-bottom:10px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                        <i class="fas fa-image"></i> Generar Solo Fondo
+                                    </button>
+                                    <div id="bgPreviewArea" style="display:none; margin-bottom:10px; position:relative; border: 2px dashed #ddd; padding: 5px; border-radius: 8px;">
+                                        <img id="bgPreviewImg" src="" style="width:100%; border-radius:6px; display: block;">
+                                        <div style="display: flex; gap: 5px; margin-top: 5px;">
+                                            <button class="btn-sm btn-success" onclick="saveBackgroundToLibrary()" style="flex: 1;">
+                                                <i class="fas fa-save"></i> Guardar
+                                            </button>
+                                            <button class="btn-sm btn-danger" onclick="clearBackgroundPreview()" style="flex: 0 0 auto;">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button id="btnGenerateStudio" class="btn-primary" onclick="generateStudioImage()" disabled style="width: 100%; margin-top: 20px;">
+                                <i class="fas fa-layer-group"></i> Aplicar Fondo
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="ai-column result-column">
+                        <h3>3. Resultado y Comparación</h3>
+                        
+                        <div class="result-preview-area" id="resultContainer">
+                            <!-- Estado Inicial -->
+                            <div id="aiEmptyResult" class="text-muted" style="text-align: center; padding: 40px;">
+                                <i class="fas fa-image fa-3x" style="opacity: 0.3;"></i>
+                                <p>Aquí aparecerá tu imagen mejorada</p>
+                            </div>
+
+                            <!-- Loading -->
+                            <div id="aiLoading" style="display:none; text-align: center; padding: 40px;">
+                                <i class="fas fa-spinner fa-spin fa-3x" style="color: var(--primary-color);"></i>
+                                <p style="margin-top: 15px;">La IA está trabajando...</p>
+                            </div>
+
+                            <!-- Comparador -->
+                            <div id="aiComparison" class="comparison-container" style="display:none;">
+                                <div class="comparison-view">
+                                    <img id="compOriginal" src="" class="comp-img original">
+                                    <img id="compResult" src="" class="comp-img result" style="opacity: 0;">
+                                    
+                                    <!-- Slider Handle (Solo Desktop) -->
+                                    <div class="slider-handle"></div>
+                                </div>
+                                
+                                <div class="comparison-controls">
+                                    <span class="comp-label">Original</span>
+                                    <input type="range" min="0" max="100" value="0" class="fade-slider" oninput="updateComparison(this.value)">
+                                    <span class="comp-label">IA Pro</span>
+                                </div>
+                                <div class="mobile-hint"><i class="fas fa-arrows-alt-h"></i> Desliza para comparar</div>
+                            </div>
+                        </div>
+                        
+                        <div id="aiActions" style="display:none; margin-top: 15px;">
+                            <button class="btn-success" onclick="applyAIImage()" style="width: 100%; margin-bottom: 10px;">
+                                <i class="fas fa-check"></i> Usar esta Imagen
+                            </button>
+                            <div class="ai-suggestions">
+                                <label>Sugerencia de Descripción:</label>
+                                <p id="aiDescriptionSuggestion" style="font-size: 0.9em; font-style: italic; color: #666; background: #f5f5f5; padding: 10px; border-radius: 5px; margin-top: 5px;"></p>
+                                <button class="btn-secondary btn-sm" onclick="copyAIDescription()" style="margin-top: 5px; width: 100%;">Copiar Descripción</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <script src="js/app.js"></script>
     <script src="lib/html5-qrcode/html5-qrcode.min.js"></script>
     <script src="js/scanner.js"></script>
@@ -457,5 +622,102 @@
             });
         }
     </script>
+<style>
+    /* Estilos para el Estudio IA */
+    .strength-controls {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 5px;
+    }
+    .btn-strength {
+        flex: 1;
+        padding: 10px;
+        border: 1px solid #ddd;
+        background: #f8f9fa;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+        font-size: 0.9em;
+    }
+    .btn-strength i { font-size: 1.2em; color: #666; }
+    .btn-strength.active {
+        background: #e3f2fd;
+        border-color: #2196f3;
+        color: #1976d2;
+        font-weight: bold;
+    }
+    .btn-strength.active i { color: #1976d2; }
+
+    /* Comparador de Imágenes */
+    .comparison-container {
+        width: 100%;
+        max-width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    .comparison-view {
+        position: relative;
+        width: 100%;
+        height: 300px; /* Altura fija para el comparador */
+        overflow: hidden;
+        border-radius: 8px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        background: #f0f0f0;
+    }
+    .comp-img {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: contain; /* Ajustar imagen sin cortar */
+        transition: opacity 0.1s ease;
+    }
+    .comp-img.result {
+        z-index: 2;
+    }
+    
+    .comparison-controls {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        padding: 0 10px;
+    }
+    .fade-slider {
+        flex: 1;
+        height: 6px;
+        -webkit-appearance: none;
+        background: #ddd;
+        border-radius: 3px;
+        outline: none;
+    }
+    .fade-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 20px;
+        height: 20px;
+        background: var(--primary-color);
+        border-radius: 50%;
+        cursor: pointer;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    .comp-label {
+        font-size: 0.85em;
+        font-weight: bold;
+        color: #555;
+        width: 60px;
+        text-align: center;
+    }
+    .mobile-hint {
+        text-align: center;
+        font-size: 0.8em;
+        color: #999;
+        margin-top: -5px;
+    }
+</style>
 </body>
 </html>

@@ -1791,3 +1791,72 @@
     color: #888;
     padding: 8px;
 }
+/* AI Studio Styles */
+.ai-workspace {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+    min-height: 400px;
+}
+
+.ai-column {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.ai-column h3 {
+    font-size: 1rem;
+    margin-bottom: 15px;
+    color: var(--text-primary);
+    border-bottom: 2px solid var(--primary-color);
+    padding-bottom: 5px;
+    display: inline-block;
+}
+
+.image-upload-area {
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: white;
+}
+
+.image-upload-area:hover {
+    border-color: var(--primary-color);
+    background: #f0f7ff;
+}
+
+.upload-placeholder i {
+    font-size: 3rem;
+    color: #ccc;
+    margin-bottom: 10px;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.status-waiting { background: #e9ecef; color: #666; }
+.status-analyzing { background: #fff3cd; color: #856404; }
+.status-success { background: #d4edda; color: #155724; }
+.status-error { background: #f8d7da; color: #721c24; }
+
+@media (max-width: 900px) {
+    .ai-workspace {
+        grid-template-columns: 1fr;
+    }
+}
+

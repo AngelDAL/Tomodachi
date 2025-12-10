@@ -30,3 +30,6 @@ public/assets/images/logos/
 *.bak
 *.backup
 *.old
+
+# Configuración de IA
+api/ai/config.php

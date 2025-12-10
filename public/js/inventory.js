@@ -1199,3 +1199,500 @@ window.fetchByCode = function(code) {
         }, 300);
     }
 };
+
+/* ==========================================
+   AI IMAGE STUDIO
+   ========================================== */
+let currentAIMode = 'add'; // 'add' or 'edit'
+
+function openAIModal(mode) {
+    currentAIMode = mode;
+    document.getElementById('aiModal').style.display = 'flex';
+    resetAIWorkspace();
+}
+
+function closeAIModal() {
+    document.getElementById('aiModal').style.display = 'none';
+}
+
+function resetAIWorkspace() {
+    document.getElementById('aiOriginalPreview').style.display = 'none';
+    document.getElementById('aiUploadPlaceholder').style.display = 'block';
+    document.getElementById('aiImageInput').value = '';
+    
+    const statusEl = document.getElementById('aiAnalysisStatus');
+    if(statusEl) {
+        statusEl.className = 'status-badge status-waiting';
+        statusEl.innerText = 'Esperando imagen...';
+    }
+    
+    document.getElementById('aiPrompt').value = '';
+    document.getElementById('btnGenerateAI').disabled = true;
+    
+    // Reset Result Area
+    document.getElementById('aiComparison').style.display = 'none';
+    document.getElementById('aiEmptyResult').style.display = 'block';
+    document.getElementById('aiActions').style.display = 'none';
+    
+    // Reset Comparison
+    document.getElementById('compOriginal').src = '';
+    document.getElementById('compResult').src = '';
+    document.querySelector('.fade-slider').value = 0;
+    updateComparison(0);
+
+    // Reset Studio Mode
+    switchAIMode('enhance');
+    document.getElementById('studioBgType').value = 'generate';
+    toggleStudioOptions();
+    document.getElementById('studioPrompt').value = '';
+    clearBackgroundPreview();
+    document.getElementById('btnGenerateStudio').disabled = false;
+}
+
+function selectStrength(btn) {
+    // Remover clase active de todos
+    document.querySelectorAll('.btn-strength').forEach(b => b.classList.remove('active'));
+    // Agregar a este
+    btn.classList.add('active');
+    // Actualizar valor oculto
+    document.getElementById('aiStrength').value = btn.dataset.value;
+    
+    // Actualizar descripción
+    const descEl = document.getElementById('strengthDesc');
+    const val = parseFloat(btn.dataset.value);
+    if (val > 0.6) descEl.innerText = "Mejora sutil: Mantiene casi intacta la forma original.";
+    else if (val > 0.4) descEl.innerText = "Balanceado: Mejora texturas e iluminación notablemente.";
+    else descEl.innerText = "Creativo: Puede alterar detalles para maximizar la estética.";
+}
+
+function updateComparison(val) {
+    const opacity = val / 100;
+    const resultImg = document.getElementById('compResult');
+    if(resultImg) resultImg.style.opacity = opacity;
+}
+
+// Event Listener para subida de imagen en AI Modal
+const aiImageInput = document.getElementById('aiImageInput');
+if (aiImageInput) {
+    aiImageInput.addEventListener('change', async function(e) {
+        if (this.files && this.files[0]) {
+            const file = this.files[0];
+            
+            // Mostrar preview
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = document.getElementById('aiOriginalPreview');
+                img.src = e.target.result;
+                img.style.display = 'block';
+                document.getElementById('aiUploadPlaceholder').style.display = 'none';
+            }
+            reader.readAsDataURL(file);
+
+            // Iniciar an�lisis con Gemini
+            analyzeImageWithGemini(file);
+        }
+    });
+}
+
+async function analyzeImageWithGemini(file) {
+    const statusEl = document.getElementById('aiAnalysisStatus');
+    const promptEl = document.getElementById('aiPrompt');
+    
+    statusEl.className = 'status-badge status-analyzing';
+    statusEl.innerHTML = '<i class=\'fas fa-spinner fa-spin\'></i> Analizando con Google Gemini...';
+    promptEl.value = 'Analizando imagen...';
+    promptEl.disabled = true;
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+        const response = await fetch('../api/ai/analyze_image.php', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+
+        if (data.ai_prompt) {
+            statusEl.className = 'status-badge status-success';
+            statusEl.innerText = 'An�lisis Completado';
+            
+            promptEl.value = data.ai_prompt;
+            
+            // Guardar sugerencias para uso posterior
+            const descEl = document.getElementById('aiDescriptionSuggestion');
+            if(descEl) {
+                descEl.innerText = data.menu_description || 'Sin descripci�n disponible';
+                descEl.dataset.productName = data.product_name || '';
+            }
+            
+            document.getElementById('btnGenerateAI').disabled = false;
+        } else {
+            console.warn('Respuesta IA:', data);
+            // Priorizar data.message si existe, luego data.error (si es string), luego stringify si es objeto
+            let msg = data.message;
+            if (!msg && data.error) {
+                msg = typeof data.error === 'string' ? data.error : JSON.stringify(data.error);
+            }
+            throw new Error(msg || 'Error desconocido');
+        }
+    } catch (error) {
+        console.error('Error AI:', error);
+        statusEl.className = 'status-badge status-error';
+        statusEl.innerText = 'Error en an�lisis';
+        promptEl.value = 'Describe aqu� c�mo quieres que se vea la imagen...';
+        document.getElementById('btnGenerateAI').disabled = false; // Permitir intentar aunque falle el an�lisis
+    } finally {
+        promptEl.disabled = false;
+    }
+}
+
+async function generateAIImage() {
+    const fileInput = document.getElementById('aiImageInput');
+    const prompt = document.getElementById('aiPrompt').value;
+    const strength = document.getElementById('aiStrength').value; // Ya es decimal (0.75, 0.55, 0.25)
+    
+    if (!fileInput.files[0]) return alert('Sube una imagen primero');
+    if (!prompt) return alert('Escribe un prompt');
+
+    // UI Loading
+    document.getElementById('aiEmptyResult').style.display = 'none';
+    document.getElementById('aiComparison').style.display = 'none';
+    document.getElementById('aiLoading').style.display = 'block';
+    document.getElementById('aiActions').style.display = 'none';
+    document.getElementById('btnGenerateAI').disabled = true;
+
+    const formData = new FormData();
+    formData.append('image', fileInput.files[0]);
+    formData.append('prompt', prompt);
+    formData.append('strength', strength);
+
+    try {
+        const response = await fetch('../api/ai/generate_image.php', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            const resultUrl = data.image_url + '?t=' + new Date().getTime();
+            
+            // Configurar Comparador
+            const compOriginal = document.getElementById('compOriginal');
+            const compResult = document.getElementById('compResult');
+            
+            // Leer imagen original para el comparador
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                compOriginal.src = e.target.result;
+            }
+            reader.readAsDataURL(fileInput.files[0]);
+            
+            compResult.src = resultUrl;
+            
+            // Mostrar Comparador
+            document.getElementById('aiComparison').style.display = 'flex';
+            
+            // Resetear slider de comparación
+            const slider = document.querySelector('.fade-slider');
+            slider.value = 0;
+            updateComparison(0);
+            
+            // Animación automática de revelado
+            setTimeout(() => {
+                let val = 0;
+                const interval = setInterval(() => {
+                    val += 2;
+                    slider.value = val;
+                    updateComparison(val);
+                    if (val >= 100) clearInterval(interval);
+                }, 20);
+            }, 500);
+
+            // Guardar URL para aplicar
+            compResult.dataset.serverUrl = data.image_url;
+            
+            document.getElementById('aiActions').style.display = 'block';
+        } else {
+            alert('Error: ' + (data.message || 'Error generando imagen'));
+            document.getElementById('aiEmptyResult').style.display = 'block';
+        }
+    } catch (error) {
+        console.error(error);
+        alert('Error de conexi�n con el servidor de IA');
+        document.getElementById('aiEmptyResult').style.display = 'block';
+    } finally {
+        document.getElementById('aiLoading').style.display = 'none';
+        document.getElementById('btnGenerateAI').disabled = false;
+    }
+}
+
+async function applyAIImage() {
+    const resultImg = document.getElementById('compResult');
+    const serverUrl = resultImg.dataset.serverUrl;
+    
+    if (!serverUrl) return;
+
+    // Convertir la imagen del servidor a Blob para simular un archivo seleccionado
+    try {
+        const response = await fetch(serverUrl);
+        const blob = await response.blob();
+        const file = new File([blob], 'ai_generated_product.png', { type: 'image/png' });
+
+        // Crear un DataTransfer para asignar al input file
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+
+        if (currentAIMode === 'add') {
+            const input = document.getElementById('addProductImage');
+            input.files = dataTransfer.files;
+            
+            // Disparar evento change manualmente para actualizar preview
+            const event = new Event('change', { bubbles: true });
+            input.dispatchEvent(event);
+            
+            // Rellenar nombre y descripci�n si est�n vac�os
+            const nameInput = document.getElementById('productNameInput');
+            const descInput = document.getElementById('productDescInput');
+            const suggestedName = document.getElementById('aiDescriptionSuggestion').dataset.productName;
+            const suggestedDesc = document.getElementById('aiDescriptionSuggestion').innerText;
+            
+            if (nameInput && nameInput.value === '' && suggestedName) nameInput.value = suggestedName;
+            if (descInput && descInput.value === '' && suggestedDesc) descInput.value = suggestedDesc;
+
+        } else {
+            const input = document.getElementById('detailImageInput');
+            input.files = dataTransfer.files;
+            
+            // Disparar evento change
+            const event = new Event('change', { bubbles: true });
+            input.dispatchEvent(event);
+        }
+        
+        closeAIModal();
+        // Asumiendo que existe showToast, si no, usar alert
+        if (typeof showToast === 'function') {
+            showToast('Imagen IA aplicada correctamente', 'success');
+        } else {
+            alert('Imagen IA aplicada correctamente');
+        }
+
+    } catch (e) {
+        console.error('Error aplicando imagen', e);
+        alert('Error aplicando la imagen al formulario');
+    }
+}
+
+function copyAIDescription() {
+    const text = document.getElementById('aiDescriptionSuggestion').innerText;
+    navigator.clipboard.writeText(text).then(() => {
+        if (typeof showToast === 'function') {
+            showToast('Descripción copiada al portapapeles');
+        } else {
+            alert('Descripción copiada');
+        }
+    });
+}
+
+/* ==========================================
+   AI STUDIO MODE FUNCTIONS
+   ========================================== */
+
+function switchAIMode(mode) {
+    // Update Tabs
+    document.querySelectorAll('.ai-tab').forEach(t => t.classList.remove('active'));
+    if (mode === 'enhance') document.querySelector('.ai-tab:nth-child(1)').classList.add('active');
+    else document.querySelector('.ai-tab:nth-child(2)').classList.add('active');
+
+    // Show Content
+    document.getElementById('modeEnhance').style.display = mode === 'enhance' ? 'block' : 'none';
+    document.getElementById('modeStudio').style.display = mode === 'studio' ? 'block' : 'none';
+}
+
+function toggleStudioOptions() {
+    const type = document.getElementById('studioBgType').value;
+    const genOptions = document.getElementById('studioGenerateOptions');
+    
+    if (type === 'generate') {
+        genOptions.style.display = 'block';
+        document.getElementById('btnGenerateStudio').innerHTML = '<i class="fas fa-layer-group"></i> Aplicar Fondo';
+    } else if (type === 'white') {
+        genOptions.style.display = 'none';
+        document.getElementById('btnGenerateStudio').innerHTML = '<i class="fas fa-eraser"></i> Eliminar Fondo';
+    }
+}
+
+async function generateBackgroundPreview() {
+    const prompt = document.getElementById('studioPrompt').value;
+    if (!prompt) return alert('Escribe una descripción para el fondo');
+
+    const btn = document.querySelector('#studioGenerateOptions .btn-secondary');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
+
+    const formData = new FormData();
+    formData.append('prompt', prompt);
+
+    try {
+        const response = await fetch('../api/ai/generate_background.php', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            const img = document.getElementById('bgPreviewImg');
+            img.src = data.image_url;
+            img.dataset.fullPath = data.image_url; // Store for later use
+            document.getElementById('bgPreviewArea').style.display = 'block';
+        } else {
+            alert('Error: ' + (data.message || 'No se pudo generar el fondo'));
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Error de conexión');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
+function clearBackgroundPreview() {
+    document.getElementById('bgPreviewArea').style.display = 'none';
+    document.getElementById('bgPreviewImg').src = '';
+    delete document.getElementById('bgPreviewImg').dataset.fullPath;
+}
+
+async function saveBackgroundToLibrary() {
+    const img = document.getElementById('bgPreviewImg');
+    if (!img.src) return;
+
+    const btn = document.querySelector('#bgPreviewArea .btn-success');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+    const formData = new FormData();
+    formData.append('image_url', img.dataset.fullPath);
+
+    try {
+        const response = await fetch('../api/stores/save_background.php', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            alert('Fondo guardado en la biblioteca de la tienda');
+            // Update the preview source to the new permanent location
+            img.src = data.new_url;
+            img.dataset.fullPath = data.new_url;
+        } else {
+            alert('Error: ' + data.message);
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Error al guardar');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save"></i> Guardar';
+    }
+}
+
+async function generateStudioImage() {
+    const fileInput = document.getElementById('aiImageInput');
+    if (!fileInput.files[0]) return alert('Sube una imagen del producto primero');
+
+    const type = document.getElementById('studioBgType').value;
+    const btn = document.getElementById('btnGenerateStudio');
+    
+    // UI Loading
+    document.getElementById('aiEmptyResult').style.display = 'none';
+    document.getElementById('aiComparison').style.display = 'none';
+    document.getElementById('aiLoading').style.display = 'block';
+    document.getElementById('aiActions').style.display = 'none';
+    btn.disabled = true;
+
+    const formData = new FormData();
+    formData.append('image', fileInput.files[0]);
+
+    let endpoint = '';
+
+    if (type === 'white') {
+        endpoint = '../api/ai/remove_background.php';
+    } else if (type === 'generate') {
+        endpoint = '../api/ai/replace_background.php';
+        
+        // Check if we have a generated background preview
+        const bgPreview = document.getElementById('bgPreviewImg');
+        if (bgPreview.src && bgPreview.dataset.fullPath && document.getElementById('bgPreviewArea').style.display !== 'none') {
+            formData.append('background_image_url', bgPreview.dataset.fullPath);
+        } else {
+            // Fallback to prompt
+            const prompt = document.getElementById('studioPrompt').value;
+            if (prompt) formData.append('prompt', prompt);
+        }
+    }
+
+    try {
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            const resultUrl = data.image_url + '?t=' + new Date().getTime();
+            
+            // Configurar Comparador
+            const compOriginal = document.getElementById('compOriginal');
+            const compResult = document.getElementById('compResult');
+            
+            // Leer imagen original
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                compOriginal.src = e.target.result;
+            }
+            reader.readAsDataURL(fileInput.files[0]);
+            
+            compResult.src = resultUrl;
+            
+            // Mostrar Comparador
+            document.getElementById('aiComparison').style.display = 'flex';
+            
+            // Resetear slider
+            const slider = document.querySelector('.fade-slider');
+            slider.value = 0;
+            updateComparison(0);
+            
+            // Animación
+            setTimeout(() => {
+                let val = 0;
+                const interval = setInterval(() => {
+                    val += 2;
+                    slider.value = val;
+                    updateComparison(val);
+                    if (val >= 100) clearInterval(interval);
+                }, 20);
+            }, 500);
+
+            // Guardar URL
+            compResult.dataset.serverUrl = data.image_url;
+            
+            document.getElementById('aiActions').style.display = 'block';
+        } else {
+            alert('Error: ' + (data.message || 'Error procesando imagen'));
+            document.getElementById('aiEmptyResult').style.display = 'block';
+        }
+    } catch (error) {
+        console.error(error);
+        alert('Error de conexión con el servidor de IA');
+        document.getElementById('aiEmptyResult').style.display = 'block';
+    } finally {
+        document.getElementById('aiLoading').style.display = 'none';
+        btn.disabled = false;
+    }
+}

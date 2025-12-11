@@ -2,6 +2,7 @@
 
 # Archivos de configuraciÃ³n sensibles
 config/database.php
+config/mail.php
 
 # Archivos de sistema
 .DS_Store
@@ -23,7 +24,7 @@ public/assets/images/logos/
 *.sublime-*
 
 # Dependencias
-/vendor/
+#/vendor/
 /node_modules/
 
 # Archivos de backup
@@ -31,5 +32,5 @@ public/assets/images/logos/
 *.backup
 *.old
 
-# Configuración de IA
+# Configuraciï¿½n de IA
 api/ai/config.php

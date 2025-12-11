@@ -49,7 +49,15 @@ Sistema de Punto de Venta (POS) web, open source, diseñado para pequeñas y med
    - Edite `config/database.php` con sus credenciales de base de datos.
    - Para producción, asegúrese de establecer `define('DEBUG_MODE', false);`.
 
-4. **Configurar Permisos**
+4. **Configurar Correo (SMTP)**
+   - Copie el archivo de configuración de ejemplo:
+     ```bash
+     cp config/mail.php.example config/mail.php
+     ```
+   - Edite `config/mail.php` con sus credenciales SMTP (Host, Puerto, Usuario, Contraseña).
+   - Esto es necesario para el envío de correos de bienvenida y notificaciones.
+
+5. **Configurar Permisos**
    - Asegúrese de que el servidor web tenga permisos de escritura en la carpeta de imágenes si planea subir logos o fotos de productos:
      ```bash
      chmod -R 755 public/assets/images

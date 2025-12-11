@@ -9,6 +9,7 @@ require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
 require_once '../../includes/Validator.class.php';
 require_once '../../includes/Auth.class.php';
+require_once '../../includes/Mail.class.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Methods: POST');
@@ -103,6 +104,15 @@ try {
         $user_id = $db->insert($sqlUser, [$store_id, $username, $hash, $full_name, $email, $user_phone]);
 
         $db->commit();
+
+        // Enviar correo de bienvenida
+        try {
+            $mailer = new Mail();
+            $mailer->sendWelcomeEmail($email, $full_name, $store_name, $username);
+        } catch (Throwable $e) {
+            // No interrumpir el flujo si falla el correo o la librería no está instalada
+            error_log("Error enviando correo de bienvenida: " . $e->getMessage());
+        }
 
         Response::success([
             'store_id' => $store_id,

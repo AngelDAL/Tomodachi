@@ -1,0 +1,10 @@
+<?php
+return [
+    'host' => 'smtp.example.com',
+    'port' => 587,
+    'username' => 'your_email@example.com',
+    'password' => 'your_password',
+    'encryption' => 'tls', // tls or ssl
+    'from_email' => 'no-reply@tomodachi.com',
+    'from_name' => 'Tomodachi POS'
+];

@@ -52,10 +52,10 @@ async function loadTerminals() {
                         <div class="amount-display">${formatCurrency(balance)}</div>
                     </div>
                     <div class="terminal-actions">
-                        <button class="btn-action btn-movements" onclick="openHistoryDrawer(${term.current_register_id})">
+                        <button class="btn-secondary" onclick="openHistoryDrawer(${term.current_register_id})">
                             <i class="fas fa-list-alt"></i> Movimientos
                         </button>
-                        <button class="btn-action btn-close" onclick="openCloseRegisterModal(${term.current_register_id}, '${term.terminal_name}', ${balance})">
+                        <button class="btn-danger" onclick="openCloseRegisterModal(${term.current_register_id}, '${term.terminal_name}', ${balance})">
                             <i class="fas fa-file-invoice-dollar"></i> Corte
                         </button>
                     </div>
@@ -66,10 +66,10 @@ async function loadTerminals() {
                         <p style="color: #666; font-style: italic;">Caja cerrada. Inicie sesión para comenzar a vender.</p>
                     </div>
                     <div class="terminal-actions">
-                        <button class="btn-action btn-open" onclick="openOpenRegisterModal(${term.terminal_id}, '${term.terminal_name}')">
+                        <button class="btn-primary" onclick="openOpenRegisterModal(${term.terminal_id}, '${term.terminal_name}')">
                             <i class="fas fa-lock-open"></i> Abrir Caja
                         </button>
-                        <button class="btn-action" style="background: #eee; color: #333;" onclick="deleteTerminal(${term.terminal_id})">
+                        <button class="btn-secondary" onclick="deleteTerminal(${term.terminal_id})">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -319,6 +319,12 @@ document.getElementById('openRegisterForm').addEventListener('submit', async (e)
 
 document.getElementById('closeRegisterForm').addEventListener('submit', async (e) => {
     e.preventDefault();
+    
+    const submitBtn = document.getElementById('btnCloseRegisterSubmit');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+
     const formData = new FormData(e.target);
     const data = {
         register_id: formData.get('register_id'),
@@ -343,6 +349,9 @@ document.getElementById('closeRegisterForm').addEventListener('submit', async (e
     } catch (err) { 
         console.error(err);
         notify('Error de conexión al realizar corte', 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
     }
 });
 

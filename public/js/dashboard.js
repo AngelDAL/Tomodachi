@@ -33,6 +33,11 @@ async function loadDashboardStats() {
             if (document.getElementById('dailyProfit')) document.getElementById('dailyProfit').textContent = formatCurrency(data.dailyProfit);
             if (document.getElementById('transactions')) document.getElementById('transactions').textContent = data.transactions;
 
+            // New cards
+            if (document.getElementById('inventoryValue')) document.getElementById('inventoryValue').textContent = formatCurrency(data.inventoryValue || 0);
+            if (document.getElementById('lowStockCount')) document.getElementById('lowStockCount').textContent = data.lowStockCount || 0;
+            if (document.getElementById('topCategory')) document.getElementById('topCategory').textContent = data.topCategory || '-';
+
             // Render Lists
             renderLowStockList(data.lowStockList);
             renderTopProductsList(data.topProducts);

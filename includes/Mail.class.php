@@ -179,4 +179,84 @@ class Mail {
             return false;
         }
     }
+
+    /**
+     * Envía un reporte ejecutivo al realizar el corte de caja
+     */
+    public function sendDailyReport($toEmail, $toName, $storeName, $date, $stats) {
+        try {
+            $this->mailer->addAddress($toEmail, $toName);
+
+            // Formatear moneda
+            $totalSales = number_format($stats['total_sales'], 2);
+            $ticketAvg = number_format($stats['ticket_average'], 2);
+            $profitTotal = number_format($stats['total_profit'], 2);
+            
+            // Content
+            $this->mailer->isHTML(true);
+            $this->mailer->Subject = "📊 Reporte de Cierre - {$storeName} - {$date}";
+            
+            $body = "
+            <div style=\"font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);\">
+                
+                <!-- Header -->
+                <div style=\"background: linear-gradient(135deg, #E3057A 0%, #b00460 100%); padding: 30px 20px; text-align: center; color: white;\">
+                    <h1 style=\"margin: 0; font-size: 24px; font-weight: 700;\">Resumen del Día</h1>
+                    <p style=\"margin: 5px 0 0 0; opacity: 0.9;\">{$storeName} | {$date}</p>
+                </div>
+
+                <!-- Main Stats -->
+                <div style=\"padding: 30px 20px;\">
+                    <div style=\"text-align: center; margin-bottom: 30px;\">
+                        <span style=\"display: block; color: #666; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;\">Ventas Totales</span>
+                        <span style=\"display: block; color: #333; font-size: 42px; font-weight: 800; margin-top: 5px;\">$ {$totalSales}</span>
+                    </div>
+
+                    <!-- Grid de detalles -->
+                    <div style=\"display: flex; justify-content: space-between; margin-bottom: 30px; border-top: 1px solid #eee; border-bottom: 1px solid #eee; padding: 20px 0;\">
+                        <div style=\"text-align: center; width: 33%;\">
+                            <span style=\"display: block; font-size: 24px;\">🛒</span>
+                            <strong style=\"display: block; color: #333; margin-top: 5px;\">{$stats['transaction_count']}</strong>
+                            <span style=\"font-size: 12px; color: #888;\">Transacciones</span>
+                        </div>
+                        <div style=\"text-align: center; width: 33%; border-left: 1px solid #eee; border-right: 1px solid #eee;\">
+                            <span style=\"display: block; font-size: 24px;\">🧾</span>
+                            <strong style=\"display: block; color: #333; margin-top: 5px;\">$ {$ticketAvg}</strong>
+                            <span style=\"font-size: 12px; color: #888;\">Ticket Promedio</span>
+                        </div>
+                        <div style=\"text-align: center; width: 33%;\">
+                            <span style=\"display: block; font-size: 24px;\">📈</span>
+                            <strong style=\"display: block; color: #27ae60; margin-top: 5px;\">$ {$profitTotal}</strong>
+                            <span style=\"font-size: 12px; color: #888;\">Ganancia</span>
+                        </div>
+                    </div>
+
+                    <!-- Top Product -->
+                    <div style=\"background-color: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #E3057A;\">
+                        <h3 style=\"margin: 0 0 10px 0; font-size: 16px; color: #333;\">🏆 Producto Estrella</h3>
+                        <div style=\"display: flex; justify-content: space-between; align-items: center;\">
+                            <span style=\"color: #555;\">{$stats['top_product_name']}</span>
+                            <span style=\"font-weight: bold; color: #E3057A;\">{$stats['top_product_qty']} vendidos</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div style=\"background-color: #f1f1f1; padding: 20px; text-align: center; font-size: 12px; color: #888;\">
+                    <p style=\"margin: 0;\">Reporte generado automáticamente por <strong>Tomodachi POS</strong></p>
+                    <p style=\"margin: 5px 0 0 0;\">&copy; " . date('Y') . " Todos los derechos reservados.</p>
+                </div>
+            </div>
+            ";
+
+            $this->mailer->Body = $body;
+            $this->mailer->AltBody = "Resumen del día {$date}: Ventas Totales: $ {$totalSales}. Transacciones: {$stats['transaction_count']}.";
+
+            $this->mailer->send();
+            return true;
+        } catch (Exception $e) {
+            error_log("Message could not be sent. Mailer Error: {$this->mailer->ErrorInfo}");
+            return false;
+        }
+    }
 }

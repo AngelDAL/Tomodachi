@@ -335,12 +335,52 @@ try {
         $profitValues[] = $profit;
     }
     
+    // 7. Inventory Value
+    $stmt = $conn->prepare("
+        SELECT SUM(current_stock * cost) as inventory_value
+        FROM products
+        WHERE store_id = ? AND status = 'active'
+    ");
+    $stmt->execute([$store_id]);
+    $inventoryValue = $stmt->fetchColumn() ?: 0;
+
+    // 8. Low Stock Count
+    $stmt = $conn->prepare("
+        SELECT COUNT(*) 
+        FROM products 
+        WHERE store_id = ? 
+        AND status = 'active' 
+        AND current_stock <= min_stock
+    ");
+    $stmt->execute([$store_id]);
+    $lowStockCount = $stmt->fetchColumn() ?: 0;
+
+    // 9. Top Category (Last 30 days)
+    $stmt = $conn->prepare("
+        SELECT c.category_name
+        FROM sale_details sd
+        JOIN sales s ON sd.sale_id = s.sale_id
+        JOIN products p ON sd.product_id = p.product_id
+        JOIN categories c ON p.category_id = c.category_id
+        WHERE s.store_id = ?
+        AND s.sale_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+        AND s.status = 'completed'
+        GROUP BY c.category_id
+        ORDER BY SUM(sd.total) DESC
+        LIMIT 1
+    ");
+    $stmt->execute([$store_id]);
+    $topCategory = $stmt->fetchColumn() ?: '-';
+
     echo json_encode([
         'success' => true,
         'data' => [
             'dailySales' => (float)$dailySales,
             'dailyProfit' => (float)$dailyProfit,
             'transactions' => (int)$transactions,
+            'inventoryValue' => (float)$inventoryValue,
+            'lowStockCount' => (int)$lowStockCount,
+            'topCategory' => $topCategory,
             'lowStockList' => $lowStockList,
             'topProducts' => $topProducts,
             'recentSales' => $recentSales,

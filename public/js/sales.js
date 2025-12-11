@@ -72,14 +72,14 @@ function initPOS() {
 
   // Ahora vinculamos eventos
   bindEvents();
-  
+
   // Inyectar interfaz de pestañas si no existe
   injectCartTabsUI();
   injectHistorySidebar();
-  
+
   // Inyectar Sidebar de Historial
   // injectHistorySidebar(); // Ya llamado arriba
-  
+
   // Persistencia: Cargar carritos guardados (Sistema Multi-Tab)
   const savedCarts = localStorage.getItem('tomodachi_multi_carts');
   if (savedCarts) {
@@ -90,31 +90,31 @@ function initPOS() {
       localStorage.removeItem('tomodachi_multi_carts');
     }
   } else {
-      // Migración: Si existe un carrito antiguo simple, moverlo al tab 1
-      const oldCart = localStorage.getItem('tomodachi_cart');
-      if (oldCart) {
-          try {
-              MULTI_CARTS['1'] = JSON.parse(oldCart);
-              localStorage.removeItem('tomodachi_cart');
-          } catch(e) {}
-      }
+    // Migración: Si existe un carrito antiguo simple, moverlo al tab 1
+    const oldCart = localStorage.getItem('tomodachi_cart');
+    if (oldCart) {
+      try {
+        MULTI_CARTS['1'] = JSON.parse(oldCart);
+        localStorage.removeItem('tomodachi_cart');
+      } catch (e) { }
+    }
   }
 
   // Recuperar pestaña activa
   const savedTab = localStorage.getItem('tomodachi_current_tab');
   if (savedTab && MULTI_CARTS[savedTab]) {
-      CURRENT_TAB = savedTab;
+    CURRENT_TAB = savedTab;
   }
 
   // Inicializar carrito actual
   CART = MULTI_CARTS[CURRENT_TAB] || [];
-  
+
   // Actualizar UI inicial de pestañas
   document.querySelectorAll('.cart-tab-btn').forEach(btn => {
-      const t = btn.getAttribute('data-tab');
-      if(t === CURRENT_TAB) btn.classList.add('active');
-      else btn.classList.remove('active');
-      updateTabBadge(t);
+    const t = btn.getAttribute('data-tab');
+    if (t === CURRENT_TAB) btn.classList.add('active');
+    else btn.classList.remove('active');
+    updateTabBadge(t);
   });
 
   renderCart();
@@ -122,12 +122,12 @@ function initPOS() {
   // Cargar ventas suspendidas
   const savedParked = localStorage.getItem('tomodachi_parked_sales');
   if (savedParked) {
-      try {
-          PARKED_SALES = JSON.parse(savedParked);
-          updateParkedSalesIndicator();
-      } catch (e) {
-          console.error('Error cargando ventas suspendidas', e);
-      }
+    try {
+      PARKED_SALES = JSON.parse(savedParked);
+      updateParkedSalesIndicator();
+    } catch (e) {
+      console.error('Error cargando ventas suspendidas', e);
+    }
   }
 
   loadCategoriesAndProducts();
@@ -195,16 +195,16 @@ function bindEvents() {
   // Pestañas internas del panel (Productos / Ajustes)
   document.querySelectorAll('.panel-tab-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
-        const tabId = btn.getAttribute('data-tab');
-        
-        // Update buttons
-        document.querySelectorAll('.panel-tab-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        
-        // Update content
-        document.querySelectorAll('.cart-tab-content').forEach(c => c.classList.remove('active'));
-        const content = document.getElementById(`tab-${tabId}`);
-        if(content) content.classList.add('active');
+      const tabId = btn.getAttribute('data-tab');
+
+      // Update buttons
+      document.querySelectorAll('.panel-tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      // Update content
+      document.querySelectorAll('.cart-tab-content').forEach(c => c.classList.remove('active'));
+      const content = document.getElementById(`tab-${tabId}`);
+      if (content) content.classList.add('active');
     });
   });
 
@@ -226,36 +226,36 @@ function bindEvents() {
   if (closeItemModalBtn) closeItemModalBtn.addEventListener('click', closeItemOptions);
   if (saveItemOptionsBtn) saveItemOptionsBtn.addEventListener('click', saveItemOptions);
   if (discountTypeSelect) discountTypeSelect.addEventListener('change', onDiscountTypeChange);
-  
+
   // Live preview events
   [discPercentInput, discFixedInput, nxnBuyInput, nxnPayInput].forEach(el => {
-      if (el) el.addEventListener('input', updateModalPreview);
+    if (el) el.addEventListener('input', updateModalPreview);
   });
 
   // Global Hotkeys
   document.addEventListener('keydown', (e) => {
-      if (e.key === 'F2') { // F2: Enfocar búsqueda
-          e.preventDefault();
-          if(searchInput) searchInput.focus();
+    if (e.key === 'F2') { // F2: Enfocar búsqueda
+      e.preventDefault();
+      if (searchInput) searchInput.focus();
+    }
+    if (e.key === 'F4') { // F4: Cobrar / Finalizar
+      e.preventDefault();
+      if (finalizeSaleBtn && !finalizeSaleBtn.disabled) finalizeSaleBtn.click();
+    }
+    if (e.key === 'F7') { // F7: Suspender venta
+      e.preventDefault();
+      parkCurrentSale();
+    }
+    if (e.key === 'Escape') { // ESC: Cerrar modales o limpiar búsqueda
+      if (itemOptionsModal && !itemOptionsModal.classList.contains('hidden')) {
+        closeItemOptions();
+      } else if (document.activeElement === searchInput) {
+        searchInput.value = '';
+        searchInput.blur();
+        if (searchResults) searchResults.classList.add('hidden');
+        if (productGallery) productGallery.style.display = 'grid';
       }
-      if (e.key === 'F4') { // F4: Cobrar / Finalizar
-          e.preventDefault();
-          if(finalizeSaleBtn && !finalizeSaleBtn.disabled) finalizeSaleBtn.click();
-      }
-      if (e.key === 'F7') { // F7: Suspender venta
-          e.preventDefault();
-          parkCurrentSale();
-      }
-      if (e.key === 'Escape') { // ESC: Cerrar modales o limpiar búsqueda
-          if(itemOptionsModal && !itemOptionsModal.classList.contains('hidden')) {
-              closeItemOptions();
-          } else if (document.activeElement === searchInput) {
-              searchInput.value = '';
-              searchInput.blur();
-              if(searchResults) searchResults.classList.add('hidden');
-              if(productGallery) productGallery.style.display = 'grid';
-          }
-      }
+    }
   });
 
   // Eliminado auto-cierre al hacer click fuera: el usuario controla con botones
@@ -330,12 +330,12 @@ async function searchProducts(term) {
           image_path: el.getAttribute('data-image'),
           stock_quantity: parseInt(el.getAttribute('data-stock')) // Asumiendo que viene en data-stock o similar, si no, undefined
         });
-        
+
         // Pequeño delay para apreciar el feedback antes de cerrar resultados
         setTimeout(() => {
-            searchInput.value = '';
-            searchResults.classList.add('hidden');
-            productGallery.style.display = 'grid';
+          searchInput.value = '';
+          searchResults.classList.add('hidden');
+          productGallery.style.display = 'grid';
         }, 250);
       });
     });
@@ -346,28 +346,28 @@ async function searchProducts(term) {
 
 function addProductToCart(prod) {
   const existing = CART.find(i => i.product_id === prod.product_id);
-  
+
   // Validación de Stock
   const currentQty = existing ? existing.quantity : 0;
   // Si prod.stock_quantity es undefined o null, asumimos infinito o no controlado
   const maxStock = (prod.stock_quantity !== undefined && prod.stock_quantity !== null && prod.stock_quantity !== '') ? parseInt(prod.stock_quantity) : null;
-  
+
   if (maxStock !== null && (currentQty + 1) > maxStock) {
-      showNotification(`Stock insuficiente. Disponible: ${maxStock}`, 'error');
-      playSound('Error.mp3'); 
-      return;
+    showNotification(`Stock insuficiente. Disponible: ${maxStock}`, 'error');
+    playSound('Error.mp3');
+    return;
   }
 
   if (existing) {
     existing.quantity += 1;
     recalcItemPrice(existing);
   } else {
-    CART.push({ 
-      product_id: prod.product_id, 
-      product_name: prod.product_name, 
-      unit_price: prod.unit_price, 
+    CART.push({
+      product_id: prod.product_id,
+      product_name: prod.product_name,
+      unit_price: prod.unit_price,
       original_price: prod.unit_price,
-      quantity: 1, 
+      quantity: 1,
       subtotal: prod.unit_price,
       image_path: prod.image_path,
       discount_type: 'none',
@@ -386,7 +386,7 @@ function renderCart() {
   // Persistencia: Guardar estado multi-carrito
   MULTI_CARTS[CURRENT_TAB] = CART;
   localStorage.setItem('tomodachi_multi_carts', JSON.stringify(MULTI_CARTS));
-  
+
   // Actualizar badge de la pestaña actual
   updateTabBadge(CURRENT_TAB);
 
@@ -397,39 +397,39 @@ function renderCart() {
     emptyCartMsg.style.display = 'block';
     if (finalizeSaleBtn) finalizeSaleBtn.disabled = true;
     if (cartBadge) {
-        cartBadge.textContent = '0';
-        cartBadge.style.display = 'none';
+      cartBadge.textContent = '0';
+      cartBadge.style.display = 'none';
     }
   } else {
     emptyCartMsg.style.display = 'none';
     if (finalizeSaleBtn) finalizeSaleBtn.disabled = false;
-    
+
     // Calculate total items count
     const totalItems = CART.reduce((sum, item) => sum + item.quantity, 0);
     if (cartBadge) {
-        cartBadge.textContent = totalItems;
-        cartBadge.style.display = 'flex';
+      cartBadge.textContent = totalItems;
+      cartBadge.style.display = 'flex';
     }
 
     cartBody.innerHTML = CART.map(item => {
-        let imgHtml = '<div class="cart-item-img-placeholder"><i class="fas fa-box"></i></div>';
-        if (item.image_path) {
-            // Ensure path is correct
-            let src = item.image_path;
-            if (!src.startsWith('/') && !src.startsWith('http')) src = '/' + src;
-            imgHtml = `<img src="${src}" alt="img" class="cart-item-img">`;
-        }
+      let imgHtml = '<div class="cart-item-img-placeholder"><i class="fas fa-box"></i></div>';
+      if (item.image_path) {
+        // Ensure path is correct
+        let src = item.image_path;
+        if (!src.startsWith('/') && !src.startsWith('http')) src = '/' + src;
+        imgHtml = `<img src="${src}" alt="img" class="cart-item-img">`;
+      }
 
-        // Price display (show original crossed out if discounted)
-        let priceHtml = formatCurrency(item.unit_price);
-        if (item.unit_price < item.original_price) {
-            priceHtml = `<div class="price-col">
+      // Price display (show original crossed out if discounted)
+      let priceHtml = formatCurrency(item.unit_price);
+      if (item.unit_price < item.original_price) {
+        priceHtml = `<div class="price-col">
                 <span class="old-price">${formatCurrency(item.original_price)}</span>
                 <span class="new-price">${formatCurrency(item.unit_price)}</span>
             </div>`;
-        }
+      }
 
-        return `<tr>
+      return `<tr>
       <td>
         <div class="cart-item-info">
             ${imgHtml}
@@ -452,11 +452,11 @@ function renderCart() {
       inp.addEventListener('input', () => {
         let q = parseInt(inp.value); if (!q || q < 1) q = 1; inp.value = q;
         const id = parseInt(inp.getAttribute('data-id'));
-        const it = CART.find(i => i.product_id === id); 
+        const it = CART.find(i => i.product_id === id);
         if (it) {
-            it.quantity = q; 
-            recalcItemPrice(it);
-            renderCart();
+          it.quantity = q;
+          recalcItemPrice(it);
+          renderCart();
         }
       });
     });
@@ -473,10 +473,10 @@ function renderCart() {
 
     // Bind edit
     Array.from(cartBody.querySelectorAll('.edit-btn')).forEach(btn => {
-        btn.addEventListener('click', () => {
-            const id = parseInt(btn.getAttribute('data-id'));
-            openItemOptions(id);
-        });
+      btn.addEventListener('click', () => {
+        const id = parseInt(btn.getAttribute('data-id'));
+        openItemOptions(id);
+      });
     });
   }
   recalcTotals();
@@ -484,39 +484,39 @@ function renderCart() {
 
 // Helper para badges de pestañas
 function updateTabBadge(tabId) {
-    const btn = document.querySelector(`.cart-tab-btn[data-tab="${tabId}"]`);
-    if (!btn) return;
-    
-    const items = MULTI_CARTS[tabId] || [];
-    const count = items.reduce((s, i) => s + i.quantity, 0);
-    
-    let badge = btn.querySelector('.tab-badge');
-    if (badge) {
-        if (count > 0) {
-            badge.textContent = count;
-            badge.style.display = 'inline-block';
-        } else {
-            badge.style.display = 'none';
-        }
+  const btn = document.querySelector(`.cart-tab-btn[data-tab="${tabId}"]`);
+  if (!btn) return;
+
+  const items = MULTI_CARTS[tabId] || [];
+  const count = items.reduce((s, i) => s + i.quantity, 0);
+
+  let badge = btn.querySelector('.tab-badge');
+  if (badge) {
+    if (count > 0) {
+      badge.textContent = count;
+      badge.style.display = 'inline-block';
+    } else {
+      badge.style.display = 'none';
     }
+  }
 }
 
 function injectCartTabsUI() {
-    // Evitar duplicados
-    if (document.getElementById('cartTabsContainer')) return;
+  // Evitar duplicados
+  if (document.getElementById('cartTabsContainer')) return;
 
-    const cartPanel = document.getElementById('cartPanel');
-    // Si no hay panel lateral, buscar contenedor principal del carrito
-    const targetContainer = cartPanel || document.getElementById('cartBody')?.closest('.col-md-4') || document.querySelector('.cart-section');
-    
-    if (!targetContainer) return;
+  const cartPanel = document.getElementById('cartPanel');
+  // Si no hay panel lateral, buscar contenedor principal del carrito
+  const targetContainer = cartPanel || document.getElementById('cartBody')?.closest('.col-md-4') || document.querySelector('.cart-section');
 
-    const tabsContainer = document.createElement('div');
-    tabsContainer.id = 'cartTabsContainer';
-    
-    // Estilos CSS inyectados
-    const style = document.createElement('style');
-    style.textContent = `
+  if (!targetContainer) return;
+
+  const tabsContainer = document.createElement('div');
+  tabsContainer.id = 'cartTabsContainer';
+
+  // Estilos CSS inyectados
+  const style = document.createElement('style');
+  style.textContent = `
         #cartTabsContainer {
             display: flex;
             width: 100%;
@@ -588,49 +588,49 @@ function injectCartTabsUI() {
             .cart-tab-btn .tab-icon { font-size: 1.2rem; margin: 0; }
         }
     `;
-    document.head.appendChild(style);
+  document.head.appendChild(style);
 
-    // Generar botones de carritos
-    ['1', '2', '3', '4'].forEach(num => {
-        const btn = document.createElement('button');
-        btn.className = 'cart-tab-btn';
-        btn.setAttribute('data-tab', num);
-        btn.innerHTML = `
+  // Generar botones de carritos
+  ['1', '2', '3', '4'].forEach(num => {
+    const btn = document.createElement('button');
+    btn.className = 'cart-tab-btn';
+    btn.setAttribute('data-tab', num);
+    btn.innerHTML = `
             <i class="fas fa-shopping-cart tab-icon"></i>
             <span class="tab-badge">0</span>
         `;
-        btn.title = `Venta ${num}`;
-        btn.onclick = () => switchCartTab(num);
-        tabsContainer.appendChild(btn);
-    });
+    btn.title = `Venta ${num}`;
+    btn.onclick = () => switchCartTab(num);
+    tabsContainer.appendChild(btn);
+  });
 
 
 
-    // Insertar en el DOM y reestructurar para vistas
-    const header = targetContainer.querySelector('.cart-header') || targetContainer.querySelector('h2') || targetContainer.querySelector('.card-header');
-    
-    if (header) {
-        header.parentNode.insertBefore(tabsContainer, header.nextSibling);
-    } else {
-        targetContainer.insertBefore(tabsContainer, targetContainer.firstChild);
-    }
+  // Insertar en el DOM y reestructurar para vistas
+  const header = targetContainer.querySelector('.cart-header') || targetContainer.querySelector('h2') || targetContainer.querySelector('.card-header');
+
+  if (header) {
+    header.parentNode.insertBefore(tabsContainer, header.nextSibling);
+  } else {
+    targetContainer.insertBefore(tabsContainer, targetContainer.firstChild);
+  }
 
 
 }
 
 function injectHistorySidebar() {
-    if (document.getElementById('historyHandle')) return;
+  if (document.getElementById('historyHandle')) return;
 
-    // 1. Crear Botón Flotante (Handle)
-    const historyHandle = document.createElement('button');
-    historyHandle.id = 'historyHandle';
-    historyHandle.className = 'cart-handle history-handle'; // Reutiliza estilos base
-    historyHandle.setAttribute('aria-label', 'Abrir historial');
-    historyHandle.innerHTML = '<i class="fas fa-history"></i>';
-    
-    // Estilos específicos para diferenciarlo y posicionarlo
-    // Inicialmente oculto fuera de pantalla (translateX)
-    historyHandle.style.cssText = `
+  // 1. Crear Botón Flotante (Handle)
+  const historyHandle = document.createElement('button');
+  historyHandle.id = 'historyHandle';
+  historyHandle.className = 'cart-handle history-handle'; // Reutiliza estilos base
+  historyHandle.setAttribute('aria-label', 'Abrir historial');
+  historyHandle.innerHTML = '<i class="fas fa-history"></i>';
+
+  // Estilos específicos para diferenciarlo y posicionarlo
+  // Inicialmente oculto fuera de pantalla (translateX)
+  historyHandle.style.cssText = `
         top: 59%; /* Debajo del carrito */
         background: #6c757d; /* Color sutil (gris) */
         transform: translateX(120%); /* Oculto a la derecha */
@@ -638,16 +638,16 @@ function injectHistorySidebar() {
         display: flex; /* Siempre flex, controlamos visibilidad con transform */
         z-index: 1049;
     `;
-    
-    // 2. Crear Panel Lateral
-    const historyPanel = document.createElement('aside');
-    historyPanel.id = 'historyPanel';
-    historyPanel.className = 'cart-side-panel'; // Reutiliza estilos base
-    historyPanel.setAttribute('aria-label', 'Historial de Ventas');
-    historyPanel.setAttribute('aria-hidden', 'true');
-    historyPanel.style.zIndex = '1051'; // Un poco más alto que el carrito por si acaso
-    
-    historyPanel.innerHTML = `
+
+  // 2. Crear Panel Lateral
+  const historyPanel = document.createElement('aside');
+  historyPanel.id = 'historyPanel';
+  historyPanel.className = 'cart-side-panel'; // Reutiliza estilos base
+  historyPanel.setAttribute('aria-label', 'Historial de Ventas');
+  historyPanel.setAttribute('aria-hidden', 'true');
+  historyPanel.style.zIndex = '1051'; // Un poco más alto que el carrito por si acaso
+
+  historyPanel.innerHTML = `
         <div class="cart-side-header" style="background: #f8f9fa; color: #333; border-bottom: 1px solid #dee2e6;">
             <h2>Historial</h2>
             <button class="close-cart" id="closeHistoryBtn" aria-label="Cerrar historial"><i class="fas fa-times"></i></button>
@@ -657,85 +657,85 @@ function injectHistorySidebar() {
         </div>
     `;
 
-    // Insertar en el DOM
-    document.body.appendChild(historyHandle);
-    document.body.appendChild(historyPanel);
+  // Insertar en el DOM
+  document.body.appendChild(historyHandle);
+  document.body.appendChild(historyPanel);
 
-    // 3. Lógica de Toggle
-    const cartPanel = document.getElementById('cartPanel');
-    const cartHandle = document.getElementById('cartHandle');
+  // 3. Lógica de Toggle
+  const cartPanel = document.getElementById('cartPanel');
+  const cartHandle = document.getElementById('cartHandle');
 
-    function toggleHistory(forceOpen = null) {
-        const isOpen = historyPanel.classList.contains('open');
-        const shouldOpen = forceOpen !== null ? forceOpen : !isOpen;
+  function toggleHistory(forceOpen = null) {
+    const isOpen = historyPanel.classList.contains('open');
+    const shouldOpen = forceOpen !== null ? forceOpen : !isOpen;
 
-        if (shouldOpen) {
-            // Cerrar carrito si está abierto
-            if (cartPanel && cartPanel.classList.contains('open')) {
-                cartPanel.classList.remove('open');
-                cartPanel.setAttribute('aria-hidden', 'true');
-            }
-            
-            historyPanel.classList.add('open');
-            historyPanel.setAttribute('aria-hidden', 'false');
-            renderHistoryView(); // Cargar datos al abrir
-        } else {
-            historyPanel.classList.remove('open');
-            historyPanel.setAttribute('aria-hidden', 'true');
-            
-            // REQUERIMIENTO: Al cerrar historial, volver a abrir el carrito
-            if (cartPanel) {
-                cartPanel.classList.add('open');
-                cartPanel.setAttribute('aria-hidden', 'false');
-            }
+    if (shouldOpen) {
+      // Cerrar carrito si está abierto
+      if (cartPanel && cartPanel.classList.contains('open')) {
+        cartPanel.classList.remove('open');
+        cartPanel.setAttribute('aria-hidden', 'true');
+      }
+
+      historyPanel.classList.add('open');
+      historyPanel.setAttribute('aria-hidden', 'false');
+      renderHistoryView(); // Cargar datos al abrir
+    } else {
+      historyPanel.classList.remove('open');
+      historyPanel.setAttribute('aria-hidden', 'true');
+
+      // REQUERIMIENTO: Al cerrar historial, volver a abrir el carrito
+      if (cartPanel) {
+        cartPanel.classList.add('open');
+        cartPanel.setAttribute('aria-hidden', 'false');
+      }
+    }
+  }
+
+  // Event Listeners
+  historyHandle.onclick = () => toggleHistory();
+  document.getElementById('closeHistoryBtn').onclick = () => toggleHistory(false);
+
+  // Observador para mostrar/ocultar el botón de historial según el estado del carrito
+  // Usamos MutationObserver para detectar cambios en la clase 'open' del cartPanel
+  if (cartPanel) {
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+          const isCartOpen = cartPanel.classList.contains('open');
+          const isHistoryOpen = historyPanel.classList.contains('open');
+
+          // Mostrar botón si el carrito está abierto O si el historial está abierto
+          if (isCartOpen || isHistoryOpen) {
+            historyHandle.style.transform = 'translateX(0)';
+          } else {
+            // Ocultar botón si ambos están cerrados
+            historyHandle.style.transform = 'translateX(120%)';
+          }
         }
-    }
+      });
+    });
+    observer.observe(cartPanel, { attributes: true });
+    // También observar el panel de historial para mantener el botón visible
+    const historyObserver = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+          const isCartOpen = cartPanel.classList.contains('open');
+          const isHistoryOpen = historyPanel.classList.contains('open');
 
-    // Event Listeners
-    historyHandle.onclick = () => toggleHistory();
-    document.getElementById('closeHistoryBtn').onclick = () => toggleHistory(false);
+          if (isCartOpen || isHistoryOpen) {
+            historyHandle.style.transform = 'translateX(0)';
+          } else {
+            historyHandle.style.transform = 'translateX(120%)';
+          }
+        }
+      });
+    });
+    historyObserver.observe(historyPanel, { attributes: true });
+  }
 
-    // Observador para mostrar/ocultar el botón de historial según el estado del carrito
-    // Usamos MutationObserver para detectar cambios en la clase 'open' del cartPanel
-    if (cartPanel) {
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-                    const isCartOpen = cartPanel.classList.contains('open');
-                    const isHistoryOpen = historyPanel.classList.contains('open');
-                    
-                    // Mostrar botón si el carrito está abierto O si el historial está abierto
-                    if (isCartOpen || isHistoryOpen) {
-                        historyHandle.style.transform = 'translateX(0)';
-                    } else {
-                        // Ocultar botón si ambos están cerrados
-                        historyHandle.style.transform = 'translateX(120%)';
-                    }
-                }
-            });
-        });
-        observer.observe(cartPanel, { attributes: true });
-        // También observar el panel de historial para mantener el botón visible
-        const historyObserver = new MutationObserver((mutations) => {
-             mutations.forEach((mutation) => {
-                if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-                    const isCartOpen = cartPanel.classList.contains('open');
-                    const isHistoryOpen = historyPanel.classList.contains('open');
-                    
-                    if (isCartOpen || isHistoryOpen) {
-                        historyHandle.style.transform = 'translateX(0)';
-                    } else {
-                        historyHandle.style.transform = 'translateX(120%)';
-                    }
-                }
-            });
-        });
-        historyObserver.observe(historyPanel, { attributes: true });
-    }
-    
-    // Estilos CSS extra
-    const style = document.createElement('style');
-    style.textContent = `
+  // Estilos CSS extra
+  const style = document.createElement('style');
+  style.textContent = `
         .history-item-card {
             background: #fff;
             border: 1px solid #eee;
@@ -754,24 +754,24 @@ function injectHistorySidebar() {
         .btn-reprint { background: #f0f0f0; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; color: #333; }
         .btn-reprint:hover { background: #e0e0e0; }
     `;
-    document.head.appendChild(style);
+  document.head.appendChild(style);
 }
 
 function renderHistoryView() {
-    const container = document.getElementById('historyPanelBody');
-    if(!container) return;
-    
-    // Cargar datos
-    const saved = localStorage.getItem('tomodachi_recent_sales');
-    let sales = [];
-    try { sales = JSON.parse(saved) || []; } catch(e) {}
-    
-    let html = '';
-    
-    if (sales.length === 0) {
-        html += '<div class="empty-cart" style="text-align: center; padding: 20px; color: #999;">No hay ventas recientes registradas en este dispositivo.</div>';
-    } else {
-        html += sales.map((s, idx) => `
+  const container = document.getElementById('historyPanelBody');
+  if (!container) return;
+
+  // Cargar datos
+  const saved = localStorage.getItem('tomodachi_recent_sales');
+  let sales = [];
+  try { sales = JSON.parse(saved) || []; } catch (e) { }
+
+  let html = '';
+
+  if (sales.length === 0) {
+    html += '<div class="empty-cart" style="text-align: center; padding: 20px; color: #999;">No hay ventas recientes registradas en este dispositivo.</div>';
+  } else {
+    html += sales.map((s, idx) => `
             <div class="history-item-card">
                 <div class="h-header">
                     <span class="h-id">Venta #${s.sale_id}</span>
@@ -787,9 +787,9 @@ function renderHistoryView() {
                 </div>
             </div>
         `).join('');
-    }
-    
-    container.innerHTML = html;
+  }
+
+  container.innerHTML = html;
 }
 
 // ==========================================
@@ -799,31 +799,31 @@ function renderHistoryView() {
 let RECENT_SALES = [];
 
 function saveSaleToHistory(saleData) {
-    // Cargar historial existente
-    const saved = localStorage.getItem('tomodachi_recent_sales');
-    if (saved) {
-        try { RECENT_SALES = JSON.parse(saved); } catch(e) {}
-    }
-    
-    // Añadir nueva venta al inicio
-    RECENT_SALES.unshift(saleData);
-    
-    // Mantener solo las últimas 10 ventas
-    if (RECENT_SALES.length > 10) RECENT_SALES = RECENT_SALES.slice(0, 10);
-    
-    localStorage.setItem('tomodachi_recent_sales', JSON.stringify(RECENT_SALES));
+  // Cargar historial existente
+  const saved = localStorage.getItem('tomodachi_recent_sales');
+  if (saved) {
+    try { RECENT_SALES = JSON.parse(saved); } catch (e) { }
+  }
+
+  // Añadir nueva venta al inicio
+  RECENT_SALES.unshift(saleData);
+
+  // Mantener solo las últimas 10 ventas
+  if (RECENT_SALES.length > 10) RECENT_SALES = RECENT_SALES.slice(0, 10);
+
+  localStorage.setItem('tomodachi_recent_sales', JSON.stringify(RECENT_SALES));
 }
 
 // Función global para el onclick del HTML inyectado
-window.reprintTicketFromHistory = function(index) {
-    // Recargar desde storage por si acaso
-    const saved = localStorage.getItem('tomodachi_recent_sales');
-    let sales = [];
-    try { sales = JSON.parse(saved) || []; } catch(e) {}
-    
-    if (sales[index]) {
-        printTicket(sales[index]);
-    }
+window.reprintTicketFromHistory = function (index) {
+  // Recargar desde storage por si acaso
+  const saved = localStorage.getItem('tomodachi_recent_sales');
+  let sales = [];
+  try { sales = JSON.parse(saved) || []; } catch (e) { }
+
+  if (sales[index]) {
+    printTicket(sales[index]);
+  }
 };
 
 // ==========================================
@@ -831,131 +831,131 @@ window.reprintTicketFromHistory = function(index) {
 // ==========================================
 
 function openItemOptions(id) {
-    const item = CART.find(i => i.product_id === id);
-    if (!item) return;
+  const item = CART.find(i => i.product_id === id);
+  if (!item) return;
 
-    EDITING_PRODUCT_ID = id;
-    
-    // Populate modal
-    if (modalProductName) modalProductName.textContent = item.product_name;
-    if (modalOriginalPrice) modalOriginalPrice.textContent = formatCurrency(item.original_price);
-    
-    // Set current values
-    if (discountTypeSelect) discountTypeSelect.value = item.discount_type || 'none';
-    
-    if (discPercentInput) discPercentInput.value = item.discount_type === 'percent' ? item.discount_value : '';
-    if (discFixedInput) discFixedInput.value = item.discount_type === 'fixed' ? item.discount_value : '';
-    
-    if (nxnBuyInput) nxnBuyInput.value = item.nxn_buy || '';
-    if (nxnPayInput) nxnPayInput.value = item.nxn_pay || '';
+  EDITING_PRODUCT_ID = id;
 
-    onDiscountTypeChange(); // Show/hide inputs
-    updateModalPreview(); // Calc preview
+  // Populate modal
+  if (modalProductName) modalProductName.textContent = item.product_name;
+  if (modalOriginalPrice) modalOriginalPrice.textContent = formatCurrency(item.original_price);
 
-    if (itemOptionsModal) {
-        itemOptionsModal.classList.remove('hidden');
-        itemOptionsModal.setAttribute('aria-hidden', 'false');
-    }
+  // Set current values
+  if (discountTypeSelect) discountTypeSelect.value = item.discount_type || 'none';
+
+  if (discPercentInput) discPercentInput.value = item.discount_type === 'percent' ? item.discount_value : '';
+  if (discFixedInput) discFixedInput.value = item.discount_type === 'fixed' ? item.discount_value : '';
+
+  if (nxnBuyInput) nxnBuyInput.value = item.nxn_buy || '';
+  if (nxnPayInput) nxnPayInput.value = item.nxn_pay || '';
+
+  onDiscountTypeChange(); // Show/hide inputs
+  updateModalPreview(); // Calc preview
+
+  if (itemOptionsModal) {
+    itemOptionsModal.classList.remove('hidden');
+    itemOptionsModal.setAttribute('aria-hidden', 'false');
+  }
 }
 
 function closeItemOptions() {
-    if (itemOptionsModal) {
-        itemOptionsModal.classList.add('hidden');
-        itemOptionsModal.setAttribute('aria-hidden', 'true');
-    }
-    EDITING_PRODUCT_ID = null;
+  if (itemOptionsModal) {
+    itemOptionsModal.classList.add('hidden');
+    itemOptionsModal.setAttribute('aria-hidden', 'true');
+  }
+  EDITING_PRODUCT_ID = null;
 }
 
 function onDiscountTypeChange() {
-    const type = discountTypeSelect.value;
-    
-    if (optPercent) optPercent.classList.add('hidden');
-    if (optFixed) optFixed.classList.add('hidden');
-    if (optNxn) optNxn.classList.add('hidden');
+  const type = discountTypeSelect.value;
 
-    if (type === 'percent' && optPercent) optPercent.classList.remove('hidden');
-    if (type === 'fixed' && optFixed) optFixed.classList.remove('hidden');
-    if (type === 'nxn' && optNxn) optNxn.classList.remove('hidden');
+  if (optPercent) optPercent.classList.add('hidden');
+  if (optFixed) optFixed.classList.add('hidden');
+  if (optNxn) optNxn.classList.add('hidden');
 
-    updateModalPreview();
+  if (type === 'percent' && optPercent) optPercent.classList.remove('hidden');
+  if (type === 'fixed' && optFixed) optFixed.classList.remove('hidden');
+  if (type === 'nxn' && optNxn) optNxn.classList.remove('hidden');
+
+  updateModalPreview();
 }
 
 function updateModalPreview() {
-    const item = CART.find(i => i.product_id === EDITING_PRODUCT_ID);
-    if (!item) return;
+  const item = CART.find(i => i.product_id === EDITING_PRODUCT_ID);
+  if (!item) return;
 
-    const type = discountTypeSelect.value;
-    let newPrice = item.original_price;
+  const type = discountTypeSelect.value;
+  let newPrice = item.original_price;
 
-    if (type === 'percent') {
-        const pct = parseFloat(discPercentInput.value) || 0;
-        newPrice = item.original_price * (1 - pct / 100);
-    } else if (type === 'fixed') {
-        const discount = parseFloat(discFixedInput.value) || 0;
-        newPrice = Math.max(0, item.original_price - discount);
-    } else if (type === 'nxn') {
-        // For NxN, the unit price depends on quantity. 
-        // In preview, we can show the effective unit price based on current quantity in cart
-        // or just show "Variable" or calculate for the current quantity.
-        const buy = parseInt(nxnBuyInput.value) || 1;
-        const pay = parseInt(nxnPayInput.value) || 1;
-        
-        if (buy > 0 && item.quantity >= buy) {
-             const sets = Math.floor(item.quantity / buy);
-             const remainder = item.quantity % buy;
-             const payableQty = (sets * pay) + remainder;
-             newPrice = (payableQty * item.original_price) / item.quantity;
-        }
+  if (type === 'percent') {
+    const pct = parseFloat(discPercentInput.value) || 0;
+    newPrice = item.original_price * (1 - pct / 100);
+  } else if (type === 'fixed') {
+    const discount = parseFloat(discFixedInput.value) || 0;
+    newPrice = Math.max(0, item.original_price - discount);
+  } else if (type === 'nxn') {
+    // For NxN, the unit price depends on quantity. 
+    // In preview, we can show the effective unit price based on current quantity in cart
+    // or just show "Variable" or calculate for the current quantity.
+    const buy = parseInt(nxnBuyInput.value) || 1;
+    const pay = parseInt(nxnPayInput.value) || 1;
+
+    if (buy > 0 && item.quantity >= buy) {
+      const sets = Math.floor(item.quantity / buy);
+      const remainder = item.quantity % buy;
+      const payableQty = (sets * pay) + remainder;
+      newPrice = (payableQty * item.original_price) / item.quantity;
     }
+  }
 
-    if (modalNewPrice) modalNewPrice.textContent = formatCurrency(newPrice);
+  if (modalNewPrice) modalNewPrice.textContent = formatCurrency(newPrice);
 }
 
 function saveItemOptions() {
-    const item = CART.find(i => i.product_id === EDITING_PRODUCT_ID);
-    if (!item) return;
+  const item = CART.find(i => i.product_id === EDITING_PRODUCT_ID);
+  if (!item) return;
 
-    const type = discountTypeSelect.value;
-    item.discount_type = type;
+  const type = discountTypeSelect.value;
+  item.discount_type = type;
 
-    if (type === 'percent') {
-        item.discount_value = parseFloat(discPercentInput.value) || 0;
-    } else if (type === 'fixed') {
-        item.discount_value = parseFloat(discFixedInput.value) || 0;
-    } else if (type === 'nxn') {
-        item.nxn_buy = parseInt(nxnBuyInput.value) || 1;
-        item.nxn_pay = parseInt(nxnPayInput.value) || 1;
-    } else {
-        item.discount_value = 0;
-    }
+  if (type === 'percent') {
+    item.discount_value = parseFloat(discPercentInput.value) || 0;
+  } else if (type === 'fixed') {
+    item.discount_value = parseFloat(discFixedInput.value) || 0;
+  } else if (type === 'nxn') {
+    item.nxn_buy = parseInt(nxnBuyInput.value) || 1;
+    item.nxn_pay = parseInt(nxnPayInput.value) || 1;
+  } else {
+    item.discount_value = 0;
+  }
 
-    recalcItemPrice(item);
-    renderCart();
-    closeItemOptions();
-    showNotification('Precio actualizado', 'success');
+  recalcItemPrice(item);
+  renderCart();
+  closeItemOptions();
+  showNotification('Precio actualizado', 'success');
 }
 
 function recalcItemPrice(item) {
-    let newUnitPrice = item.original_price;
+  let newUnitPrice = item.original_price;
 
-    if (item.discount_type === 'percent') {
-        newUnitPrice = item.original_price * (1 - item.discount_value / 100);
-    } else if (item.discount_type === 'fixed') {
-        newUnitPrice = Math.max(0, item.original_price - item.discount_value);
-    } else if (item.discount_type === 'nxn') {
-        const buy = item.nxn_buy || 1;
-        const pay = item.nxn_pay || 1;
-        
-        if (buy > 0 && item.quantity >= buy) {
-             const sets = Math.floor(item.quantity / buy);
-             const remainder = item.quantity % buy;
-             const payableQty = (sets * pay) + remainder;
-             newUnitPrice = (payableQty * item.original_price) / item.quantity;
-        }
+  if (item.discount_type === 'percent') {
+    newUnitPrice = item.original_price * (1 - item.discount_value / 100);
+  } else if (item.discount_type === 'fixed') {
+    newUnitPrice = Math.max(0, item.original_price - item.discount_value);
+  } else if (item.discount_type === 'nxn') {
+    const buy = item.nxn_buy || 1;
+    const pay = item.nxn_pay || 1;
+
+    if (buy > 0 && item.quantity >= buy) {
+      const sets = Math.floor(item.quantity / buy);
+      const remainder = item.quantity % buy;
+      const payableQty = (sets * pay) + remainder;
+      newUnitPrice = (payableQty * item.original_price) / item.quantity;
     }
+  }
 
-    item.unit_price = newUnitPrice;
-    item.subtotal = item.quantity * item.unit_price;
+  item.unit_price = newUnitPrice;
+  item.subtotal = item.quantity * item.unit_price;
 }
 
 function recalcTotals() {
@@ -1051,20 +1051,20 @@ async function finalizeSale() {
     if (resData.success) {
       playSound('Sound7.mp3');
       showNotification('Venta registrada', 'success');
-      
+
       if (resData.register_opened) {
-          showNotification('Se ha abierto una nueva caja automáticamente', 'info');
+        showNotification('Se ha abierto una nueva caja automáticamente', 'info');
       }
-      
+
       // Preparar datos para ticket
       const ticketData = {
-          items: [...CART],
-          total: CART.reduce((s, i) => s + i.subtotal, 0),
-          date: new Date().toLocaleString(),
-          sale_id: resData.sale_id || '---',
-          cashier: resData.cashier_name || 'Cajero'
+        items: [...CART],
+        total: CART.reduce((s, i) => s + i.subtotal, 0),
+        date: new Date().toLocaleString(),
+        sale_id: resData.sale_id || '---',
+        cashier: resData.cashier_name || 'Cajero'
       };
-      
+
       // Guardar en historial local
       saveSaleToHistory(ticketData);
 
@@ -1077,12 +1077,12 @@ async function finalizeSale() {
       CART = [];
       MULTI_CARTS[CURRENT_TAB] = []; // Limpiar del storage global
       localStorage.setItem('tomodachi_multi_carts', JSON.stringify(MULTI_CARTS));
-      
+
       renderCart();
       if (discountInput) discountInput.value = '0';
       if (taxInput) taxInput.value = '0';
       if (checkoutReceivedInput) checkoutReceivedInput.value = '0';
-      
+
       // Resetear contadores de dinero visuales
       if (typeof resetMoneyCounts === 'function') resetMoneyCounts(true);
 
@@ -1125,7 +1125,7 @@ async function loadCategoriesAndProducts() {
 
     renderCategoryBar();
     renderGallery(getFilteredProducts());
-    
+
     // Bind interactions
     // bindCategoryDrag(); // Deshabilitado por problemas de UX en escritorio
     bindGallerySwipe();
@@ -1141,7 +1141,7 @@ function getFilteredProducts() {
 
 function renderGallery(list, animate = false) {
   if (!productGallery) return;
-  
+
   // Limpiar clases de animación CSS antiguas
   productGallery.classList.remove('slide-in-left', 'slide-in-right');
 
@@ -1175,15 +1175,15 @@ function renderGallery(list, animate = false) {
 
   // Ejecutar animación de entrada con anime.js
   if (animate && typeof anime !== 'undefined') {
-      anime({
-          targets: '.gallery-item',
-          opacity: [0, 1],
-          translateY: [20, 0],
-          scale: [0.95, 1],
-          delay: anime.stagger(40), // Retraso escalonado entre elementos
-          duration: 400,
-          easing: 'easeOutQuad'
-      });
+    anime({
+      targets: '.gallery-item',
+      opacity: [0, 1],
+      translateY: [20, 0],
+      scale: [0.95, 1],
+      delay: anime.stagger(40), // Retraso escalonado entre elementos
+      duration: 400,
+      easing: 'easeOutQuad'
+    });
   }
 }
 
@@ -1202,14 +1202,14 @@ function renderCategoryBar() {
       // if (isCatDragging) return; // Deshabilitado check de drag
       const id = el.getAttribute('data-id');
       const newId = id ? id : null;
-      
+
       // Determinar dirección para animación
       let direction = 'next';
       const currentIdx = getCategoryIndex(activeCategoryId);
       const newIdx = getCategoryIndex(newId);
-      
+
       if (newIdx < currentIdx) direction = 'prev';
-      
+
       setActiveCategory(newId, direction);
       el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
     });
@@ -1217,11 +1217,11 @@ function renderCategoryBar() {
 }
 
 function getCategoryIndex(id) {
-    // null es index 0
-    if (id === null) return 0;
-    // Buscar en allCategories
-    const idx = allCategories.findIndex(c => String(c.category_id) === String(id));
-    return idx === -1 ? 0 : idx + 1; // +1 porque 'Todos' es 0
+  // null es index 0
+  if (id === null) return 0;
+  // Buscar en allCategories
+  const idx = allCategories.findIndex(c => String(c.category_id) === String(id));
+  return idx === -1 ? 0 : idx + 1; // +1 porque 'Todos' es 0
 }
 
 function setActiveCategory(id, direction = 'none') {
@@ -1229,78 +1229,78 @@ function setActiveCategory(id, direction = 'none') {
   if (String(activeCategoryId) === String(id)) return;
 
   const updateState = () => {
-      activeCategoryId = id;
-      renderCategoryBar();
-      renderGallery(getFilteredProducts(), true);
-      scrollToActiveCategoryPill();
+    activeCategoryId = id;
+    renderCategoryBar();
+    renderGallery(getFilteredProducts(), true);
+    scrollToActiveCategoryPill();
   };
 
   // Si hay items y anime.js está disponible, animar salida
   const currentItems = document.querySelectorAll('.gallery-item');
   if (typeof anime !== 'undefined' && currentItems.length > 0) {
-      anime({
-          targets: '.gallery-item',
-          opacity: [1, 0],
-          scale: [1, 0.9],
-          duration: 150,
-          easing: 'easeInQuad',
-          complete: updateState
-      });
+    anime({
+      targets: '.gallery-item',
+      opacity: [1, 0],
+      scale: [1, 0.9],
+      duration: 150,
+      easing: 'easeInQuad',
+      complete: updateState
+    });
   } else {
-      updateState();
+    updateState();
   }
 }
 
 function bindGallerySwipe() {
-    if (!productGallery || productGallery.dataset.swipeBound === '1') return;
-    productGallery.dataset.swipeBound = '1';
+  if (!productGallery || productGallery.dataset.swipeBound === '1') return;
+  productGallery.dataset.swipeBound = '1';
 
-    let touchStartX = 0;
-    let touchEndX = 0;
-    const minSwipeDistance = 50;
+  let touchStartX = 0;
+  let touchEndX = 0;
+  const minSwipeDistance = 50;
 
-    productGallery.addEventListener('touchstart', e => {
-        touchStartX = e.changedTouches[0].screenX;
-    }, { passive: true });
+  productGallery.addEventListener('touchstart', e => {
+    touchStartX = e.changedTouches[0].screenX;
+  }, { passive: true });
 
-    productGallery.addEventListener('touchend', e => {
-        touchEndX = e.changedTouches[0].screenX;
-        handleSwipe();
-    }, { passive: true });
+  productGallery.addEventListener('touchend', e => {
+    touchEndX = e.changedTouches[0].screenX;
+    handleSwipe();
+  }, { passive: true });
 
-    function handleSwipe() {
-        const distance = touchEndX - touchStartX;
-        
-        if (Math.abs(distance) < minSwipeDistance) return;
+  function handleSwipe() {
+    const distance = touchEndX - touchStartX;
 
-        const currentIdx = getCategoryIndex(activeCategoryId);
-        const totalCats = allCategories.length + 1; // +1 por 'Todos'
+    if (Math.abs(distance) < minSwipeDistance) return;
 
-        if (distance < 0) {
-            // Swipe Left -> Next Category
-            if (currentIdx < totalCats - 1) {
-                const nextIdx = currentIdx + 1;
-                const nextId = nextIdx === 0 ? null : allCategories[nextIdx - 1].category_id;
-                setActiveCategory(nextId, 'next');
-            }
-        } else {
-            // Swipe Right -> Prev Category
-            if (currentIdx > 0) {
-                const prevIdx = currentIdx - 1;
-                const prevId = prevIdx === 0 ? null : allCategories[prevIdx - 1].category_id;
-                setActiveCategory(prevId, 'prev');
-            }
-        }
+    const currentIdx = getCategoryIndex(activeCategoryId);
+    const totalCats = allCategories.length + 1; // +1 por 'Todos'
+
+    if (distance < 0) {
+      // Swipe Left -> Next Category
+      if (currentIdx < totalCats - 1) {
+        const nextIdx = currentIdx + 1;
+        const nextId = nextIdx === 0 ? null : allCategories[nextIdx - 1].category_id;
+        setActiveCategory(nextId, 'next');
+      }
+    } else {
+      // Swipe Right -> Prev Category
+      if (currentIdx > 0) {
+        const prevIdx = currentIdx - 1;
+        const prevId = prevIdx === 0 ? null : allCategories[prevIdx - 1].category_id;
+        setActiveCategory(prevId, 'prev');
+      }
     }
+  }
 }
 
 function scrollToActiveCategoryPill() {
-    setTimeout(() => {
-        const activePill = categoryBar.querySelector('.category-pill.active');
-        if (activePill) {
-            activePill.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-        }
-    }, 50);
+  setTimeout(() => {
+    const activePill = categoryBar.querySelector('.category-pill.active');
+    if (activePill) {
+      activePill.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+  }, 50);
 }
 
 function bindCategoryDrag() {
@@ -1317,9 +1317,9 @@ async function fetchByCode(code) {
     const resData = await res.json();
     if (resData.success && resData.data) {
       const p = resData.data;
-      addProductToCart({ 
-        product_id: p.product_id, 
-        product_name: p.product_name, 
+      addProductToCart({
+        product_id: p.product_id,
+        product_name: p.product_name,
         unit_price: parseFloat(p.price),
         image_path: p.image_path,
         stock_quantity: p.stock_quantity // Asegurar que el backend lo envíe
@@ -1448,7 +1448,7 @@ function printTicket(data) {
     showNotification('Habilita pop-ups para imprimir ticket', 'warning');
     return;
   }
-  
+
   const storeName = localStorage.getItem('tomodachi_store_name') || 'Tomodachi Store';
 
   const itemsHtml = data.items.map(item => `
@@ -1494,7 +1494,7 @@ function printTicket(data) {
     </body>
     </html>
   `;
-  
+
   win.document.write(html);
   win.document.close();
 }
@@ -1504,98 +1504,98 @@ function printTicket(data) {
 // ==========================================
 
 async function checkSessionStatus(response) {
-    if (response.status === 401 || response.status === 403) {
-        showNotification('La sesión ha expirado. Redirigiendo...', 'error');
-        setTimeout(() => window.location.href = '/login.php', 2000);
-        return false;
-    }
-    return true;
+  if (response.status === 401 || response.status === 403) {
+    showNotification('La sesión ha expirado. Redirigiendo...', 'error');
+    setTimeout(() => window.location.href = '/login.php', 2000);
+    return false;
+  }
+  return true;
 }
 
 function parkCurrentSale() {
-    if (CART.length === 0) return showNotification('El carrito está vacío', 'warning');
-    
-    const saleData = {
-        id: Date.now(),
-        timestamp: new Date().toLocaleString(),
-        items: [...CART],
-        total: CART.reduce((s, i) => s + i.subtotal, 0)
-    };
-    
-    PARKED_SALES.push(saleData);
-    localStorage.setItem('tomodachi_parked_sales', JSON.stringify(PARKED_SALES));
-    
-    CART = [];
-    // localStorage.removeItem('tomodachi_cart'); // Ya no se usa
-    renderCart();
-    updateParkedSalesIndicator();
-    showNotification('Venta suspendida/guardada', 'success');
+  if (CART.length === 0) return showNotification('El carrito está vacío', 'warning');
+
+  const saleData = {
+    id: Date.now(),
+    timestamp: new Date().toLocaleString(),
+    items: [...CART],
+    total: CART.reduce((s, i) => s + i.subtotal, 0)
+  };
+
+  PARKED_SALES.push(saleData);
+  localStorage.setItem('tomodachi_parked_sales', JSON.stringify(PARKED_SALES));
+
+  CART = [];
+  // localStorage.removeItem('tomodachi_cart'); // Ya no se usa
+  renderCart();
+  updateParkedSalesIndicator();
+  showNotification('Venta suspendida/guardada', 'success');
 }
 
 function restoreParkedSale(id) {
-    const index = PARKED_SALES.findIndex(s => s.id === id);
-    if (index === -1) return;
-    
-    if (CART.length > 0) {
-        if(!confirm('Hay productos en el carrito actual. ¿Deseas sobrescribirlos?')) return;
-    }
-    
-    CART = [...PARKED_SALES[index].items];
-    PARKED_SALES.splice(index, 1);
-    localStorage.setItem('tomodachi_parked_sales', JSON.stringify(PARKED_SALES));
-    
-    renderCart();
-    updateParkedSalesIndicator();
-    showNotification('Venta recuperada', 'success');
+  const index = PARKED_SALES.findIndex(s => s.id === id);
+  if (index === -1) return;
+
+  if (CART.length > 0) {
+    if (!confirm('Hay productos en el carrito actual. ¿Deseas sobrescribirlos?')) return;
+  }
+
+  CART = [...PARKED_SALES[index].items];
+  PARKED_SALES.splice(index, 1);
+  localStorage.setItem('tomodachi_parked_sales', JSON.stringify(PARKED_SALES));
+
+  renderCart();
+  updateParkedSalesIndicator();
+  showNotification('Venta recuperada', 'success');
 }
 
 function updateParkedSalesIndicator() {
-    // Buscar o crear el indicador
-    let indicator = document.getElementById('parkedSalesBtn');
-    
-    if (!indicator) {
-        // Intentar inyectarlo en la barra superior o cerca del carrito
-        const target = document.querySelector('.cart-header') || document.getElementById('cartPanel');
-        if (target) {
-            indicator = document.createElement('button');
-            indicator.id = 'parkedSalesBtn';
-            indicator.className = 'btn-parked-sales';
-            indicator.style.cssText = 'margin: 5px; padding: 5px 10px; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; display: none; font-size: 0.8rem;';
-            indicator.onclick = showParkedSalesList;
-            
-            if(target.classList.contains('cart-header')) {
-                 target.appendChild(indicator);
-            } else {
-                 target.insertBefore(indicator, target.firstChild);
-            }
-        }
-    }
+  // Buscar o crear el indicador
+  let indicator = document.getElementById('parkedSalesBtn');
 
-    if(indicator) {
-        indicator.textContent = `Suspendidas (${PARKED_SALES.length})`;
-        indicator.style.display = PARKED_SALES.length > 0 ? 'inline-block' : 'none';
+  if (!indicator) {
+    // Intentar inyectarlo en la barra superior o cerca del carrito
+    const target = document.querySelector('.cart-header') || document.getElementById('cartPanel');
+    if (target) {
+      indicator = document.createElement('button');
+      indicator.id = 'parkedSalesBtn';
+      indicator.className = 'btn-parked-sales';
+      indicator.style.cssText = 'margin: 5px; padding: 5px 10px; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; display: none; font-size: 0.8rem;';
+      indicator.onclick = showParkedSalesList;
+
+      if (target.classList.contains('cart-header')) {
+        target.appendChild(indicator);
+      } else {
+        target.insertBefore(indicator, target.firstChild);
+      }
     }
+  }
+
+  if (indicator) {
+    indicator.textContent = `Suspendidas (${PARKED_SALES.length})`;
+    indicator.style.display = PARKED_SALES.length > 0 ? 'inline-block' : 'none';
+  }
 }
 
 function showParkedSalesList() {
-    if (PARKED_SALES.length === 0) return;
-    
-    // Crear un modal simple dinámicamente
-    const modalId = 'parkedSalesModal';
-    let modal = document.getElementById(modalId);
-    
-    if (!modal) {
-        modal = document.createElement('div');
-        modal.id = modalId;
-        modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; display: flex; justify-content: center; align-items: center;';
-        document.body.appendChild(modal);
-        
-        modal.addEventListener('click', (e) => {
-            if(e.target === modal) modal.style.display = 'none';
-        });
-    }
-    
-    const listHtml = PARKED_SALES.map(s => `
+  if (PARKED_SALES.length === 0) return;
+
+  // Crear un modal simple dinámicamente
+  const modalId = 'parkedSalesModal';
+  let modal = document.getElementById(modalId);
+
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = modalId;
+    modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; display: flex; justify-content: center; align-items: center;';
+    document.body.appendChild(modal);
+
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.style.display = 'none';
+    });
+  }
+
+  const listHtml = PARKED_SALES.map(s => `
         <div style="background: #f5f5f5; padding: 10px; margin-bottom: 10px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
             <div>
                 <strong>${s.timestamp}</strong><br>
@@ -1604,16 +1604,16 @@ function showParkedSalesList() {
             <button onclick="restoreParkedSale(${s.id}); document.getElementById('${modalId}').style.display='none';" style="background: #4caf50; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">Recuperar</button>
         </div>
     `).join('');
-    
-    modal.innerHTML = `
+
+  modal.innerHTML = `
         <div style="background: white; padding: 20px; border-radius: 8px; max-width: 400px; width: 90%; max-height: 80vh; overflow-y: auto;">
             <h3 style="margin-top: 0;">Ventas Suspendidas</h3>
             ${listHtml}
             <button onclick="document.getElementById('${modalId}').style.display='none'" style="margin-top: 10px; width: 100%; padding: 8px;">Cerrar</button>
         </div>
     `;
-    
-    modal.style.display = 'flex';
+
+  modal.style.display = 'flex';
 }
 
 // ==========================================
@@ -1623,58 +1623,58 @@ function showParkedSalesList() {
 let moneyCounts = {};
 
 function renderQuickCashButtons() {
-    const input = document.getElementById('checkoutReceived');
-    if (!input) return;
+  const input = document.getElementById('checkoutReceived');
+  if (!input) return;
 
-    // Asegurar que el input tenga un wrapper para posicionar el botón
-    let wrapper = document.getElementById('money-input-wrapper');
-    if (!wrapper) {
-        // Crear wrapper alrededor del input existente
-        wrapper = document.createElement('div');
-        wrapper.id = 'money-input-wrapper';
-        wrapper.style.cssText = 'position: relative; display: flex; align-items: stretch; width: 100%;';
-        
-        // Mover el input dentro del wrapper
-        input.parentNode.insertBefore(wrapper, input);
-        wrapper.appendChild(input);
-        
-        // Ajustar estilo del input
-        input.style.flex = '1';
-        input.style.borderTopRightRadius = '0';
-        input.style.borderBottomRightRadius = '0';
+  // Asegurar que el input tenga un wrapper para posicionar el botón
+  let wrapper = document.getElementById('money-input-wrapper');
+  if (!wrapper) {
+    // Crear wrapper alrededor del input existente
+    wrapper = document.createElement('div');
+    wrapper.id = 'money-input-wrapper';
+    wrapper.style.cssText = 'position: relative; display: flex; align-items: stretch; width: 100%;';
 
-        // Botón para abrir el panel
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'money-panel-toggle';
-        btn.innerHTML = '<i class="fas fa-money-bill-wave"></i>';
-        btn.title = "Seleccionar billetes/monedas";
-        btn.onclick = toggleMoneyPanel;
-        btn.style.cssText = 'padding: 0 15px; background: var(--primary-color, #4CAF50); color: white; border: none; border-top-right-radius: 4px; border-bottom-right-radius: 4px; cursor: pointer; font-size: 1.1rem;';
-        
-        wrapper.appendChild(btn);
+    // Mover el input dentro del wrapper
+    input.parentNode.insertBefore(wrapper, input);
+    wrapper.appendChild(input);
 
-        // Listener para limpiar contadores si se escribe manualmente
-        input.addEventListener('input', (e) => {
-            if (e.isTrusted) { // Solo si es evento de usuario real
-                resetMoneyCounts(false); // false = no borrar input, solo visuales
-                // Ocultar panel al escribir
-                const panel = document.getElementById('money-panel-tooltip');
-                const overlay = document.getElementById('money-panel-overlay');
-                if (panel) panel.classList.remove('active');
-                if (overlay) overlay.classList.remove('active');
-            }
-        });
-        
-        injectMoneyPanelStyles();
-    }
+    // Ajustar estilo del input
+    input.style.flex = '1';
+    input.style.borderTopRightRadius = '0';
+    input.style.borderBottomRightRadius = '0';
+
+    // Botón para abrir el panel
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'money-panel-toggle';
+    btn.innerHTML = '<i class="fas fa-money-bill-wave"></i>';
+    btn.title = "Seleccionar billetes/monedas";
+    btn.onclick = toggleMoneyPanel;
+    btn.style.cssText = 'padding: 0 15px; background: var(--primary-color, #4CAF50); color: white; border: none; border-top-right-radius: 4px; border-bottom-right-radius: 4px; cursor: pointer; font-size: 1.1rem;';
+
+    wrapper.appendChild(btn);
+
+    // Listener para limpiar contadores si se escribe manualmente
+    input.addEventListener('input', (e) => {
+      if (e.isTrusted) { // Solo si es evento de usuario real
+        resetMoneyCounts(false); // false = no borrar input, solo visuales
+        // Ocultar panel al escribir
+        const panel = document.getElementById('money-panel-tooltip');
+        const overlay = document.getElementById('money-panel-overlay');
+        if (panel) panel.classList.remove('active');
+        if (overlay) overlay.classList.remove('active');
+      }
+    });
+
+    injectMoneyPanelStyles();
+  }
 }
 
 function injectMoneyPanelStyles() {
-    if (document.getElementById('money-panel-styles')) return;
-    const style = document.createElement('style');
-    style.id = 'money-panel-styles';
-    style.textContent = `
+  if (document.getElementById('money-panel-styles')) return;
+  const style = document.createElement('style');
+  style.id = 'money-panel-styles';
+  style.textContent = `
         /* Estilos comunes */
         .money-panel-tooltip {
             background: white;
@@ -1871,105 +1871,105 @@ function injectMoneyPanelStyles() {
         .btn-money-action.clear { color: #d32f2f; border-color: #ffcdd2; background: #ffebee; }
         .btn-money-action.clear:hover { background: #ffcdd2; }
     `;
-    document.head.appendChild(style);
+  document.head.appendChild(style);
 }
 
 function toggleMoneyPanel(e) {
-    if(e) e.stopPropagation();
-    let panel = document.getElementById('money-panel-tooltip');
-    if (!panel) {
-        createMoneyPanel();
-        panel = document.getElementById('money-panel-tooltip');
-    }
-    
-    const overlay = document.getElementById('money-panel-overlay');
+  if (e) e.stopPropagation();
+  let panel = document.getElementById('money-panel-tooltip');
+  if (!panel) {
+    createMoneyPanel();
+    panel = document.getElementById('money-panel-tooltip');
+  }
 
-    if (panel.classList.contains('active')) {
-        // Cerrar
-        panel.classList.remove('active');
-        if(overlay) overlay.classList.remove('active');
-    } else {
-        // Abrir
-        panel.classList.add('active');
-        if(overlay) overlay.classList.add('active');
-        
-        // Limpiar estilos inline de posicionamiento absoluto (para que CSS fixed funcione)
-        panel.style.top = '';
-        panel.style.left = '';
-        panel.style.bottom = '';
-        panel.style.right = '';
-    }
+  const overlay = document.getElementById('money-panel-overlay');
+
+  if (panel.classList.contains('active')) {
+    // Cerrar
+    panel.classList.remove('active');
+    if (overlay) overlay.classList.remove('active');
+  } else {
+    // Abrir
+    panel.classList.add('active');
+    if (overlay) overlay.classList.add('active');
+
+    // Limpiar estilos inline de posicionamiento absoluto (para que CSS fixed funcione)
+    panel.style.top = '';
+    panel.style.left = '';
+    panel.style.bottom = '';
+    panel.style.right = '';
+  }
 }
 
 function positionMoneyPanel(panel) {
-    const wrapper = document.getElementById('money-input-wrapper');
-    if (!wrapper || !panel) return;
+  const wrapper = document.getElementById('money-input-wrapper');
+  if (!wrapper || !panel) return;
 
-    // Resetear estilos para medir correctamente
-    panel.style.top = '';
-    panel.style.bottom = '';
-    panel.style.left = '';
-    panel.style.right = '';
-    panel.classList.remove('pos-top', 'pos-bottom');
+  // Resetear estilos para medir correctamente
+  panel.style.top = '';
+  panel.style.bottom = '';
+  panel.style.left = '';
+  panel.style.right = '';
+  panel.classList.remove('pos-top', 'pos-bottom');
 
-    const rect = wrapper.getBoundingClientRect();
-    const panelRect = panel.getBoundingClientRect();
-    const scrollY = window.scrollY || window.pageYOffset;
-    const scrollX = window.scrollX || window.pageXOffset;
-    
-    const spaceAbove = rect.top;
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const margin = 10;
+  const rect = wrapper.getBoundingClientRect();
+  const panelRect = panel.getBoundingClientRect();
+  const scrollY = window.scrollY || window.pageYOffset;
+  const scrollX = window.scrollX || window.pageXOffset;
 
-    // Decidir posición vertical (Preferir arriba, si no cabe, abajo)
-    if (spaceAbove > panelRect.height + margin || spaceAbove > spaceBelow) {
-        // Mostrar Arriba (Coordenadas absolutas al documento)
-        panel.style.top = (rect.top + scrollY - panelRect.height - margin) + 'px';
-        panel.classList.add('pos-top');
-    } else {
-        // Mostrar Abajo
-        panel.style.top = (rect.bottom + scrollY + margin) + 'px';
-        panel.classList.add('pos-bottom');
-    }
+  const spaceAbove = rect.top;
+  const spaceBelow = window.innerHeight - rect.bottom;
+  const margin = 10;
 
-    // Ajuste Horizontal (Alinear a la derecha del input)
-    let leftPos = rect.right + scrollX - panelRect.width;
-    
-    // Si se sale por la izquierda, alinear a la izquierda
-    if (leftPos < 10) {
-        leftPos = rect.left + scrollX;
-    }
-    
-    panel.style.left = leftPos + 'px';
+  // Decidir posición vertical (Preferir arriba, si no cabe, abajo)
+  if (spaceAbove > panelRect.height + margin || spaceAbove > spaceBelow) {
+    // Mostrar Arriba (Coordenadas absolutas al documento)
+    panel.style.top = (rect.top + scrollY - panelRect.height - margin) + 'px';
+    panel.classList.add('pos-top');
+  } else {
+    // Mostrar Abajo
+    panel.style.top = (rect.bottom + scrollY + margin) + 'px';
+    panel.classList.add('pos-bottom');
+  }
+
+  // Ajuste Horizontal (Alinear a la derecha del input)
+  let leftPos = rect.right + scrollX - panelRect.width;
+
+  // Si se sale por la izquierda, alinear a la izquierda
+  if (leftPos < 10) {
+    leftPos = rect.left + scrollX;
+  }
+
+  panel.style.left = leftPos + 'px';
 }
 
 function createMoneyPanel() {
-    const wrapper = document.getElementById('money-input-wrapper');
-    if (!wrapper) return;
+  const wrapper = document.getElementById('money-input-wrapper');
+  if (!wrapper) return;
 
-    // Overlay para móvil
-    let overlay = document.getElementById('money-panel-overlay');
-    if (!overlay) {
-        overlay = document.createElement('div');
-        overlay.id = 'money-panel-overlay';
-        overlay.className = 'money-panel-overlay';
-        document.body.appendChild(overlay);
-        overlay.addEventListener('click', () => {
-             const panel = document.getElementById('money-panel-tooltip');
-             if(panel) panel.classList.remove('active');
-             overlay.classList.remove('active');
-        });
-    }
+  // Overlay para móvil
+  let overlay = document.getElementById('money-panel-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'money-panel-overlay';
+    overlay.className = 'money-panel-overlay';
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', () => {
+      const panel = document.getElementById('money-panel-tooltip');
+      if (panel) panel.classList.remove('active');
+      overlay.classList.remove('active');
+    });
+  }
 
-    const panel = document.createElement('div');
-    panel.id = 'money-panel-tooltip';
-    panel.className = 'money-panel-tooltip';
-    
-    // Definición de dinero
-    const coins = [1, 2, 5, 10];
-    const bills = [20, 50, 100, 200, 500, 1000];
-    
-    let html = `
+  const panel = document.createElement('div');
+  panel.id = 'money-panel-tooltip';
+  panel.className = 'money-panel-tooltip';
+
+  // Definición de dinero
+  const coins = [1, 2, 5, 10];
+  const bills = [20, 50, 100, 200, 500, 1000];
+
+  let html = `
         <div class="money-panel-header" style="text-align: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
             <div style="font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Total Acumulado</div>
             <div id="money-panel-total" style="font-size: 2.2rem; font-weight: 800; color: var(--primary-color, #2e7d32); line-height: 1.2; margin-top: 5px;">$0.00</div>
@@ -2000,102 +2000,166 @@ function createMoneyPanel() {
             <button class="btn-money-action" onclick="document.getElementById('money-panel-tooltip').classList.remove('active'); document.getElementById('money-panel-overlay').classList.remove('active');">Cerrar</button>
         </div>
     `;
-    
-    panel.innerHTML = html;
-    // IMPORTANTE: Añadir al body para evitar problemas de z-index y overflow
-    document.body.appendChild(panel);
-    
-    // Listener global para cerrar en escritorio (clic fuera)
-    document.addEventListener('click', function closeMoneyPanel(e) {
-        const isMobile = window.innerWidth <= 768;
-        if (isMobile) return; // En móvil usamos el overlay
 
-        if (panel.classList.contains('active') && 
-            !panel.contains(e.target) && 
-            !e.target.closest('.money-panel-toggle')) {
-            panel.classList.remove('active');
-        }
-    });
-    
-    // Restaurar badges si había estado
-    updateMoneyBadges();
+  panel.innerHTML = html;
+  // IMPORTANTE: Añadir al body para evitar problemas de z-index y overflow
+  document.body.appendChild(panel);
+
+  // Listener global para cerrar en escritorio (clic fuera)
+  document.addEventListener('click', function closeMoneyPanel(e) {
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) return; // En móvil usamos el overlay
+
+    if (panel.classList.contains('active') &&
+      !panel.contains(e.target) &&
+      !e.target.closest('.money-panel-toggle')) {
+      panel.classList.remove('active');
+    }
+  });
+
+  // Restaurar badges si había estado
+  updateMoneyBadges();
 }
 
 // Exponer globalmente para los onlick del HTML inyectado
-window.addMoney = function(amount) {
-    if (!moneyCounts[amount]) moneyCounts[amount] = 0;
-    moneyCounts[amount]++;
-    
+window.addMoney = function (amount) {
+  if (!moneyCounts[amount]) moneyCounts[amount] = 0;
+  moneyCounts[amount]++;
+
+  updateMoneyInput();
+  updateMoneyBadges();
+};
+
+window.removeMoney = function (amount) {
+  if (moneyCounts[amount] && moneyCounts[amount] > 0) {
+    moneyCounts[amount]--;
+    if (moneyCounts[amount] === 0) delete moneyCounts[amount];
     updateMoneyInput();
     updateMoneyBadges();
+  }
 };
 
-window.removeMoney = function(amount) {
-    if (moneyCounts[amount] && moneyCounts[amount] > 0) {
-        moneyCounts[amount]--;
-        if (moneyCounts[amount] === 0) delete moneyCounts[amount];
-        updateMoneyInput();
-        updateMoneyBadges();
-    }
-};
-
-window.resetMoneyCounts = function(clearInput = true) {
-    moneyCounts = {};
-    updateMoneyBadges();
-    if (clearInput && checkoutReceivedInput) {
-        checkoutReceivedInput.value = '';
-        recalcChange();
-    }
-    updateMoneyPanelTotal(0);
+window.resetMoneyCounts = function (clearInput = true) {
+  moneyCounts = {};
+  updateMoneyBadges();
+  if (clearInput && checkoutReceivedInput) {
+    checkoutReceivedInput.value = '';
+    recalcChange();
+  }
+  updateMoneyPanelTotal(0);
 };
 
 function updateMoneyInput() {
-    let total = 0;
-    for (const [val, count] of Object.entries(moneyCounts)) {
-        total += parseInt(val) * count;
-    }
-    
-    if (checkoutReceivedInput) {
-        checkoutReceivedInput.value = total;
-        recalcChange();
-    }
-    updateMoneyPanelTotal(total);
+  let total = 0;
+  for (const [val, count] of Object.entries(moneyCounts)) {
+    total += parseInt(val) * count;
+  }
+
+  if (checkoutReceivedInput) {
+    checkoutReceivedInput.value = total;
+    recalcChange();
+  }
+  updateMoneyPanelTotal(total);
 }
 
 function updateMoneyPanelTotal(total) {
-    const el = document.getElementById('money-panel-total');
-    if (el) el.textContent = formatCurrency(total);
+  const el = document.getElementById('money-panel-total');
+  if (el) el.textContent = formatCurrency(total);
 }
 
 function updateMoneyBadges() {
-    const panel = document.getElementById('money-panel-tooltip');
-    if (!panel) return;
-    
-    // Limpiar badges y botones de restar existentes
-    panel.querySelectorAll('.money-count-badge, .money-remove-btn').forEach(el => el.remove());
-    
-    // Añadir nuevos
-    for (const [val, count] of Object.entries(moneyCounts)) {
-        if (count > 0) {
-            const btn = panel.querySelector(`.money-btn[data-val="${val}"]`);
-            if (btn) {
-                // Badge de cantidad
-                const badge = document.createElement('div');
-                badge.className = 'money-count-badge';
-                badge.textContent = count;
-                btn.appendChild(badge);
+  const panel = document.getElementById('money-panel-tooltip');
+  if (!panel) return;
 
-                // Botón de restar
-                const removeBtn = document.createElement('div');
-                removeBtn.className = 'money-remove-btn';
-                removeBtn.innerHTML = '<i class="fas fa-minus"></i>';
-                removeBtn.title = "Restar uno";
-                removeBtn.onclick = (e) => { 
-                    e.stopPropagation(); // Evitar que dispare el addMoney del padre
-                    removeMoney(val); 
-                };
-                btn.appendChild(removeBtn);
-            }
-        }
+  // Limpiar badges y botones de restar existentes
+  panel.querySelectorAll('.money-count-badge, .money-remove-btn').forEach(el => el.remove());
+
+  // Añadir nuevos
+  for (const [val, count] of Object.entries(moneyCounts)) {
+    if (count > 0) {
+      const btn = panel.querySelector(`.money-btn[data-val="${val}"]`);
+      if (btn) {
+        // Badge de cantidad
+        const badge = document.createElement('div');
+        badge.className = 'money-count-badge';
+        badge.textContent = count;
+        btn.appendChild(badge);
+
+        // Botón de restar
+        const removeBtn = document.createElement('div');
+        removeBtn.className = 'money-remove-btn';
+        removeBtn.innerHTML = '<i class="fas fa-minus"></i>';
+        removeBtn.title = "Restar uno";
+        removeBtn.onclick = (e) => {
+          e.stopPropagation(); // Evitar que dispare el addMoney del padre
+          removeMoney(val);
+        };
+        btn.appendChild(removeBtn);
+      }
     }
+  }
 }
+
+// ==========================================
+// INTERFAZ DE VOZ (API Pública para VoiceCommander)
+// ==========================================
+window.posSystem = {
+  searchAndAdd: async (query, quantity) => {
+    try {
+      console.log(`[Voice] Searching for: ${query}, Qty: ${quantity}`);
+      // Usar la lógica de búsqueda existente
+      const res = await fetch('../api/inventory/products.php?search=' + encodeURIComponent(query), { method: 'GET', headers: { 'Content-Type': 'application/json' }, credentials: 'include' });
+      if (!res.ok) return false;
+
+      const resData = await res.json();
+      if (!resData.success || !resData.data || resData.data.length === 0) {
+        return false;
+      }
+
+      // Lógica de desempate:
+      // 1. Coincidencia exacta de nombre
+      // 2. Primer resultado si la lista es corta
+      let product = resData.data.find(p => p.product_name.toLowerCase() === query.toLowerCase());
+
+      if (!product) {
+        // Si no hay exacta, tomar el primero (asumiendos la búsqueda ya ordena por relevancia)
+        product = resData.data[0];
+      }
+
+      if (product) {
+        // Agregar al carrito N veces
+        for (let i = 0; i < quantity; i++) {
+          addProductToCart({
+            product_id: parseInt(product.product_id),
+            product_name: product.product_name,
+            unit_price: parseFloat(product.price),
+            image_path: product.image_path,
+            stock_quantity: product.stock_quantity !== undefined ? parseInt(product.stock_quantity) : null
+          });
+        }
+        return true;
+      }
+      return false;
+    } catch (e) {
+      console.error('Error in voice searchAndAdd', e);
+      return false;
+    }
+  },
+
+  initCheckout: () => {
+    // Simular click en carrito si está cerrado
+    if (cartPanel && !cartPanel.classList.contains('open')) {
+      toggleCartPanel(true);
+    }
+    // Enfocar input de recibido
+    setTimeout(() => {
+      if (checkoutReceivedInput) checkoutReceivedInput.focus();
+    }, 500);
+  },
+
+  clearCart: () => {
+    CART = [];
+    renderCart();
+    showNotification('Carrito vaciado por voz', 'info');
+  }
+};

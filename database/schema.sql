@@ -31,6 +31,8 @@ CREATE TABLE users (
     role ENUM('super_admin', 'admin', 'manager', 'cashier') NOT NULL,
     status ENUM('active', 'inactive') DEFAULT 'active',
     show_onboarding TINYINT(1) DEFAULT 1,
+    reset_token_hash VARCHAR(255) NULL,
+    reset_token_expires_at DATETIME NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_login TIMESTAMP NULL,
     FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE RESTRICT,

@@ -55,20 +55,49 @@ try {
     $storeSettings = $storeInfo['settings'] ? json_decode($storeInfo['settings'], true) : [];
     $allowNegativeStock = isset($storeSettings['allow_negative_stock']) && $storeSettings['allow_negative_stock'];
 
-    // Obtener caja abierta si no se pasa register_id
-    if ($register_id<=0) {
-        $open = $db->selectOne('SELECT register_id FROM cash_registers WHERE store_id = ? AND status = ?',[$store_id,REGISTER_OPEN]);
-        if (!$open) {
-            // Abrir caja automáticamente
-            $user = $auth->getCurrentUser();
-            $register_id = $db->insert('INSERT INTO cash_registers (store_id, user_id, opening_date, initial_amount, status) VALUES (?,?,NOW(),0,?)',
-                [$store_id, $user['user_id'], REGISTER_OPEN]);
-            $open = ['register_id' => $register_id];
-        }
-        $register_id = (int)$open['register_id'];
-    } else {
+    // Obtener caja abierta
+    // Prioridad: 1. register_id enviado, 2. Caja abierta por el usuario actual, 3. Única caja abierta en la tienda
+    
+    if ($register_id > 0) {
         $open = $db->selectOne('SELECT register_id FROM cash_registers WHERE register_id = ? AND status = ?',[$register_id,REGISTER_OPEN]);
-        if (!$open) { Response::error('Caja no está abierta',409); }
+        if (!$open) { Response::error('La caja especificada no está abierta',409); }
+    } else {
+        // Buscar caja del usuario actual
+        $user = $auth->getCurrentUser();
+        $open = $db->selectOne('SELECT register_id FROM cash_registers WHERE store_id = ? AND user_id = ? AND status = ?',[$store_id, $user['user_id'], REGISTER_OPEN]);
+        
+        if (!$open) {
+            // Si no tiene caja propia, buscar si hay SOLO UNA caja abierta en la tienda (modo simple)
+            $opens = $db->select('SELECT register_id FROM cash_registers WHERE store_id = ? AND status = ?',[$store_id, REGISTER_OPEN]);
+            if (count($opens) === 1) {
+                $open = $opens[0];
+            } else if (count($opens) > 1) {
+                Response::error('Hay múltiples cajas abiertas. Por favor seleccione una terminal o abra su propia caja.', 409);
+            }
+        }
+
+        if (!$open) {
+            // Si no hay caja abierta, intentar abrir una automáticamente (fallback)
+            // Buscar terminal disponible o crear una
+            $terminals = $db->select('SELECT terminal_id FROM terminals WHERE store_id = ? AND status = "active"', [$store_id]);
+            $terminal_id = 0;
+            
+            if (count($terminals) > 0) {
+                $terminal_id = $terminals[0]['terminal_id'];
+            } else {
+                $terminal_id = $db->insert('INSERT INTO terminals (store_id, terminal_name) VALUES (?, ?)', [$store_id, 'Caja Automática']);
+            }
+
+            // Crear registro de caja abierta
+            $register_id = $db->insert('INSERT INTO cash_registers (store_id, user_id, terminal_id, opening_date, initial_amount, status) VALUES (?, ?, ?, NOW(), 0, ?)', [
+                $store_id, $user['user_id'], $terminal_id, REGISTER_OPEN
+            ]);
+            
+            // Marcar para notificación
+            $autoOpenedRegister = true;
+        } else {
+            $register_id = (int)$open['register_id'];
+        }
     }
 
     // Cálculo de totales y validaciones de stock
@@ -145,7 +174,11 @@ try {
         throw $e;
     }
 
-    Response::success(['sale_id'=>$sale_id,'total'=>$total],'Venta registrada');
+    Response::success([
+        'sale_id'=>$sale_id,
+        'total'=>$total,
+        'register_opened' => isset($autoOpenedRegister) && $autoOpenedRegister
+    ],'Venta registrada');
 } catch (Exception $e) {
     Response::error('Error servidor: '.$e->getMessage(),500);
 }

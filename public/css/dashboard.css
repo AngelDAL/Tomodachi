@@ -300,7 +300,7 @@
     opacity: 0.5;
 }
 
-.btn-primary, .btn-secondary {
+.btn-primary, .btn-secondary, .btn-save, .btn-danger {
     padding: 10px 20px;
     border: none;
     border-radius: 5px;
@@ -308,6 +308,7 @@
     font-weight: 600;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
     transition: background 0.2s;
 }
@@ -321,6 +322,15 @@
     opacity: 0.9;
 }
 
+.btn-save {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.btn-save:hover {
+    opacity: 0.9;
+}
+
 .btn-secondary {
     background-color: #6c757d;
     color: white;
@@ -329,6 +339,15 @@
 .btn-secondary:hover {
     background-color: #5a6268;
 }
+
+.btn-danger {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+.btn-danger:hover {
+    opacity: 0.9;
+}}
 
 .form-control {
     width: 100%;

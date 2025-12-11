@@ -190,6 +190,7 @@ body {
     box-shadow: 0 2px 6px rgba(0, 0, 0, .2);
     transition: right .3s ease, opacity .3s;
     opacity: 0;
+    z-index: 9999;
 }
 
 .notification.show {
@@ -296,6 +297,116 @@ body {
     border: 1px solid #ccc;
     border-radius: 4px;
     font-size: .85rem;
+}
+
+/* Estilos para el Drawer (Panel Lateral) - Global */
+.drawer-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.drawer-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.drawer-content {
+    width: 550px;
+    max-width: 100%;
+    height: 100%;
+    background: var(--bg-card, #fff);
+    box-shadow: -5px 0 25px rgba(0, 0, 0, 0.15);
+    transform: translateX(100%);
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.drawer-overlay.show .drawer-content {
+    transform: translateX(0);
+}
+
+.drawer-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border-light, #eee);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--bg-card, #fff);
+    z-index: 10;
+    flex-shrink: 0;
+}
+
+.drawer-header h2 {
+    margin: 0;
+    font-size: 1.4rem;
+    color: var(--text-color, #333);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 600;
+}
+
+.drawer-close {
+    background: transparent;
+    border: none;
+    font-size: 1.2rem;
+    color: var(--text-muted, #666);
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.drawer-close:hover {
+    background: var(--bg-hover, #f5f5f5);
+    color: var(--danger-color, #dc3545);
+    transform: rotate(90deg);
+}
+
+.drawer-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color, #ddd) transparent;
+}
+
+.drawer-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.drawer-body::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.drawer-body::-webkit-scrollbar-thumb {
+    background-color: var(--border-color, #ddd);
+    border-radius: 3px;
+}
+
+/* Responsive para el drawer */
+@media (max-width: 768px) {
+    .drawer-content {
+        width: 100%;
+        max-width: 100%;
+    }
 }
 
 .btn-secondary {

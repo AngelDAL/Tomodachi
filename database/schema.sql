@@ -28,7 +28,7 @@ CREATE TABLE users (
     full_name VARCHAR(100) NOT NULL,
     email VARCHAR(100),
     phone VARCHAR(20) NULL,
-    role ENUM('admin', 'manager', 'cashier') NOT NULL,
+    role ENUM('super_admin', 'admin', 'manager', 'cashier') NOT NULL,
     status ENUM('active', 'inactive') DEFAULT 'active',
     show_onboarding TINYINT(1) DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -97,10 +97,21 @@ CREATE TABLE inventory_movements (
     INDEX idx_movement_type (movement_type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Tabla: terminals (Terminales / Puntos de Venta)
+CREATE TABLE terminals (
+    terminal_id INT AUTO_INCREMENT PRIMARY KEY,
+    store_id INT NOT NULL,
+    terminal_name VARCHAR(50) NOT NULL,
+    status ENUM('active', 'inactive') DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Tabla: cash_registers (Cajas registradoras)
 CREATE TABLE cash_registers (
     register_id INT AUTO_INCREMENT PRIMARY KEY,
     store_id INT NOT NULL,
+    terminal_id INT DEFAULT NULL,
     user_id INT NOT NULL,
     opening_date DATETIME NOT NULL,
     closing_date DATETIME,
@@ -111,6 +122,7 @@ CREATE TABLE cash_registers (
     status ENUM('open', 'closed') DEFAULT 'open',
     notes TEXT,
     FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE RESTRICT,
+    FOREIGN KEY (terminal_id) REFERENCES terminals(terminal_id) ON DELETE SET NULL,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE RESTRICT,
     INDEX idx_store_status (store_id, status),
     INDEX idx_opening_date (opening_date)
@@ -174,6 +186,10 @@ CREATE TABLE cash_movements (
 -- Insertar tienda principal
 INSERT INTO stores (store_name, address, phone, status) VALUES
 ('Tienda Principal', 'Calle Principal #123, Ciudad', '555-1234', 'active');
+
+-- Insertar terminal por defecto
+INSERT INTO terminals (store_id, terminal_name) VALUES
+(1, 'Caja Principal');
 
 -- Insertar categorías de ejemplo
 INSERT INTO categories (store_id, category_name, description, icon_class) VALUES

@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="view-transition" content="same-origin">
+    <title>Finanzas - Tomodachi</title>
+    <!-- Local Fonts -->
+    <link rel="stylesheet" href="css/fonts.css">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <script src="js/theme-init.js"></script>
+    <style>
+        .finance-container {
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .finance-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .terminals-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .terminal-card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: var(--card-shadow);
+            border-left: 5px solid #ccc;
+            transition: transform 0.2s;
+        }
+        .terminal-card:hover {
+            transform: translateY(-2px);
+        }
+        .terminal-card.open {
+            border-left-color: var(--success-color);
+        }
+        .terminal-card.closed {
+            border-left-color: var(--danger-color);
+        }
+        .terminal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .terminal-status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        .status-open { background: #d1e7dd; color: #0f5132; }
+        .status-closed { background: #f8d7da; color: #842029; }
+        
+        .terminal-info {
+            margin-bottom: 15px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+        .amount-display {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: var(--text-color);
+            margin: 10px 0;
+        }
+        .terminal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .btn-action {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        .btn-open { background: var(--success-color); color: white; }
+        .btn-close { background: var(--danger-color); color: white; }
+        .btn-movements { background: var(--secondary-color); color: white; }
+        
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .summary-card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: var(--card-shadow);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .summary-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: #e3f2fd;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <button class="sidebar-close" id="sidebarClose" aria-label="Cerrar menú"><i class="fas fa-times"></i></button>
+                <h2>Tomodachi</h2>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item">
+                    <span><i class="fas fa-chart-line"></i></span> Dashboard
+                </a>
+                <a href="sales.html" class="nav-item">
+                    <span><i class="fas fa-cash-register"></i></span> Punto de Venta
+                </a>
+                <a href="inventory.html" class="nav-item">
+                    <span><i class="fas fa-box"></i></span> Inventario
+                </a>
+                <a href="finance.html" class="nav-item active">
+                    <span><i class="fas fa-wallet"></i></span> Finanzas
+                </a>
+                <a href="reports.html" class="nav-item desktop-only-nav">
+                    <span><i class="fas fa-chart-bar"></i></span> Reportes
+                </a>
+                
+                <div class="nav-group profile-nav-group">
+                    <a href="profile.html" class="nav-item" id="profileMenuBtn">
+                        <span class="profile-icon-container">
+                            <img src="assets/images/default-logo.png" alt="Store" class="nav-profile-img" id="navStoreLogo">
+                        </span>
+                        <span class="nav-text">Mi Perfil</span>
+                    </a>
+                </div>
+                <a href="#" class="nav-item" id="logoutBtn">
+                    <span><i class="fas fa-sign-out-alt"></i></span> Cerrar Sesión
+                </a>
+            </nav>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="finance-container">
+                <div class="finance-header">
+                    <h1><i class="fas fa-wallet"></i> Control de Caja</h1>
+                    <button class="btn-primary" onclick="openAddTerminalModal()">
+                        <i class="fas fa-plus"></i> Nueva Terminal
+                    </button>
+                </div>
+
+                <div class="summary-cards">
+                    <div class="summary-card">
+                        <div class="summary-icon"><i class="fas fa-money-bill-wave"></i></div>
+                        <div>
+                            <h3>Total en Cajas</h3>
+                            <p class="amount-display" id="totalCashDisplay">$0.00</p>
+                        </div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-icon"><i class="fas fa-cash-register"></i></div>
+                        <div>
+                            <h3>Cajas Abiertas</h3>
+                            <p class="amount-display" id="openTerminalsDisplay">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <h2 style="margin-bottom: 15px;">Terminales</h2>
+                <div id="terminalsGrid" class="terminals-grid">
+                    <!-- Terminals injected by JS -->
+                    <div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Cargando terminales...</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Drawer Abrir Caja -->
+    <div id="openRegisterModal" class="drawer-overlay">
+        <div class="drawer-content">
+            <div class="drawer-header">
+                <h2><i class="fas fa-lock-open"></i> Abrir Caja</h2>
+                <button class="drawer-close" onclick="closeModal('openRegisterModal')"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="drawer-body">
+                <form id="openRegisterForm">
+                    <input type="hidden" id="openTerminalId" name="terminal_id">
+                    <div class="form-group">
+                        <label>Terminal</label>
+                        <input type="text" id="openTerminalName" readonly class="form-control-plaintext">
+                    </div>
+                    <div class="form-group">
+                        <label for="initialAmount">Monto Inicial en Efectivo</label>
+                        <input type="number" id="initialAmount" name="initial_amount" step="0.01" min="0" required placeholder="0.00">
+                    </div>
+                    <button type="submit" class="btn-save" style="width: 100%; margin-top: 20px;">Abrir Caja</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Drawer Cerrar Caja (Corte) -->
+    <div id="closeRegisterModal" class="drawer-overlay">
+        <div class="drawer-content">
+            <div class="drawer-header">
+                <h2><i class="fas fa-file-invoice-dollar"></i> Corte de Caja</h2>
+                <button class="drawer-close" onclick="closeModal('closeRegisterModal')"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="drawer-body">
+                <form id="closeRegisterForm">
+                    <input type="hidden" id="closeRegisterId" name="register_id">
+                    <div class="form-group">
+                        <label>Terminal</label>
+                        <input type="text" id="closeTerminalName" readonly class="form-control-plaintext">
+                    </div>
+                    
+                    <div class="info-box" style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
+                        <div class="info-row"><span>Saldo Inicial:</span> <span id="closeInitial"></span></div>
+                        <div class="info-row"><span>Ventas:</span> <span id="closeSales"></span></div>
+                        <div class="info-row"><span>Entradas:</span> <span id="closeEntries"></span></div>
+                        <div class="info-row"><span>Retiros:</span> <span id="closeWithdrawals"></span></div>
+                        <div class="info-row" style="border-top: 1px solid #ddd; margin-top: 5px; padding-top: 5px; font-weight: bold;">
+                            <span>Esperado en Caja:</span> <span id="closeExpected"></span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="countedAmount">Dinero Contado (Real)</label>
+                        <input type="number" id="countedAmount" name="counted_amount" step="0.01" min="0" required placeholder="0.00">
+                    </div>
+                    
+                    <div id="diffDisplay" style="text-align: center; margin: 10px 0; font-weight: bold;"></div>
+
+                    <div class="form-group">
+                        <label>Notas del Cierre</label>
+                        <textarea id="closeNotes" name="notes" rows="2"></textarea>
+                    </div>
+
+                    <button type="submit" class="btn-danger" style="width: 100%; margin-top: 20px;">Realizar Corte</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Drawer Historial de Movimientos -->
+    <div id="movementsHistoryDrawer" class="drawer-overlay">
+        <div class="drawer-content">
+            <div class="drawer-header">
+                <h2><i class="fas fa-list-alt"></i> Historial de Caja</h2>
+                <button class="drawer-close" onclick="closeModal('movementsHistoryDrawer')"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="drawer-body" style="display: flex; flex-direction: column; height: 100%;">
+                
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: center; border: 1px solid #e9ecef;">
+                    <div style="font-size: 0.9em; color: #666; margin-bottom: 5px;">Monto Esperado Actual</div>
+                    <div id="historyExpectedAmount" style="font-size: 1.8em; font-weight: bold; color: var(--text-color);">$0.00</div>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <button class="btn-primary" style="width: 100%;" onclick="openMovementsModal(currentHistoryRegisterId)">
+                        <i class="fas fa-plus-circle"></i> Registrar Entrada/Salida
+                    </button>
+                </div>
+                <div id="movementsList" style="flex: 1; overflow-y: auto;">
+                    <!-- Lista inyectada por JS -->
+                    <div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Drawer Movimientos (Agregar) -->
+    <div id="movementsModal" class="drawer-overlay">
+        <div class="drawer-content">
+            <div class="drawer-header">
+                <h2><i class="fas fa-exchange-alt"></i> Movimiento de Efectivo</h2>
+                <button class="drawer-close" onclick="closeModal('movementsModal')"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="drawer-body">
+                <form id="movementsForm">
+                    <input type="hidden" id="moveRegisterId" name="register_id">
+                    <div class="form-group">
+                        <label>Tipo de Movimiento</label>
+                        <select id="moveType" name="type" required>
+                            <option value="entry">Entrada de Dinero</option>
+                            <option value="withdrawal">Retiro de Dinero</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Monto</label>
+                        <input type="number" id="moveAmount" name="amount" step="0.01" min="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Descripción / Motivo</label>
+                        <input type="text" id="moveDesc" name="description" required placeholder="Ej: Pago a proveedor, Cambio inicial...">
+                    </div>
+                    <button type="submit" class="btn-save" style="width: 100%; margin-top: 20px;">Registrar Movimiento</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Drawer Nueva Terminal -->
+    <div id="addTerminalModal" class="drawer-overlay">
+        <div class="drawer-content">
+            <div class="drawer-header">
+                <h2>Nueva Terminal</h2>
+                <button class="drawer-close" onclick="closeModal('addTerminalModal')"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="drawer-body">
+                <form id="addTerminalForm">
+                    <div class="form-group">
+                        <label for="newTerminalName">Nombre de la Terminal</label>
+                        <input type="text" id="newTerminalName" name="terminal_name" required placeholder="Ej: Caja Principal">
+                    </div>
+                    <button type="submit" class="btn-save" style="width: 100%; margin-top: 20px;">Crear Terminal</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
+    <script src="js/app.js"></script>
+    <script src="js/finance.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const session = await checkSession();
+            if (!session) {
+                window.location.href = 'login.html';
+                return;
+            }
+            loadTerminals();
+        });
+    </script>
+</body>
+</html>

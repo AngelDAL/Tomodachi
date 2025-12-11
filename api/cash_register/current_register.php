@@ -23,13 +23,33 @@ try {
     if (!$auth->isLoggedIn()) { Response::unauthorized(); }
     if (!$auth->hasRole([ROLE_ADMIN,ROLE_MANAGER,ROLE_CASHIER])) { Response::error('Permisos insuficientes',403); }
 
+    $currentUser = $auth->getCurrentUser();
+
     $register_id = isset($_GET['register_id']) ? (int)$_GET['register_id'] : 0;
     $store_id = isset($_GET['store_id']) ? (int)$_GET['store_id'] : 0;
+    $terminal_id = isset($_GET['terminal_id']) ? (int)$_GET['terminal_id'] : 0;
 
-    if (!$register_id && !$store_id) { Response::validationError(['params'=>'Proporcione store_id o register_id']); }
+    if (!$register_id && !$store_id && !$terminal_id) { Response::validationError(['params'=>'Proporcione store_id, terminal_id o register_id']); }
 
     if (!$register_id) {
-        $reg = $db->selectOne('SELECT * FROM cash_registers WHERE store_id=? AND status=?',[ $store_id, REGISTER_OPEN ]);
+        $reg = null;
+        if ($terminal_id > 0) {
+            $reg = $db->selectOne('SELECT * FROM cash_registers WHERE terminal_id=? AND status=?',[ $terminal_id, REGISTER_OPEN ]);
+        } else {
+            // Intentar buscar caja abierta por el usuario actual
+            $reg = $db->selectOne('SELECT * FROM cash_registers WHERE store_id=? AND user_id=? AND status=?',[ $store_id, $currentUser['user_id'], REGISTER_OPEN ]);
+            
+            // Si no, buscar si hay una única caja abierta en la tienda
+            if (!$reg) {
+                $regs = $db->select('SELECT * FROM cash_registers WHERE store_id=? AND status=?',[ $store_id, REGISTER_OPEN ]);
+                if (count($regs) === 1) {
+                    $reg = $regs[0];
+                } else if (count($regs) > 1) {
+                    Response::error('Múltiples cajas abiertas. Seleccione una terminal.', 409);
+                }
+            }
+        }
+
         if (!$reg) { Response::error('No hay caja abierta',404); }
         $register_id = (int)$reg['register_id'];
         $register = $reg;

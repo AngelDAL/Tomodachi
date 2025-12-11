@@ -597,9 +597,9 @@ function injectCartTabsUI() {
         btn.setAttribute('data-tab', num);
         btn.innerHTML = `
             <i class="fas fa-shopping-cart tab-icon"></i>
-            <span class="tab-label">Venta ${num}</span>
             <span class="tab-badge">0</span>
         `;
+        btn.title = `Venta ${num}`;
         btn.onclick = () => switchCartTab(num);
         tabsContainer.appendChild(btn);
     });
@@ -1051,6 +1051,10 @@ async function finalizeSale() {
     if (resData.success) {
       playSound('Sound7.mp3');
       showNotification('Venta registrada', 'success');
+      
+      if (resData.register_opened) {
+          showNotification('Se ha abierto una nueva caja automáticamente', 'info');
+      }
       
       // Preparar datos para ticket
       const ticketData = {
@@ -1678,35 +1682,36 @@ function injectMoneyPanelStyles() {
             box-shadow: 0 4px 20px rgba(0,0,0,0.15);
             border-radius: 8px;
             padding: 15px;
-            z-index: 1000;
+            z-index: 2000;
+        }
+        
+        .money-panel-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1999;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s;
+        }
+        .money-panel-overlay.active {
+            opacity: 1;
+            visibility: visible;
         }
         
         /* Escritorio */
         @media (min-width: 769px) {
             .money-panel-tooltip {
-                position: absolute;
-                width: 340px;
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                width: 380px;
                 display: none;
                 animation: fadeIn 0.2s ease-out;
             }
             .money-panel-tooltip.active {
                 display: block;
-            }
-            /* Flechas */
-            .money-panel-tooltip::after {
-                content: '';
-                position: absolute;
-                right: 15px;
-                border-width: 8px;
-                border-style: solid;
-            }
-            .money-panel-tooltip.pos-top::after {
-                top: 100%;
-                border-color: white transparent transparent transparent;
-            }
-            .money-panel-tooltip.pos-bottom::after {
-                bottom: 100%;
-                border-color: transparent transparent white transparent;
             }
         }
 
@@ -1722,7 +1727,7 @@ function injectMoneyPanelStyles() {
                 border: none;
                 box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
                 padding: 20px;
-                z-index: 9999;
+                z-index: 2000;
                 transform: translateY(100%);
                 transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
                 display: block !important;
@@ -1731,26 +1736,12 @@ function injectMoneyPanelStyles() {
                 transform: translateY(0);
             }
             
-            .money-panel-overlay {
-                position: fixed;
-                top: 0; left: 0; right: 0; bottom: 0;
-                background: rgba(0,0,0,0.5);
-                z-index: 9998;
-                opacity: 0;
-                visibility: hidden;
-                transition: opacity 0.3s;
-            }
-            .money-panel-overlay.active {
-                opacity: 1;
-                visibility: visible;
-            }
-            
             /* Ajustes grid móvil */
             .money-grid { gap: 12px; }
             .money-btn { height: 55px; font-size: 1.2rem; }
         }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translate(-50%, -45%); } to { opacity: 1; transform: translate(-50%, -50%); } }
 
         .money-section { margin-bottom: 15px; }
         .money-section-title { font-size: 0.75rem; color: #888; margin-bottom: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -1891,7 +1882,6 @@ function toggleMoneyPanel(e) {
         panel = document.getElementById('money-panel-tooltip');
     }
     
-    const isMobile = window.innerWidth <= 768;
     const overlay = document.getElementById('money-panel-overlay');
 
     if (panel.classList.contains('active')) {
@@ -1901,14 +1891,13 @@ function toggleMoneyPanel(e) {
     } else {
         // Abrir
         panel.classList.add('active');
-        if (isMobile) {
-            if(overlay) overlay.classList.add('active');
-            // Limpiar estilos inline de posicionamiento absoluto
-            panel.style.top = '';
-            panel.style.left = '';
-        } else {
-            positionMoneyPanel(panel);
-        }
+        if(overlay) overlay.classList.add('active');
+        
+        // Limpiar estilos inline de posicionamiento absoluto (para que CSS fixed funcione)
+        panel.style.top = '';
+        panel.style.left = '';
+        panel.style.bottom = '';
+        panel.style.right = '';
     }
 }
 

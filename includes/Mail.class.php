@@ -136,4 +136,47 @@ class Mail {
             return false;
         }
     }
+
+    public function sendPasswordResetEmail($toEmail, $toName, $resetLink) {
+        try {
+            $this->mailer->addAddress($toEmail, $toName);
+
+            // Content
+            $this->mailer->isHTML(true);
+            $this->mailer->Subject = 'Restablecer Contraseña - Tomodachi POS';
+            
+            $body = "
+            <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;'>
+                <div style='text-align: center; margin-bottom: 20px;'>
+                    <h1 style='color: #E3057A;'>Tomodachi POS</h1>
+                </div>
+                <div style='background-color: #f9f9f9; padding: 20px; border-radius: 5px;'>
+                    <h2>Restablecer Contraseña</h2>
+                    <p>Hola {$toName},</p>
+                    <p>Hemos recibido una solicitud para restablecer la contraseña de tu cuenta.</p>
+                    <p>Haz clic en el siguiente botón para crear una nueva contraseña:</p>
+                    <div style='text-align: center; margin: 30px 0;'>
+                        <a href='{$resetLink}' style='background-color: #E3057A; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;'>Restablecer Contraseña</a>
+                    </div>
+                    <p>Si no solicitaste este cambio, puedes ignorar este correo.</p>
+                    <p>Este enlace expirará en 1 hora.</p>
+                    <br>
+                    <p>Saludos,<br>El equipo de Tomodachi</p>
+                </div>
+                <div style='text-align: center; margin-top: 20px; font-size: 12px; color: #999;'>
+                    &copy; " . date('Y') . " Tomodachi POS. Todos los derechos reservados.
+                </div>
+            </div>
+            ";
+
+            $this->mailer->Body = $body;
+            $this->mailer->AltBody = "Hola {$toName}, Para restablecer tu contraseña visita: {$resetLink}";
+
+            $this->mailer->send();
+            return true;
+        } catch (Exception $e) {
+            error_log("Message could not be sent. Mailer Error: {$this->mailer->ErrorInfo}");
+            return false;
+        }
+    }
 }

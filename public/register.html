@@ -154,12 +154,12 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    successMessage.textContent = '¡Registro exitoso! Redirigiendo al login...';
+                    successMessage.textContent = '¡Registro exitoso! Redirigiendo al dashboard...';
                     successMessage.style.display = 'block';
                     registerForm.reset();
                     setTimeout(() => {
-                        window.location.href = 'login.html';
-                    }, 2000);
+                        window.location.href = 'dashboard.html';
+                    }, 1500);
                 } else {
                     showError(result.message || 'Error en el registro');
                     if (result.errors) {

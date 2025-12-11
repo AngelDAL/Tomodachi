@@ -114,10 +114,30 @@ try {
             error_log("Error enviando correo de bienvenida: " . $e->getMessage());
         }
 
+        // Iniciar sesión automáticamente
+        $auth = new Auth($db);
+        $user = $auth->login($username, $password);
+
+        // Establecer cookie persistente (Remember Me)
+        if ($user) {
+            $params = session_get_cookie_params();
+            setcookie(
+                session_name(),
+                session_id(),
+                time() + (365 * 24 * 60 * 60), // 1 año
+                $params['path'],
+                $params['domain'],
+                $params['secure'],
+                $params['httponly']
+            );
+        }
+
         Response::success([
             'store_id' => $store_id,
             'user_id' => $user_id,
-            'message' => 'Registro exitoso. Ahora puedes iniciar sesión.'
+            'user' => $user,
+            'session' => $auth->getCurrentUser(),
+            'message' => 'Registro exitoso. Bienvenido.'
         ], 'Registro exitoso', 201);
 
     } catch (Exception $e) {

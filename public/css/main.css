@@ -4,6 +4,7 @@
  */
 
 @import url('variables.css');
+@import url('utilities.css');
 
 * {
     margin: 0;

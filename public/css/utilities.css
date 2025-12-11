@@ -1,0 +1,14 @@
+
+/* Utility Classes */
+.text-success { color: var(--success-color) !important; }
+.text-danger { color: var(--danger-color) !important; }
+.text-warning { color: var(--warning-color) !important; }
+.text-info { color: var(--info-color) !important; }
+.text-muted { color: var(--text-muted) !important; }
+
+/* Badges */
+.badge-success { background-color: var(--success-color) !important; color: white; }
+.badge-danger { background-color: var(--danger-color) !important; color: white; }
+.badge-warning { background-color: var(--warning-color) !important; color: black; }
+.badge-info { background-color: var(--info-color) !important; color: white; }
+.badge-secondary { background-color: #6c757d !important; color: white; }

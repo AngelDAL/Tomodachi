@@ -125,6 +125,59 @@ try {
         echo json_encode(['success' => true, 'data' => $data]);
         exit;
     }
+
+    if ($type === 'cash_registers') {
+        // Cash Registers History Report
+        $stmt = $conn->prepare("
+            SELECT 
+                cr.register_id,
+                cr.opening_date,
+                cr.closing_date,
+                u.username,
+                t.terminal_name,
+                cr.initial_amount,
+                cr.final_amount,
+                cr.expected_amount,
+                cr.difference,
+                cr.status,
+                cr.notes
+            FROM cash_registers cr
+            JOIN users u ON cr.user_id = u.user_id
+            LEFT JOIN terminals t ON cr.terminal_id = t.terminal_id
+            WHERE cr.store_id = ?
+            AND DATE(cr.opening_date) BETWEEN ? AND ?
+            ORDER BY cr.opening_date DESC
+        ");
+        $stmt->execute([$store_id, $start_date, $end_date]);
+        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode(['success' => true, 'data' => $data]);
+        exit;
+    }
+
+    if ($type === 'cash_movements') {
+        // Cash Movements Report (Entries/Withdrawals)
+        $stmt = $conn->prepare("
+            SELECT 
+                cm.movement_id,
+                cm.created_at,
+                u.username,
+                t.terminal_name,
+                cm.movement_type,
+                cm.amount,
+                cm.description
+            FROM cash_movements cm
+            JOIN cash_registers cr ON cm.register_id = cr.register_id
+            JOIN users u ON cm.user_id = u.user_id
+            LEFT JOIN terminals t ON cr.terminal_id = t.terminal_id
+            WHERE cr.store_id = ?
+            AND DATE(cm.created_at) BETWEEN ? AND ?
+            ORDER BY cm.created_at DESC
+        ");
+        $stmt->execute([$store_id, $start_date, $end_date]);
+        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode(['success' => true, 'data' => $data]);
+        exit;
+    }
     
     // 1. Daily Sales
     $stmt = $conn->prepare("

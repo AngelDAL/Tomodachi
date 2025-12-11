@@ -90,6 +90,8 @@
                                     <option value="inventory">Valoración de Inventario</option>
                                     <option value="top_products">Productos Más Vendidos</option>
                                     <option value="inventory_movements">Movimientos de Inventario</option>
+                                    <option value="cash_registers">Historial de Cajas (Cortes)</option>
+                                    <option value="cash_movements">Movimientos de Efectivo</option>
                                     <option value="qr_labels">Impresión de Etiquetas QR</option>
                                 </select>
                             </div>
@@ -312,6 +314,65 @@
                         </tr>
                     `;
                 });
+            } else if (type === 'cash_registers') {
+                html += `
+                    <th>ID</th>
+                    <th>Apertura</th>
+                    <th>Cierre</th>
+                    <th>Terminal</th>
+                    <th>Usuario</th>
+                    <th>Inicial</th>
+                    <th>Final</th>
+                    <th>Diferencia</th>
+                    <th>Estado</th>
+                </tr></thead><tbody>`;
+
+                data.forEach(row => {
+                    const diff = parseFloat(row.difference || 0);
+                    const diffColor = diff < 0 ? 'red' : (diff > 0 ? 'green' : 'inherit');
+                    
+                    html += `
+                        <tr>
+                            <td data-label="ID">#${row.register_id}</td>
+                            <td data-label="Apertura">${new Date(row.opening_date).toLocaleString()}</td>
+                            <td data-label="Cierre">${row.closing_date ? new Date(row.closing_date).toLocaleString() : '-'}</td>
+                            <td data-label="Terminal">${row.terminal_name || 'General'}</td>
+                            <td data-label="Usuario">${row.username}</td>
+                            <td data-label="Inicial">$${parseFloat(row.initial_amount).toFixed(2)}</td>
+                            <td data-label="Final">${row.final_amount !== null ? '$' + parseFloat(row.final_amount).toFixed(2) : '-'}</td>
+                            <td data-label="Diferencia" style="color: ${diffColor}">${row.difference !== null ? '$' + diff.toFixed(2) : '-'}</td>
+                            <td data-label="Estado"><span class="badge ${row.status === 'open' ? 'badge-success' : 'badge-secondary'}">${row.status === 'open' ? 'Abierta' : 'Cerrada'}</span></td>
+                        </tr>
+                    `;
+                });
+            } else if (type === 'cash_movements') {
+                html += `
+                    <th>Fecha</th>
+                    <th>Terminal</th>
+                    <th>Usuario</th>
+                    <th>Tipo</th>
+                    <th>Monto</th>
+                    <th>Descripción</th>
+                </tr></thead><tbody>`;
+
+                data.forEach(row => {
+                    let typeLabel = row.movement_type;
+                    let typeClass = '';
+                    if (row.movement_type === 'entry') { typeLabel = 'Entrada'; typeClass = 'text-success'; }
+                    else if (row.movement_type === 'withdrawal') { typeLabel = 'Retiro'; typeClass = 'text-danger'; }
+                    else if (row.movement_type === 'sale') { typeLabel = 'Venta'; }
+
+                    html += `
+                        <tr>
+                            <td data-label="Fecha">${new Date(row.created_at).toLocaleString()}</td>
+                            <td data-label="Terminal">${row.terminal_name || 'General'}</td>
+                            <td data-label="Usuario">${row.username}</td>
+                            <td data-label="Tipo" class="${typeClass}">${typeLabel}</td>
+                            <td data-label="Monto">$${parseFloat(row.amount).toFixed(2)}</td>
+                            <td data-label="Descripción">${row.description || '-'}</td>
+                        </tr>
+                    `;
+                });
             } else if (type === 'inventory_movements') {
                 html += `
                     <th>Fecha</th>
@@ -394,6 +455,36 @@
                     'Total Unidades en Stock': totalStock,
                     'Valor Total Costo': '$' + totalCostVal.toFixed(2),
                     'Valor Total Venta': '$' + totalPriceVal.toFixed(2)
+                };
+            } else if (currentReportType === 'cash_registers') {
+                let totalDiff = 0;
+                let closedCount = 0;
+                currentReportData.forEach(row => {
+                    if (row.status === 'closed') {
+                        totalDiff += parseFloat(row.difference || 0);
+                        closedCount++;
+                    }
+                });
+                summary = {
+                    'Total Registros': currentReportData.length,
+                    'Cajas Cerradas': closedCount,
+                    'Diferencia Acumulada': '$' + totalDiff.toFixed(2)
+                };
+            } else if (currentReportType === 'cash_movements') {
+                let totalIn = 0;
+                let totalOut = 0;
+                currentReportData.forEach(row => {
+                    if (row.movement_type === 'entry' || row.movement_type === 'sale') {
+                        totalIn += parseFloat(row.amount);
+                    } else if (row.movement_type === 'withdrawal') {
+                        totalOut += parseFloat(row.amount);
+                    }
+                });
+                summary = {
+                    'Total Movimientos': currentReportData.length,
+                    'Total Entradas (Inc. Ventas)': '$' + totalIn.toFixed(2),
+                    'Total Retiros': '$' + totalOut.toFixed(2),
+                    'Flujo Neto': '$' + (totalIn - totalOut).toFixed(2)
                 };
             } else if (currentReportType === 'top_products') {
                 let totalRevenue = 0;
@@ -627,6 +718,44 @@
                         <td style="padding: 8px; border: 1px solid #ddd;">${row.new_stock}</td>
                         <td style="padding: 8px; border: 1px solid #ddd;">${row.username}</td>
                         <td style="padding: 8px; border: 1px solid #ddd;">${row.notes || '-'}</td>
+                    </tr>`;
+                });
+            } else if (currentReportType === 'cash_registers') {
+                tableHtml += '<th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">ID</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Apertura</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Cierre</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Terminal</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Usuario</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Inicial</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Final</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Diferencia</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Estado</th></tr></thead><tbody>';
+                currentReportData.forEach((row, index) => {
+                    const bg = index % 2 === 0 ? '#fff' : '#f2f2f2';
+                    const diff = parseFloat(row.difference || 0);
+                    const diffColor = diff < 0 ? 'red' : (diff > 0 ? 'green' : 'inherit');
+                    
+                    tableHtml += `<tr style="background-color: ${bg};">
+                        <td style="padding: 8px; border: 1px solid #ddd;">#${row.register_id}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">${new Date(row.opening_date).toLocaleString()}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">${row.closing_date ? new Date(row.closing_date).toLocaleString() : '-'}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">${row.terminal_name || 'General'}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">${row.username}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">$${parseFloat(row.initial_amount).toFixed(2)}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">${row.final_amount !== null ? '$' + parseFloat(row.final_amount).toFixed(2) : '-'}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd; color: ${diffColor};">${row.difference !== null ? '$' + diff.toFixed(2) : '-'}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">${row.status === 'open' ? 'Abierta' : 'Cerrada'}</td>
+                    </tr>`;
+                });
+            } else if (currentReportType === 'cash_movements') {
+                tableHtml += '<th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Fecha</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Terminal</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Usuario</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Tipo</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Monto</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Descripción</th></tr></thead><tbody>';
+                currentReportData.forEach((row, index) => {
+                    const bg = index % 2 === 0 ? '#fff' : '#f2f2f2';
+                    let typeLabel = row.movement_type;
+                    let typeColor = 'inherit';
+                    if (row.movement_type === 'entry') { typeLabel = 'Entrada'; typeColor = 'green'; }
+                    else if (row.movement_type === 'withdrawal') { typeLabel = 'Retiro'; typeColor = 'red'; }
+                    else if (row.movement_type === 'sale') { typeLabel = 'Venta'; }
+
+                    tableHtml += `<tr style="background-color: ${bg};">
+                        <td style="padding: 8px; border: 1px solid #ddd;">${new Date(row.created_at).toLocaleString()}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">${row.terminal_name || 'General'}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">${row.username}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd; color: ${typeColor};">${typeLabel}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">$${parseFloat(row.amount).toFixed(2)}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">${row.description || '-'}</td>
                     </tr>`;
                 });
             }

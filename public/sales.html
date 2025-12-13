@@ -14,7 +14,6 @@
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/sales.css">
     <link rel="stylesheet" href="css/scanner_overlay.css">
-    <link rel="stylesheet" href="css/iron_mode.css">
     <script src="js/theme-init.js"></script>
 </head>
 
@@ -94,9 +93,7 @@
                             aria-label="Buscar producto" class="search-main">
                         <button id="toggleScannerBtn" type="button" class="btn-scanner" aria-label="Escáner"
                             title="Activar escáner"><i class="fas fa-barcode"></i></button>
-                        <button id="toggleVoiceBtn" type="button" class="btn-scanner" style="margin-left: 5px;"
-                            aria-label="Control por Voz" title="Activar Asistente"><i class="fas fa-microphone"
-                                style="color: var(--primary-color);"></i></button>
+                        <!-- Voice control removed per request -->
                     </div>
 
                     <!-- Checkout Header (Movido desde abajo) -->
@@ -107,21 +104,31 @@
                                         aria-hidden="true"></i><span>Total</span></div>
                                 <span id="totalBadge" class="checkout-value total-value" aria-live="polite">$0.00</span>
                             </div>
-                            <div class="checkout-item received-item" aria-label="Monto recibido">
-                                <div class="checkout-label"><i class="fas fa-hand-holding-dollar"
-                                        aria-hidden="true"></i><span>Recibido</span></div>
-                                <input type="number" id="checkoutReceived" min="0" step="0.01" value="0"
-                                    class="checkout-input" placeholder="0.00" aria-label="Ingresar monto recibido">
+
+                            <!-- Agrupación de Pago -->
+                            <div class="pay-action-row"
+                                style="grid-column: 1/-1; display:flex; gap:8px; align-items: flex-end;">
+                                <div class="checkout-item received-item" style="flex: 1; min-width: 0;"
+                                    aria-label="Monto recibido">
+                                    <div class="checkout-label" style="font-size: 0.8rem; margin-bottom: 2px;">Recibido
+                                    </div>
+                                    <input type="number" id="checkoutReceived" min="0" step="0.01" value=""
+                                        class="checkout-input" placeholder="$"
+                                        style="width: 100%; padding: 10px; font-size: 1.1rem; border: 2px solid #ddd; border-radius: 8px;">
+                                </div>
+                                <button id="finalizeSaleBtn" class="btn-finalize-sale" disabled title="Cobrar ahora"
+                                    style="flex: 1.5; min-width: 0; margin: 0; height: 48px; display: flex; align-items: center; justify-content: center; gap: 8px;"
+                                    aria-label="Finalizar venta">
+                                    <i class="fas fa-check-circle"></i><span class="btn-text">COBRAR</span>
+                                </button>
                             </div>
-                            <div class="checkout-item change-item" aria-label="Cambio a entregar">
-                                <div class="checkout-label"><i class="fas fa-coins"
-                                        aria-hidden="true"></i><span>Cambio</span></div>
-                                <span id="checkoutChange" class="checkout-value change-value"
-                                    aria-live="polite">$0.00</span>
+
+                            <div class="checkout-item change-item" aria-label="Cambio a entregar"
+                                style="grid-column: 1/-1; flex-direction: row; justify-content: space-between; align-items: center; padding: 0 5px;">
+                                <div class="checkout-label">Cambio:</div>
+                                <span id="checkoutChange" class="checkout-value change-value" aria-live="polite"
+                                    style="font-size: 1.1rem;">$0.00</span>
                             </div>
-                            <button id="finalizeSaleBtn" class="btn-finalize-sale" disabled title="Finalizar venta"
-                                aria-label="Finalizar venta"><i class="fas fa-check"></i><span
-                                    class="btn-text">Finalizar</span></button>
                         </div>
                     </div>
 
@@ -281,22 +288,7 @@
         </div>
     </div>
 
-    <!-- Kawaii Voice Overlay -->
-    <div id="jarvisOverlay" class="jarvis-overlay">
-        <div class="voice-avatar">
-            <i class="fas fa-microphone"></i>
-        </div>
-        <div class="pulse-ring"></div>
-
-        <div class="jarvis-status" id="jarvisStatus">¿En qué te ayudo?</div>
-        <div class="jarvis-transcript" id="jarvisTranscript">...</div>
-
-        <div class="voice-waves-container">
-            <div class="voice-wave"></div>
-            <div class="voice-wave"></div>
-            <div class="voice-wave"></div>
-        </div>
-    </div>
+    <!-- Voice overlay removed -->
 
     <script src="js/app.js"></script>
     <script src="lib/html5-qrcode/html5-qrcode.min.js"></script>
@@ -304,7 +296,7 @@
     <script src="js/tour.js"></script>
     <script src="lib/animejs/anime.min.js"></script>
     <script src="js/sales.js"></script>
-    <script src="js/voice_commander.js"></script>
+    <!-- voice_commander removed -->
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             const session = await checkSession();

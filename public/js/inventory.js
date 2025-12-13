@@ -293,13 +293,13 @@ function bindEvents() {
     }
 
     // Cerrar modal al hacer clic fuera
-    if (addProductModal) {
-        addProductModal.addEventListener('click', (e) => {
-            if (e.target === addProductModal) {
-                closeAddProductModal();
-            }
-        });
-    }
+    // if (addProductModal) {
+    //     addProductModal.addEventListener('click', (e) => {
+    //         if (e.target === addProductModal) {
+    //             closeAddProductModal();
+    //         }
+    //     });
+    // }
 
     // Modal de detalles
     const closeDetailsBtn = document.getElementById('closeDetailsModalBtn');

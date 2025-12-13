@@ -1404,6 +1404,7 @@
     font-size: 0.95rem;
     font-weight: 600;
     width: 120px;
+    min-width: 80px;
     transition: all 0.2s;
     text-align: right;
 }
@@ -1616,6 +1617,7 @@
     text-align: center;
     padding: 5px 0;
     width: 110px;
+    min-width: 80px;
     font-size: 1.3rem;
     font-weight: 600;
 }

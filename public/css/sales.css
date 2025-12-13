@@ -96,7 +96,7 @@
     display: flex;
     gap: 10px;
     padding: 10px 12px 4px;
-    overflow-x: auto;
+    /* overflow-x: auto; */
     overscroll-behavior-x: contain;
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -274,7 +274,7 @@
     position: relative;
     /* Para animaciones de slide */
     transition: transform 0.3s ease-out, opacity 0.3s ease-out;
-    max-height: 54vh;
+    max-height: 50vh;
 }
 
 /* Animaciones de desplazamiento */
@@ -1326,230 +1326,214 @@
     background: #a0a0a0;
 }
 
-/* =================== NUEVA BARRA CHECKOUT =================== */
-.cart-footer {
-    background: linear-gradient(90deg, var(--white) 0%, var(--bg-lighter) 100%);
-    box-shadow: 0 -4px 14px rgba(0, 0, 0, 0.08);
+/* =================== BARRA DE CHECKOUT (REDISEÑO GRID) =================== */
+.cart-footer.checkout-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 12px 20px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    display: block;
+    width: 100%;
+    height: auto;
 }
 
 .checkout-group {
-    flex: 1;
-    display: flex;
-    align-items: stretch;
-    justify-content: flex-end;
-    gap: 20px;
-    padding: 10px 18px;
-    font-size: 0.85rem;
+    display: grid;
+    /* Desktop Layout: Total | Received | Change | Button */
+    grid-template-columns: auto auto auto 1fr;
+    align-items: center;
+    gap: 24px;
+    max-width: 1400px;
+    margin: 0 auto;
 }
 
+/* Flatten the pay-action-row so its children participate in the main grid */
+.pay-action-row {
+    display: contents;
+}
+
+/* Base Item Styles */
 .checkout-item {
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    gap: 6px;
-    min-width: 105px;
+    gap: 4px;
+    min-width: 0;
 }
 
+/* Logical Ordering for Desktop */
+.total-item { order: 1; }
+.received-item { order: 2; }
+.change-item { order: 3; }
+.btn-finalize-sale { order: 4; }
+
+/* Typography & Colors */
 .checkout-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #6b7280;
+    font-weight: 700;
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 0.65rem;
-    font-weight: 700;
-    letter-spacing: 0.7px;
-    text-transform: uppercase;
-    color: var(--text-medium);
-}
-
-.checkout-label i {
-    font-size: 0.9rem;
+    white-space: nowrap;
 }
 
 .checkout-value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+.total-value { color: #059669; } /* Green-600 */
+.change-value { color: #4b5563; } /* Gray-600 */
+.change-value.negative { color: #dc2626; } /* Red-600 */
+
+/* Input Styling */
+.received-item .checkout-input {
+    font-size: 1.5rem;
+    padding: 8px 12px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    width: 160px;
+    font-weight: 700;
+    color: #111827;
+    text-align: right;
+    transition: all 0.2s;
+    background: #f9fafb;
+}
+
+.received-item .checkout-input:focus {
+    border-color: #059669;
+    background: #fff;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+}
+
+/* Button Styling */
+.btn-finalize-sale {
+    height: 52px;
+    background: #059669;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
     display: flex;
     align-items: center;
-    font-variant-numeric: tabular-nums;
-    font-weight: 600;
-}
-
-.total-value {
-    font-size: 1.55rem;
-    font-weight: 700;
-    color: var(--primary-darker);
-    line-height: 1;
-}
-
-.change-value {
-    font-size: 1.55rem;
-    font-weight: 700;
-    color: var(--warning-dark);
-    line-height: 1;
-    transition: color 0.2s;
-}
-
-.change-value.negative {
-    color: var(--danger-dark);
-}
-
-.received-item .checkout-input {
-    font-size: 1.05rem;
-    font-weight: 600;
-    color: var(--secondary-darker);
-}
-
-.checkout-input {
-    padding: 8px 10px;
-    border: 2px solid var(--border-input);
-    background: var(--white);
-    border-radius: 8px;
-    font-size: 0.95rem;
-    font-weight: 600;
-    width: 120px;
-    min-width: 80px;
+    justify-content: center;
+    gap: 10px;
     transition: all 0.2s;
-    text-align: right;
+    width: 100%;
+    max-width: 320px;
+    justify-self: end; /* Align to right end of container */
+    box-shadow: 0 4px 6px rgba(5, 150, 105, 0.2);
 }
 
-.checkout-input:focus {
-    outline: none;
-    border-color: var(--secondary-dark);
-    box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.15);
+.btn-finalize-sale:hover:not(:disabled) {
+    background: #047857;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 8px rgba(5, 150, 105, 0.25);
 }
 
-.checkout-group .btn-finalize-sale {
-    width: auto;
-    min-width: 150px;
-    padding: 12px 18px;
-    font-size: 1.05rem;
-    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-darker) 100%);
-    border: none;
-    border-radius: 10px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);
+.btn-finalize-sale:active:not(:disabled) {
+    transform: translateY(0);
 }
 
-.checkout-group .btn-finalize-sale .btn-text {
-    font-size: 0.9rem;
-    font-weight: 600;
-}
-
-.checkout-group .btn-finalize-sale:disabled {
-    background: #bdbdbd;
+.btn-finalize-sale:disabled {
+    background: #d1d5db;
+    color: #9ca3af;
+    cursor: not-allowed;
     box-shadow: none;
 }
 
-.checkout-group .btn-finalize-sale:hover:not(:disabled) {
-    filter: brightness(1.05);
-}
+/* ================= RESPONSIVE LAYOUTS ================= */
 
-.checkout-group .btn-finalize-sale:active:not(:disabled) {
-    transform: scale(0.97);
-}
-
-/* Responsive checkout bar */
-@media (max-width: 640px) {
+/* Tablet / Small Desktop (< 960px) */
+@media (max-width: 960px) {
     .checkout-group {
-        gap: 14px;
-        padding: 8px 12px;
+        /* Switch to 2 rows */
+        /* Row 1: Total | Change */
+        /* Row 2: Received | Button */
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
     }
 
-    .total-value,
-    .change-value {
+    .total-item { 
+        order: 1; 
+        align-items: flex-start;
+    }
+    
+    .change-item { 
+        order: 2; 
+        align-items: flex-end; 
+        text-align: right;
+    }
+    .change-item .checkout-label { justify-content: flex-end; }
+
+    .received-item { 
+        order: 3; 
+        grid-column: 1; 
+    }
+    .received-item .checkout-input { width: 100%; }
+
+    .btn-finalize-sale { 
+        order: 4; 
+        grid-column: 2; 
+        max-width: none; 
+        justify-self: stretch;
+    }
+}
+
+/* Mobile (< 480px) */
+@media (max-width: 480px) {
+    .cart-footer.checkout-header {
+        padding: 10px 12px;
+    }
+
+    .checkout-group {
+        gap: 12px;
+    }
+
+    /* Adjust font sizes for small screens */
+    .checkout-value,
+    .received-item .checkout-input {
         font-size: 1.3rem;
     }
 
-    .checkout-input {
-        width: 105px;
-        padding: 6px 8px;
-        font-size: 0.9rem;
-    }
-
-    .checkout-group .btn-finalize-sale {
-        min-width: 120px;
-        padding: 10px 14px;
-        font-size: 0.95rem;
+    .btn-finalize-sale {
+        height: 48px;
+        font-size: 1rem;
     }
 }
 
-@media (max-width: 480px) {
-
-    /* Totales en 1a fila; botón en 2a fila centrado */
-    .cart-footer {
-        height: auto;
-        padding: 8px 10px 12px;
-        flex-wrap: wrap;
-    }
-
+/* Very Small Mobile (< 360px) */
+@media (max-width: 360px) {
     .checkout-group {
-        flex: 1 1 100%;
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 8px;
-        padding: 4px 6px 0;
-        align-items: end;
+        /* Stack everything vertically */
+        grid-template-columns: 1fr;
+        gap: 10px;
     }
 
-    .checkout-item {
-        min-width: 0;
-    }
-
-    .checkout-label {
-        font-size: 0.55rem;
-    }
-
-    .total-value,
-    .change-value {
-        font-size: 1.1rem;
-    }
-
-    .checkout-input {
-        width: 78px;
-        padding: 4px 6px;
-        font-size: 0.85rem;
-    }
-
-    .received-item .checkout-input {
-        width: 78px;
-    }
-
-    /* Botón centrado en segunda fila */
-    .checkout-group .btn-finalize-sale {
+    .total-item, .change-item, .received-item, .btn-finalize-sale {
         grid-column: 1 / -1;
-        justify-self: center;
-        width: clamp(140px, 60%, 220px);
-        min-width: 140px;
-        padding: 10px 14px;
-        font-size: 0.95rem;
-        border-radius: 10px;
-        box-shadow: 0 6px 14px rgba(46, 125, 50, 0.22);
+        align-items: stretch;
+        text-align: left;
     }
-}
-
-/* Ajustes para pantallas muy pequeñas: solo iconos en etiquetas */
-@media (max-width: 380px) {
-    .checkout-label span {
-        display: none;
-    }
-
-    .checkout-label i {
-        font-size: 1.2rem;
-        margin-right: 0;
-    }
-
-    .checkout-group {
-        gap: 4px;
-        padding: 4px;
-    }
-
-    .checkout-input {
-        width: 70px;
-        font-size: 0.8rem;
-    }
-
-    .received-item .checkout-input {
-        width: 70px;
-    }
+    
+    .change-item { align-items: flex-start; text-align: left; }
+    .change-item .checkout-label { justify-content: flex-start; }
+    
+    /* Reorder for vertical stack: Total -> Received -> Button -> Change */
+    .total-item { order: 1; }
+    .received-item { order: 2; }
+    .btn-finalize-sale { order: 3; }
+    .change-item { order: 4; }
 }
 
 /* ==========================================================================
@@ -1880,396 +1864,6 @@
 
 .btn-primary:hover {
     background: var(--primary-dark);
-}
-/* Ajustes para el Checkout Header (Movido arriba) */
-.checkout-header {
-    position: relative;
-    box-shadow: none;
-    border-bottom: 1px solid var(--border-light);
-    padding: 10px 16px;
-    background: white;
-}
-
-.checkout-group {
-    justify-content: space-between; /* Distribuir espacio uniformemente */
-    align-items: center; /* Alinear verticalmente al centro */
-}
-
-/* Alinear items del checkout */
-.checkout-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center; /* Centrar contenido horizontalmente */
-    justify-content: center;
-    text-align: center;
-}
-
-.checkout-label {
-    justify-content: center;
-    margin-bottom: 4px;
-}
-
-/* Corregir alineación del input recibido */
-.received-item .checkout-input {
-    text-align: center;
-    padding: 5px 0;
-    height: auto;
-    margin: 0;
-    line-height: 1.2;
-    display: block; /* Asegurar comportamiento de bloque */
-}
-
-/* Asegurar que los valores de texto estén alineados con el input */
-.checkout-value {
-    justify-content: center;
-    height: auto; /* Permitir altura natural */
-    line-height: 1.2;
-    padding: 5px 0; /* Igualar padding del input */
-    display: block; /* Comportamiento similar al input */
-}
-
-/* Ajuste específico para el botón finalizar */
-.checkout-group .btn-finalize-sale {
-    margin-left: auto; /* Empujar a la derecha si hay espacio extra */
-}
-
-/* Ajustes Responsive para el Header Checkout */
-@media (max-width: 640px) {
-    .checkout-header {
-        padding: 8px 10px;
-    }
-    
-    .checkout-group {
-        gap: 10px;
-        display: grid;
-        grid-template-columns: repeat(3, 1fr); /* 3 columnas iguales para datos */
-        grid-template-rows: auto auto; /* 2 filas */
-    }
-    
-    /* Los 3 items de datos en la primera fila */
-    .checkout-item {
-        grid-row: 1;
-    }
-    
-    /* El botón ocupa toda la segunda fila */
-    .checkout-group .btn-finalize-sale {
-        grid-row: 2;
-        grid-column: 1 / -1;
-        width: 100%;
-        margin-top: 8px;
-    }
-}
-
-/* ==========================================================================
-   COMPACT STICKY CHECKOUT HEADER
-   ========================================================================== */
-
-/* Asegurar que el header completo sea sticky */
-.pos-header {
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    background: white;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-}
-
-/* Reducir tamaño del contenedor del checkout */
-.checkout-header {
-    padding: 4px 12px;
-    background: #fcfcfc;
-    border-bottom: 1px solid #e0e0e0;
-}
-
-/* Ajustar grupo para ser más compacto */
-.checkout-group {
-    padding: 0;
-    gap: 15px;
-}
-
-/* Etiquetas más pequeñas */
-.checkout-label {
-    font-size: 0.6rem;
-    margin-bottom: 0;
-    opacity: 0.8;
-}
-
-.checkout-label i {
-    font-size: 0.7rem;
-}
-
-/* Valores más compactos */
-.total-value, 
-.change-value {
-    font-size: 1.1rem;
-    padding: 0;
-}
-
-/* Input recibido más compacto */
-.received-item .checkout-input {
-    font-size: 1.1rem;
-    padding: 0;
-    width: 90px;
-    background: transparent;
-    border-bottom-width: 1px;
-}
-
-.received-item .checkout-input:focus {
-    background: white;
-}
-
-/* Botón finalizar más pequeño */
-.checkout-group .btn-finalize-sale {
-    padding: 6px 16px;
-    font-size: 0.9rem;
-    min-width: 100px;
-    height: 36px;
-    box-shadow: 0 2px 5px rgba(46, 125, 50, 0.2);
-}
-
-/* Ajustes Responsive Compactos */
-@media (max-width: 640px) {
-    .checkout-header {
-        padding: 6px 8px;
-    }
-
-    .checkout-group {
-        gap: 6px;
-        /* Mantener grid pero más ajustado */
-    }
-
-    .total-value, 
-    .change-value {
-        font-size: 1rem;
-    }
-
-    .received-item .checkout-input {
-        font-size: 1rem;
-        width: 100%;
-    }
-
-    .checkout-group .btn-finalize-sale {
-        height: 32px;
-        padding: 0 12px;
-        font-size: 0.85rem;
-        margin-top: 4px;
-    }
-    
-    /* Reducir altura de la barra de búsqueda también para ganar espacio */
-    .search-section {
-        padding: 8px 10px;
-    }
-    
-    .search-main {
-        padding: 6px 10px;
-        font-size: 0.9rem;
-    }
-    
-    .btn-scanner {
-        padding: 6px 10px;
-    }
-}
-
-/* ==========================================================================
-   STICKY CHECKOUT HEADER (FIXED SIZE & LAYOUT FIXES)
-   ========================================================================== */
-
-/* Estado Base (Fijo y Compacto) */
-.pos-header {
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    background: white;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    padding-bottom: 0;
-}
-
-/* Override fuerte para anular estilos de .cart-footer si existen */
-.checkout-header.cart-footer {
-    position: relative !important;
-    bottom: auto !important;
-    right: auto !important;
-    height: auto !important;
-    width: 100% !important;
-    border-top: none !important;
-    padding: 8px 16px;
-    background: #fcfcfc;
-    border-bottom: 1px solid #e0e0e0;
-    overflow: visible !important; /* Permitir que sombras o elementos sobresalgan si es necesario */
-    display: block !important; /* Resetear display flex del footer */
-}
-
-.checkout-group {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 20px;
-    width: 100%;
-    max-width: 100%;
-    flex-wrap: wrap;
-}
-
-.checkout-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-width: 80px;
-}
-
-.checkout-label {
-    font-size: 0.65rem;
-    margin-bottom: 2px;
-    opacity: 0.9;
-    white-space: nowrap;
-}
-
-.checkout-label i {
-    font-size: 0.8rem;
-}
-
-.total-value, 
-.change-value {
-    font-size: 1.2rem;
-    font-weight: 700;
-    padding: 2px 0;
-    white-space: nowrap;
-}
-
-.received-item .checkout-input {
-    font-size: 1.2rem;
-    width: 100px;
-    text-align: center;
-    padding: 2px 0;
-    background: transparent;
-    border: none;
-    border-bottom: 2px solid #ddd;
-    border-radius: 0;
-}
-
-.received-item .checkout-input:focus {
-    border-bottom-color: var(--primary-color);
-    background: white;
-}
-
-/* Botón finalizar */
-.checkout-group .btn-finalize-sale {
-    padding: 8px 20px;
-    font-size: 1rem;
-    min-width: 120px;
-    height: 40px;
-    box-shadow: 0 2px 5px rgba(46, 125, 50, 0.2);
-    margin-left: auto;
-    white-space: nowrap;
-    display: inline-flex !important; /* Asegurar visibilidad */
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-}
-
-/* Ajustes Responsive Compactos */
-@media (max-width: 768px) {
-    .checkout-group {
-        gap: 10px;
-    }
-    
-    .checkout-item {
-        min-width: 60px;
-    }
-}
-
-@media (max-width: 640px) {
-    .checkout-header.cart-footer {
-        padding: 8px 10px;
-    }
-
-    .checkout-group {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        grid-template-rows: auto auto;
-        gap: 8px 12px;
-        justify-items: center;
-    }
-
-    .checkout-item {
-        grid-row: 1;
-        width: 100%;
-    }
-
-    .checkout-group .btn-finalize-sale {
-        grid-row: 2;
-        grid-column: 1 / -1;
-        width: 100%;
-        margin: 4px 0 0 0;
-        height: 42px;
-    }
-
-    .total-value, 
-    .change-value,
-    .received-item .checkout-input {
-        font-size: 1.1rem;
-    }
-    
-    .search-section {
-        padding: 8px 10px;
-    }
-}
-
-@media (max-width: 380px) {
-    .checkout-label span {
-        display: none;
-    }
-    
-    .checkout-label i {
-        font-size: 1rem;
-        margin: 0;
-    }
-}
-
-.total-value, 
-.change-value {
-    font-size: 1.25rem; /* Tamaño intermedio fijo */
-}
-
-.received-item .checkout-input {
-    font-size: 1.25rem; /* Tamaño intermedio fijo */
-    width: 100px;
-    padding: 2px 0;
-}
-
-.checkout-group .btn-finalize-sale {
-    height: 40px; /* Tamaño intermedio fijo */
-    font-size: 0.95rem;
-    padding: 0 16px;
-}
-
-.search-section {
-    padding: 10px 14px;
-}
-
-/* Ajustes Responsive */
-@media (max-width: 640px) {
-    .checkout-header {
-        padding: 6px 10px;
-    }
-    
-    .total-value, 
-    .change-value {
-        font-size: 1.1rem;
-    }
-
-    .received-item .checkout-input {
-        font-size: 1.1rem;
-        width: 90px;
-    }
-
-    .checkout-group .btn-finalize-sale {
-        height: 36px;
-        font-size: 0.9rem;
-    }
-    
-    .search-section {
-        padding: 8px 10px;
-    }
 }
 /* Animación de producto añadido */
 @keyframes itemAddedPulse {

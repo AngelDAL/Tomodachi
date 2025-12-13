@@ -106,28 +106,21 @@
                             </div>
 
                             <!-- Agrupación de Pago -->
-                            <div class="pay-action-row"
-                                style="grid-column: 1/-1; display:flex; gap:8px; align-items: flex-end;">
-                                <div class="checkout-item received-item" style="flex: 1; min-width: 0;"
-                                    aria-label="Monto recibido">
-                                    <div class="checkout-label" style="font-size: 0.8rem; margin-bottom: 2px;">Recibido
-                                    </div>
+                            <div class="pay-action-row">
+                                <div class="checkout-item received-item" aria-label="Monto recibido">
+                                    <div class="checkout-label">Recibido</div>
                                     <input type="number" id="checkoutReceived" min="0" step="0.01" value=""
-                                        class="checkout-input" placeholder="$"
-                                        style="width: 100%; padding: 10px; font-size: 1.1rem; border: 2px solid #ddd; border-radius: 8px;">
+                                        class="checkout-input" placeholder="$">
                                 </div>
                                 <button id="finalizeSaleBtn" class="btn-finalize-sale" disabled title="Cobrar ahora"
-                                    style="flex: 1.5; min-width: 0; margin: 0; height: 48px; display: flex; align-items: center; justify-content: center; gap: 8px;"
                                     aria-label="Finalizar venta">
                                     <i class="fas fa-check-circle"></i><span class="btn-text">COBRAR</span>
                                 </button>
                             </div>
 
-                            <div class="checkout-item change-item" aria-label="Cambio a entregar"
-                                style="grid-column: 1/-1; flex-direction: row; justify-content: space-between; align-items: center; padding: 0 5px;">
+                            <div class="checkout-item change-item" aria-label="Cambio a entregar">
                                 <div class="checkout-label">Cambio:</div>
-                                <span id="checkoutChange" class="checkout-value change-value" aria-live="polite"
-                                    style="font-size: 1.1rem;">$0.00</span>
+                                <span id="checkoutChange" class="checkout-value change-value" aria-live="polite">$0.00</span>
                             </div>
                         </div>
                     </div>

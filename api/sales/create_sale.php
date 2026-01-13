@@ -107,9 +107,10 @@ try {
         $pid = isset($it['product_id']) ? (int)$it['product_id'] : 0;
         // Permitir decimales para venta a granel
         $qty = isset($it['quantity']) ? (float)$it['quantity'] : 0;
-        // SEGURIDAD: Ignoramos el precio enviado por el frontend y usamos el de la BD
-        // $price = isset($it['price']) ? (float)$it['price'] : 0.0; 
         
+        // Aceptamos el precio del frontend para reflejar descuentos/promociones calculados por el cliente (JS)
+        $requestedPrice = isset($it['price']) ? (float)$it['price'] : null;
+
         if ($pid<=0 || $qty<=0) { Response::validationError(['items'=>'Datos inválidos en item índice '.$idx]); }
         
         // Obtenemos precio real de la base de datos y stock
@@ -117,7 +118,9 @@ try {
         
         if (!$prod) { Response::error('Producto inactivo o inexistente ID '.$pid,404); }
         
-        $price = (float)$prod['price']; // Precio blindado
+        // Si se envió un precio específico (promoción), usarlo. De lo contrario, usar precio base.
+        $price = ($requestedPrice !== null) ? $requestedPrice : (float)$prod['price'];
+        
         $stockActual = (float)$prod['current_stock'];
         
         // Validar stock solo si NO se permite stock negativo

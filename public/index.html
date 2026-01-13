@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tomodachi POS - El futuro de tu negocio</title>
+    
+    <!-- Local Fonts -->
+    <link rel="stylesheet" href="css/fonts.css">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
+    <!-- Landing CSS -->
+    <link rel="stylesheet" href="css/landing.css">
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="container navbar">
+            <a href="index.html" class="logo">
+                <svg viewBox="0 0 978 978" version="1.1" xmlns="http://www.w3.org/2000/svg" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2; fill: var(--primary-color);">
+                    <g transform="matrix(1,0,0,1,-640.505536,-1753.937008)">
+                        <g transform="matrix(3.479065,0,0,3.479065,-4010.290738,-1296.905436)">
+                            <path d="M1439.144,903.435C1445.042,887.496 1460.24,876.915 1477.235,876.915C1494.231,876.915 1509.429,887.496 1515.327,903.435L1535.807,958.783L1591.155,979.263C1607.094,985.161 1617.676,1000.36 1617.676,1017.355C1617.676,1034.35 1607.094,1049.548 1591.155,1055.446L1535.807,1075.927L1515.327,1131.275C1509.429,1147.214 1494.231,1157.795 1477.235,1157.795C1460.24,1157.795 1445.042,1147.214 1439.144,1131.275L1418.663,1075.927L1363.316,1055.446C1347.377,1049.548 1336.795,1034.35 1336.795,1017.355C1336.795,1000.36 1347.377,985.161 1363.316,979.263L1418.663,958.783L1439.144,903.435ZM1477.235,958.616C1444.817,958.616 1418.497,984.936 1418.497,1017.355C1418.497,1049.774 1444.817,1076.093 1477.235,1076.093C1509.654,1076.093 1535.974,1049.774 1535.974,1017.355C1535.974,984.936 1509.654,958.616 1477.235,958.616ZM1477.235,987.986C1493.445,987.986 1506.605,1001.145 1506.605,1017.355C1506.605,1033.564 1493.445,1046.724 1477.235,1046.724C1461.026,1046.724 1447.866,1033.564 1447.866,1017.355C1447.866,1001.145 1461.026,987.986 1477.235,987.986Z"/>
+                        </g>
+                    </g>
+                </svg>
+                Tomodachi
+            </a>
+            <nav class="nav-links">
+                <a href="#features">Características</a>
+                <a href="#works">Cómo funciona</a>
+                <a href="#gallery">Galería</a>
+            </nav>
+            <div class="auth-buttons">
+                <a href="login.html" class="btn btn-outline"><span class="btn-text">Iniciar</span><i class="fas fa-sign-in-alt btn-icon"></i></a>
+                <a href="register.html" class="btn btn-primary"><span class="btn-text">Registro</span><i class="fas fa-user-plus btn-icon"></i></a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section with Video Background -->
+    <section class="hero">
+        <div class="hero-video-wrapper">
+            <!-- Video background with fallback poster -->
+            <video autoplay muted loop playsinline poster="assets/images/frontPage/UI1.jpg">
+                <source src="assets/video/hero_bg.mp4" type="video/mp4">
+            </video>
+        </div>
+        <div class="hero-overlay"></div>
+        
+        <div class="container hero-content fade-up">
+            <h1>Gestión inteligente para tu negocio</h1>
+            <p>El punto de venta moderno que simplifica tus ventas, controla tu inventario y te ayuda a crecer. Sin complicaciones, sin hardware costoso.</p>
+            <div class="hero-btns">
+                <a href="register.html" class="btn btn-primary btn-lg">Registrarse</a>
+                <a href="#features" class="btn btn-outline btn-lg">Mas información</a>
+            </div>
+        </div>
+        
+        <div class="scroll-down">
+            <i class="fas fa-chevron-down"></i>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="section">
+        <div class="container">
+            <h2 class="fade-up">Todo lo necesario para el éxito</h2>
+            <p class="section-subtitle fade-up">Herramientas diseñadas pensando en la eficiencia y la simplicidad</p>
+            
+            <div class="features-grid">
+                <div class="feature-card fade-up">
+                    <div class="feature-icon"><i class="fas fa-cash-register"></i></div>
+                    <h3>Ventas Rápidas</h3>
+                    <p>Procesa transacciones en segundos con una interfaz intuitiva diseñada para agilidad.</p>
+                </div>
+                <div class="feature-card fade-up">
+                    <div class="feature-icon"><i class="fas fa-mobile-alt"></i></div>
+                    <h3>Acceso Móvil</h3>
+                    <p>Lleva tu negocio contigo. Accede a ventas y reportes desde tu celular o tablet en cualquier lugar.</p>
+                </div>
+                <div class="feature-card fade-up">
+                    <div class="feature-icon"><i class="fas fa-chart-pie"></i></div>
+                    <h3>Analíticas</h3>
+                    <p>Toma decisiones basadas en datos reales con reportes detallados de ventas y rendimiento.</p>
+                </div>
+                <div class="feature-card fade-up">
+                    <div class="feature-icon"><i class="fas fa-qrcode"></i></div>
+                    <h3>Inventario</h3>
+                    <p>Control total de tu stock, creación de etiquetas y alertas de reabastecimiento.</p>
+                </div>
+                <div class="feature-card fade-up">
+                    <div class="feature-icon"><i class="fas fa-users"></i></div>
+                    <h3>Equipo</h3>
+                    <p>Gestiona roles y permisos para todo tu personal de forma segura y sencilla.</p>
+                </div>
+                <div class="feature-card fade-up">
+                    <div class="feature-icon"><i class="fas fa-cloud"></i></div>
+                    <h3>Cloud Based</h3>
+                    <p>Accede a tu negocio desde cualquier lugar y dispositivo, siempre sincronizado.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Showcase Section 1 -->
+    <section id="works" class="section showcase">
+        <div class="container showcase-content fade-up">
+            <div class="showcase-image-wrapper">
+                <div class="showcase-image">
+                     <img src="assets/images/frontPage/UI2.jpg" alt="Tomodachi Desktop View" style="width:100%; height: auto;">
+                </div>
+            </div>
+            <div class="showcase-text">
+                <h3>Interfaz Moderna y Limpia</h3>
+                <p>Olvídate de sistemas complicados y antiguos. Tomodachi ofrece una experiencia de usuario fluida y agradable.</p>
+                <ul style="margin-top: 20px;">
+                    <li style="margin-bottom: 10px;"><i class="fas fa-check text-primary"></i> Punto de venta optimizado</li>
+                    <li style="margin-bottom: 10px;"><i class="fas fa-check text-primary"></i> Personalizable a tu marca</li>
+                    <li style="margin-bottom: 10px;"><i class="fas fa-check text-primary"></i> Diseño intuitivo para fácil aprendizaje</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- Showcase Section 2 -->
+    <section class="section">
+        <div class="container showcase-content reverse fade-up">
+            <div class="showcase-image-wrapper">
+                <div class="showcase-image">
+                    <img src="assets/images/frontPage/Movil.png" alt="Tomodachi Mobile View" style="width:100%; height: auto;">
+                </div>
+            </div>
+            <div class="showcase-text">
+                <h3>Control Total desde Cualquier Lugar</h3>
+                <p>No necesitas estar en la tienda para saber qué está pasando. Gestiona tu negocio de forma remota.</p>
+                <br>
+                <ul>
+                    <li style="margin-bottom: 15px;">
+                        <strong class="text-primary">Monitorización en Vivo</strong>
+                        <p>Consulta las ventas y el estado de la caja registradora en tiempo real desde tu dispositivo móvil.</p>
+                    </li>
+                    <li style="margin-bottom: 15px;">
+                        <strong class="text-primary">Gestión Multi-Sucursal</strong>
+                        <p>Administra inventarios y ventas de todas tus tiendas desde un solo panel centralizado.</p>
+                    </li>
+                </ul>
+            </div>
+        </section>
+
+    <!-- Gallery / Screenshots Section -->
+    <section id="gallery" class="section gallery-section">
+        <div class="container">
+            <h2 class="fade-up">Explora la Plataforma</h2>
+            <p class="section-subtitle fade-up">Un vistazo a las poderosas herramientas que tendrás en tus manos</p>
+            
+            <div class="screenshots-grid">
+                <div class="screenshot-item fade-up">
+                    <div class="screenshot-placeholder" style="background-image: url('assets/images/frontPage/Reporting.png');"></div>
+                    <div class="screenshot-caption">Reportes y Analíticas</div>
+                </div>
+                <div class="screenshot-item fade-up">
+                    <div class="screenshot-placeholder" style="background-image: url('assets/images/frontPage/Inventory.png');"></div>
+                    <div class="screenshot-caption">Control de Inventario</div>
+                </div>
+                <div class="screenshot-item fade-up">
+                    <div class="screenshot-placeholder" style="background-image: url('assets/images/frontPage/QRGenerator.png');"></div>
+                    <div class="screenshot-caption">Generador de Etiquetas QR</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="section cta fade-up">
+        <div class="container">
+            <h2>Lleva tu negocio al siguiente nivel</h2>
+            <p>Únete hoy y experimenta la diferencia. Sin costos.</p>
+            <a href="register.html" class="btn btn-lg">Crear Cuenta</a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <div class="logo">
+                       <!-- Logo SVG White -->
+                       <svg viewBox="0 0 978 978" version="1.1" xmlns="http://www.w3.org/2000/svg" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2; fill: white;">
+                            <g transform="matrix(1,0,0,1,-640.505536,-1753.937008)">
+                                <g transform="matrix(3.479065,0,0,3.479065,-4010.290738,-1296.905436)">
+                                    <path d="M1439.144,903.435C1445.042,887.496 1460.24,876.915 1477.235,876.915C1494.231,876.915 1509.429,887.496 1515.327,903.435L1535.807,958.783L1591.155,979.263C1607.094,985.161 1617.676,1000.36 1617.676,1017.355C1617.676,1034.35 1607.094,1049.548 1591.155,1055.446L1535.807,1075.927L1515.327,1131.275C1509.429,1147.214 1494.231,1157.795 1477.235,1157.795C1460.24,1157.795 1445.042,1147.214 1439.144,1131.275L1418.663,1075.927L1363.316,1055.446C1347.377,1049.548 1336.795,1034.35 1336.795,1017.355C1336.795,1000.36 1347.377,985.161 1363.316,979.263L1418.663,958.783L1439.144,903.435ZM1477.235,958.616C1444.817,958.616 1418.497,984.936 1418.497,1017.355C1418.497,1049.774 1444.817,1076.093 1477.235,1076.093C1509.654,1076.093 1535.974,1049.774 1535.974,1017.355C1535.974,984.936 1509.654,958.616 1477.235,958.616ZM1477.235,987.986C1493.445,987.986 1506.605,1001.145 1506.605,1017.355C1506.605,1033.564 1493.445,1046.724 1477.235,1046.724C1461.026,1046.724 1447.866,1033.564 1447.866,1017.355C1447.866,1001.145 1461.026,987.986 1477.235,987.986Z"/>
+                                </g>
+                            </g>
+                        </svg>
+                        Tomodachi
+                    </div>
+                    <p style="color: #999;">Sistema de gestión empresarial diseñado para la era digital.</p>
+                </div>
+                 <div class="footer-col">
+                    <h4>Producto</h4>
+                    <ul>
+                        <li><a href="#features">Características</a></li>
+                        <li><a href="#gallery">Galería</a></li>
+                        <li><a href="register.html">Registro</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Soporte</h4>
+                    <ul>
+                        <li><a href="support.html">Ayuda</a></li>
+                        <li><a href="support.html">Contacto</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Legal</h4>
+                    <ul>
+                        <li><a href="terms.html">Términos y Condiciones</a></li>
+                        <li><a href="privacy.html">Política de Privacidad</a></li>
+                        <li><a href="#">Cookies</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Tomodachi POS. Todos los derechos reservados.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Smooth scroll
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href');
+                if (targetId && targetId !== '#') {
+                    document.querySelector(targetId).scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+        
+        // Header transparency on scroll
+        const header = document.querySelector('.header');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 50) {
+                header.style.backgroundColor = "rgba(255, 255, 255, 0.95)";
+                header.style.boxShadow = "0 2px 20px rgba(0,0,0,0.1)";
+            } else {
+                header.style.backgroundColor = "rgba(255, 255, 255, 0.95)";
+            }
+        });
+
+        // Intersection Observer for Animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: "0px 0px -50px 0px"
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    observer.unobserve(entry.target); 
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.fade-up, .fade-in').forEach(el => {
+            observer.observe(el);
+        });
+        
+        // Year
+        document.querySelector('.footer-bottom p').innerHTML = 
+            `&copy; ${new Date().getFullYear()} Tomodachi POS. Todos los derechos reservados.`;
+    </script>
+</body>
+</html>

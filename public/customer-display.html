@@ -329,6 +329,61 @@
             color: var(--primary-color);
         }
 
+        /* Promo Badges */
+        .promo-badges {
+            display: flex;
+            gap: 6px;
+            margin-top: 6px;
+            flex-wrap: wrap;
+        }
+        
+        .promo-pill {
+            background-color: var(--secondary-color);
+            color: white;
+            font-size: 0.75rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .discount-tag {
+            background-color: var(--primary-color);
+            color: white;
+            font-size: 0.75rem;
+            padding: 3px 6px;
+            border-radius: 6px;
+            font-weight: 700;
+        }
+
+        /* Bundle Slideshow */
+        .bundle-image-container {
+            position: relative;
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            border: 2px solid var(--secondary-color);
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .bundle-image-container img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: opacity 0.5s ease-in-out;
+            opacity: 1;
+        }
+        
+        .bundle-image-container img.fading-out {
+            opacity: 0;
+        }
+
         /* Responsive */
         @media (max-width: 1000px) {
             .main-content {
@@ -494,39 +549,152 @@
                 return;
             }
 
-            // Renderizar productos
-            const html = cart.map(item => {
-                const hasPromo = item.unit_price < item.original_price;
-                const imagePath = getRelativeImagePath(item.image_path);
-                
-                const imgHtml = imagePath 
-                    ? `<img src="${imagePath}" alt="" class="product-image" onerror="this.outerHTML='<div class=\\'product-image-icon\\'><i class=\\'fas fa-shopping-basket\\'></i></div>'">`
-                    : `<div class="product-image-icon"><i class="fas fa-shopping-basket"></i></div>`;
-                
-                return `
-                <div class="product-item">
-                    ${imgHtml}
-                    <div class="product-quantity">${formatQuantity(item.quantity)}</div>
-                    <div class="product-info">
-                        <div class="product-name">${escapeHtml(item.product_name)}</div>
-                        <div class="product-unit-price">
-                            ${hasPromo 
-                                ? `<span class="price-original">${formatCurrency(item.original_price)}</span>
-                                   <span class="price-promo">${formatCurrency(item.unit_price)}</span>`
-                                : formatCurrency(item.unit_price)
-                            }
-                            ${item.is_bulk ? `/ ${item.bulk_unit || 'kg'}` : 'c/u'}
+            // Procesar y agrupar items para visualización (manejo de Bundles)
+            const displayItems = [];
+            const processedBundles = new Set(); // Para rastrear qué bundles ya agregamos
+
+            cart.forEach(item => {
+                if (item.bundle_data && item.bundle_data.in_bundle_qty > 0) {
+                    const bundleName = item.bundle_data.name;
+                    
+                    // Si no hemos procesado este bundle, crearlo
+                    if (!processedBundles.has(bundleName)) {
+                        processedBundles.add(bundleName);
+                        
+                        // Buscar todos los items que pertenecen a este mismo bundle
+                        const bundleItems = cart.filter(i => 
+                            i.bundle_data && 
+                            i.bundle_data.name === bundleName && 
+                            i.bundle_data.in_bundle_qty > 0
+                        );
+
+                        // Calcular total del bundle sumando las partes "in_bundle" de cada item
+                        const totalBundlePrice = bundleItems.reduce((sum, i) => sum + i.bundle_data.in_bundle_subtotal, 0);
+                        const bundleCount = item.bundle_data.count;
+
+                        displayItems.push({
+                            type: 'bundle',
+                            name: bundleName,
+                            count: bundleCount,
+                            subtotal: totalBundlePrice,
+                            items: bundleItems.map(i => ({
+                                name: i.product_name,
+                                qty: i.bundle_data.in_bundle_qty,
+                                image: i.image_path
+                            }))
+                        });
+                    }
+
+                    // Si el item tiene sobras fuera del bundle, agregarlas como item normal
+                    if (item.bundle_data.out_bundle_qty > 0) {
+                        displayItems.push({
+                            type: 'standard',
+                            ...item,
+                            quantity: item.bundle_data.out_bundle_qty,
+                            subtotal: item.bundle_data.out_bundle_subtotal,
+                            unit_price: item.original_price, // El resto se cobra a precio full (o ya descontado por simple promo si aplicara, pero sales.js usa original_price para bundle calculations)
+                            promo_applied: null // El resto no es bundle
+                        });
+                    }
+
+                } else {
+                    // Item normal
+                    displayItems.push({
+                        type: 'standard',
+                        ...item
+                    });
+                }
+            });
+
+            // Renderizar items procesados
+            const html = displayItems.map(item => {
+                if (item.type === 'bundle') {
+                    // Renderizado de Bundle
+                    // Usar imagen del primer producto o ícono de paquete
+                    // Collect all unique images
+                    const uniqueImages = [...new Set(item.items.map(p => p.image).filter(img => img))];
+                    const validImages = uniqueImages.map(img => getRelativeImagePath(img));
+                    
+                    let imgHtml;
+                    if (validImages.length > 0) {
+                        // Join with a separator (pipe)
+                        const imagesStr = validImages.join('|').replace(/"/g, '&quot;');
+                        imgHtml = `
+                        <div class="bundle-image-container" data-images="${imagesStr}" data-index="0">
+                            <img src="${validImages[0]}" alt="">
+                        </div>`;
+                    } else {
+                         imgHtml = `<div class="product-image-icon" style="color: var(--secondary-color)"><i class="fas fa-box-open"></i></div>`;
+                    }
+
+                    const productsListHtml = item.items.map(p => 
+                        `<div style="font-size: 0.85rem; color: #666; display: flex; align-items: center; gap: 5px; margin-top: 2px;">
+                           <i class="fas fa-check-circle" style="font-size: 0.7rem; color: var(--success-color);"></i> 
+                           ${formatQuantity(p.qty)}x ${escapeHtml(p.name)}
+                         </div>`
+                    ).join('');
+
+                    return `
+                    <div class="product-item" style="background: #fdfbff; border-left: 4px solid var(--secondary-color);">
+                        ${imgHtml}
+                        <div class="product-quantity" style="background: var(--secondary-color);">${item.count}</div>
+                        <div class="product-info">
+                            <div class="product-name" style="color: var(--secondary-color); font-weight: 700;">
+                                <i class="fas fa-star" style="font-size:0.8em; margin-right:4px;"></i> ${escapeHtml(item.name)}
+                            </div>
+                            <div class="product-unit-price" style="margin-top: 4px;">
+                                ${productsListHtml}
+                            </div>
                         </div>
+                        <div class="product-total">${formatCurrency(item.subtotal)}</div>
+                    </div>`;
+                } else {
+                    // Renderizado Normal (Standard)
+                    const hasPromo = item.unit_price < item.original_price;
+                    const imagePath = getRelativeImagePath(item.image_path);
+                    const discountPct = hasPromo ? calculateDiscountPercentage(item.original_price, item.unit_price) : 0;
+                    
+                    const imgHtml = imagePath 
+                        ? `<img src="${imagePath}" alt="" class="product-image" onerror="this.outerHTML='<div class=\\'product-image-icon\\'><i class=\\'fas fa-shopping-basket\\'></i></div>'">`
+                        : `<div class="product-image-icon"><i class="fas fa-shopping-basket"></i></div>`;
+                    
+                    return `
+                    <div class="product-item">
+                        ${imgHtml}
+                        <div class="product-quantity">${formatQuantity(item.quantity)}</div>
+                        <div class="product-info">
+                            <div class="product-name">${escapeHtml(item.product_name)}</div>
+                            <div class="product-unit-price">
+                                ${hasPromo 
+                                    ? `<span class="price-original">${formatCurrency(item.original_price)}</span>
+                                    <span class="price-promo">${formatCurrency(item.unit_price)}</span>`
+                                    : formatCurrency(item.unit_price)
+                                }
+                                ${item.is_bulk ? `/ ${item.bulk_unit || 'kg'}` : 'c/u'}
+                            </div>
+                            ${hasPromo ? `
+                            <div class="promo-badges">
+                                <span class="promo-pill"><i class="fas fa-tag"></i> ${escapeHtml(item.promo_applied || 'Oferta')}</span>
+                                ${discountPct > 0 ? `<span class="discount-tag">-${discountPct}%</span>` : ''}
+                            </div>
+                            ` : ''}
+                        </div>
+                        <div class="product-total">${formatCurrency(item.subtotal || (item.quantity * item.unit_price))}</div>
                     </div>
-                    <div class="product-total">${formatCurrency(item.subtotal || (item.quantity * item.unit_price))}</div>
-                </div>
-            `}).join('');
+                `
+                }
+            }).join('');
 
             productsList.innerHTML = html;
 
             // Actualizar totales
             if (totals) {
-                itemCount.textContent = cart.length;
+                // ... (Totales iguales)
+                itemCount.textContent = cart.length; // Ojo: item count sigue siendo líneas de productos reales? O bundles?
+                // El cliente preferiría ver "Artículos" físicos o líneas? 
+                // Por ahora mostramos cart.length que es líneas de productos (no bundles).
+                // Podríamos cambiar a totals.itemCount si viene del backend.
+                
                 subtotal.textContent = formatCurrency(totals.subtotal || 0);
                 
                 if (totals.discount > 0) {
@@ -552,6 +720,13 @@
         function formatQuantity(qty) {
             const num = parseFloat(qty);
             return Number.isInteger(num) ? num : num.toFixed(3);
+        }
+
+        function calculateDiscountPercentage(original, current) {
+            if (!original || original <= 0) return 0;
+            const diff = original - current;
+            const pct = (diff / original) * 100;
+            return Math.round(pct);
         }
 
         // Escape HTML
@@ -603,6 +778,39 @@
             initBroadcastChannel();
             loadStoreLogo();
             console.log('Pantalla de cliente iniciada');
+            
+            // Iniciar Slideshow de Bundles
+            setInterval(() => {
+                const containers = document.querySelectorAll('.bundle-image-container');
+                containers.forEach(container => {
+                    const imagesAttr = container.getAttribute('data-images');
+                    if (!imagesAttr) return;
+                    
+                    const images = imagesAttr.split('|');
+                    if (images.length <= 1) return;
+                    
+                    let currentIndex = parseInt(container.getAttribute('data-index') || 0);
+                    let nextIndex = (currentIndex + 1) % images.length;
+                    
+                    const img = container.querySelector('img');
+                    if (img && !img.classList.contains('fading-out')) {
+                        // Start fade out
+                        img.classList.add('fading-out');
+                        
+                        setTimeout(() => {
+                            img.src = images[nextIndex];
+                            // Wait for load or just show
+                            img.onload = () => {
+                                img.classList.remove('fading-out');
+                            };
+                            // Fallback timeout
+                            setTimeout(() => img.classList.remove('fading-out'), 100);
+                        }, 500); // 500ms transition time
+                        
+                        container.setAttribute('data-index', nextIndex);
+                    }
+                });
+            }, 3000); // Cambiar imagen cada 3 segundos
         });
 
         // Limpiar al cerrar

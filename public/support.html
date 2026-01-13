@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soporte - Tomodachi POS</title>
+    
+    <!-- Local Fonts -->
+    <link rel="stylesheet" href="css/fonts.css">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
+    <!-- Landing CSS -->
+    <link rel="stylesheet" href="css/landing.css">
+    
+    <style>
+        /* Specific styles for support page */
+        .page-header {
+            padding-top: 140px;
+            padding-bottom: 80px;
+            background: linear-gradient(135deg, #fff 0%, #f9f9f9 100%);
+            text-align: center;
+            border-bottom-left-radius: 50% 30px;
+            border-bottom-right-radius: 50% 30px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .page-header::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 0;
+            width: 100%;
+            height: 20px;
+            background: radial-gradient(ellipse at center, rgba(0,0,0,0.03) 0%, rgba(0,0,0,0) 70%);
+        }
+
+        .page-header h1 {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            color: var(--text-color);
+            animation: floatText 4s ease-in-out infinite;
+            display: inline-block;
+        }
+        
+        .page-header p {
+            font-size: 1.2rem;
+            color: #666;
+            max-width: 600px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+        
+        @keyframes floatText {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
+            100% { transform: translateY(0px); }
+        }
+
+        /* Ambient Geometric Shapes */
+        .decoration-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .geo-shape {
+            position: absolute;
+            opacity: 0.15;
+            stroke: var(--primary-color);
+            fill: none;
+            stroke-width: 3;
+            animation: floatShape 6s ease-in-out infinite;
+            will-change: transform;
+        }
+        
+        .geo-shape.small { width: 40px; height: 40px; stroke-width: 2; }
+        .geo-shape.medium { width: 80px; height: 80px; stroke-width: 3; }
+        .geo-shape.large { width: 150px; height: 150px; stroke-width: 4; opacity: 0.08; }
+
+        @keyframes floatShape {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-15px) rotate(5deg); }
+        }
+
+        .support-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .contact-form-card {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            margin-bottom: 60px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-color);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #eee;
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            box-sizing: border-box; /* Important for padding */
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(227, 5, 122, 0.1);
+        }
+
+        textarea.form-control {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.1rem;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .btn-submit:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Access Options */
+        .quick-contact {
+            text-align: center;
+            margin-bottom: 40px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .contact-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 25px;
+            background: white;
+            border-radius: 50px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            text-decoration: none;
+            color: var(--text-color);
+            font-weight: 500;
+            transition: transform 0.3s;
+        }
+
+        .contact-pill:hover {
+            transform: translateY(-3px);
+            color: var(--primary-color);
+        }
+
+        /* Success Animation Overlay */
+        .success-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.5s ease;
+        }
+
+        .success-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .checkmark-circle {
+            width: 100px;
+            height: 100px;
+            position: relative;
+            display: inline-block;
+            vertical-align: top;
+            margin-bottom: 30px;
+        }
+
+        .checkmark-circle .background {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: #27ae60;
+            position: absolute;
+        }
+
+        .checkmark-circle .checkmark {
+            border-radius: 5px;
+        }
+
+        .checkmark-circle .checkmark.draw:after {
+            animation-delay: 100ms;
+            animation-duration: 1s;
+            animation-timing-function: ease;
+            animation-name: checkmark;
+            transform: scaleX(-1) rotate(135deg);
+            animation-fill-mode: forwards;
+        }
+
+        .checkmark-circle .checkmark:after {
+            opacity: 0;
+            height: 0;
+            width: 0;
+            transform-origin: left top;
+            border-right: 15px solid white;
+            border-top: 15px solid white;
+            border-radius: 2.5px;
+            content: '';
+            left: 28px; /* Adjusted to be more centered visually */
+            top: 48px; /* Adjusted to be more centered visually */
+            position: absolute;
+        }
+
+        @keyframes checkmark {
+            0% {
+                height: 0;
+                width: 0;
+                opacity: 0;
+            }
+            20% {
+                height: 0;
+                width: 25px;
+                opacity: 1;
+            }
+            40% {
+                height: 50px;
+                width: 25px;
+                opacity: 1;
+            }
+            100% {
+                height: 50px;
+                width: 25px;
+                opacity: 1;
+            }
+        }
+        
+        .success-message-text {
+            font-size: 2rem;
+            color: var(--text-color);
+            margin-bottom: 10px;
+            transform: translateY(20px);
+            opacity: 0;
+            transition: all 0.5s ease 0.5s;
+        }
+        
+        .success-subtext {
+            color: #666;
+            margin-bottom: 30px;
+            transform: translateY(20px);
+            opacity: 0;
+            transition: all 0.5s ease 0.7s;
+        }
+        
+        .success-overlay.active .success-message-text,
+        .success-overlay.active .success-subtext {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        .btn-close-overlay {
+            padding: 12px 30px;
+            background: var(--text-color);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1rem;
+            transform: translateY(20px);
+            opacity: 0;
+            transition: all 0.5s ease 0.9s;
+        }
+        
+        .success-overlay.active .btn-close-overlay {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+            display: none;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="header" style="background-color: rgba(255, 255, 255, 0.95); box-shadow: 0 2px 20px rgba(0,0,0,0.1);">
+        <div class="container navbar">
+            <a href="index.html" class="logo">
+                <svg viewBox="0 0 978 978" version="1.1" xmlns="http://www.w3.org/2000/svg" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2; fill: var(--primary-color); width: 40px; height: 40px;">
+                    <g transform="matrix(1,0,0,1,-640.505536,-1753.937008)">
+                        <g transform="matrix(3.479065,0,0,3.479065,-4010.290738,-1296.905436)">
+                            <path d="M1439.144,903.435C1445.042,887.496 1460.24,876.915 1477.235,876.915C1494.231,876.915 1509.429,887.496 1515.327,903.435L1535.807,958.783L1591.155,979.263C1607.094,985.161 1617.676,1000.36 1617.676,1017.355C1617.676,1034.35 1607.094,1049.548 1591.155,1055.446L1535.807,1075.927L1515.327,1131.275C1509.429,1147.214 1494.231,1157.795 1477.235,1157.795C1460.24,1157.795 1445.042,1147.214 1439.144,1131.275L1418.663,1075.927L1363.316,1055.446C1347.377,1049.548 1336.795,1034.35 1336.795,1017.355C1336.795,1000.36 1347.377,985.161 1363.316,979.263L1418.663,958.783L1439.144,903.435ZM1477.235,958.616C1444.817,958.616 1418.497,984.936 1418.497,1017.355C1418.497,1049.774 1444.817,1076.093 1477.235,1076.093C1509.654,1076.093 1535.974,1049.774 1535.974,1017.355C1535.974,984.936 1509.654,958.616 1477.235,958.616ZM1477.235,987.986C1493.445,987.986 1506.605,1001.145 1506.605,1017.355C1506.605,1033.564 1493.445,1046.724 1477.235,1046.724C1461.026,1046.724 1447.866,1033.564 1447.866,1017.355C1447.866,1001.145 1461.026,987.986 1477.235,987.986Z"/>
+                        </g>
+                    </g>
+                </svg>
+                Tomodachi
+            </a>
+            <nav class="nav-links">
+                <a href="index.html#features">Características</a>
+                <a href="index.html#works">Cómo funciona</a>
+                <a href="index.html#gallery">Galería</a>
+            </nav>
+            <div class="auth-buttons">
+                <a href="login.html" class="btn btn-outline">Iniciar Sesión</a>
+                <a href="register.html" class="btn btn-primary">Registrarse Gratis</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="page-header fade-up">
+        <!-- SVG Background Decorations -->
+        <div class="decoration-container" id="headerDecorations">
+            <!-- Circle Left -->
+            <svg class="geo-shape medium" style="left: 10%; top: 20%;" viewBox="0 0 100 100" data-speed="0.2">
+                <circle cx="50" cy="50" r="45" />
+            </svg>
+            
+            <!-- Triangle Right -->
+            <svg class="geo-shape medium" style="right: 15%; top: 30%; animation-delay: 1s;" viewBox="0 0 100 100" data-speed="0.15">
+                <polygon points="50,5 95,95 5,95" />
+            </svg>
+            
+            <!-- Square Bottom Left -->
+            <svg class="geo-shape small" style="left: 20%; bottom: 20%; animation-delay: 2s;" viewBox="0 0 100 100" data-speed="0.3">
+                <rect x="10" y="10" width="80" height="80" rx="10" />
+            </svg>
+
+             <!-- Hexagon Right Top -->
+             <svg class="geo-shape large" style="right: 5%; top: 10%; animation-delay: 1.5s; opacity: 0.05;" viewBox="0 0 100 100" data-speed="0.1">
+                <polygon points="25,5 75,5 95,50 75,95 25,95 5,50" />
+            </svg>
+        </div>
+
+        <div class="container" style="position: relative; z-index: 2;">
+            <h1>Estamos aquí para ayudarte</h1>
+            <p>Si encuentras algún error, tienes dudas o sugerencias, háznoslo saber. Nuestro equipo está listo para escucharte.</p>
+        </div>
+    </div>
+
+    <section class="section" style="padding-top: 20px; position: relative;">
+        <!-- Body Decorations -->
+        <div class="decoration-container" id="bodyDecorations" style="height: 100%; pointer-events: none;">
+             <svg class="geo-shape large" style="left: -50px; top: 100px; animation-delay: 0.5s;" viewBox="0 0 100 100" data-speed="0.1">
+                <circle cx="50" cy="50" r="45" />
+            </svg>
+            <svg class="geo-shape medium" style="right: 5%; bottom: 100px; animation-delay: 2.5s;" viewBox="0 0 100 100" data-speed="-0.1">
+                <rect x="10" y="10" width="80" height="80" transform="rotate(45 50 50)" />
+            </svg>
+        </div>
+
+        <div class="container" style="position: relative; z-index: 2;">
+            
+            <div class="quick-contact fade-up">
+                <a href="mailto:contacto@baburu.shop" class="contact-pill">
+                    <i class="fas fa-envelope text-primary"></i> contacto@baburu.shop
+                </a>
+            </div>
+
+            <div class="support-container">
+                <div class="contact-form-card fade-up">
+                    <form id="supportForm">
+                        <div class="form-group">
+                            <label for="type">¿Motivo de tu mensaje?</label>
+                            <select id="type" name="type" class="form-control" required>
+                                <option value="Consulta General">Consulta General</option>
+                                <option value="Reporte de Error/Bug">Reporte de Error (Bug)</option>
+                                <option value="Sugerencia">Sugerencia de Mejora</option>
+                                <option value="Otro">Otro</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="subject">Asunto</label>
+                            <input type="text" id="subject" name="subject" class="form-control" placeholder="Breve descripción del tema" required>
+                        </div>
+                        
+                        <div class="row" style="display: flex; gap: 20px; flex-wrap: wrap;">
+                            <div class="form-group" style="flex: 1; min-width: 250px;">
+                                <label for="name">Tu Nombre</label>
+                                <input type="text" id="name" name="name" class="form-control" placeholder="Nombre completo" required>
+                            </div>
+                            <div class="form-group" style="flex: 1; min-width: 250px;">
+                                <label for="email">Tu Correo Electrónico</label>
+                                <input type="email" id="email" name="email" class="form-control" placeholder="correo@ejemplo.com" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="message">Mensaje</label>
+                            <textarea id="message" name="message" class="form-control" placeholder="Cuéntanos más detalles..." required></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-submit">
+                            <span class="loading-spinner"></span> Enviar Mensaje
+                        </button>
+                    </form>
+                </div>
+            </div>
+            
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <div class="logo">
+                       <svg viewBox="0 0 978 978" version="1.1" xmlns="http://www.w3.org/2000/svg" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2; fill: white;">
+                            <g transform="matrix(1,0,0,1,-640.505536,-1753.937008)">
+                                <g transform="matrix(3.479065,0,0,3.479065,-4010.290738,-1296.905436)">
+                                    <path d="M1439.144,903.435C1445.042,887.496 1460.24,876.915 1477.235,876.915C1494.231,876.915 1509.429,887.496 1515.327,903.435L1535.807,958.783L1591.155,979.263C1607.094,985.161 1617.676,1000.36 1617.676,1017.355C1617.676,1034.35 1607.094,1049.548 1591.155,1055.446L1535.807,1075.927L1515.327,1131.275C1509.429,1147.214 1494.231,1157.795 1477.235,1157.795C1460.24,1157.795 1445.042,1147.214 1439.144,1131.275L1418.663,1075.927L1363.316,1055.446C1347.377,1049.548 1336.795,1034.35 1336.795,1017.355C1336.795,1000.36 1347.377,985.161 1363.316,979.263L1418.663,958.783L1439.144,903.435ZM1477.235,958.616C1444.817,958.616 1418.497,984.936 1418.497,1017.355C1418.497,1049.774 1444.817,1076.093 1477.235,1076.093C1509.654,1076.093 1535.974,1049.774 1535.974,1017.355C1535.974,984.936 1509.654,958.616 1477.235,958.616ZM1477.235,987.986C1493.445,987.986 1506.605,1001.145 1506.605,1017.355C1506.605,1033.564 1493.445,1046.724 1477.235,1046.724C1461.026,1046.724 1447.866,1033.564 1447.866,1017.355C1447.866,1001.145 1461.026,987.986 1477.235,987.986Z"/>
+                                </g>
+                            </g>
+                        </svg>
+                        Tomodachi
+                    </div>
+                    <p style="color: #999;">Sistema de gestión empresarial diseñado para la era digital.</p>
+                </div>
+                 <div class="footer-col">
+                    <h4>Producto</h4>
+                    <ul>
+                        <li><a href="index.html#features">Características</a></li>
+                        <li><a href="index.html#gallery">Galería</a></li>
+                        <li><a href="register.html">Registro</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Soporte</h4>
+                    <ul>
+                        <li><a href="#">Ayuda</a></li>
+                        <li><a href="support.html">Contacto</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Legal</h4>
+                    <ul>
+                        <li><a href="terms.html">Términos y Condiciones</a></li>
+                        <li><a href="privacy.html">Política de Privacidad</a></li>
+                        <li><a href="#">Cookies</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Tomodachi POS. Todos los derechos reservados.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Success Overlay -->
+    <div class="success-overlay" id="successOverlay">
+        <div class="checkmark-circle">
+            <div class="background"></div>
+            <div class="checkmark draw"></div>
+        </div>
+        <h2 class="success-message-text">¡Gracias por tu mensaje!</h2>
+        <p class="success-subtext">Hemos recibido tu comentario. Te contactaremos pronto.</p>
+        <button class="btn-close-overlay" onclick="window.location.reload()">Entendido</button>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // Animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: "0px 0px -50px 0px"
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    observer.unobserve(entry.target); 
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.fade-up').forEach(el => {
+            observer.observe(el);
+        });
+        // Parallax Effect for Shapes
+        window.addEventListener('scroll', () => {
+            const scrollY = window.scrollY;
+            document.querySelectorAll('.geo-shape').forEach(shape => {
+                const speed = parseFloat(shape.getAttribute('data-speed') || 0);
+                if (speed !== 0) {
+                    // Combine vertical parallax with existing CSS rotation if possible, 
+                    // but simple translateY is safer to avoid conflict with keyframes.
+                    // To avoid conflict with CSS animation 'floatShape' which uses transform, 
+                    // we can't easily modify transform directly without overwriting the animation.
+                    // Solution: The CSS animation is on the SVG. We can adjust 'top' property? No, expensive.
+                    // Better: Wrap parallax in a wrapper or use marginTop/transform:translate3d() specifically if the keyframe uses something else.
+                    // The CSS keyframe uses 'transform'. 
+                    // Let's modify the translateY in the style attribute, which overrides the keyframe PARTIALLY if not careful?
+                    // Actually, setting style.transform overrides the keyframe completely.
+                    // Strategy: Remove CSS animation 'floatShape' from .geo-shape 
+                    // and implement the floating IN ADDITION to scrolling in JS? 
+                    // OR: Use a wrapper div for position/parallax and the SVG for floating.
+                    
+                    // Since I already added them without wrappers, let's keep it simple:
+                    // I'll update the CSS to use a Wrapper logic for future robustness, but for now
+                    // let's just make the scroll move the element via 'marginTop' to avoid transform conflict.
+                   
+                    shape.style.marginTop = `${scrollY * speed}px`;
+                }
+            });
+        });
+        // Current Year
+        document.querySelector('.footer-bottom p').innerHTML = 
+            `&copy; ${new Date().getFullYear()} Tomodachi POS. Todos los derechos reservados.`;
+
+        // Form Handling
+        const form = document.getElementById('supportForm');
+        const overlay = document.getElementById('successOverlay');
+        
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const spinner = submitBtn.querySelector('.loading-spinner');
+            
+            // Disable button
+            submitBtn.disabled = true;
+            spinner.style.display = 'inline-block';
+            
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            try {
+                // Correct path relative to public/support.html to reach api/support/send_message.php
+                // Assumes api folder is at root and server allows ../ traversal OR api is mapped alias.
+                // Based on CLI test success, backend is working. 
+                const response = await fetch('../api/support/send_message.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Show success animation
+                    overlay.classList.add('active');
+                    form.reset();
+                } else {
+                    alert('Error: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Hubo un error al conectar con el servidor. Por favor intenta más tarde.');
+            } finally {
+                submitBtn.disabled = false;
+                spinner.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -259,4 +259,44 @@ class Mail {
             return false;
         }
     }
+
+    public function sendSupportMessage($email, $name, $subject, $message, $type) {
+        try {
+            // Send TO support
+            $supportEmail = 'contacto@baburu.shop';
+            
+            $this->mailer->addAddress($supportEmail, 'Soporte Tomodachi');
+            $this->mailer->addReplyTo($email, $name);
+
+            // Content
+            $this->mailer->isHTML(true);
+            $this->mailer->Subject = "Soporte [{$type}]: {$subject}";
+            
+            $body = "
+            <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;'>
+                <div style='background-color: #f9f9f9; padding: 20px; border-radius: 5px;'>
+                    <h2 style='color: #E3057A;'>Nuevo mensaje de soporte</h2>
+                    <p><strong>De:</strong> {$name} ({$email})</p>
+                    <p><strong>Tipo:</strong> {$type}</p>
+                    <p><strong>Asunto:</strong> {$subject}</p>
+                    <hr style='border: 1px solid #eee; margin: 20px 0;'>
+                    <h3>Mensaje:</h3>
+                    <p style='white-space: pre-wrap;'>{$message}</p>
+                </div>
+                <div style='text-align: center; margin-top: 20px; font-size: 12px; color: #999;'>
+                    Enviado desde el formulario de soporte web.
+                </div>
+            </div>
+            ";
+
+            $this->mailer->Body = $body;
+            $this->mailer->AltBody = "Nuevo mensaje de soporte de {$name} ({$email}). Tipo: {$type}. Asunto: {$subject}. Mensaje: {$message}";
+
+            $this->mailer->send();
+            return true;
+        } catch (Exception $e) {
+            error_log("Message could not be sent. Mailer Error: {$this->mailer->ErrorInfo}");
+            return false;
+        }
+    }
 }

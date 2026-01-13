@@ -21,22 +21,27 @@ if (!$auth->isLoggedIn()) {
 // Obtener datos
 $data = json_decode(file_get_contents('php://input'), true);
 
-if (!$data) {
-    Response::error('Datos inválidos', 400);
+if (!isset($data['promotion_id'])) {
+    Response::error('ID de promoción no especificado', 400);
 }
 
-// Validar campos requeridos
-$required = ['name', 'start_date', 'end_date', 'type'];
-foreach ($required as $field) {
-    if (!isset($data[$field]) || $data[$field] === '') {
-        Response::error("El campo $field es requerido", 400);
-    }
+// Validaciones básicas requeridas
+if (!isset($data['name']) || empty($data['name'])) {
+    Response::error('El nombre de la promoción es requerido', 400);
+}
+if (!isset($data['start_date']) || !isset($data['end_date'])) {
+    Response::error('Las fechas de inicio y fin son requeridas', 400);
+}
+if (!isset($data['type'])) {
+    Response::error('El tipo de promoción es requerido', 400);
 }
 
-$store_id = $_SESSION['store_id'];
+$promotion_id = (int)$data['promotion_id'];
+$store_id = $auth->getCurrentUser()['store_id'];
 $name = Validator::sanitizeString($data['name']);
 $description = isset($data['description']) ? Validator::sanitizeString($data['description']) : '';
-// Fix Date Format (Convert to valid Y-m-d H:i:s)
+
+// Validar fechas
 try {
     $start_date = date('Y-m-d H:i:s', strtotime($data['start_date']));
     $end_date = date('Y-m-d H:i:s', strtotime($data['end_date']));
@@ -46,12 +51,11 @@ try {
 
 $type = $data['type'];
 
-// Lógica específica por tipo de promoción
+// Lógica específica por tipo de promoción - Copiada de create.php
 $discount_type = isset($data['discount_type']) ? $data['discount_type'] : 'percentage';
 $discount_value = isset($data['discount_value']) ? $data['discount_value'] : 0;
 
 if ($type === 'bundle') {
-    // Para bundles, el valor viene en bundle_price y el tipo es fixed_price
     if (isset($data['bundle_price']) && is_numeric($data['bundle_price'])) {
         $discount_value = $data['bundle_price'];
         $discount_type = 'fixed_price';
@@ -59,40 +63,45 @@ if ($type === 'bundle') {
         Response::error("El precio del paquete (bundle_price) es requerido", 400);
     }
 } else {
-    // Para otros tipos, validar que discount_value exista y sea válido
     if ((!isset($data['discount_value']) || $data['discount_value'] === '')) {
         Response::error("El valor del descuento es requerido", 400);
     }
 }
 
-// Asegurar que sean numéricos para la BD
 $discount_value = floatval($discount_value);
-
 $min_purchase_amount = isset($data['min_purchase_amount']) ? $data['min_purchase_amount'] : 0;
 $min_quantity = isset($data['min_quantity']) ? $data['min_quantity'] : 1;
 $targets = isset($data['targets']) ? $data['targets'] : [];
+$is_active = isset($data['is_active']) ? (int)$data['is_active'] : 1;
 
 try {
-    // Reutilizar $db existente si es posible, pero Auth usa su propia instancia privada.
-    // Creamos una nueva conexión para la transacción de inserción.
     $conn = $db->getConnection();
     $conn->beginTransaction();
 
-    // Insertar promoción
+    // 1. Verificar propiedad y existencia
+    $checkStmt = $conn->prepare("SELECT promotion_id FROM promotions WHERE promotion_id = :id AND store_id = :store_id");
+    $checkStmt->execute([':id' => $promotion_id, ':store_id' => $store_id]);
+    if (!$checkStmt->fetch()) {
+        throw new Exception("Promoción no encontrada o acceso denegado");
+    }
+
+    // 2. Actualizar tabla principal
     $stmt = $conn->prepare("
-        INSERT INTO promotions (
-            store_id, name, description, start_date, end_date, 
-            type, discount_type, discount_value, 
-            min_purchase_amount, min_quantity
-        ) VALUES (
-            :store_id, :name, :description, :start_date, :end_date,
-            :type, :discount_type, :discount_value,
-            :min_purchase_amount, :min_quantity
-        )
+        UPDATE promotions SET
+            name = :name,
+            description = :description,
+            start_date = :start_date,
+            end_date = :end_date,
+            type = :type,
+            discount_type = :discount_type,
+            discount_value = :discount_value,
+            min_purchase_amount = :min_purchase_amount,
+            min_quantity = :min_quantity,
+            is_active = :is_active
+        WHERE promotion_id = :promotion_id AND store_id = :store_id
     ");
 
     $stmt->execute([
-        ':store_id' => $store_id,
         ':name' => $name,
         ':description' => $description,
         ':start_date' => $start_date,
@@ -101,12 +110,18 @@ try {
         ':discount_type' => $discount_type,
         ':discount_value' => $discount_value,
         ':min_purchase_amount' => $min_purchase_amount,
-        ':min_quantity' => $min_quantity
+        ':min_quantity' => $min_quantity,
+        ':is_active' => $is_active,
+        ':promotion_id' => $promotion_id,
+        ':store_id' => $store_id
     ]);
 
-    $promotion_id = $conn->lastInsertId();
+    // 3. Actualizar Targets (Borrar e Insertar de nuevo)
+    // Primero, borrar existentes
+    $delTargets = $conn->prepare("DELETE FROM promotion_targets WHERE promotion_id = :promotion_id");
+    $delTargets->execute([':promotion_id' => $promotion_id]);
 
-    // Insertar targets
+    // Insertar nuevos targets
     if (!empty($targets)) {
         $stmtTarget = $conn->prepare("
             INSERT INTO promotion_targets (promotion_id, product_id, category_id)
@@ -114,11 +129,16 @@ try {
         ");
 
         foreach ($targets as $target) {
-            $product_id = ($target['type'] === 'product') ? $target['id'] : null;
-            $category_id = ($target['type'] === 'category') ? $target['id'] : null;
+            // Manejar tanto el formato del UI (id, type) como el formato raw si viniera de DB
+            $tType = isset($target['type']) ? $target['type'] : null;
+            $tId = isset($target['id']) ? $target['id'] : null;
+
+            if (!$tType || !$tId) continue;
+
+            $product_id = ($tType === 'product') ? $tId : null;
+            $category_id = ($tType === 'category') ? $tId : null;
             
-            // Validar que al menos uno no sea null
-            if (!$product_id && !$category_id) continue;
+            if ($product_id === null && $category_id === null) continue;
 
             $stmtTarget->execute([
                 ':promotion_id' => $promotion_id,
@@ -129,17 +149,9 @@ try {
     }
 
     $conn->commit();
-    Response::success(['promotion_id' => $promotion_id], 'Promoción creada exitosamente', 201);
+    Response::success(['message' => 'Promoción actualizada correctamente', 'id' => $promotion_id]);
 
-} catch (Throwable $e) { 
-    if (isset($conn) && $conn->inTransaction()) {
-        $conn->rollBack();
-    }
-    
-    // Use absolute path for logs to avoid resolution issues
-    $logPath = __DIR__ . '/../../logs/promotions_error.log';
-    $errorMsg = date('Y-m-d H:i:s') . " Error: " . $e->getMessage() . "\n" . $e->getTraceAsString() . "\n";
-    @file_put_contents($logPath, $errorMsg, FILE_APPEND);
-    
-    Response::error('Error del servidor: ' . $e->getMessage(), 500, ['trace' => $e->getTraceAsString()]);
+} catch (Exception $e) {
+    if (isset($conn)) $conn->rollBack();
+    Response::error('Error al actualizar: ' . $e->getMessage(), 500);
 }

@@ -350,12 +350,21 @@ async function searchProducts(term) {
 }
 
 function addProductToCart(prod) {
-  // Si es producto a granel, solicitar cantidad primero
-  if (prod.is_bulk == 1) {
-    promptBulkQuantity(prod);
-    return;
-  }
+  // Recargar promociones activas para asegurar tener las últimas reglas
+  // Esto permite que si se creó una promo hace un segundo, aplique inmediatamente
+  loadActivePromotions().then(() => {
+      // Continuar con la lógica normal después de refrescar promos...
+      // Si es producto a granel, solicitar cantidad primero
+      if (prod.is_bulk == 1) {
+        promptBulkQuantity(prod);
+        return;
+      }
+      
+      _addToCartInternal(prod);
+  });
+}
 
+function _addToCartInternal(prod) {
   const existing = CART.find(i => i.product_id === prod.product_id);
 
   // Validación de Stock
@@ -387,7 +396,8 @@ function addProductToCart(prod) {
       nxn_pay: 0,
       stock_quantity: maxStock, // Guardar referencia del stock
       is_bulk: prod.is_bulk || 0,
-      bulk_unit: prod.bulk_unit || 'kg'
+      bulk_unit: prod.bulk_unit || 'kg',
+      category_id: prod.category_id
     });
   }
   playSound('Sound2.mp3');
@@ -654,36 +664,39 @@ function confirmBulkQuantity() {
   
   const prod = window._tempBulkProduct;
   if (!prod) return;
-  
-  // Buscar si ya existe en el carrito
-  const existing = CART.find(i => i.product_id === prod.product_id);
-  
-  if (existing) {
-    existing.quantity = parseFloat(existing.quantity) + quantity;
-    recalcItemPrice(existing);
-  } else {
-    CART.push({
-      product_id: prod.product_id,
-      product_name: prod.product_name,
-      unit_price: prod.unit_price,
-      original_price: prod.unit_price,
-      quantity: quantity,
-      subtotal: prod.unit_price * quantity,
-      image_path: prod.image_path,
-      discount_type: 'none',
-      discount_value: 0,
-      nxn_buy: 0,
-      nxn_pay: 0,
-      stock_quantity: prod.stock_quantity,
-      is_bulk: 1,
-      bulk_unit: prod.bulk_unit || 'kg'
-    });
-  }
-  
-  playSound('Sound2.mp3');
-  renderCart();
-  showNotification(`${quantity} ${prod.bulk_unit} agregados`, 'success');
-  closeBulkModal();
+
+  loadActivePromotions().then(() => {
+    // Buscar si ya existe en el carrito
+    const existing = CART.find(i => i.product_id === prod.product_id);
+    
+    if (existing) {
+      existing.quantity = parseFloat(existing.quantity) + quantity;
+      recalcItemPrice(existing);
+    } else {
+      CART.push({
+        product_id: prod.product_id,
+        product_name: prod.product_name,
+        unit_price: prod.unit_price,
+        original_price: prod.unit_price,
+        quantity: quantity,
+        subtotal: prod.unit_price * quantity,
+        image_path: prod.image_path,
+        discount_type: 'none',
+        discount_value: 0,
+        nxn_buy: 0,
+        nxn_pay: 0,
+        stock_quantity: prod.stock_quantity,
+        is_bulk: 1,
+        bulk_unit: prod.bulk_unit || 'kg',
+        category_id: prod.category_id
+      });
+    }
+    
+    playSound('Sound2.mp3');
+    renderCart();
+    showNotification(`${quantity} ${prod.bulk_unit} agregados`, 'success');
+    closeBulkModal();
+  });
 }
 
 // Helper para badges de pestañas
@@ -1164,6 +1177,9 @@ function recalcItemPrice(item) {
 }
 
 function recalcTotals() {
+  // Aplicar Promociones Automáticas antes de calcular totales
+  applyPromotions();
+
   const subtotal = CART.reduce((s, i) => s + i.subtotal, 0);
   const discount = (discountInput && discountInput.value) ? parseFloat(discountInput.value) : 0;
   const promoDiscount = (typeof CURRENT_BILL_DISCOUNT !== 'undefined') ? CURRENT_BILL_DISCOUNT : 0;
@@ -1345,6 +1361,42 @@ function getFilteredProducts() {
   return allProducts.filter(p => String(p.category_id || '') === String(activeCategoryId));
 }
 
+function calculatePromoPrice(product) {
+  if (!ACTIVE_PROMOTIONS || ACTIVE_PROMOTIONS.length === 0) return null;
+  
+  // Solo buscamos promos de tipo simple para mostrar precio unitario directo
+  const simplePromos = ACTIVE_PROMOTIONS.filter(p => 
+      p.type === 'simple_discount' && isTarget({ ...product, quantity: 1, original_price: product.price }, p)
+  );
+
+  if (simplePromos.length === 0) return null;
+
+  // Aplicar la mejor promo disponible
+  let bestPrice = parseFloat(product.price);
+  let appliedPromo = null;
+
+  simplePromos.forEach(promo => {
+      let price = parseFloat(product.price);
+      let discount = 0;
+      
+      if (promo.discount_type === 'percentage') {
+          discount = price * (parseFloat(promo.discount_value) / 100);
+      } else {
+          discount = parseFloat(promo.discount_value);
+      }
+      
+      let newPrice = price - discount;
+      if (newPrice < 0) newPrice = 0;
+      
+      if (newPrice < bestPrice) {
+          bestPrice = newPrice;
+          appliedPromo = promo;
+      }
+  });
+
+  return appliedPromo ? bestPrice : null;
+}
+
 function renderGallery(list, animate = false) {
   if (!productGallery) return;
 
@@ -1359,10 +1411,26 @@ function renderGallery(list, animate = false) {
   // Renderizar items (ocultos si se va a animar)
   productGallery.innerHTML = list.map(p => {
     const imagePath = getRelativeImagePath(p.image_path);
+    const promoPrice = calculatePromoPrice(p);
+    const hasPromo = promoPrice !== null && promoPrice < parseFloat(p.price);
+    
+    let priceHtml = '';
+    if (hasPromo) {
+         priceHtml = `
+            <span class="original-price" style="text-decoration: line-through; font-size: 0.8em; color: #999; margin-right: 5px;">${formatCurrency(p.price)}</span>
+            <span class="promo-price" style="color: #dc3545; font-weight: bold;">${formatCurrency(promoPrice)}</span>
+         `;
+    } else {
+         priceHtml = formatCurrency(p.price);
+    }
+
     return `<div class="gallery-item" data-id="${p.product_id}" data-price="${p.price}" data-stock="${p.stock_quantity !== undefined ? p.stock_quantity : ''}" data-image="${p.image_path || ''}" data-is_bulk="${p.is_bulk || 0}" data-bulk_unit="${p.bulk_unit || 'kg'}" title="${escapeHtml(p.product_name)}" style="opacity: ${animate ? 0 : 1};">
-        <div class="img-wrap">${imagePath ? `<img src="${imagePath}" alt="img" onerror="this.outerHTML='<span class=\\'no-img\\'>Sin imagen</span>'">` : '<span class="no-img">Sin imagen</span>'}</div>
+        <div class="img-wrap">
+            ${imagePath ? `<img src="${imagePath}" alt="img" onerror="this.outerHTML='<span class=\\'no-img\\'>Sin imagen</span>'">` : '<span class="no-img">Sin imagen</span>'}
+            ${hasPromo ? '<div style="position:absolute; top:5px; right:5px; background:#dc3545; color:white; font-size:0.75em; padding:2px 6px; border-radius:4px; font-weight:bold; z-index:2;"><i class="fas fa-tag"></i> Oferta</div>' : ''}
+        </div>
         <div class="g-name">${escapeHtml(p.product_name)}</div>
-        <div class="g-price">${formatCurrency(p.price)}</div>
+        <div class="g-price">${priceHtml}</div>
       </div>`;
   }).join('');
 
@@ -2783,6 +2851,7 @@ function applyPromotions() {
         if (!item.manual_edit) {
              item.unit_price = item.original_price;
              item.promo_applied = null;
+             item.bundle_data = null; // Reset bundle meta
         }
     });
 
@@ -2795,6 +2864,8 @@ function applyPromotions() {
             applySimpleDiscount(promo);
         } else if (promo.type === 'bulk_discount') {
             applyBulkDiscount(promo);
+        } else if (promo.type === 'bundle') {
+            applyBundleDiscount(promo);
         }
     });
 
@@ -2860,6 +2931,127 @@ function applyBulkDiscount(promo) {
             }
         });
     }
+}
+
+function applyBundleDiscount(promo) {
+    const requiredTargets = promo.targets; 
+    if (!requiredTargets || requiredTargets.length === 0) return;
+
+    // Lógica STRICT SET (Conjunto Completo):
+    // El bundle solo aplica si están presentes TODOS los items definidos en los targets.
+    // Asumimos que se requiere 1 unidad de cada target para formar 1 bundle.
+    
+    // 1. Calcular cuántos "Sets" completos podemos formar
+    let potentialBundles = Number.MAX_SAFE_INTEGER;
+    
+    // Mapa para saber qué items del carrito cumplen qué target
+    // target_index -> [ { item_ref, qty_available } ]
+    let usageMap = [];
+
+    // Verificación de cobertura de targets
+    for (let i = 0; i < requiredTargets.length; i++) {
+        let t = requiredTargets[i];
+        
+        // Encontrar items en el carrito que coincidan con este target
+        let matches = CART.filter(item => {
+            if (t.product_id && item.product_id == t.product_id) return true;
+            if (t.category_id && item.category_id == t.category_id) return true;
+            return false;
+        });
+        
+        let totalQtyForTarget = matches.reduce((sum, item) => sum + item.quantity, 0);
+        
+        if (totalQtyForTarget === 0) {
+            potentialBundles = 0; // Faltan componentes del bundle
+            break;
+        }
+        
+        potentialBundles = Math.min(potentialBundles, totalQtyForTarget);
+        usageMap[i] = matches; 
+    }
+
+    let numBundles = potentialBundles;
+    
+    // Si no se puede formar ningún paquete completo, salir
+    if (numBundles === 0 || numBundles === Number.MAX_SAFE_INTEGER) return;
+
+    // 2. Calcular costos
+    let bundlePrice = parseFloat(promo.discount_value);
+    let totalBundleCost = numBundles * bundlePrice;
+
+    // 3. Identificar las unidades físicas que participan en los bundles
+    // Para calcular el precio original de esas unidades y determinar el ratio de descuento.
+    let participatingUnits = []; // { item: ref, qty: number, originalAmount: number }
+
+    for (let i = 0; i < requiredTargets.length; i++) {
+        let matches = usageMap[i]; // Items del carrito que sirven para este target
+        let countNeeded = numBundles; // Necesitamos 'numBundles' unidades de este target
+
+        // Ordenamos por precio para maximizar el descuento (o estandarizar).
+        // En este caso, tomamos simplemente las disponibles.
+        for (let item of matches) {
+            if (countNeeded <= 0) break;
+            
+            let taking = Math.min(item.quantity, countNeeded);
+            
+            participatingUnits.push({
+                item: item,
+                qty: taking,
+                originalAmount: taking * item.original_price
+            });
+            
+            countNeeded -= taking;
+        }
+    }
+
+    // 4. Calcular Ratio de Descuento
+    let totalOriginalPrice = participatingUnits.reduce((sum, u) => sum + u.originalAmount, 0);
+    // Evitar target > original protecciones si el usuario quiere bundle fijo.
+    // Simplemente distribuimos el precio del bundle entre los items.
+    let ratio = totalOriginalPrice > 0 ? totalBundleCost / totalOriginalPrice : 1;
+
+    // 5. Aplicar precios al Carrito (Weighted Average)
+    // Un item puede tener 5 unidades, pero solo 2 son parte de bundles. 
+    // Precio Final = ((2 * PrecioDescuento) + (3 * PrecioOriginal)) / 5
+    
+    // Agrupar impacto por item
+    let itemImpact = new Map(); // item -> { bundledQty: 0, bundledRevenue: 0 }
+
+    participatingUnits.forEach(u => {
+        if (!itemImpact.has(u.item)) {
+            itemImpact.set(u.item, { bundledQty: 0, bundledRevenue: 0 });
+        }
+        let info = itemImpact.get(u.item);
+        info.bundledQty += u.qty;
+        info.bundledRevenue += (u.originalAmount * ratio);
+    });
+
+    itemImpact.forEach((info, item) => {
+        if (item.manual_edit) return;
+
+        let remainingQty = item.quantity - info.bundledQty;
+        // El resto se cobra a precio original (u original_price puede ya tener desc. simple? 
+        // Asumimos prioridad bundle > simple. applyPromotions resetea a original_price siempre al inicio).
+        let remainingRevenue = remainingQty * item.original_price;
+        
+        let totalRevenue = info.bundledRevenue + remainingRevenue;
+        let avgPrice = totalRevenue / item.quantity;
+        
+        // Aplicar
+        item.unit_price = avgPrice;
+        item.subtotal = totalRevenue;
+        item.promo_applied = `${promo.name} (${numBundles} packs)`;
+
+        // Guardar metadatos para visualización agrupada
+        item.bundle_data = {
+            name: promo.name,
+            count: numBundles,
+            in_bundle_qty: info.bundledQty,
+            in_bundle_subtotal: info.bundledRevenue,
+            out_bundle_qty: remainingQty, 
+            out_bundle_subtotal: remainingRevenue
+        };
+    });
 }
 
 function isTarget(item, promo) {

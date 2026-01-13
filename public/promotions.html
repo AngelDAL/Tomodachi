@@ -102,44 +102,65 @@
                     <form id="promoForm">
                         <div class="form-group">
                             <label>Nombre de la Promoción</label>
-                            <input type="text" name="name" required class="form-control" placeholder="Ej. Oferta de Verano">
+                            <div class="input-icon-wrapper">
+                                <i class="fas fa-heading"></i>
+                                <input type="text" name="name" required class="form-control" placeholder="Ej. Oferta de Verano">
+                            </div>
                         </div>
                         <div class="form-row">
                             <div class="form-group">
                                 <label>Fecha Inicio</label>
-                                <input type="datetime-local" name="start_date" required class="form-control">
+                                <div class="input-icon-wrapper">
+                                    <i class="fas fa-calendar-alt"></i>
+                                    <input type="datetime-local" name="start_date" required class="form-control">
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label>Fecha Fin</label>
-                                <input type="datetime-local" name="end_date" required class="form-control">
+                                <div class="input-icon-wrapper">
+                                    <i class="fas fa-calendar-check"></i>
+                                    <input type="datetime-local" name="end_date" required class="form-control">
+                                </div>
                             </div>
                         </div>
                         <div class="form-group">
                             <label>Tipo de Promoción</label>
-                            <select name="type" id="promoType" class="form-control" onchange="updateFormFields()">
-                                <option value="simple_discount">Descuento Simple (Producto/Categoría)</option>
-                                <option value="bulk_discount">Descuento por Volumen (Ej. 3x2)</option>
-                                <option value="bill_discount">Descuento en Total de Cuenta</option>
-                                <option value="bundle">Paquete (Bundle)</option>
-                            </select>
+                            <div class="input-icon-wrapper">
+                                <i class="fas fa-list-ul"></i>
+                                <select name="type" id="promoType" class="form-control" onchange="updateFormFields()">
+                                    <option value="simple_discount">Descuento Simple (Producto/Categoría)</option>
+                                    <option value="bulk_discount">Descuento por Volumen (Ej. 3x2)</option>
+                                    <option value="bill_discount">Descuento en Total de Cuenta</option>
+                                    <option value="bundle">Paquete (Bundle)</option>
+                                </select>
+                            </div>
                         </div>
                         <div class="form-row" id="discountFields">
                             <div class="form-group">
                                 <label>Tipo de Descuento</label>
-                                <select name="discount_type" class="form-control" onchange="calculateProfit()">
-                                    <option value="percentage">Porcentaje (%)</option>
-                                    <option value="fixed_amount">Monto Fijo ($)</option>
-                                </select>
+                                <div class="input-icon-wrapper">
+                                    <i class="fas fa-percentage"></i>
+                                    <select name="discount_type" class="form-control" onchange="calculateProfit()">
+                                        <option value="percentage">Porcentaje (%)</option>
+                                        <option value="fixed_amount">Monto Fijo ($)</option>
+                                    </select>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label>Valor del Descuento</label>
-                                <input type="number" name="discount_value" step="0.01" required class="form-control" placeholder="10" oninput="calculateProfit()">
+                                <div class="input-icon-wrapper">
+                                    <i class="fas fa-dollar-sign"></i>
+                                    <input type="number" name="discount_value" step="0.01" required class="form-control" placeholder="10" oninput="calculateProfit()">
+                                </div>
                             </div>
                         </div>
                         
                         <div id="bundlePriceField" class="form-group" style="display:none;">
                             <label>Precio Final del Paquete</label>
-                            <input type="number" name="bundle_price" step="0.01" class="form-control" placeholder="99.90" oninput="calculateProfit()">
+                            <div class="input-icon-wrapper">
+                                <i class="fas fa-tag"></i>
+                                <input type="number" name="bundle_price" step="0.01" class="form-control" placeholder="99.90" oninput="calculateProfit()">
+                            </div>
                         </div>
 
                         <div id="conditionFields" class="form-row">
@@ -168,20 +189,30 @@
                 <!-- Lado Derecho: Grid de Productos -->
                 <div class="modal-grid-side">
                     <div class="grid-header">
-                        <label>Seleccionar Productos</label>
-                        <div style="position: relative; width: 60%;">
-                            <input type="text" id="productGridSearch" placeholder="Filtrar productos..." class="form-control" style="padding: 0.5rem;">
+                        <label>Catálogo de Productos</label>
+                        <div class="input-icon-wrapper" style="width: 60%;">
+                             <i class="fas fa-search"></i>
+                            <input type="text" id="productGridSearch" placeholder="Buscar producto..." class="form-control">
                         </div>
                     </div>
                     <!-- Indicador visual para bundles -->
-                    <div id="bundleInfoMsg" style="display:none; font-size:0.92em; color:#0056b3; margin-bottom:8px;">
-                        <i class="fas fa-info-circle"></i> Para <b>Paquete (Bundle)</b>: todos los productos seleccionados deben estar juntos en la venta para aplicar el precio especial.
+                    <div id="bundleInfoMsg" style="display:none; font-size:0.85em; background:#e0f2fe; color:#0369a1; padding:8px; border-radius:6px; margin-bottom:8px;">
+                        <i class="fas fa-info-circle"></i> <b>Modo Paquete:</b> Los productos seleccionados formarán un único pack indivisible.
                     </div>
-                    <div id="productsGrid" class="products-grid-container">
-                        <!-- Cargando productos... -->
+                    
+                    <div id="productsGrid" class="products-grid-container" style="flex:1; overflow-y:auto;">
+                        <!-- Grid Content -->
                     </div>
-                    <div id="selectedCount" style="font-size: 0.85rem; color: var(--text-muted);">
-                        0 productos seleccionados
+
+                    <!-- Sección de Productos Seleccionados (Bottom) -->
+                    <div id="selectedProductsSection" class="selected-products-panel" style="display: none;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
+                            <label style="font-weight:600; font-size:0.9rem;">Productos Seleccionados</label>
+                            <span class="badge" id="selectedCountNum" style="background:var(--primary-color); color:white; padding:2px 8px; border-radius:10px; font-size:0.8rem;">0</span>
+                        </div>
+                        <div id="selectedProductsList" style="display: flex; flex-wrap: wrap; gap: 8px; max-height: 100px; overflow-y: auto;">
+                            <!-- Chips -->
+                        </div>
                     </div>
                 </div>
             </div>
@@ -191,6 +222,62 @@
             </div>
         </div>
     </div>
+
+    <style>
+        .selected-chip {
+            background-color: var(--secondary-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 4px 10px;
+            display: flex;
+            align-items: center;
+            font-size: 0.85rem;
+            animation: fadeIn 0.3s ease;
+        }
+        .selected-chip img {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 8px;
+        }
+        .selected-chip span {
+            max-width: 150px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .selected-chip .remove-chip {
+            margin-left: 6px;
+            color: var(--danger-color);
+            cursor: pointer;
+            padding: 2px;
+        }
+        .selected-chip .remove-chip:hover {
+            color: #d32f2f;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+    </style>
+    <!-- Confirm Modal -->
+    <div id="confirmModal" class="modal">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <div class="modal-header" style="justify-content: center; border-bottom: none; padding-bottom: 0;">
+                <h3 id="confirmTitle">Confirmar Acción</h3>
+            </div>
+            <div class="modal-body" style="padding: 20px;">
+                <p id="confirmMessage" style="color: var(--text-color); margin-bottom: 20px;">¿Estás seguro?</p>
+                <div style="display: flex; justify-content: center; gap: 10px;">
+                    <button class="btn btn-secondary" onclick="closeConfirmModal()">Cancelar</button>
+                    <button class="btn btn-danger" id="confirmBtnAction">Confirmar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container (if needed for specific positioning, though existing css/js might handle body append) -->
 
     <script src="js/promotions.js"></script>
     <script src="js/promotions-app.js"></script>

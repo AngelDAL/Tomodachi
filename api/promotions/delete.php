@@ -1,11 +1,19 @@
 <?php
 require_once '../../config/database.php';
+require_once '../../config/constants.php';
 require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
-require_once '../../api/auth/verify_session.php';
+require_once '../../includes/Auth.class.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     Response::error('Método no permitido', 405);
+}
+
+$db = new Database();
+$auth = new Auth($db);
+
+if (!$auth->isLoggedIn()) {
+    Response::unauthorized();
 }
 
 $data = json_decode(file_get_contents('php://input'), true);
@@ -18,7 +26,6 @@ if (!$promotion_id) {
 $store_id = $_SESSION['store_id'];
 
 try {
-    $db = new Database();
     $conn = $db->getConnection();
 
     // Verificar que pertenezca a la tienda

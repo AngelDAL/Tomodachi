@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Política de Privacidad - Tomodachi POS</title>
+    
+    <!-- Local Fonts -->
+    <link rel="stylesheet" href="css/fonts.css">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
+    <!-- Landing CSS -->
+    <link rel="stylesheet" href="css/landing.css">
+    
+    <style>
+        .legal-content h3 {
+            margin-top: 2rem;
+            color: var(--primary-dark);
+            font-size: 1.5rem;
+        }
+        .legal-content p, .legal-content ul {
+            margin-bottom: 1.2rem;
+            color: #555;
+            font-size: 1.1rem;
+        }
+        .legal-content ul {
+            list-style-type: disc;
+            padding-left: 2rem;
+        }
+        .page-header {
+            background: linear-gradient(135deg, var(--primary-lighter) 0%, #fff 100%);
+            padding-top: 160px;
+            padding-bottom: 60px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="container navbar">
+            <a href="index.html" class="logo">
+                <svg viewBox="0 0 978 978" version="1.1" xmlns="http://www.w3.org/2000/svg" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2; fill: var(--primary-color);">
+                    <g transform="matrix(1,0,0,1,-640.505536,-1753.937008)">
+                        <g transform="matrix(3.479065,0,0,3.479065,-4010.290738,-1296.905436)">
+                            <path d="M1439.144,903.435C1445.042,887.496 1460.24,876.915 1477.235,876.915C1494.231,876.915 1509.429,887.496 1515.327,903.435L1535.807,958.783L1591.155,979.263C1607.094,985.161 1617.676,1000.36 1617.676,1017.355C1617.676,1034.35 1607.094,1049.548 1591.155,1055.446L1535.807,1075.927L1515.327,1131.275C1509.429,1147.214 1494.231,1157.795 1477.235,1157.795C1460.24,1157.795 1445.042,1147.214 1439.144,1131.275L1418.663,1075.927L1363.316,1055.446C1347.377,1049.548 1336.795,1034.35 1336.795,1017.355C1336.795,1000.36 1347.377,985.161 1363.316,979.263L1418.663,958.783L1439.144,903.435ZM1477.235,958.616C1444.817,958.616 1418.497,984.936 1418.497,1017.355C1418.497,1049.774 1444.817,1076.093 1477.235,1076.093C1509.654,1076.093 1535.974,1049.774 1535.974,1017.355C1535.974,984.936 1509.654,958.616 1477.235,958.616ZM1477.235,987.986C1493.445,987.986 1506.605,1001.145 1506.605,1017.355C1506.605,1033.564 1493.445,1046.724 1477.235,1046.724C1461.026,1046.724 1447.866,1033.564 1447.866,1017.355C1447.866,1001.145 1461.026,987.986 1477.235,987.986Z"/>
+                        </g>
+                    </g>
+                </svg>
+                Tomodachi
+            </a>
+            <nav class="nav-links">
+                <a href="index.html#features">Características</a>
+                <a href="index.html#works">Cómo funciona</a>
+                <a href="index.html#gallery">Galería</a>
+            </nav>
+            <div class="auth-buttons">
+                <a href="login.html" class="btn btn-outline">Iniciar Sesión</a>
+                <a href="register.html" class="btn btn-primary">Registrarse Gratis</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="page-header">
+        <div class="container text-center">
+            <h1>Política de Privacidad</h1>
+            <p>Última actualización: Enero 2026</p>
+        </div>
+    </div>
+
+    <section class="section">
+        <div class="container legal-content" style="max-width: 800px;">
+            <p>En <strong>Tomodachi POS</strong>, valoramos y respetamos la privacidad de su negocio. A diferencia de las soluciones en la nube convencionales, nuestra arquitectura está diseñada para darle el control total sobre sus datos. Esta política detalla cómo manejamos la información.</p>
+
+            <h3>1. Modelo de Datos y Propiedad</h3>
+            <p>Tomodachi opera bajo un modelo de <strong>infraestructura propia (self-hosted)</strong> y aislamiento de datos. Esto significa que:</p>
+            <ul>
+                <li>Usted es el único propietario de los datos generados por el sistema (ventas, inventarios, precios, base de datos de clientes).</li>
+                <li>La base de datos reside en su propio servidor o servicio de alojamiento contratado por usted, no en nuestros servidores centrales.</li>
+            </ul>
+
+            <h3>2. Recopilación de Información</h3>
+            <p>Los desarrolladores de Tomodachi y sus entidades afiliadas <strong>NO</strong> tienen acceso, no recopilan, no monitorean y no almacenan externamente:</p>
+            <ul>
+                <li>Información financiera de su negocio.</li>
+                <li>Datos personales de sus empleados o clientes.</li>
+                <li>Estrategias de precios o volúmenes de venta.</li>
+            </ul>
+            <p>El sistema no incluye "puertas traseras" ni mecanismos de telemetría oculta que envíen su información comercial a terceros.</p>
+
+            <h3>3. Responsabilidad del Usuario</h3>
+            <p>Dado que los datos se almacenan en su infraestructura, la seguridad y confidencialidad final de los mismos recae en la administración de su servidor:</p>
+            <ul>
+                <li>Es responsabilidad del usuario implementar certificados de seguridad (SSL/HTTPS) en su instalación.</li>
+                <li>Se recomienda encarecidamente realizar copias de seguridad (backups) periódicas de su base de datos.</li>
+                <li>Las contraseñas de los usuarios se almacenan encriptadas (hashing), pero es deber de los administradores gestionar los accesos de sus empleados de manera segura.</li>
+            </ul>
+
+            <h3>4. Uso de Cookies y Almacenamiento Local</h3>
+            <p>El sistema utiliza cookies y almacenamiento local del navegador (LocalStorage/SessionStorage) únicamente para fines técnicos esenciales:</p>
+            <ul>
+                <li>Mantener la sesión del usuario activa.</li>
+                <li>Guardar preferencias de configuración de la interfaz (como el tema claro/oscuro).</li>
+                <li>Almacenar temporalmente datos del carrito de compras en caso de desconexión.</li>
+            </ul>
+
+            <h3>5. Cambios en la Política</h3>
+            <p>Nos reservamos el derecho de actualizar esta política de privacidad según sea necesario para reflejar cambios en nuestras prácticas o requisitos legales. Cualquier cambio será notificado a través de las actualizaciones del software.</p>
+
+            <div style="margin-top: 50px; text-align: center;">
+                <a href="index.html" class="btn btn-outline"><i class="fas fa-arrow-left"></i> Volver al Inicio</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <div class="logo">
+                       <svg viewBox="0 0 978 978" version="1.1" xmlns="http://www.w3.org/2000/svg" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2; fill: white;">
+                            <g transform="matrix(1,0,0,1,-640.505536,-1753.937008)">
+                                <g transform="matrix(3.479065,0,0,3.479065,-4010.290738,-1296.905436)">
+                                    <path d="M1439.144,903.435C1445.042,887.496 1460.24,876.915 1477.235,876.915C1494.231,876.915 1509.429,887.496 1515.327,903.435L1535.807,958.783L1591.155,979.263C1607.094,985.161 1617.676,1000.36 1617.676,1017.355C1617.676,1034.35 1607.094,1049.548 1591.155,1055.446L1535.807,1075.927L1515.327,1131.275C1509.429,1147.214 1494.231,1157.795 1477.235,1157.795C1460.24,1157.795 1445.042,1147.214 1439.144,1131.275L1418.663,1075.927L1363.316,1055.446C1347.377,1049.548 1336.795,1034.35 1336.795,1017.355C1336.795,1000.36 1347.377,985.161 1363.316,979.263L1418.663,958.783L1439.144,903.435ZM1477.235,958.616C1444.817,958.616 1418.497,984.936 1418.497,1017.355C1418.497,1049.774 1444.817,1076.093 1477.235,1076.093C1509.654,1076.093 1535.974,1049.774 1535.974,1017.355C1535.974,984.936 1509.654,958.616 1477.235,958.616ZM1477.235,987.986C1493.445,987.986 1506.605,1001.145 1506.605,1017.355C1506.605,1033.564 1493.445,1046.724 1477.235,1046.724C1461.026,1046.724 1447.866,1033.564 1447.866,1017.355C1447.866,1001.145 1461.026,987.986 1477.235,987.986Z"/>
+                                </g>
+                            </g>
+                        </svg>
+                        Tomodachi
+                    </div>
+                    <p style="color: #999;">Sistema de gestión empresarial diseñado para la era digital.</p>
+                </div>
+                 <div class="footer-col">
+                    <h4>Producto</h4>
+                    <ul>
+                        <li><a href="index.html#features">Características</a></li>
+                        <li><a href="index.html#gallery">Galería</a></li>
+                        <li><a href="register.html">Registro</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Soporte</h4>
+                    <ul>
+                        <li><a href="#">Ayuda</a></li>
+                        <li><a href="#">Contacto</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Legal</h4>
+                    <ul>
+                        <li><a href="privacy.html">Privacidad</a></li>
+                        <li><a href="terms.html">Términos</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Tomodachi POS. Todos los derechos reservados.</p>
+            </div>
+        </div>
+    </footer>
+    
+    <script>
+        // Dynamic Year
+        document.querySelector('.footer-bottom p').innerHTML = 
+            `&copy; ${new Date().getFullYear()} Tomodachi POS. Todos los derechos reservados.`;
+    </script>
+</body>
+</html>

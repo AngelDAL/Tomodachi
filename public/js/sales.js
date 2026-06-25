@@ -521,8 +521,10 @@ async function searchProducts(term) {
       return `
       <div class="gallery-item" data-id="${p.product_id}" data-price="${p.price}" data-stock="${p.stock_quantity !== undefined ? p.stock_quantity : ''}" data-image="${p.image_path || ''}" data-is_bulk="${p.is_bulk || 0}" data-bulk_unit="${p.bulk_unit || 'kg'}" data-category="${p.category_id || ''}" title="${escapeHtml(p.product_name)}" style="animation-delay: ${Math.min(index * 0.05, 0.5)}s">
         <div class="img-wrap">${imagePath ? `<img src="${imagePath}" alt="img" onerror="this.outerHTML='<span class=\\'no-img\\'>Sin imagen</span>'">` : '<span class="no-img">Sin imagen</span>'}</div>
-        <div class="g-name">${escapeHtml(p.product_name)}</div>
-        <div class="g-price">${formatCurrency(p.price)}</div>
+        <div class="item-details">
+          <div class="g-name" title="${escapeHtml(p.product_name)}">${escapeHtml(p.product_name)}</div>
+          <div class="g-price">${formatCurrency(p.price)}</div>
+        </div>
       </div>
     `}).join('');
 
@@ -1782,17 +1784,15 @@ function renderGallery(list, animate = false) {
            data-bulk_unit="${p.bulk_unit || 'kg'}" 
            data-category="${p.category_id || ''}"
            title="${escapeHtml(p.product_name)}">
-            
+             
         <div class="img-wrap">
             ${imagePath ? `<img src="${imagePath}" loading="lazy" alt="${escapeHtml(p.product_name)}" onerror="this.parentNode.innerHTML='<i class=\\'fas fa-box\\'></i>'">` : '<i class="fas fa-box" style="color:#eee; font-size:1.5rem;"></i>'}
             ${stockBadge}
         </div>
         
-        <div class="item-details" style="padding: 8px; display: flex; flex-direction: column; flex: 1; justify-content: space-between;">
-            <h4 style="margin: 0 0 4px 0; font-size: 0.95rem; color: #333; font-weight: 600;">${escapeHtml(p.product_name)}</h4>
-            <div class="price-area" style="font-weight: 700; color: var(--primary-color);">
-                ${priceHtml}
-            </div>
+        <div class="item-details">
+            <h4 class="g-name" title="${escapeHtml(p.product_name)}">${escapeHtml(p.product_name)}</h4>
+            <div class="g-price">${priceHtml}</div>
         </div>
       </div>
     `;

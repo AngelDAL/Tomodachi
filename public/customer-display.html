@@ -542,6 +542,293 @@
                 flex: 1;
             }
         }
+
+        /* Tablets y teléfonos en landscape */
+        @media (max-width: 768px) {
+            .header {
+                padding: 10px 16px;
+            }
+
+            .logo-img {
+                width: 40px;
+                height: 40px;
+            }
+
+            .store-name {
+                font-size: 1.3rem;
+            }
+
+            .welcome-msg {
+                font-size: 1rem;
+            }
+
+            .main-content {
+                padding: 12px;
+                gap: 12px;
+            }
+
+            .products-section,
+            .summary-card,
+            .info-card {
+                border-radius: 12px;
+                padding: 16px;
+            }
+
+            .section-title {
+                font-size: 1.2rem;
+                margin-bottom: 12px;
+                padding-bottom: 8px;
+            }
+
+            .product-item {
+                padding: 12px 8px;
+                gap: 12px;
+            }
+
+            .product-image,
+            .product-image-icon,
+            .bundle-image-container {
+                width: 48px;
+                height: 48px;
+            }
+
+            .product-image-icon {
+                font-size: 1.4rem;
+            }
+
+            .product-quantity {
+                min-width: 34px;
+                height: 34px;
+                font-size: 1rem;
+            }
+
+            .product-name {
+                font-size: 1.05rem;
+            }
+
+            .product-unit-price {
+                font-size: 0.85rem;
+            }
+
+            .product-total {
+                font-size: 1.2rem;
+            }
+
+            .summary-row {
+                padding: 8px 0;
+            }
+
+            .summary-label {
+                font-size: 1rem;
+            }
+
+            .summary-value {
+                font-size: 1.1rem;
+            }
+
+            .total-row {
+                margin: -16px;
+                margin-top: 12px;
+                padding: 16px;
+            }
+
+            .total-row .summary-label {
+                font-size: 1.2rem;
+            }
+
+            .total-row .summary-value {
+                font-size: 1.6rem;
+            }
+        }
+
+        /* Teléfonos pequeños y vista muy reducida */
+        @media (max-width: 480px) {
+            body {
+                overflow: auto; /* Permitir scroll si el contenido no cabe */
+            }
+
+            .header {
+                padding: 8px 12px;
+            }
+
+            .logo {
+                gap: 8px;
+            }
+
+            .logo-img {
+                width: 32px;
+                height: 32px;
+            }
+
+            .store-name {
+                font-size: 1.05rem;
+            }
+
+            .conn-status {
+                font-size: 0.7rem;
+                padding: 3px 8px;
+            }
+
+            .qr-toggle-btn {
+                width: 32px;
+                height: 32px;
+                font-size: 1rem;
+            }
+
+            .main-content {
+                flex-direction: column;
+                padding: 8px;
+                gap: 8px;
+            }
+
+            .products-section {
+                padding: 12px;
+                min-height: 0;
+            }
+
+            .products-list {
+                padding-right: 6px;
+            }
+
+            .product-item {
+                padding: 10px 6px;
+                gap: 8px;
+                /* En pantallas muy pequeñas priorizamos cantidad, info y total */
+                grid-template-columns: auto 1fr auto;
+            }
+
+            /* Ocultar imagen en móvil muy pequeño para ganar espacio */
+            .product-item > .product-image,
+            .product-item > .product-image-icon,
+            .product-item > .bundle-image-container {
+                display: none;
+            }
+
+            .product-quantity {
+                min-width: 30px;
+                height: 30px;
+                font-size: 0.95rem;
+            }
+
+            .product-name {
+                font-size: 0.95rem;
+            }
+
+            .product-unit-price {
+                font-size: 0.8rem;
+            }
+
+            .product-total {
+                font-size: 1.05rem;
+            }
+
+            .summary-section {
+                width: 100%;
+                flex-direction: column;
+                gap: 8px;
+                /* Fijar resumen abajo para que el total siempre sea visible */
+                position: sticky;
+                bottom: 0;
+                z-index: 10;
+            }
+
+            .summary-card {
+                padding: 12px;
+                box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
+            }
+
+            .info-card {
+                display: none; /* En pantallas muy pequeñas omitimos el mensaje de agradecimiento */
+            }
+
+            .summary-row {
+                padding: 6px 0;
+            }
+
+            .summary-label {
+                font-size: 0.9rem;
+            }
+
+            .summary-value {
+                font-size: 1rem;
+            }
+
+            .total-row {
+                margin: -12px;
+                margin-top: 10px;
+                padding: 12px;
+            }
+
+            .total-row .summary-label {
+                font-size: 1.1rem;
+            }
+
+            .total-row .summary-value {
+                font-size: 1.4rem;
+            }
+        }
+
+        /* Orientación landscape en teléfonos pequeños */
+        @media (max-height: 500px) and (orientation: landscape) {
+            .header {
+                padding: 6px 12px;
+            }
+
+            .logo-img {
+                width: 32px;
+                height: 32px;
+            }
+
+            .store-name {
+                font-size: 1.1rem;
+            }
+
+            .main-content {
+                flex-direction: row;
+                padding: 8px 12px;
+            }
+
+            .products-section {
+                flex: 2;
+                padding: 10px;
+            }
+
+            .summary-section {
+                flex: 1;
+                width: auto;
+                min-width: 180px;
+            }
+
+            .summary-card,
+            .info-card {
+                padding: 12px;
+                border-radius: 10px;
+            }
+
+            .product-item {
+                padding: 8px 6px;
+                gap: 8px;
+            }
+
+            .product-image,
+            .product-image-icon,
+            .bundle-image-container {
+                width: 40px;
+                height: 40px;
+            }
+
+            .product-name {
+                font-size: 0.95rem;
+            }
+
+            .product-total {
+                font-size: 1.05rem;
+            }
+
+            .total-row .summary-value {
+                font-size: 1.4rem;
+            }
+        }
     </style>
 </head>
 <body>

@@ -312,7 +312,8 @@ function bindEvents() {
                 }
 
                 // Generar URL con el UUID de sesión
-                const baseUrl = window.location.origin + '/Tomodachi/public/customer-display.html';
+                // Compatible con subcarpeta local (/Tomodachi/public) y dominio propio (raíz /public)
+                const baseUrl = window.location.origin + window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1) + 'customer-display.html';
                 const url = baseUrl + '?cart=' + displaySessionUUID;
 
                 navigator.clipboard.writeText(url).then(() => {

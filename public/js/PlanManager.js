@@ -39,7 +39,7 @@ class PlanManager {
 
         this.readyPromise = new Promise(async (resolve, reject) => {
             try {
-                const response = await fetch('http://localhost/Tomodachi/api/auth/permissions.php');
+                const response = await fetch('../../api/auth/permissions.php');
                 if (!response.ok) throw new Error('Failed to fetch permissions');
 
                 const data = await response.json();

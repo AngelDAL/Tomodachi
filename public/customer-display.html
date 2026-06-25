@@ -749,7 +749,8 @@
         // QR / Link panel
         // ============================================================
         function getDisplayUrl() {
-            const base = window.location.origin + '/Tomodachi/public/customer-display.html';
+            // Compatible con subcarpeta local (/Tomodachi/public) y dominio propio (raíz /public)
+            const base = window.location.origin + window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1) + 'customer-display.html';
             return SESSION_UUID ? base + '?cart=' + SESSION_UUID : base;
         }
 

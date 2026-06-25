@@ -122,6 +122,7 @@
     /* Items to Hide on Mobile */
     .desktop-only-nav,
     .nav-separator,
+    .nav-bottom-group,
     #supportBtn,
     #logoutBtn {
         display: none !important;

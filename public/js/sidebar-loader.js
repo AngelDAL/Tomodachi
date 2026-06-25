@@ -1,15 +1,19 @@
-document.addEventListener('DOMContentLoaded', function() {
-    // 0. Load Modern Sidebar CSS
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = 'css/sidebar-modern.css';
-    document.head.appendChild(link);
+function initSidebar() {
+    // 0. Load Modern Sidebar CSS only if not already present in the head
+    if (!document.querySelector('link[href="css/sidebar-modern.css"]')) {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'css/sidebar-modern.css';
+        document.head.appendChild(link);
+    }
 
-    // Load Mobile Bottom Nav CSS
-    const mobileLink = document.createElement('link');
-    mobileLink.rel = 'stylesheet';
-    mobileLink.href = 'css/mobile-nav.css';
-    document.head.appendChild(mobileLink);
+    if (!document.querySelector('link[href="css/mobile-nav.css"]')) {
+        // Load Mobile Bottom Nav CSS
+        const mobileLink = document.createElement('link');
+        mobileLink.rel = 'stylesheet';
+        mobileLink.href = 'css/mobile-nav.css';
+        document.head.appendChild(mobileLink);
+    }
 
     const sidebarNav = document.querySelector('.sidebar-nav');
     if (!sidebarNav) return;
@@ -60,7 +64,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </span>
                 <span class="nav-text">Mi Perfil</span>
             </a>
-            
+
             <div class="user-tooltip-menu" id="profileTooltipMenu">
                 <a href="profile.html" class="tooltip-item">
                     <i class="fas fa-cog"></i> Configuración
@@ -79,18 +83,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 </a>
             </div>
         </div>
-        <a href="#" class="nav-item" id="logoutBtn">
-            <span><i class="fas fa-sign-out-alt"></i></span> <span class="nav-text">Cerrar Sesión</span>
-        </a>
-        
-        <div class="nav-separator" style="margin: 10px 0; border-top: 1px solid rgba(255,255,255,0.1);"></div>
-        
-        <a href="#" class="nav-item desktop-only-nav js-support-btn" id="supportBtn" style="color: #aaa; font-size: 0.9em;">
-            <span><i class="fas fa-headset"></i></span> <span class="nav-text">Soporte/Sugerencias</span>
-        </a>
     `;
 
-    sidebarNav.innerHTML = menuHTML + profileHTML;
+    // Bottom group: pushed to the bottom on desktop
+    const bottomGroupHTML = `
+        <div class="nav-bottom-group">
+            <a href="#" class="nav-item" id="logoutBtn">
+                <span><i class="fas fa-sign-out-alt"></i></span> <span class="nav-text">Cerrar Sesión</span>
+            </a>
+
+            <div class="nav-separator" style="margin: 10px 0; border-top: 1px solid rgba(255,255,255,0.1);"></div>
+
+            <a href="#" class="nav-item desktop-only-nav js-support-btn" id="supportBtn" style="color: #aaa; font-size: 0.9em;">
+                <span><i class="fas fa-headset"></i></span> <span class="nav-text">Soporte/Sugerencias</span>
+            </a>
+        </div>
+    `;
+
+    sidebarNav.innerHTML = menuHTML + profileHTML + bottomGroupHTML;
 
     // --- Enhanced Sidebar Logic (Floating & Dynamic Store Name) ---
 
@@ -115,20 +125,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Toggle functionality
             toggleBtn.addEventListener('click', function() {
-                document.body.classList.toggle('sidebar-collapsed');
-                const isCollapsed = document.body.classList.contains('sidebar-collapsed');
+                document.documentElement.classList.toggle('sidebar-collapsed');
+                const isCollapsed = document.documentElement.classList.contains('sidebar-collapsed');
                 localStorage.setItem('sidebarCollapsed', isCollapsed);
             });
         }
     }
 
-    // 2. Restore Collapsed State
-    const savedState = localStorage.getItem('sidebarCollapsed');
-    if (savedState === 'true') {
-        document.body.classList.add('sidebar-collapsed');
-    }
-
-    // 3. Fetch Store Settings for Dynamic Name
+    // 2. Fetch Store Settings for Dynamic Name
     fetch('../api/stores/settings.php')
         .then(response => response.json())
         .then(data => {
@@ -213,4 +217,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // const profileMenuBtn = document.getElementById('profileMenuBtn');
     // ... adds listener.
     // We will let app.js handle the UI toggle for profile to avoid conflicts.
-});
+}
+
+// Run immediately if the DOM is already parsed, otherwise wait for DOMContentLoaded.
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSidebar);
+} else {
+    initSidebar();
+}

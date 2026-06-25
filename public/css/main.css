@@ -1045,7 +1045,7 @@ table tr:hover {
 }
 
 .sidebar {
-    view-transition-name: sidebar;
+    view-transition-name: none;
 }
 
 .main-content {

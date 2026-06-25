@@ -163,7 +163,7 @@ function openPromoModal(promoId = null, isReadOnly = false) {
                              name: p.product_name,
                              price: p.price,
                              cost: p.cost,
-                             image: p.image_url || p.image_path || p.image
+                             image: p.image_path
                          };
                      } else {
                          fullInfo = { name: t.product_name, price: 0, cost: 0 };
@@ -340,14 +340,14 @@ function renderProductsGrid(products) {
     grid.innerHTML = products.map(p => {
         const isSelected = selectedTargets.some(t => t.id == p.product_id);
 
-        let imgSrc = getRelativeImagePath(p.image_url || p.image_path || p.image);
+        let imgSrc = getRelativeImagePath(p.image_path);
         if (!imgSrc) {
             // Fallback default
-            imgSrc = 'assets/images/products/default.png';
+            imgSrc = 'assets/images/products/default-product.svg';
         }
 
         // Manejar error de carga con onerror
-        const onErrorParams = "this.onerror=null;this.src='assets/images/products/default.png';";
+        const onErrorParams = "this.onerror=null;this.src='assets/images/products/default-product.svg';";
 
         return `
             <div class="product-item-card ${isSelected ? "selected" : ""}" onclick="toggleProductSelection(${p.product_id})" title="${p.product_name}">
@@ -384,8 +384,8 @@ function renderSelectedProductsList() {
 
     list.innerHTML = selectedTargets.map(t => {
         let imgTag = '';
-        if (t.image) {
-            const imgPath = getRelativeImagePath(t.image);
+        if (t.image_path) {
+            const imgPath = getRelativeImagePath(t.image_path);
             imgTag = `<img src="${imgPath}" alt="img">`;
         } else {
             imgTag = `<div style="width:24px;height:24px;background:#334155;border-radius:50%;margin-right:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-box" style="font-size:10px;color:#cbd5e1;"></i></div>`;
@@ -421,7 +421,7 @@ function toggleProductSelection(productId) {
             name: product.product_name,
             price: product.price,
             cost: product.cost,
-            image: product.image_url || product.image_path || product.image
+            image: product.image_path
         });
     }
     renderProductsGrid(allProducts);
@@ -675,14 +675,81 @@ function formatType(type) {
 // ============================================================
 // PAGINATION
 // ============================================================
-const PROMO_PER_PAGE = 10;
+const PROMO_PER_PAGE = 9;
 let currentPage = 1;
+
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount || 0);
+}
+
+function formatNumber(num) {
+    return new Intl.NumberFormat('es-MX').format(num || 0);
+}
+
+function getPromotionStatus(promo) {
+    const now = new Date();
+    const start = new Date(promo.start_date.replace(' ', 'T'));
+    const end = new Date(promo.end_date.replace(' ', 'T'));
+    const isFlagActive = promo.is_active == 1;
+
+    if (!isFlagActive) {
+        return { label: 'Inactiva', class: 'inactive', icon: 'fa-toggle-off' };
+    }
+    if (now < start) {
+        const daysToStart = Math.max(1, Math.ceil((start - now) / (1000 * 60 * 60 * 24)));
+        return { label: 'Próxima', class: 'upcoming', icon: 'fa-clock', daysToStart };
+    }
+    if (now > end) {
+        return { label: 'Expirada', class: 'expired', icon: 'fa-calendar-times' };
+    }
+    return { label: 'Activa', class: 'active', icon: 'fa-check-circle' };
+}
+
+function getPromotionDateInfo(promo) {
+    const now = new Date();
+    const start = new Date(promo.start_date.replace(' ', 'T'));
+    const end = new Date(promo.end_date.replace(' ', 'T'));
+
+    let daysActive = 0;
+    let daysLeft = 0;
+    let daysToStart = 0;
+
+    if (now >= start) {
+        daysActive = Math.max(0, Math.floor((Math.min(now, end) - start) / (1000 * 60 * 60 * 24)));
+    }
+    if (now <= end) {
+        daysLeft = Math.max(0, Math.ceil((end - Math.max(now, start)) / (1000 * 60 * 60 * 24)));
+    }
+    if (now < start) {
+        daysToStart = Math.max(0, Math.ceil((start - now) / (1000 * 60 * 60 * 24)));
+    }
+
+    return { daysActive, daysLeft, daysToStart };
+}
+
+function getPromotionProgress(promo) {
+    const now = new Date();
+    const start = new Date(promo.start_date.replace(' ', 'T'));
+    const end = new Date(promo.end_date.replace(' ', 'T'));
+    const total = end - start;
+
+    if (total <= 0) return { percent: 100, label: 'Finalizada' };
+    if (now < start) return { percent: 0, label: 'Por iniciar' };
+    if (now > end) return { percent: 100, label: 'Finalizada' };
+
+    const elapsed = now - start;
+    const percent = Math.min(100, Math.max(0, (elapsed / total) * 100));
+    return { percent: Math.round(percent), label: `${percent.toFixed(0)}% transcurrido` };
+}
 
 function renderPromotions(promotions) {
     const list = document.getElementById("promotionsList");
     if (!list) return;
+
+    list.className = "promotions-grid";
+
     if (!promotions || promotions.length === 0) {
-        list.innerHTML = "<p style='text-align:center; color:#888; padding:40px 0;'><i class='fas fa-tags' style='font-size:2rem; color:#ddd; margin-bottom:10px; display:block;'></i>No hay promociones activas.<br><small style='color:#aaa;'>Crea una nueva para empezar</small></p>";
+        list.innerHTML = "<p style='text-align:center; color:#888; padding:40px 0; grid-column: 1 / -1;'><i class='fas fa-tags' style='font-size:2rem; color:#ddd; margin-bottom:10px; display:block;'></i>No hay promociones activas.<br><small style='color:#aaa;'>Crea una nueva para empezar</small></p>";
         document.getElementById('promoPagination').style.display = 'none';
         return;
     }
@@ -694,23 +761,106 @@ function renderPromotions(promotions) {
     const start = (currentPage - 1) * PROMO_PER_PAGE;
     const pageItems = promotions.slice(start, start + PROMO_PER_PAGE);
 
-    list.innerHTML = pageItems.map(p => `
-        <div class="promo-card ${p.is_active == 1 ? "" : "inactive"}">
-            <div class="promo-details">
-                <h3>${p.name}</h3>
-                <div class="promo-meta">
-                    <span><i class="fas fa-calendar"></i> ${new Date(p.start_date).toLocaleDateString()} - ${new Date(p.end_date).toLocaleDateString()}</span>
-                    <span><i class="fas fa-tag"></i> ${formatType(p.type)}</span>
-                    <span><i class="fas fa-percent"></i> ${p.type === "bundle" ? "$" + parseFloat(p.discount_value).toFixed(2) + " (Fijo)" : parseFloat(p.discount_value) + (p.discount_type === "percentage" ? "%" : "$") + " OFF"}</span>
+    list.innerHTML = pageItems.map(p => {
+        const status = getPromotionStatus(p);
+        const dateInfo = getPromotionDateInfo(p);
+        const progress = getPromotionProgress(p);
+        const targetCount = p.targets ? p.targets.length : 0;
+        const stats = p.stats || { units_sold: 0, sales_count: 0, revenue: 0 };
+        const isDone = status.class === 'expired' || status.class === 'inactive';
+
+        const targetImages = (p.targets || []).slice(0, 4).map(t => {
+            let img = getRelativeImagePath(t.image_path) || 'assets/images/products/default-product.svg';
+            return `<img src="${img}" alt="" onerror="this.src='assets/images/products/default-product.svg'">`;
+        }).join('');
+        const moreTargets = targetCount > 4 ? `<span class="promo-more-targets">+${targetCount - 4}</span>` : '';
+
+        let dateBadgeText = '';
+        if (status.class === 'expired') {
+            dateBadgeText = 'Finalizada';
+        } else if (status.class === 'inactive') {
+            dateBadgeText = 'Inactiva';
+        } else if (status.daysToStart) {
+            dateBadgeText = `Inicia en ${status.daysToStart} día${status.daysToStart !== 1 ? 's' : ''}`;
+        } else if (dateInfo.daysLeft > 0) {
+            dateBadgeText = `${dateInfo.daysLeft} día${dateInfo.daysLeft !== 1 ? 's' : ''} restantes`;
+        } else if (dateInfo.daysLeft === 0 && status.class === 'active') {
+            dateBadgeText = 'Finaliza hoy';
+        }
+
+        const discountValue = p.type === "bundle"
+            ? "$" + parseFloat(p.discount_value).toFixed(2)
+            : parseFloat(p.discount_value) + (p.discount_type === "percentage" ? "%" : "$");
+
+        return `
+            <div class="promo-card-v2 ${status.class} ${isDone ? 'promo-done' : ''}">
+                <div class="promo-card-top">
+                    <div class="promo-title-row">
+                        <h3 class="promo-name" title="${p.name}">${p.name}</h3>
+                        <div class="promo-status-badge ${status.class}">
+                            <i class="fas ${status.icon}"></i> ${status.label}
+                        </div>
+                    </div>
+                    <div class="promo-discount-row">
+                        <div class="promo-discount-big">${discountValue}</div>
+                        <div class="promo-discount-meta">
+                            <span class="promo-discount-label">${p.type === "bundle" ? "Precio fijo" : "Descuento"}</span>
+                            <span class="promo-type-pill">${formatType(p.type)}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="promo-timeline">
+                    <div class="promo-timeline-bar">
+                        <div class="promo-timeline-progress ${status.class}" style="width: ${progress.percent}%"></div>
+                    </div>
+                    <div class="promo-timeline-labels">
+                        <span><i class="fas fa-play"></i> ${new Date(p.start_date).toLocaleDateString()}</span>
+                        <span class="promo-timeline-center">${progress.label}</span>
+                        <span>${new Date(p.end_date).toLocaleDateString()} <i class="fas fa-flag-checkered"></i></span>
+                    </div>
+                    ${dateBadgeText ? `<div class="promo-date-badge ${status.class}">${dateBadgeText}</div>` : ''}
+                </div>
+
+                <div class="promo-stats">
+                    <div class="promo-stat">
+                        <i class="fas fa-shopping-cart"></i>
+                        <div>
+                            <span class="promo-stat-value">${formatNumber(stats.sales_count)}</span>
+                            <span class="promo-stat-label">Ventas</span>
+                        </div>
+                    </div>
+                    <div class="promo-stat">
+                        <i class="fas fa-box-open"></i>
+                        <div>
+                            <span class="promo-stat-value">${formatNumber(stats.units_sold)}</span>
+                            <span class="promo-stat-label">Unidades</span>
+                        </div>
+                    </div>
+                    <div class="promo-stat">
+                        <i class="fas fa-dollar-sign"></i>
+                        <div>
+                            <span class="promo-stat-value">${formatCurrency(stats.revenue)}</span>
+                            <span class="promo-stat-label">Ingresos</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="promo-card-footer">
+                    <div class="promo-targets-preview">
+                        ${targetImages}
+                        ${moreTargets}
+                        <span class="promo-targets-label">${targetCount} producto${targetCount !== 1 ? 's' : ''}</span>
+                    </div>
+                    <div class="promo-actions">
+                        <button class="btn btn-info" onclick="openPromoModal(${p.promotion_id}, true)" title="Ver"><i class="fas fa-eye"></i></button>
+                        <button class="btn btn-primary" onclick="openPromoModal(${p.promotion_id}, false)" title="Editar"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-danger" onclick="deletePromotion(${p.promotion_id})" title="Eliminar"><i class="fas fa-trash"></i></button>
+                    </div>
                 </div>
             </div>
-            <div class="promo-actions">
-                <button class="btn btn-info" onclick="openPromoModal(${p.promotion_id}, true)" title="Ver"><i class="fas fa-eye"></i></button>
-                <button class="btn btn-primary" onclick="openPromoModal(${p.promotion_id}, false)" title="Editar"><i class="fas fa-edit"></i></button>
-                <button class="btn btn-danger" onclick="deletePromotion(${p.promotion_id})" title="Eliminar"><i class="fas fa-trash"></i></button>
-            </div>
-        </div>
-    `).join("");
+        `;
+    }).join("");
 
     renderPagination(totalPages);
 }
@@ -814,7 +964,7 @@ function openPromoDrawer(promoId = null) {
                 if (t.product_id) {
                     const p = allProducts.find(prod => prod.product_id == t.product_id);
                     if (p) {
-                        fullInfo = { name: p.product_name, price: p.price, cost: p.cost, image: p.image_url || p.image_path || p.image };
+                        fullInfo = { name: p.product_name, price: p.price, cost: p.cost, image: p.image_path };
                     } else {
                         fullInfo = { name: t.product_name, price: 0, cost: 0 };
                     }
@@ -998,9 +1148,9 @@ function renderDrawerProducts(products) {
     }
     grid.innerHTML = products.map(p => {
         const isSelected = selectedTargets.some(t => t.id == p.product_id);
-        let imgSrc = getRelativeImagePath(p.image_url || p.image_path || p.image);
-        if (!imgSrc) imgSrc = 'assets/images/products/default.png';
-        const onErrorParams = "this.onerror=null;this.src='assets/images/products/default.png';";
+        let imgSrc = getRelativeImagePath(p.image_path);
+        if (!imgSrc) imgSrc = 'assets/images/products/default-product.svg';
+        const onErrorParams = "this.onerror=null;this.src='assets/images/products/default-product.svg';";
         return `
             <div class="product-item-card ${isSelected ? 'selected' : ''}" onclick="toggleDrawerProduct(${p.product_id})" title="${p.product_name}">
                 <div class="product-item-img-wrapper">
@@ -1029,7 +1179,7 @@ function toggleDrawerProduct(productId) {
             name: product.product_name,
             price: product.price,
             cost: product.cost,
-            image: product.image_url || product.image_path || product.image
+            image: product.image_path
         });
     }
     renderDrawerProducts(allProducts);
@@ -1052,8 +1202,8 @@ function renderDrawerSelected() {
     section.style.display = 'block';
     list.innerHTML = selectedTargets.map(t => {
         let imgTag = '';
-        if (t.image) {
-            const imgPath = getRelativeImagePath(t.image);
+        if (t.image_path) {
+            const imgPath = getRelativeImagePath(t.image_path);
             imgTag = `<img src="${imgPath}" alt="img">`;
         } else {
             imgTag = `<div style="width:24px;height:24px;background:#334155;border-radius:50%;margin-right:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-box" style="font-size:10px;color:#cbd5e1;"></i></div>`;

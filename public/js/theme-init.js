@@ -1,4 +1,18 @@
 (function() {
+    // Restore sidebar collapsed state as early as possible to avoid layout flash
+    const savedSidebarState = localStorage.getItem('sidebarCollapsed');
+    if (savedSidebarState === 'true') {
+        document.documentElement.classList.add('sidebar-collapsed');
+    }
+
+    // Temporarily disable sidebar transitions during initial paint to prevent jumps
+    document.documentElement.classList.add('sidebar-loading');
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            document.documentElement.classList.remove('sidebar-loading');
+        });
+    });
+
     const savedTheme = localStorage.getItem('pos_theme_config');
     if (savedTheme) {
         try {

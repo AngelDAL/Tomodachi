@@ -22,8 +22,8 @@ try {
     $store_id = $currentUser['store_id'] ?? 1; // Default to store 1 if not set
     
     $type = $_GET['type'] ?? 'dashboard';
-    $start_date = $_GET['start_date'] ?? date('Y-m-01');
-    $end_date = $_GET['end_date'] ?? date('Y-m-t');
+    $start_date = isset($_GET['start_date']) ? str_replace('T', ' ', $_GET['start_date']) : date('Y-m-01 00:00:00');
+    $end_date = isset($_GET['end_date']) ? str_replace('T', ' ', $_GET['end_date']) : date('Y-m-t 23:59:59');
 
     if ($type === 'sales') {
         // Sales Report
@@ -40,7 +40,7 @@ try {
             JOIN sale_details sd ON s.sale_id = sd.sale_id
             LEFT JOIN products p ON sd.product_id = p.product_id
             WHERE s.store_id = ? 
-            AND DATE(s.sale_date) BETWEEN ? AND ?
+            AND s.sale_date BETWEEN ? AND ?
             AND s.status = 'completed'
             GROUP BY s.sale_id
             ORDER BY s.sale_date DESC
@@ -87,7 +87,7 @@ try {
             JOIN sales s ON sd.sale_id = s.sale_id
             JOIN products p ON sd.product_id = p.product_id
             WHERE s.store_id = ?
-            AND DATE(s.sale_date) BETWEEN ? AND ?
+            AND s.sale_date BETWEEN ? AND ?
             AND s.status = 'completed'
             GROUP BY p.product_id
             ORDER BY total_sold DESC
@@ -117,7 +117,7 @@ try {
             JOIN products p ON im.product_id = p.product_id
             JOIN users u ON im.user_id = u.user_id
             WHERE im.store_id = ?
-            AND DATE(im.created_at) BETWEEN ? AND ?
+            AND im.created_at BETWEEN ? AND ?
             ORDER BY im.created_at DESC
         ");
         $stmt->execute([$store_id, $start_date, $end_date]);
@@ -145,7 +145,7 @@ try {
             JOIN users u ON cr.user_id = u.user_id
             LEFT JOIN terminals t ON cr.terminal_id = t.terminal_id
             WHERE cr.store_id = ?
-            AND DATE(cr.opening_date) BETWEEN ? AND ?
+            AND cr.opening_date BETWEEN ? AND ?
             ORDER BY cr.opening_date DESC
         ");
         $stmt->execute([$store_id, $start_date, $end_date]);
@@ -170,7 +170,7 @@ try {
             JOIN users u ON cm.user_id = u.user_id
             LEFT JOIN terminals t ON cr.terminal_id = t.terminal_id
             WHERE cr.store_id = ?
-            AND DATE(cm.created_at) BETWEEN ? AND ?
+            AND cm.created_at BETWEEN ? AND ?
             ORDER BY cm.created_at DESC
         ");
         $stmt->execute([$store_id, $start_date, $end_date]);

@@ -6,6 +6,13 @@
     --sidebar-border-radius: 12px;
 }
 
+/* Prevent transition jumps during the initial page load */
+html.sidebar-loading .sidebar,
+html.sidebar-loading .sidebar *,
+html.sidebar-loading .main-content {
+    transition: none !important;
+}
+
 /* Base style for existing elements inside Sidebar */
 /* MOVED: Override generic span rule inside media query to preserve mobile */
 
@@ -94,8 +101,16 @@
 
     .sidebar-nav {
         flex: 1; /* Take remaining height */
+        display: flex;
+        flex-direction: column;
         overflow-y: auto;
         padding: 10px 0;
+    }
+
+    /* Push the bottom group (logout/support) to the end of the sidebar */
+    .nav-bottom-group {
+        margin-top: auto;
+        padding-bottom: 10px;
     }
     
     /* Override .nav-item to ensure proper spacing in desktop mode */
@@ -138,61 +153,61 @@
     }
 
     /* ----- Collapsed State ----- */
-    body.sidebar-collapsed .sidebar {
+    html.sidebar-collapsed .sidebar {
         width: var(--sidebar-collapsed-width) !important;
     }
 
-    body.sidebar-collapsed .main-content {
+    html.sidebar-collapsed .main-content {
         margin-left: calc(var(--sidebar-collapsed-width) + (var(--sidebar-gap) * 2)) !important;
     }
 
     /* Hiding Text */
-    body.sidebar-collapsed .nav-text,
-    body.sidebar-collapsed .sidebar-header h2 {
+    html.sidebar-collapsed .nav-text,
+    html.sidebar-collapsed .sidebar-header h2 {
         display: none;
         opacity: 0;
     }
 
     /* Centering Icons */
-    body.sidebar-collapsed .nav-item {
+    html.sidebar-collapsed .nav-item {
         justify-content: center;
         padding: 15px 0;
     }
 
-    body.sidebar-collapsed .nav-icon {
+    html.sidebar-collapsed .nav-icon {
         margin: 0;
         font-size: 1.2rem;
     }
 
-    body.sidebar-collapsed .sidebar-header {
+    html.sidebar-collapsed .sidebar-header {
         justify-content: center;
         padding: 20px 0;
     }
 
-    body.sidebar-collapsed .sidebar-desktop-toggle {
+    html.sidebar-collapsed .sidebar-desktop-toggle {
         margin: 0;
     }
 
     /* Profile Section Adjustments when Collapsed */
-    body.sidebar-collapsed .profile-nav-group span.profile-icon-container {
+    html.sidebar-collapsed .profile-nav-group span.profile-icon-container {
         display: flex;
         justify-content: center;
         width: 100%;
     }
     
-    body.sidebar-collapsed .nav-profile-img {
+    html.sidebar-collapsed .nav-profile-img {
         width: 32px;
         height: 32px;
         margin: 0;
     }
     
     /* Hide Separator / extra items */
-    body.sidebar-collapsed .nav-separator {
+    html.sidebar-collapsed .nav-separator {
         display: none;
     }
     
     /* Tooltip adjustments for collapsed */
-    body.sidebar-collapsed .profile-nav-group:hover .user-tooltip-menu {
+    html.sidebar-collapsed .profile-nav-group:hover .user-tooltip-menu {
         left: var(--sidebar-collapsed-width); /* Show right of collapsed bar */
         bottom: 20px; /* Adjust as needed */
         top: auto;

@@ -1635,7 +1635,7 @@ async function loadCategoriesAndProducts() {
         allCategories.forEach(cat => {
             const opt = document.createElement('option');
             opt.value = cat.category_id;
-            opt.textContent = cat.name;
+            opt.textContent = cat.category_name || cat.name || 'Sin nombre';
             catSelect.appendChild(opt);
         });
     }

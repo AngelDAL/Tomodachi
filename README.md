@@ -75,6 +75,17 @@ usuarios y ventas históricas para que puedas explorar el sistema:
 Con `SEED_DEMO=false` obtienes solo los datos base del esquema (tienda 1 +
 admin).
 
+## 🖥️ Uso
+
+1. Acceda a la aplicación desde su navegador (ej. `http://localhost:8080`).
+   Verá un **carrusel de presentación** con las características del sistema;
+   la última diapositiva permite iniciar sesión o **crear una empresa nueva**
+   (al registrarte se crea una empresa independiente con su propio
+   inventario, ventas y equipo).
+2. Credenciales por defecto: **admin / admin123**.
+3. **¡Importante!** Cambie la contraseña del administrador inmediatamente
+   después del primer inicio de sesión.
+
 ## 🛠️ Instalación manual (Apache/Nginx + PHP + MySQL)
 
 Requisitos: PHP 8.0+, MySQL 8.0 / MariaDB 10.5+, extensiones PDO, pdo_mysql,

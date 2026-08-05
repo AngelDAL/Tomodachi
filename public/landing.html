@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tomodachi POS - El futuro de tu negocio</title>
+    <title>Tomodachi POS - Sistema de Punto de Venta Open Source</title>
 
     <!-- Check Session -->
     <script>
@@ -17,383 +17,777 @@
             })
             .catch(console.error);
     </script>
-    
+
     <!-- Local Fonts -->
     <link rel="stylesheet" href="css/fonts.css">
     <!-- FontAwesome -->
     <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
-    <!-- Landing CSS -->
-    <link rel="stylesheet" href="css/landing.css">
+    <style>
+        @import url('css/variables.css');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Google Sans Flex', sans-serif;
+            color: var(--text-color);
+            background: #0f0f1a;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* ===== Carrusel ===== */
+        .carousel {
+            position: relative;
+            height: 100vh;
+            width: 100%;
+        }
+
+        .slides {
+            height: 100%;
+            display: flex;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .slide {
+            min-width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            position: relative;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        /* Fondos alternados */
+        .slide:nth-child(1) { background: linear-gradient(135deg, #1a0b2e 0%, #2d1b4e 100%); }
+        .slide:nth-child(2) { background: linear-gradient(135deg, #0f1a2e 0%, #1b2f52 100%); }
+        .slide:nth-child(3) { background: linear-gradient(135deg, #1a0b2e 0%, #3a1052 100%); }
+        .slide:nth-child(4) { background: linear-gradient(135deg, #10261c 0%, #1d4a35 100%); }
+        .slide:nth-child(5) { background: linear-gradient(135deg, #2e1408 0%, #4e2a10 100%); }
+        .slide:nth-child(6) { background: linear-gradient(135deg, #0f1a2e 0%, #233a63 100%); }
+        .slide:nth-child(7) { background: linear-gradient(135deg, #1a0b2e 0%, #2d1b4e 100%); }
+        .slide:nth-child(8) { background: linear-gradient(135deg, #101018 0%, #1e1e30 100%); }
+
+        .slide-content {
+            max-width: 900px;
+            text-align: center;
+            color: #fff;
+            z-index: 2;
+        }
+
+        .slide-icon {
+            font-size: 4rem;
+            color: var(--primary-color);
+            margin-bottom: 24px;
+            display: block;
+            filter: drop-shadow(0 4px 16px rgba(227, 5, 122, 0.35));
+        }
+
+        .slide-content h2 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            line-height: 1.15;
+        }
+
+        .slide-content p {
+            font-size: 1.2rem;
+            line-height: 1.7;
+            color: rgba(255, 255, 255, 0.85);
+            max-width: 720px;
+            margin: 0 auto 12px;
+        }
+
+        .slide-content ul {
+            list-style: none;
+            margin: 20px auto 0;
+            max-width: 640px;
+            text-align: left;
+            display: inline-block;
+        }
+
+        .slide-content ul li {
+            padding: 8px 0;
+            font-size: 1.05rem;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .slide-content ul li i {
+            color: var(--primary-color);
+            margin-right: 12px;
+        }
+
+        .slide-kicker {
+            display: inline-block;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            font-size: 0.8rem;
+            color: var(--primary-color);
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+
+        .badge-open-source {
+            display: inline-block;
+            background: rgba(76, 175, 80, 0.2);
+            border: 1px solid rgba(76, 175, 80, 0.5);
+            color: #7ce08a;
+            padding: 6px 16px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            margin-top: 20px;
+            letter-spacing: 0.5px;
+        }
+
+        /* Logo */
+        .logo-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            margin-bottom: 28px;
+        }
+
+        .logo-row svg {
+            width: 52px;
+            height: 52px;
+            fill: var(--primary-color);
+        }
+
+        .logo-row .logo-name {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 0.5px;
+        }
+
+        /* ===== Navegación ===== */
+        .nav-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #fff;
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            font-size: 1.2rem;
+            cursor: pointer;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            backdrop-filter: blur(8px);
+        }
+
+        .nav-arrow:hover {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+            transform: translateY(-50%) scale(1.05);
+        }
+
+        .nav-arrow.prev { left: 24px; }
+        .nav-arrow.next { right: 24px; }
+
+        .dots {
+            position: absolute;
+            bottom: 28px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.25);
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s;
+            padding: 0;
+        }
+
+        .dot.active {
+            background: var(--primary-color);
+            width: 28px;
+            border-radius: 5px;
+        }
+
+        /* Contador de diapositiva */
+        .slide-counter {
+            position: absolute;
+            bottom: 28px;
+            right: 32px;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.9rem;
+            z-index: 10;
+            letter-spacing: 2px;
+        }
+
+        /* Barra de progreso */
+        .progress-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: var(--primary-color);
+            z-index: 20;
+            transition: width 0.6s ease;
+        }
+
+        /* ===== Slide final: Login / Registro ===== */
+        .auth-slide {
+            background: linear-gradient(135deg, #101018 0%, #1e1e30 100%);
+        }
+
+        .auth-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(12px);
+            border-radius: 20px;
+            padding: 36px 40px;
+            width: 100%;
+            max-width: 440px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+        }
+
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 24px;
+            border-radius: 10px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.06);
+            padding: 4px;
+        }
+
+        .auth-tab {
+            flex: 1;
+            padding: 10px 0;
+            text-align: center;
+            border: none;
+            background: transparent;
+            color: rgba(255, 255, 255, 0.6);
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .auth-tab.active {
+            background: var(--primary-color);
+            color: #fff;
+        }
+
+        .auth-panel {
+            display: none;
+        }
+
+        .auth-panel.active {
+            display: block;
+        }
+
+        .auth-panel h3 {
+            color: #fff;
+            font-size: 1.4rem;
+            margin-bottom: 6px;
+        }
+
+        .auth-panel .subtitle {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+
+        .auth-panel .subtitle strong {
+            color: var(--primary-color);
+        }
+
+        .auth-field {
+            margin-bottom: 14px;
+            text-align: left;
+        }
+
+        .auth-field label {
+            display: block;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.8rem;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .auth-field input {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.07);
+            color: #fff;
+            font-family: inherit;
+            font-size: 0.95rem;
+            transition: border 0.3s;
+        }
+
+        .auth-field input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .auth-field input::placeholder {
+            color: rgba(255, 255, 255, 0.35);
+        }
+
+        .auth-row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .auth-row .auth-field {
+            flex: 1;
+        }
+
+        .auth-btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            background: var(--primary-color);
+            color: #fff;
+            font-family: inherit;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 6px;
+            transition: all 0.3s;
+        }
+
+        .auth-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .auth-btn:disabled {
+            opacity: 0.7;
+            cursor: wait;
+        }
+
+        .auth-msg {
+            margin-top: 12px;
+            font-size: 0.85rem;
+            display: none;
+            text-align: center;
+        }
+
+        .auth-msg.error {
+            color: #ff6b6b;
+            display: block;
+        }
+
+        .auth-msg.success {
+            color: #7ce08a;
+            display: block;
+        }
+
+        .auth-hint {
+            margin-top: 16px;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.45);
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        .auth-hint code {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 8px;
+            border-radius: 6px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .slide { padding: 24px; }
+            .slide-content h2 { font-size: 1.9rem; }
+            .slide-content p { font-size: 1rem; }
+            .nav-arrow { display: none; }
+            .auth-card { padding: 24px 20px; }
+            .auth-row { flex-direction: column; gap: 0; }
+        }
+    </style>
 </head>
 
 <body>
 
-    <!-- Header -->
-    <header class="header">
-        <div class="container navbar">
-            <a href="index.html" class="logo">
-                <svg viewBox="0 0 978 978" version="1.1" xmlns="http://www.w3.org/2000/svg"
-                    style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2; fill: var(--primary-color);">
-                    <g transform="matrix(1,0,0,1,-640.505536,-1753.937008)">
-                        <g transform="matrix(3.479065,0,0,3.479065,-4010.290738,-1296.905436)">
-                            <path
-                                d="M1439.144,903.435C1445.042,887.496 1460.24,876.915 1477.235,876.915C1494.231,876.915 1509.429,887.496 1515.327,903.435L1535.807,958.783L1591.155,979.263C1607.094,985.161 1617.676,1000.36 1617.676,1017.355C1617.676,1034.35 1607.094,1049.548 1591.155,1055.446L1535.807,1075.927L1515.327,1131.275C1509.429,1147.214 1494.231,1157.795 1477.235,1157.795C1460.24,1157.795 1445.042,1147.214 1439.144,1131.275L1418.663,1075.927L1363.316,1055.446C1347.377,1049.548 1336.795,1034.35 1336.795,1017.355C1336.795,1000.36 1347.377,985.161 1363.316,979.263L1418.663,958.783L1439.144,903.435ZM1477.235,958.616C1444.817,958.616 1418.497,984.936 1418.497,1017.355C1418.497,1049.774 1444.817,1076.093 1477.235,1076.093C1509.654,1076.093 1535.974,1049.774 1535.974,1017.355C1535.974,984.936 1509.654,958.616 1477.235,958.616ZM1477.235,987.986C1493.445,987.986 1506.605,1001.145 1506.605,1017.355C1506.605,1033.564 1493.445,1046.724 1477.235,1046.724C1461.026,1046.724 1447.866,1033.564 1447.866,1017.355C1447.866,1001.145 1461.026,987.986 1477.235,987.986Z" />
-                        </g>
-                    </g>
-                </svg>
-                Tomodachi
-            </a>
-            <button class="hamburger" id="hamburger" aria-label="Menú">
-                <span></span>
-                <span></span>
-                <span></span>
-            </button>
-            <nav class="nav-links" id="navLinks">
-                <a href="#features">Características</a>
-                <a href="#works">Cómo funciona</a>
-                <a href="#gallery">Galería</a>
-                <a href="#pricing">Precios</a>
-                <div class="nav-links-auth">
-                    <a href="login.html" class="btn btn-outline btn-sm"><span class="btn-text">Iniciar</span><i
-                            class="fas fa-sign-in-alt btn-icon"></i></a>
-                    <a href="register.html" class="btn btn-primary btn-sm"><span class="btn-text">Registro</span><i
-                            class="fas fa-user-plus btn-icon"></i></a>
-                </div>
-            </nav>
-            <div class="auth-buttons">
-                <a href="login.html" class="btn btn-outline"><span class="btn-text">Iniciar</span><i
-                        class="fas fa-sign-in-alt btn-icon"></i></a>
-                <a href="register.html" class="btn btn-primary"><span class="btn-text">Registro</span><i
-                        class="fas fa-user-plus btn-icon"></i></a>
-            </div>
-        </div>
-    </header>
+    <div class="carousel" id="carousel">
+        <div class="progress-bar" id="progressBar"></div>
 
-    <!-- Hero Section with Video Background -->
-    <section class="hero">
-        <div class="hero-video-wrapper">
-            <!-- Video background with fallback poster -->
-            <video autoplay muted loop playsinline poster="assets/images/frontPage/UI1.jpg">
-                <source src="assets/video/hero_bg.mp4" type="video/mp4">
-            </video>
-        </div>
-        <div class="hero-overlay"></div>
+        <div class="slides" id="slides">
 
-        <div class="container hero-content fade-up">
-            <h1>Gestión inteligente para tu negocio</h1>
-            <p>El punto de venta moderno que simplifica tus ventas, controla tu inventario y te ayuda a crecer. Sin
-                complicaciones, sin hardware costoso.</p>
-            <div class="hero-btns">
-                <a href="register.html" class="btn btn-primary btn-lg">Registrarse</a>
-                <a href="#features" class="btn btn-outline btn-lg">Mas información</a>
-            </div>
-        </div>
-
-        <div class="scroll-down">
-            <i class="fas fa-chevron-down"></i>
-        </div>
-    </section>
-
-    <!-- Features Section -->
-    <section id="features" class="section">
-        <div class="container">
-            <h2 class="fade-up">Todo lo necesario para el éxito</h2>
-            <p class="section-subtitle fade-up">Herramientas diseñadas pensando en la eficiencia y la simplicidad</p>
-
-            <div class="features-grid">
-                <div class="feature-card fade-up">
-                    <div class="feature-icon"><i class="fas fa-cash-register"></i></div>
-                    <h3>Ventas Rápidas</h3>
-                    <p>Procesa transacciones en segundos con una interfaz intuitiva diseñada para agilidad.</p>
-                </div>
-                <div class="feature-card fade-up">
-                    <div class="feature-icon"><i class="fas fa-mobile-alt"></i></div>
-                    <h3>Acceso Móvil</h3>
-                    <p>Lleva tu negocio contigo. Accede a ventas y reportes desde tu celular o tablet en cualquier
-                        lugar.</p>
-                </div>
-                <div class="feature-card fade-up">
-                    <div class="feature-icon"><i class="fas fa-chart-pie"></i></div>
-                    <h3>Analíticas</h3>
-                    <p>Toma decisiones basadas en datos reales con reportes detallados de ventas y rendimiento.</p>
-                </div>
-                <div class="feature-card fade-up">
-                    <div class="feature-icon"><i class="fas fa-qrcode"></i></div>
-                    <h3>Inventario</h3>
-                    <p>Control total de tu stock, creación de etiquetas y alertas de reabastecimiento.</p>
-                </div>
-                <div class="feature-card fade-up">
-                    <div class="feature-icon"><i class="fas fa-users"></i></div>
-                    <h3>Equipo</h3>
-                    <p>Gestiona roles y permisos para todo tu personal de forma segura y sencilla.</p>
-                </div>
-                <div class="feature-card fade-up">
-                    <div class="feature-icon"><i class="fas fa-cloud"></i></div>
-                    <h3>Cloud Based</h3>
-                    <p>Accede a tu negocio desde cualquier lugar y dispositivo, siempre sincronizado.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Showcase Section 1 -->
-    <section id="works" class="section showcase">
-        <div class="container showcase-content fade-up">
-            <div class="showcase-image-wrapper">
-                <div class="showcase-image">
-                    <img src="assets/images/frontPage/UI2.jpg" alt="Tomodachi Desktop View"
-                        style="width:100%; height: auto;">
-                </div>
-            </div>
-            <div class="showcase-text">
-                <h3>Interfaz Moderna y Limpia</h3>
-                <p>Olvídate de sistemas complicados y antiguos. Tomodachi ofrece una experiencia de usuario fluida y
-                    agradable.</p>
-                <ul style="margin-top: 20px;">
-                    <li style="margin-bottom: 10px;"><i class="fas fa-check text-primary"></i> Punto de venta optimizado
-                    </li>
-                    <li style="margin-bottom: 10px;"><i class="fas fa-check text-primary"></i> Personalizable a tu marca
-                    </li>
-                    <li style="margin-bottom: 10px;"><i class="fas fa-check text-primary"></i> Diseño intuitivo para
-                        fácil aprendizaje</li>
-                </ul>
-            </div>
-        </div>
-    </section>
-
-    <!-- Showcase Section 2 -->
-    <section class="section">
-        <div class="container showcase-content reverse fade-up">
-            <div class="showcase-image-wrapper">
-                <div class="showcase-image">
-                    <img src="assets/images/frontPage/Movil.png" alt="Tomodachi Mobile View"
-                        style="width:100%; height: auto;">
-                </div>
-            </div>
-            <div class="showcase-text">
-                <h3>Control Total desde Cualquier Lugar</h3>
-                <p>No necesitas estar en la tienda para saber qué está pasando. Gestiona tu negocio de forma remota.</p>
-                <br>
-                <ul>
-                    <li style="margin-bottom: 15px;">
-                        <strong class="text-primary">Monitorización en Vivo</strong>
-                        <p>Consulta las ventas y el estado de la caja registradora en tiempo real desde tu dispositivo
-                            móvil.</p>
-                    </li>
-                    <li style="margin-bottom: 15px;">
-                        <strong class="text-primary">Gestión Multi-Sucursal</strong>
-                        <p>Administra inventarios y ventas de todas tus tiendas desde un solo panel centralizado.</p>
-                    </li>
-                </ul>
-            </div>
-    </section>
-
-    <!-- Gallery / Screenshots Section -->
-    <section id="gallery" class="section gallery-section">
-        <div class="container">
-            <h2 class="fade-up">Explora la Plataforma</h2>
-            <p class="section-subtitle fade-up">Un vistazo a las poderosas herramientas que tendrás en tus manos</p>
-
-            <div class="screenshots-grid">
-                <div class="screenshot-item fade-up">
-                    <div class="screenshot-placeholder"
-                        style="background-image: url('assets/images/frontPage/Reporting.png');"></div>
-                    <div class="screenshot-content">
-                        <h3>Reportes y Analíticas</h3>
-                        <p>Obtén insights valiosos sobre tus ventas diarias, productos más vendidos y rendimiento
-                            mensual con gráficos interactivos.</p>
-                    </div>
-                </div>
-                <div class="screenshot-item fade-up">
-                    <div class="screenshot-placeholder"
-                        style="background-image: url('assets/images/frontPage/Inventory.png');"></div>
-                    <div class="screenshot-content">
-                        <h3>Control de Inventario</h3>
-                        <p>Mantén tu stock sincronizado en tiempo real. Recibe alertas de escasez y gestiona proveedores
-                            desde un solo lugar.</p>
-                    </div>
-                </div>
-                <div class="screenshot-item fade-up">
-                    <div class="screenshot-placeholder"
-                        style="background-image: url('assets/images/frontPage/QRGenerator.png');"></div>
-                    <div class="screenshot-content">
-                        <h3>Etiquetado Inteligente</h3>
-                        <p>Genera e imprime etiquetas con códigos QR automáticamente para agilizar el proceso de cobro y
-                            organización.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Pricing Section -->
-    <section id="pricing" class="section" style="background-color: #f9f9f9;">
-        <div class="container">
-            <h2 class="fade-up">Planes a tu medida</h2>
-            <p class="section-subtitle fade-up">Comienza gratis y mejora tu experiencia con funciones premium</p>
-
-            <div class="pricing-grid fade-up">
-                <!-- Free Plan -->
-                <div class="pricing-card">
-                    <div class="plan-header">
-                        <h3>Gratuito</h3>
-                        <div class="price">$0<span>/mes</span></div>
-                    </div>
-                    <ul class="plan-features">
-                        <li><i class="fas fa-check"></i> Ventas e Inventario</li>
-                        <li><i class="fas fa-check"></i> Reportes Básicos</li>
-                        <li><i class="fas fa-check"></i> 1 Usuario Administrador</li>
-                        <li><i class="fas fa-check"></i> Soporte Comunitario</li>
-                    </ul>
-                    <a href="register.html" class="btn btn-outline">Comenzar Gratis</a>
-                </div>
-
-                <!-- Premium Plan -->
-                <div class="pricing-card popular">
-                    <div class="badge">Recomendado</div>
-                    <div class="plan-header">
-                        <h3>Premium</h3>
-                        <div class="price">$120<span>/mes</span></div>
-                    </div>
-                    <ul class="plan-features">
-                        <li><i class="fas fa-check"></i> <strong>Todo lo del plan gratuito</strong></li>
-                        <li><i class="fas fa-check"></i> Personalización (Web y Reportes)</li>
-                        <li><i class="fas fa-check"></i> Personalización del Ticket</li>
-                        <li><i class="fas fa-check"></i> Modo Kiosko</li>
-                        <li><i class="fas fa-check"></i> Dictado en Punto de Venta</li>
-                        <li><i class="fas fa-check"></i> Hasta 3 Usuarios (inc. admin)</li>
-                    </ul>
-                    <a href="register.html" class="btn btn-primary">Obtener Premium</a>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- CTA Section -->
-    <section class="section cta fade-up">
-        <div class="container">
-            <h2>Lleva tu negocio al siguiente nivel</h2>
-            <p>Únete hoy y experimenta la diferencia. Sin costos.</p>
-            <a href="register.html" class="btn btn-lg">Crear Cuenta</a>
-        </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-grid">
-                <div class="footer-brand">
-                    <div class="logo">
-                        <!-- Logo SVG White -->
+            <!-- ===== Slide 1: Hero ===== -->
+            <section class="slide">
+                <div class="slide-content">
+                    <div class="logo-row">
                         <svg viewBox="0 0 978 978" version="1.1" xmlns="http://www.w3.org/2000/svg"
-                            style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2; fill: white;">
+                            style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
                             <g transform="matrix(1,0,0,1,-640.505536,-1753.937008)">
                                 <g transform="matrix(3.479065,0,0,3.479065,-4010.290738,-1296.905436)">
                                     <path
-                                        d="M1439.144,903.435C1445.042,887.496 1460.24,876.915 1477.235,876.915C1494.231,876.915 1509.429,887.496 1515.327,903.435L1535.807,958.783L1591.155,979.263C1607.094,985.161 1617.676,1000.36 1617.676,1017.355C1617.676,1034.35 1607.094,1049.548 1591.155,1055.446L1535.807,1075.927L1515.327,1131.275C1509.429,1147.214 1494.231,1157.795 1477.235,1157.795C1460.24,1157.795 1445.042,1147.214 1439.144,1131.275L1418.663,1075.927L1363.316,1055.446C1347.377,1049.548 1336.795,1034.35 1336.795,1000.36 1347.377,985.161 1363.316,979.263L1418.663,958.783L1439.144,903.435ZM1477.235,958.616C1444.817,958.616 1418.497,984.936 1418.497,1017.355C1418.497,1049.774 1444.817,1076.093 1477.235,1076.093C1509.654,1076.093 1535.974,1049.774 1535.974,1017.355C1535.974,984.936 1509.654,958.616 1477.235,958.616ZM1477.235,987.986C1493.445,987.986 1506.605,1001.145 1506.605,1017.355C1506.605,1033.564 1493.445,1046.724 1477.235,1046.724C1461.026,1046.724 1447.866,1033.564 1447.866,1017.355C1447.866,1001.145 1461.026,987.986 1477.235,987.986Z" />
+                                        d="M1439.144,903.435C1445.042,887.496 1460.24,876.915 1477.235,876.915C1494.231,876.915 1509.429,887.496 1515.327,903.435L1535.807,958.783L1591.155,979.263C1607.094,985.161 1617.676,1000.36 1617.676,1017.355C1617.676,1034.35 1607.094,1049.548 1591.155,1055.446L1535.807,1075.927L1515.327,1131.275C1509.429,1147.214 1494.231,1157.795 1477.235,1157.795C1460.24,1157.795 1445.042,1147.214 1439.144,1131.275L1418.663,1075.927L1363.316,1055.446C1347.377,1049.548 1336.795,1034.35 1336.795,1017.355C1336.795,1000.36 1347.377,985.161 1363.316,979.263L1418.663,958.783L1439.144,903.435ZM1477.235,958.616C1444.817,958.616 1418.497,984.936 1418.497,1017.355C1418.497,1049.774 1444.817,1076.093 1477.235,1076.093C1509.654,1076.093 1535.974,1049.774 1535.974,1017.355C1535.974,984.936 1509.654,958.616 1477.235,958.616ZM1477.235,987.986C1493.445,987.986 1506.605,1001.145 1506.605,1017.355C1506.605,1033.564 1493.445,1046.724 1477.235,1046.724C1461.026,1046.724 1447.866,1033.564 1447.866,1017.355C1447.866,1001.145 1461.026,987.986 1477.235,987.986Z" />
                                 </g>
                             </g>
                         </svg>
-                        Tomodachi
+                        <span class="logo-name">Tomodachi</span>
                     </div>
-                    <p style="color: #999;">Sistema de gestión empresarial diseñado para la era digital.</p>
+                    <span class="slide-kicker">Punto de Venta Open Source</span>
+                    <h2>El sistema de gestión para tu negocio</h2>
+                    <p>Ventas, inventario, cajas, promociones y reportes en un solo lugar. Instálalo en tu propio
+                        servidor, sin suscripciones ni cobros.</p>
+                    <div class="badge-open-source"><i class="fas fa-code-branch"></i> Self-hosted · Open Source · Apache 2.0</div>
                 </div>
-                <div class="footer-col">
-                    <h4>Producto</h4>
+            </section>
+
+            <!-- ===== Slide 2: Ventas ===== -->
+            <section class="slide">
+                <div class="slide-content">
+                    <i class="fas fa-cash-register slide-icon"></i>
+                    <span class="slide-kicker">Caja rápida</span>
+                    <h2>Ventas en segundos</h2>
+                    <p>Interfaz de caja intuitiva pensada para agilidad: productos por código de barras, QR o búsqueda
+                        instantánea. Ventas a granel, descuentos y múltiples métodos de pago.</p>
                     <ul>
-                        <li><a href="#features">Características</a></li>
-                        <li><a href="#gallery">Galería</a></li>
-                        <li><a href="#pricing">Precios</a></li>
-                        <li><a href="register.html">Registro</a></li>
+                        <li><i class="fas fa-check"></i> Caja rápida con teclado o lector</li>
+                        <li><i class="fas fa-check"></i> Códigos de barras y QR generados automáticamente</li>
+                        <li><i class="fas fa-check"></i> Pago en efectivo, tarjeta, transferencia o mixto</li>
+                        <li><i class="fas fa-check"></i> Display para cliente en tiempo real</li>
                     </ul>
                 </div>
-                <div class="footer-col">
-                    <h4>Soporte</h4>
+            </section>
+
+            <!-- ===== Slide 3: Inventario ===== -->
+            <section class="slide">
+                <div class="slide-content">
+                    <i class="fas fa-boxes-stacked slide-icon"></i>
+                    <span class="slide-kicker">Control total</span>
+                    <h2>Inventario que se actualiza solo</h2>
+                    <p>Cada venta descuenta stock automáticamente. Categorías, alertas de reabastecimiento, ajustes y
+                        movimientos con historial completo.</p>
                     <ul>
-                        <li><a href="support.html">Ayuda</a></li>
-                        <li><a href="support.html">Contacto</a></li>
+                        <li><i class="fas fa-check"></i> Stock en tiempo real por producto</li>
+                        <li><i class="fas fa-check"></i> Alertas de mínimo y reabastecimiento</li>
+                        <li><i class="fas fa-check"></i> Importación de productos desde CSV/Excel</li>
+                        <li><i class="fas fa-check"></i> Historial de movimientos (entradas, salidas, ajustes)</li>
                     </ul>
                 </div>
-                <div class="footer-col">
-                    <h4>Legal</h4>
+            </section>
+
+            <!-- ===== Slide 4: Multi-empresa ===== -->
+            <section class="slide">
+                <div class="slide-content">
+                    <i class="fas fa-building-columns slide-icon"></i>
+                    <span class="slide-kicker">Multi-empresa</span>
+                    <h2>Varias empresas, un solo sistema</h2>
+                    <p>Cada cuenta es una empresa independiente, con sus tiendas, usuarios y datos aislados. Crea tu
+                        empresa, agrega sucursales y asigna tu equipo con roles específicos.</p>
                     <ul>
-                        <li><a href="terms.html">Términos y Condiciones</a></li>
-                        <li><a href="privacy.html">Política de Privacidad</a></li>
-                        <li><a href="#">Cookies</a></li>
+                        <li><i class="fas fa-check"></i> Múltiples tiendas por empresa</li>
+                        <li><i class="fas fa-check"></i> Usuarios con roles: Admin, Gerente, Cajero</li>
+                        <li><i class="fas fa-check"></i> Datos 100% aislados entre empresas</li>
+                        <li><i class="fas fa-check"></i> Terminales y cajas por sucursal</li>
                     </ul>
                 </div>
-            </div>
-            <div class="footer-bottom">
-                <p>&copy; 2024 Tomodachi POS. Todos los derechos reservados.</p>
-            </div>
+            </section>
+
+            <!-- ===== Slide 5: Cajas y dinero ===== -->
+            <section class="slide">
+                <div class="slide-content">
+                    <i class="fas fa-coins slide-icon"></i>
+                    <span class="slide-kicker">Dinero bajo control</span>
+                    <h2>Cajas registradoras con arqueo</h2>
+                    <p>Abre y cierra cajas, registra movimientos de entrada y salida, y detecta diferencias al
+                        instante.</p>
+                    <ul>
+                        <li><i class="fas fa-check"></i> Apertura y cierre de caja por usuario</li>
+                        <li><i class="fas fa-check"></i> Movimientos: entradas, retiros, ventas</li>
+                        <li><i class="fas fa-check"></i> Arqueo con diferencia calculada</li>
+                        <li><i class="fas fa-check"></i> Cancelación de ventas con devolución de stock</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- ===== Slide 6: Promociones y reportes ===== -->
+            <section class="slide">
+                <div class="slide-content">
+                    <i class="fas fa-chart-line slide-icon"></i>
+                    <span class="slide-kicker">Crece con datos</span>
+                    <h2>Promociones y reportes que venden</h2>
+                    <p>Crea descuentos, paquetes y ofertas por cantidad. Consulta reportes y gráficas para tomar
+                        decisiones informadas.</p>
+                    <ul>
+                        <li><i class="fas fa-check"></i> Promociones: descuento simple, por cantidad, paquete o cuenta</li>
+                        <li><i class="fas fa-check"></i> Reportes diarios de ventas y ganancias</li>
+                        <li><i class="fas fa-check"></i> Productos más vendidos y categorías top</li>
+                        <li><i class="fas fa-check"></i> Dashboard con estadísticas en tiempo real</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- ===== Slide 7: Open source / self-hosted ===== -->
+            <section class="slide">
+                <div class="slide-content">
+                    <i class="fas fa-server slide-icon"></i>
+                    <span class="slide-kicker">Tus datos, tu servidor</span>
+                    <h2>Self-hosted y open source</h2>
+                    <p>Instálalo con Docker en tu propio servidor en minutos. Sin suscripciones, sin límites, sin que
+                        nadie más toque tus datos.</p>
+                    <ul>
+                        <li><i class="fas fa-check"></i> Docker: <code style="background:rgba(255,255,255,0.1);padding:2px 8px;border-radius:6px;">docker compose up -d</code></li>
+                        <li><i class="fas fa-check"></i> Todas las funciones desbloqueadas</li>
+                        <li><i class="fas fa-check"></i> API REST documentada para agentes e integraciones</li>
+                        <li><i class="fas fa-check"></i> Código en GitHub bajo licencia Apache 2.0</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- ===== Slide 8: Login / Registro ===== -->
+            <section class="slide auth-slide">
+                <div class="auth-card">
+                    <div class="logo-row" style="margin-bottom: 16px;">
+                        <svg viewBox="0 0 978 978" version="1.1" xmlns="http://www.w3.org/2000/svg"
+                            style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2; width:36px; height:36px; fill:var(--primary-color);">
+                            <g transform="matrix(1,0,0,1,-640.505536,-1753.937008)">
+                                <g transform="matrix(3.479065,0,0,3.479065,-4010.290738,-1296.905436)">
+                                    <path
+                                        d="M1439.144,903.435C1445.042,887.496 1460.24,876.915 1477.235,876.915C1494.231,876.915 1509.429,887.496 1515.327,903.435L1535.807,958.783L1591.155,979.263C1607.094,985.161 1617.676,1000.36 1617.676,1017.355C1617.676,1034.35 1607.094,1049.548 1591.155,1055.446L1535.807,1075.927L1515.327,1131.275C1509.429,1147.214 1494.231,1157.795 1477.235,1157.795C1460.24,1157.795 1445.042,1147.214 1439.144,1131.275L1418.663,1075.927L1363.316,1055.446C1347.377,1049.548 1336.795,1034.35 1336.795,1017.355C1336.795,1000.36 1347.377,985.161 1363.316,979.263L1418.663,958.783L1439.144,903.435ZM1477.235,958.616C1444.817,958.616 1418.497,984.936 1418.497,1017.355C1418.497,1049.774 1444.817,1076.093 1477.235,1076.093C1509.654,1076.093 1535.974,1049.774 1535.974,1017.355C1535.974,984.936 1509.654,958.616 1477.235,958.616ZM1477.235,987.986C1493.445,987.986 1506.605,1001.145 1506.605,1017.355C1506.605,1033.564 1493.445,1046.724 1477.235,1046.724C1461.026,1046.724 1447.866,1033.564 1447.866,1017.355C1447.866,1001.145 1461.026,987.986 1477.235,987.986Z" />
+                                </g>
+                            </g>
+                        </svg>
+                        <span class="logo-name" style="font-size:1.4rem;">Tomodachi</span>
+                    </div>
+
+                    <div class="auth-tabs">
+                        <button class="auth-tab active" data-tab="login" onclick="switchTab('login')"><i class="fas fa-sign-in-alt"></i> Iniciar sesión</button>
+                        <button class="auth-tab" data-tab="register" onclick="switchTab('register')"><i class="fas fa-building"></i> Crear empresa</button>
+                    </div>
+
+                    <!-- Panel Login -->
+                    <div class="auth-panel active" id="panel-login">
+                        <h3>Bienvenido de nuevo</h3>
+                        <p class="subtitle">Accede a la empresa que ya creaste</p>
+                        <form id="loginForm">
+                            <div class="auth-field">
+                                <label for="login_username">Usuario</label>
+                                <input type="text" id="login_username" required placeholder="tu_usuario" autocomplete="username">
+                            </div>
+                            <div class="auth-field">
+                                <label for="login_password">Contraseña</label>
+                                <input type="password" id="login_password" required placeholder="••••••••" autocomplete="current-password">
+                            </div>
+                            <button type="submit" class="auth-btn" id="loginBtn"><i class="fas fa-sign-in-alt"></i> Iniciar sesión</button>
+                            <div class="auth-msg" id="loginMsg"></div>
+                        </form>
+                        <p class="auth-hint">Demo: <code>admin</code> / <code>admin123</code> · <code>demo</code> / <code>demo123</code></p>
+                    </div>
+
+                    <!-- Panel Registro (nueva empresa) -->
+                    <div class="auth-panel" id="panel-register">
+                        <h3>Crear tu nueva empresa</h3>
+                        <p class="subtitle">Al registrarte se crea una <strong>empresa nueva</strong> para ti, con su
+                            propio inventario, ventas y equipo.</p>
+                        <form id="registerForm">
+                            <div class="auth-field">
+                                <label for="reg_store_name">Nombre de tu empresa *</label>
+                                <input type="text" id="reg_store_name" required placeholder="Ej. Cafetería El Árbol">
+                            </div>
+                            <div class="auth-field">
+                                <label for="reg_full_name">Tu nombre *</label>
+                                <input type="text" id="reg_full_name" required placeholder="Nombre completo">
+                            </div>
+                            <div class="auth-field">
+                                <label for="reg_email">Correo electrónico *</label>
+                                <input type="email" id="reg_email" required placeholder="correo@ejemplo.com">
+                            </div>
+                            <div class="auth-row">
+                                <div class="auth-field">
+                                    <label for="reg_username">Usuario *</label>
+                                    <input type="text" id="reg_username" required placeholder="Para iniciar sesión">
+                                </div>
+                                <div class="auth-field">
+                                    <label for="reg_password">Contraseña *</label>
+                                    <input type="password" id="reg_password" required minlength="6" placeholder="Mínimo 6 caracteres">
+                                </div>
+                            </div>
+                            <button type="submit" class="auth-btn" id="registerBtn"><i class="fas fa-building"></i> Crear mi empresa</button>
+                            <div class="auth-msg" id="registerMsg"></div>
+                        </form>
+                        <p class="auth-hint">Incluye todo: ventas, inventario, cajas, reportes. Sin tarjeta, sin costo.</p>
+                    </div>
+                </div>
+            </section>
+
         </div>
-    </footer>
+
+        <button class="nav-arrow prev" id="prevBtn" aria-label="Anterior"><i class="fas fa-chevron-left"></i></button>
+        <button class="nav-arrow next" id="nextBtn" aria-label="Siguiente"><i class="fas fa-chevron-right"></i></button>
+
+        <div class="dots" id="dots"></div>
+        <div class="slide-counter" id="slideCounter">1 / 8</div>
+    </div>
 
     <script>
-        // Mobile hamburger menu
-        const hamburger = document.getElementById('hamburger');
-        const navLinks = document.getElementById('navLinks');
+        // ===== Carrusel =====
+        const slides = document.querySelectorAll('.slide');
+        const dotsContainer = document.getElementById('dots');
+        const counter = document.getElementById('slideCounter');
+        const progressBar = document.getElementById('progressBar');
+        const total = slides.length;
+        let current = 0;
 
-        hamburger.addEventListener('click', () => {
-            hamburger.classList.toggle('active');
-            navLinks.classList.toggle('open');
-            document.body.classList.toggle('no-scroll');
+        slides.forEach((_, i) => {
+            const dot = document.createElement('button');
+            dot.className = 'dot' + (i === 0 ? ' active' : '');
+            dot.setAttribute('aria-label', 'Ir a diapositiva ' + (i + 1));
+            dot.addEventListener('click', () => goTo(i));
+            dotsContainer.appendChild(dot);
         });
 
-        navLinks.querySelectorAll('a').forEach(link => {
-            link.addEventListener('click', () => {
-                hamburger.classList.remove('active');
-                navLinks.classList.remove('open');
-                document.body.classList.remove('no-scroll');
-            });
+        const dots = document.querySelectorAll('.dot');
+
+        function goTo(index) {
+            current = Math.max(0, Math.min(total - 1, index));
+            document.getElementById('slides').style.transform = 'translateX(-' + (current * 100) + '%)';
+            dots.forEach((d, i) => d.classList.toggle('active', i === current));
+            counter.textContent = (current + 1) + ' / ' + total;
+            progressBar.style.width = (((current + 1) / total) * 100) + '%';
+        }
+
+        document.getElementById('prevBtn').addEventListener('click', () => goTo(current - 1));
+        document.getElementById('nextBtn').addEventListener('click', () => goTo(current + 1));
+
+        // Teclado
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight') goTo(current + 1);
+            if (e.key === 'ArrowLeft') goTo(current - 1);
         });
 
-        // Smooth scroll
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const targetId = this.getAttribute('href');
-                if (targetId && targetId !== '#') {
-                    document.querySelector(targetId).scrollIntoView({
-                        behavior: 'smooth'
-                    });
+        // Swipe táctil
+        let touchStartX = 0;
+        document.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; }, { passive: true });
+        document.addEventListener('touchend', (e) => {
+            const diff = e.changedTouches[0].clientX - touchStartX;
+            if (Math.abs(diff) > 60) {
+                if (diff < 0) goTo(current + 1);
+                else goTo(current - 1);
+            }
+        }, { passive: true });
+
+        // ===== Tabs auth =====
+        function switchTab(tab) {
+            document.querySelectorAll('.auth-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+            document.getElementById('panel-login').classList.toggle('active', tab === 'login');
+            document.getElementById('panel-register').classList.toggle('active', tab === 'register');
+        }
+
+        // ===== Login =====
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const msg = document.getElementById('loginMsg');
+            const btn = document.getElementById('loginBtn');
+            msg.className = 'auth-msg';
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+            try {
+                const res = await fetch('../api/auth/login.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        username: document.getElementById('login_username').value,
+                        password: document.getElementById('login_password').value,
+                        remember: false
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    msg.className = 'auth-msg success';
+                    msg.textContent = '¡Bienvenido! Entrando a tu empresa...';
+                    setTimeout(() => {
+                        window.location.href = (data.data.user.role === 'super_admin') ? 'super_admin.html' : 'dashboard.html';
+                    }, 600);
+                } else {
+                    msg.className = 'auth-msg error';
+                    msg.textContent = data.message || 'Credenciales incorrectas';
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Iniciar sesión';
                 }
-            });
-        });
-
-        // Header transparency on scroll
-        const header = document.querySelector('.header');
-        window.addEventListener('scroll', () => {
-            if (window.scrollY > 50) {
-                header.style.backgroundColor = "rgba(255, 255, 255, 0.95)";
-                header.style.boxShadow = "0 2px 20px rgba(0,0,0,0.1)";
-            } else {
-                header.style.backgroundColor = "rgba(255, 255, 255, 0.95)";
+            } catch (err) {
+                msg.className = 'auth-msg error';
+                msg.textContent = 'Error de conexión. Intente nuevamente.';
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Iniciar sesión';
             }
         });
 
-        // Intersection Observer for Animations
-        const observerOptions = {
-            threshold: 0.1,
-            rootMargin: "0px 0px -50px 0px"
-        };
-
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('visible');
-                    observer.unobserve(entry.target);
+        // ===== Registro (nueva empresa) =====
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const msg = document.getElementById('registerMsg');
+            const btn = document.getElementById('registerBtn');
+            msg.className = 'auth-msg';
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando tu empresa...';
+            try {
+                const res = await fetch('../api/auth/register.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        store_name: document.getElementById('reg_store_name').value,
+                        full_name: document.getElementById('reg_full_name').value,
+                        email: document.getElementById('reg_email').value,
+                        username: document.getElementById('reg_username').value,
+                        password: document.getElementById('reg_password').value
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    msg.className = 'auth-msg success';
+                    msg.textContent = '¡Empresa creada! Entrando al dashboard...';
+                    setTimeout(() => { window.location.href = 'dashboard.html'; }, 800);
+                } else {
+                    msg.className = 'auth-msg error';
+                    msg.textContent = data.message || 'Error al crear la empresa';
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-building"></i> Crear mi empresa';
                 }
-            });
-        }, observerOptions);
-
-        document.querySelectorAll('.fade-up, .fade-in').forEach(el => {
-            observer.observe(el);
+            } catch (err) {
+                msg.className = 'auth-msg error';
+                msg.textContent = 'Error de conexión. Intente nuevamente.';
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-building"></i> Crear mi empresa';
+            }
         });
 
-        // Year
-        document.querySelector('.footer-bottom p').innerHTML =
-            `&copy; ${new Date().getFullYear()} Tomodachi POS. Todos los derechos reservados.`;
+        // Avance automático cada 8s (pausa en la última slide)
+        let autoTimer = setInterval(() => {
+            if (current < total - 1) goTo(current + 1);
+        }, 8000);
+
+        document.getElementById('carousel').addEventListener('mouseenter', () => clearInterval(autoTimer));
+        document.getElementById('carousel').addEventListener('mouseleave', () => {
+            autoTimer = setInterval(() => {
+                if (current < total - 1) goTo(current + 1);
+            }, 8000);
+        });
     </script>
 </body>
 

@@ -14,6 +14,9 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteRule ^(config|includes|database)/ - [F,L]
+    # Propagar header Authorization para API tokens (Bearer)
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 </IfModule>
 
 # Configuración de PHP (para PHP 8.x)

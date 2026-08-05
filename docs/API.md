@@ -6,11 +6,26 @@ API REST en PHP puro. Base URL: `https://tomodachi.tabtap.dev` (o tu propio host
 
 - **Sesión de navegador**: `POST /api/auth/login.php` con `{username, password}`.
   El servidor setea una cookie de sesión (`tomodachi_session`, httponly).
-- **Todas las rutas (excepto auth públicas) requieren sesión iniciada**. Si no,
+- **API Token (para agentes/IA)**: header `Authorization: Bearer td_...`
+  (o `X-API-Key`). Los tokens se gestionan en el panel
+  **Integraciones** (`/public/integrations.html`) o vía los endpoints
+  `api/api_tokens/*`. Cada token pertenece a UNA empresa y tiene scopes.
+- **Todas las rutas (excepto auth públicas) requieren autenticación**. Si no,
   responden `401 {"success": false, "message": "No autorizado"}`.
-- **Aislamiento multi-tienda**: el backend usa SIEMPRE `store_id` de la sesión.
-  Si un endpoint recibe `store_id` por query/body, lo valida contra la sesión
-  y responde `403` si no coincide. No intentes pasar `store_id` de otra tienda.
+- **Aislamiento multi-tienda**: el backend usa SIEMPRE `store_id` de la sesión
+  o del token. Si un endpoint recibe `store_id` por query/body, lo valida
+  contra la identidad y responde `403` si no coincide.
+
+## Scopes de API Token (estilo Home Assistant)
+
+| Scope | Permiso |
+|---|---|
+| `read` | Leer datos (ventas, inventario, reportes, tema) |
+| `write` | Crear/modificar (ventas, inventario, config) |
+| `custom` | Personalizar apariencia (tema, colores) |
+
+Los tokens pueden tener expiración (`expires_in_days`) o ser eternos
+(`0`). Un token revocado o expirado responde `401`.
 
 ## Formato de respuesta
 
@@ -86,6 +101,33 @@ una mejora pendiente (ver MEJORAS_OPERATIVAS.md #1).
 | GET | `/api/reports/dashboard_stats.php` | Estadísticas del dashboard (ventas, productos, cajas) |
 | GET | `/api/reports/get_chart_data.php` | Datos de gráficas |
 
+## API Tokens (Integraciones / Agentes IA)
+
+| Método | Ruta | Descripción | Auth |
+|---|---|---|---|
+| POST | `/api/api_tokens/create.php` | Crear token. Body: `{name, scopes:[read\|write\|custom], expires_in_days}`. Devuelve el token UNA vez | admin (sesión) |
+| GET | `/api/api_tokens/read.php` | Listar tokens de la tienda (sin revelar el token) | admin (sesión) |
+| POST | `/api/api_tokens/revoke.php` | Revocar token. Body: `{token_id}` | admin (sesión) |
+
+### Uso con agentes de IA
+
+```bash
+# 1. Crear un token con scope custom (desde el panel o con sesión admin)
+curl -b cj -X POST http://localhost:8080/api/api_tokens/create.php \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"mi-agente","scopes":["read","custom"],"expires_in_days":30}'
+
+# 2. El agente usa el token para personalizar el tema de la tienda
+curl -X POST https://tomodachi.tabtap.dev/api/stores/theme.php \
+  -H "Authorization: Bearer td_1_abc123.<SECRET>" \
+  -H 'Content-Type: application/json' \
+  -d '{"theme_config":{"primary_color":"#E3057A","secondary_color":"#4a4a4a"}}'
+
+# 3. Leer el tema actual
+curl https://tomodachi.tabtap.dev/api/stores/theme.php \
+  -H "Authorization: Bearer td_1_abc123.<SECRET>"
+```
+
 ## Tiendas (Stores)
 
 | Método | Ruta | Descripción | Roles |
@@ -94,6 +136,7 @@ una mejora pendiente (ver MEJORAS_OPERATIVAS.md #1).
 | POST | `/api/stores/create.php` | Crear tienda | admin |
 | PUT | `/api/stores/update.php` | Actualizar tienda (solo la propia) | admin |
 | GET/POST | `/api/stores/settings.php` | Leer/guardar settings de la tienda propia | auth |
+| GET/POST | `/api/stores/theme.php` | Leer/modificar tema (colores). POST requiere scope `custom` o `write`; GET scope `read` | sesión o token |
 | POST | `/api/stores/import_data.php` | Importar productos (CSV/JSON) | admin |
 | POST | `/api/stores/upload_logo.php` | Subir logo | admin |
 | POST | `/api/stores/save_background.php` | Guardar fondo generado (IA deshabilitada en CE) | auth |

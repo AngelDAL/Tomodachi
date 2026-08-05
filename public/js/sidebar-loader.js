@@ -25,7 +25,8 @@ function initSidebar() {
         { href: 'inventory.html', icon: 'fa-box', text: 'Inventario' },
         { href: 'promotions.html', icon: 'fa-tags', text: 'Promociones' },
         { href: 'finance.html', icon: 'fa-wallet', text: 'Finanzas' },
-        { href: 'reports.html', icon: 'fa-chart-bar', text: 'Reportes', className: 'desktop-only-nav' } // Keeping reports desktop-only for now as per original
+        { href: 'reports.html', icon: 'fa-chart-bar', text: 'Reportes', className: 'desktop-only-nav' }, // Keeping reports desktop-only for now as per original
+        { href: 'integrations.html', icon: 'fa-plug', text: 'Integraciones' }
     ];
 
     // Current page detection

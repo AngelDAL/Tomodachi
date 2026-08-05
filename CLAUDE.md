@@ -38,9 +38,17 @@ curl -b /tmp/cj http://localhost:8080/api/reports/dashboard_stats.php
 
 - `api/ai/*` → deshabilitado (403 en OPEN_SOURCE). No reactivar.
 - Comandos de voz / VoiceCommander → eliminado del alcance.
-- Tokens de API para IA (`api_tokens`) → fuera por ahora.
 - No subir secretos: `config/database.php`, `config/mail.php`,
   `api/ai/config.php` están en `.gitignore`.
+
+## Integraciones con agentes (API tokens)
+
+- Los agentes se autentican con `Authorization: Bearer td_...`
+  (clase `includes/ApiAuth.class.php`, middleware `getActor()`).
+- Scopes: `read` (leer), `write` (modificar), `custom` (personalizar tema).
+- CRUD: `api/api_tokens/{create,read,revoke}.php` (solo admin, por sesión).
+- Personalizar tema: `POST /api/stores/theme.php` con scope `custom`.
+- Panel web: `public/integrations.html` (en el sidebar).
 
 ## Flujo
 

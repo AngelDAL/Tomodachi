@@ -3,7 +3,10 @@ header('Content-Type: application/json');
 require_once '../../config/constants.php';
 // require_once '../../config/database.php'; // Uncomment when implementing DB check
 
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_name(SESSION_NAME);
+    session_start();
+}
 
 $response = [
     'success' => true,
@@ -77,20 +80,3 @@ if (APP_MODE === 'OPEN_SOURCE') {
 
 echo json_encode($response);
 exit;
-
-        $response['plan'] = $user_plan;
-        $response['permissions'] = $saas_plans[$user_plan];
-    }
-
-} catch (Exception $e) {
-    $response['success'] = false;
-    $response['error'] = $e->getMessage();
-    // Fallback for safety
-    if (APP_MODE === 'OPEN_SOURCE') {
-        $response['permissions'] = $opensource_permissions;
-    } else {
-        $response['permissions'] = $saas_plans['free'];
-    }
-}
-
-echo json_encode($response);

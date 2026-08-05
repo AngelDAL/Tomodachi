@@ -1,8 +1,8 @@
 -- Tomodachi POS - Datos demo opcionales
 -- Se aplican SOLO en el primer arranque cuando SEED_DEMO=true (default).
 -- Crea una tienda de ejemplo adicional, más productos y ventas históricas
--- para que quien instale entienda de inmediato qué hace el sistema.
 USE tomodachi_pos;
+SET NAMES utf8mb4;
 
 -- ============================================================
 -- Tienda demo adicional

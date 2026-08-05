@@ -12,6 +12,8 @@ until mysqladmin ping -h"${DB_HOST}" -u"${DB_USER}" -p"${DB_PASS}" --skip-ssl --
 done
 echo "[Tomodachi] Base de datos lista."
 
+MYSQL="mysql -h${DB_HOST} -u${DB_USER} -p${DB_PASS} --skip-ssl --default-character-set=utf8mb4"
+
 # Generar config/database.php a partir de variables de entorno
 if [ ! -f /var/www/html/config/database.php ]; then
   echo "[Tomodachi] Generando config/database.php..."
@@ -34,16 +36,16 @@ PHP
 fi
 
 # Importar esquema solo si la BD está vacía (primera ejecución)
-TABLE_COUNT=$(mysql -h"${DB_HOST}" -u"${DB_USER}" -p"${DB_PASS}" --skip-ssl "${DB_NAME}" -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '${DB_NAME}';" 2>/dev/null || echo "0")
+TABLE_COUNT=$($MYSQL "${DB_NAME}" -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '${DB_NAME}';" 2>/dev/null || echo "0")
 if [ "${TABLE_COUNT}" = "0" ] || [ -z "${TABLE_COUNT}" ]; then
   echo "[Tomodachi] Base vacía — importando schema.sql..."
-  mysql -h"${DB_HOST}" -u"${DB_USER}" -p"${DB_PASS}" --skip-ssl "${DB_NAME}" < /var/www/html/database/schema.sql
+  $MYSQL "${DB_NAME}" < /var/www/html/database/schema.sql
   echo "[Tomodachi] Esquema importado. Usuario inicial: admin / admin123"
 
   # Datos demo opcionales (SEED_DEMO=true por defecto; false para instalación limpia)
   if [ "${SEED_DEMO:-true}" = "true" ]; then
     echo "[Tomodachi] SEED_DEMO activo — cargando datos de demostración..."
-    mysql -h"${DB_HOST}" -u"${DB_USER}" -p"${DB_PASS}" --skip-ssl "${DB_NAME}" < /var/www/html/database/seed_demo.sql
+    $MYSQL "${DB_NAME}" < /var/www/html/database/seed_demo.sql
     echo "[Tomodachi] Datos demo cargados. Usuario demo: demo / demo123 (tienda 2)"
   else
     echo "[Tomodachi] SEED_DEMO=false — instalación limpia (solo datos base del schema)."

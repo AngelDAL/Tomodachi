@@ -33,6 +33,11 @@ try {
     if (!$sale) { Response::notFound('Venta no existe'); }
     if ($sale['status'] !== SALE_COMPLETED) { Response::error('Solo ventas completadas pueden cancelarse',409); }
 
+    // Seguridad: el usuario solo puede cancelar ventas de su propia tienda
+    if ((int)$sale['store_id'] !== (int)$currentUser['store_id']) {
+        Response::error('No autorizado para cancelar ventas de otra tienda', 403);
+    }
+
     $items = $db->select('SELECT product_id, quantity FROM sale_details WHERE sale_id = ?',[$sale_id]);
     if (!$items) { Response::error('Venta sin detalles',409); }
 

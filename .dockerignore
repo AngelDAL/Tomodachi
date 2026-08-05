@@ -1,0 +1,22 @@
+# Dependencias y artefactos que no van a la imagen
+vendor/
+node_modules/
+composer.phar
+
+# Configuración local sensible (el entrypoint genera database.php)
+config/database.php
+config/mail.php
+api/ai/config.php
+
+# Git y CI
+.git/
+.github/
+
+# Entorno
+.env
+
+# Logs y temporales
+*.log
+temp/
+cache/
+database/backups/

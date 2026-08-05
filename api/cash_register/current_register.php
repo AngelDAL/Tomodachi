@@ -31,10 +31,17 @@ try {
 
     if (!$register_id && !$store_id && !$terminal_id) { Response::validationError(['params'=>'Proporcione store_id, terminal_id o register_id']); }
 
+    // Seguridad: forzar tienda de la sesión si viene store_id; validar tienda si viene por terminal/register
+    $session_store_id = (int)$currentUser['store_id'];
+    if ($store_id > 0 && $store_id !== $session_store_id) {
+        Response::error('No autorizado para consultar cajas de otra tienda', 403);
+    }
+    $store_id = $session_store_id;
+
     if (!$register_id) {
         $reg = null;
         if ($terminal_id > 0) {
-            $reg = $db->selectOne('SELECT * FROM cash_registers WHERE terminal_id=? AND status=?',[ $terminal_id, REGISTER_OPEN ]);
+            $reg = $db->selectOne('SELECT * FROM cash_registers WHERE terminal_id=? AND store_id=? AND status=?',[ $terminal_id, $store_id, REGISTER_OPEN ]);
         } else {
             // Intentar buscar caja abierta por el usuario actual
             $reg = $db->selectOne('SELECT * FROM cash_registers WHERE store_id=? AND user_id=? AND status=?',[ $store_id, $currentUser['user_id'], REGISTER_OPEN ]);
@@ -56,6 +63,7 @@ try {
     } else {
         $register = $db->selectOne('SELECT * FROM cash_registers WHERE register_id=?',[ $register_id ]);
         if (!$register) { Response::error('Caja no encontrada',404); }
+        if ((int)$register['store_id'] !== $session_store_id) { Response::error('No autorizado para consultar cajas de otra tienda',403); }
         if ($register['status'] !== REGISTER_OPEN) { Response::error('La caja no está abierta',409); }
     }
 

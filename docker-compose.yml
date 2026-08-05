@@ -1,0 +1,44 @@
+# Tomodachi POS - Community Edition
+# Levantar: docker compose up -d
+# Acceder: http://localhost:8080
+# Credenciales iniciales: admin / admin123
+services:
+  db:
+    image: mariadb:10.11
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-tomodachi_root_secret}
+      MARIADB_DATABASE: ${DB_NAME:-tomodachi_pos}
+      MARIADB_USER: ${DB_USER:-tomodachi}
+      MARIADB_PASSWORD: ${DB_PASS:-tomodachi_secret}
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_NAME: ${DB_NAME:-tomodachi_pos}
+      DB_USER: ${DB_USER:-tomodachi}
+      DB_PASS: ${DB_PASS:-tomodachi_secret}
+      APP_MODE: ${APP_MODE:-OPEN_SOURCE}
+      SEED_DEMO: ${SEED_DEMO:-true}
+      TZ: ${TZ:-America/Mexico_City}
+    ports:
+      - "${PORT:-8080}:80"
+    volumes:
+      # Persistir imágenes subidas (logos, productos, fondos)
+      - app_uploads:/var/www/html/public/assets/images
+
+volumes:
+  db_data:
+  app_uploads:

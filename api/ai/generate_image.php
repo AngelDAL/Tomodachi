@@ -16,7 +16,10 @@ if (!$auth->isLoggedIn()) {
     Response::error('No autorizado', 401);
 }
 
-// Restricción: Herramientas de IA solo para Premium
+// Funciones de IA deshabilitadas en Community Edition (OPEN_SOURCE)
+if (APP_MODE === 'OPEN_SOURCE') {
+    Response::error('Funciones de IA no incluidas en Community Edition', 403);
+}
 $auth->requirePremium();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {

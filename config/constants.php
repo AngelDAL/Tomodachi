@@ -52,6 +52,7 @@ define('PLAN_FREE', 'free');
 define('PLAN_PREMIUM', 'premium');
 
 // Modo de Despliegue
-// 'OPEN_SOURCE': Todas las features desbloqueadas por defecto
-// 'SAAS': Verifica suscripción y planes
-define('APP_MODE', 'SAAS'); 
+// 'OPEN_SOURCE': Todas las features desbloqueadas por defecto (default, ideal para self-hosting)
+// 'SAAS': Verifica suscripción y planes (para el proveedor que ofrece hosting gestionado)
+$envAppMode = getenv('APP_MODE');
+define('APP_MODE', in_array($envAppMode, ['OPEN_SOURCE', 'SAAS'], true) ? $envAppMode : 'OPEN_SOURCE');

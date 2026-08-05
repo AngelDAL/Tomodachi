@@ -40,16 +40,24 @@ try {
     if ($amount <= 0) { $errors['amount'] = 'Debe ser mayor a 0'; }
     if ($errors) { Response::validationError($errors); }
 
+    $session_store_id = (int)$currentUser['store_id'];
+
+    // Seguridad: si se envía store_id, debe ser el de la sesión
+    if ($store_id > 0 && $store_id !== $session_store_id) {
+        Response::error('No autorizado para operar cajas de otra tienda', 403);
+    }
+
     // Obtener register si se dio store_id
     if (!$register_id) {
-        $reg = $db->selectOne('SELECT register_id FROM cash_registers WHERE store_id=? AND status=?',[ $store_id, REGISTER_OPEN ]);
+        $reg = $db->selectOne('SELECT register_id FROM cash_registers WHERE store_id=? AND status=?',[ $session_store_id, REGISTER_OPEN ]);
         if (!$reg) { Response::error('No hay caja abierta para la tienda',404); }
         $register_id = (int)$reg['register_id'];
     }
 
-    // Validar que la caja esté abierta
-    $register = $db->selectOne('SELECT register_id, status FROM cash_registers WHERE register_id=?',[ $register_id ]);
+    // Validar que la caja esté abierta y sea de la tienda del usuario
+    $register = $db->selectOne('SELECT register_id, store_id, status FROM cash_registers WHERE register_id=?',[ $register_id ]);
     if (!$register) { Response::error('Caja no encontrada',404); }
+    if ((int)$register['store_id'] !== $session_store_id) { Response::error('No autorizado para operar cajas de otra tienda',403); }
     if ($register['status'] !== REGISTER_OPEN) { Response::error('La caja no está abierta',409); }
 
     $mid = $db->insert('INSERT INTO cash_movements (register_id, user_id, movement_type, amount, description) VALUES (?,?,?,?,?)',[

@@ -1,9 +1,25 @@
 <?php
+require_once '../../config/database.php';
+require_once '../../config/constants.php';
+require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
+require_once '../../includes/Auth.class.php';
 require_once 'config.php';
 
 header('Content-Type: application/json');
 set_time_limit(300); // Aumentar tiempo de ejecución (5 min)
+
+// Seguridad: requiere sesión iniciada
+$db = new Database();
+$auth = new Auth($db);
+if (!$auth->isLoggedIn()) {
+    Response::error('No autorizado', 401);
+}
+
+// Funciones de IA deshabilitadas en Community Edition (OPEN_SOURCE)
+if (APP_MODE === 'OPEN_SOURCE') {
+    Response::error('Funciones de IA no incluidas en Community Edition', 403);
+}
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     Response::error('Método no permitido', 405);

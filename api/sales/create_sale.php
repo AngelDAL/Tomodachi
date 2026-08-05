@@ -47,6 +47,13 @@ try {
     if ($payment_method===PAYMENT_MIXED && ($cash_amount===null || $cash_amount<0)) $errors['cash_amount']='Requerido en pago mixto';
     if ($errors) { Response::validationError($errors); }
 
+    // Seguridad: el usuario solo puede facturar en su propia tienda
+    $currentUser = $auth->getCurrentUser();
+    $session_store_id = (int)$currentUser['store_id'];
+    if ($store_id !== $session_store_id) {
+        Response::error('No autorizado para facturar en otra tienda', 403);
+    }
+
     // Validar store
     $storeInfo = $db->selectOne('SELECT store_id, settings FROM stores WHERE store_id = ? AND status = ?',[$store_id,STATUS_ACTIVE]);
     if (!$storeInfo) { Response::error('Tienda no válida',404); }
@@ -59,8 +66,8 @@ try {
     // Prioridad: 1. register_id enviado, 2. Caja abierta por el usuario actual, 3. Única caja abierta en la tienda
     
     if ($register_id > 0) {
-        $open = $db->selectOne('SELECT register_id FROM cash_registers WHERE register_id = ? AND status = ?',[$register_id,REGISTER_OPEN]);
-        if (!$open) { Response::error('La caja especificada no está abierta',409); }
+        $open = $db->selectOne('SELECT register_id FROM cash_registers WHERE register_id = ? AND store_id = ? AND status = ?',[$register_id,$store_id,REGISTER_OPEN]);
+        if (!$open) { Response::error('La caja especificada no está abierta en esta tienda',409); }
     } else {
         // Buscar caja del usuario actual
         $user = $auth->getCurrentUser();
@@ -113,10 +120,10 @@ try {
 
         if ($pid<=0 || $qty<=0) { Response::validationError(['items'=>'Datos inválidos en item índice '.$idx]); }
         
-        // Obtenemos precio real de la base de datos y stock
-        $prod = $db->selectOne('SELECT product_id, product_name, status, price, current_stock FROM products WHERE product_id = ? AND status = ?',[$pid,STATUS_ACTIVE]);
+        // Obtenemos precio real de la base de datos y stock (solo de la tienda del usuario)
+        $prod = $db->selectOne('SELECT product_id, product_name, status, price, current_stock FROM products WHERE product_id = ? AND store_id = ? AND status = ?',[$pid,$store_id,STATUS_ACTIVE]);
         
-        if (!$prod) { Response::error('Producto inactivo o inexistente ID '.$pid,404); }
+        if (!$prod) { Response::error('Producto inactivo o inexistente en esta tienda ID '.$pid,404); }
         
         // Si se envió un precio específico (promoción), usarlo. De lo contrario, usar precio base.
         $price = ($requestedPrice !== null) ? $requestedPrice : (float)$prod['price'];

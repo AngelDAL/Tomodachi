@@ -25,6 +25,12 @@ try {
     $store_id = isset($data['store_id']) ? (int)$data['store_id'] : 0;
     if ($store_id <= 0) { Response::validationError(['store_id'=>'Requerido']); }
 
+    // Seguridad: el admin solo puede actualizar su propia tienda
+    $session_store_id = isset($_SESSION['store_id']) ? (int)$_SESSION['store_id'] : 0;
+    if ($store_id !== $session_store_id) {
+        Response::error('No autorizado para actualizar otra tienda', 403);
+    }
+
     $store = $db->selectOne('SELECT store_id FROM stores WHERE store_id = ?',[$store_id]);
     if (!$store) { Response::notFound('Tienda no existe'); }
 

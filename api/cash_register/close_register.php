@@ -25,6 +25,8 @@ try {
     $data = json_decode(file_get_contents('php://input'), true);
     if (!$data) { Response::validationError(['body'=>'JSON inválido']); }
 
+    $currentUser = $auth->getCurrentUser();
+
     $register_id = isset($data['register_id']) ? (int)$data['register_id'] : 0;
     $counted_amount = isset($data['counted_amount']) ? (float)$data['counted_amount'] : null;
     $notes = isset($data['notes']) ? substr(trim($data['notes']),0,255) : null;
@@ -34,7 +36,12 @@ try {
     if ($counted_amount === null || $counted_amount < 0) { $errors['counted_amount'] = 'Monto contado inválido'; }
     if ($errors) { Response::validationError($errors); }
 
-    $register = $db->selectOne('SELECT register_id, initial_amount, status FROM cash_registers WHERE register_id=?',[ $register_id ]);
+    // Seguridad: el usuario solo puede cerrar cajas de su propia tienda
+    $register = $db->selectOne('SELECT register_id, store_id, initial_amount, status FROM cash_registers WHERE register_id=?',[ $register_id ]);
+    if (!$register) { Response::notFound('Caja no existe'); }
+    if ((int)$register['store_id'] !== (int)$currentUser['store_id']) {
+        Response::error('No autorizado para cerrar cajas de otra tienda', 403);
+    }
     if (!$register) { Response::error('Caja no encontrada',404); }
     if ($register['status'] !== REGISTER_OPEN) { Response::error('La caja ya está cerrada',409); }
 

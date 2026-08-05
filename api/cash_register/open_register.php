@@ -33,7 +33,11 @@ try {
     if ($store_id<=0) { Response::validationError(['store_id'=>'Requerido']); }
     if ($initial<0) { Response::validationError(['initial_amount'=>'No negativo']); }
 
-    // Verificar tienda
+    // Seguridad: el usuario solo puede abrir cajas en su propia tienda
+    if ($store_id !== (int)$currentUser['store_id']) {
+        Response::error('No autorizado para abrir cajas en otra tienda', 403);
+    }
+
     $store = $db->selectOne('SELECT store_id FROM stores WHERE store_id = ? AND status = ?',[$store_id,STATUS_ACTIVE]);
     if (!$store) { Response::error('Tienda inválida',404); }
 

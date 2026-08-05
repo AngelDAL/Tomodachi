@@ -17,15 +17,19 @@ Thumbs.db
 # Imágenes de productos (generadas dinámicamente)
 public/assets/images/products/
 public/assets/images/logos/
+public/assets/images/backgrounds/
 
 # Archivos de IDE
 .vscode/
 .idea/
 *.sublime-*
 
-# Dependencias
-#/vendor/
+# Dependencias (se instalan con composer install / npm install)
+/vendor/
 /node_modules/
+
+# Composer descargable
+composer.phar
 
 # Archivos de backup
 *.bak
@@ -33,5 +37,8 @@ public/assets/images/logos/
 *.old
 database/backups/*.sql
 
-# Configuraci�n de IA
+# Configuración de IA
 api/ai/config.php
+
+# Entorno Docker
+.env

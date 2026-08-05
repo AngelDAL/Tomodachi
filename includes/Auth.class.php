@@ -177,8 +177,12 @@ class Auth {
     /**
      * Verifica si se requiere acceso Premium y detiene la ejecución si no lo tiene.
      * Útil para proteger endpoints API.
+     * En modo OPEN_SOURCE nunca bloquea (todas las features desbloqueadas).
      */
     public function requirePremium() {
+        if (APP_MODE === 'OPEN_SOURCE') {
+            return true;
+        }
         if (!$this->isPremium()) {
             http_response_code(403);
             echo json_encode(['success' => false, 'message' => 'Esta función requiere un plan Premium.']);

@@ -21,11 +21,20 @@ try {
 
     if (!$auth->isLoggedIn()) { Response::unauthorized(); }
 
+    $currentUser = $auth->getCurrentUser();
+    $session_store_id = (int)$currentUser['store_id'];
+
     $sale_id = isset($_GET['sale_id']) ? (int)$_GET['sale_id'] : 0;
     if ($sale_id<=0) { Response::validationError(['sale_id'=>'Requerido']); }
     
     $sale = $db->selectOne('SELECT sale_id, store_id, user_id, register_id, sale_date, subtotal, tax, discount, total, payment_method, status FROM sales WHERE sale_id = ?',[$sale_id]);
     if (!$sale) { Response::notFound('Venta no existe'); }
+
+    // Seguridad: el usuario solo puede ver detalles de ventas de su propia tienda
+    if ((int)$sale['store_id'] !== $session_store_id) {
+        Response::error('No autorizado para ver ventas de otra tienda', 403);
+    }
+
     $items = $db->select('SELECT detail_id, product_id, quantity, unit_price, subtotal, discount, total FROM sale_details WHERE sale_id = ?',[$sale_id]);
     $sale['items']=$items;
     Response::success($sale,'Detalle de venta');

@@ -45,6 +45,12 @@ try {
 
     if ($errors) { Response::validationError($errors); }
 
+    // Seguridad: un admin solo puede crear usuarios en su propia tienda (super_admin puede elegir)
+    $currentUser = $auth->getCurrentUser();
+    if ($currentUser['role'] !== ROLE_SUPER_ADMIN && $store_id !== (int)$currentUser['store_id']) {
+        Response::error('No autorizado para crear usuarios en otra tienda', 403);
+    }
+
     // Verificar usuario existente
     $exists = $db->selectOne('SELECT user_id FROM users WHERE username = ?',[$username]);
     if ($exists) { Response::error('Usuario ya existe',409); }

@@ -38,6 +38,9 @@ docker compose up -d --build
 
 Accede a **http://localhost:8080**
 
+> Demo pública en **https://tomodachi.tabtap.dev** (Community Edition, datos
+> demo: admin/admin123 o demo/demo123)
+
 Credenciales iniciales:
 - **Usuario**: `admin`
 - **Contraseña**: `admin123`

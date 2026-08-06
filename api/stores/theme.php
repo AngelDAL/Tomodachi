@@ -54,9 +54,10 @@ try {
             'via'          => $actor['via'],
         ], 'Tema de la tienda');
     } elseif ($method === 'POST') {
-        // Escribir tema: requiere scope custom (o write)
-        if (!$apiAuth->hasScope($actor, 'custom') && !$apiAuth->hasScope($actor, 'write')) {
-            Response::error('El token no tiene permiso: custom/write', 403);
+        // Escribir tema: requiere scope custom (la personalización es exclusiva
+        // del scope 'custom'; un token solo-write no puede tocar el tema)
+        if (!$apiAuth->hasScope($actor, 'custom')) {
+            Response::error('El token no tiene permiso: custom', 403);
         }
 
         $raw = file_get_contents('php://input');

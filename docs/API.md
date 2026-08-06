@@ -22,7 +22,7 @@ API REST en PHP puro. Base URL: `https://tomodachi.tabtap.dev` (o tu propio host
 |---|---|
 | `read` | Leer datos (ventas, inventario, reportes, tema) |
 | `write` | Crear/modificar (ventas, inventario, config) |
-| `custom` | Personalizar apariencia (tema, colores) |
+| `custom` | Personalizar apariencia (tema, colores) — exclusivo para el tema |
 
 Los tokens pueden tener expiración (`expires_in_days`) o ser eternos
 (`0`). Un token revocado o expirado responde `401`.
@@ -136,7 +136,7 @@ curl https://tomodachi.tabtap.dev/api/stores/theme.php \
 | POST | `/api/stores/create.php` | Crear tienda | admin |
 | PUT | `/api/stores/update.php` | Actualizar tienda (solo la propia) | admin |
 | GET/POST | `/api/stores/settings.php` | Leer/guardar settings de la tienda propia | auth |
-| GET/POST | `/api/stores/theme.php` | Leer/modificar tema (colores). POST requiere scope `custom` o `write`; GET scope `read` | sesión o token |
+| GET/POST | `/api/stores/theme.php` | Leer/modificar tema (colores). POST requiere scope `custom` (exclusivo); GET scope `read` | sesión o token |
 | POST | `/api/stores/import_data.php` | Importar productos (CSV/JSON) | admin |
 | POST | `/api/stores/upload_logo.php` | Subir logo | admin |
 | POST | `/api/stores/save_background.php` | Guardar fondo generado (IA deshabilitada en CE) | auth |

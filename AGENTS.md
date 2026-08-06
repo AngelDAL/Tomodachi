@@ -83,10 +83,10 @@ docker/        Dockerfile, docker-compose.yml, entrypoint.sh
 - **Comandos de voz** (VoiceCommander): eliminados del alcance CE.
 - La filosofía: los agentes integran vía **API documentada + API tokens**
   (`api/api_tokens/*`, header `Authorization: Bearer td_...`). Un agente con
-  scope `custom` puede personalizar el tema (`api/stores/theme.php`), con
-  `read` leer datos, con `write` modificar. Los tokens se gestionan desde
-  el panel Integraciones o los endpoints CRUD; cada uno pertenece a una
-  tienda y puede expirar o revocarse.
+  scope `custom` puede personalizar el tema (`api/stores/theme.php`, scope
+  exclusivo), con `read` leer datos, con `write` modificar. Los tokens se
+  gestionan desde el panel Integraciones o los endpoints CRUD; cada uno
+  pertenece a una tienda y puede expirar o revocarse.
 
 ## Datos de prueba
 

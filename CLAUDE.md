@@ -47,7 +47,8 @@ curl -b /tmp/cj http://localhost:8080/api/reports/dashboard_stats.php
   (clase `includes/ApiAuth.class.php`, middleware `getActor()`).
 - Scopes: `read` (leer), `write` (modificar), `custom` (personalizar tema).
 - CRUD: `api/api_tokens/{create,read,revoke}.php` (solo admin, por sesión).
-- Personalizar tema: `POST /api/stores/theme.php` con scope `custom`.
+- Personalizar tema: `POST /api/stores/theme.php` con scope `custom`
+  (exclusivo: un token solo-write NO puede tocar el tema).
 - Panel web: `public/integrations.html` (en el sidebar).
 
 ## Flujo

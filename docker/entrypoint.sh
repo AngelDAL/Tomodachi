@@ -1,7 +1,30 @@
 #!/bin/bash
 # Tomodachi POS - Entrypoint
 # Espera a la base de datos, genera config/database.php, importa esquema si es
-# la primera vez, y arranca Apache.
+# la primera vez, aplica migraciones pendientes automáticamente y arranca Apache.
+#
+# === Sistema de migraciones automáticas ===
+# El despliegue es 100% automático: `docker compose up -d --build` deja la BD
+# lista (esquema + migraciones + datos demo) sin SQL manual.
+#
+#   - La tabla de control `schema_migrations`
+#     (version VARCHAR(100) PRIMARY KEY, applied_at TIMESTAMP DEFAULT
+#     CURRENT_TIMESTAMP) registra qué migraciones ya se aplicaron.
+#   - BD vacía (primer arranque): se importa database/schema.sql (baseline
+#     consolidado) y TODAS las migraciones de database/migrations/*.sql se
+#     registran como aplicadas (INSERT IGNORE): el schema.sql ya incluye esos
+#     cambios, re-ejecutarlos solo provocaría errores de columna duplicada.
+#   - BD existente: se consulta schema_migrations y se aplican SOLO las
+#     migraciones pendientes, en orden numérico (sort -V). Cada migración se
+#     registra (INSERT IGNORE) justo después de aplicarse, así nunca se
+#     re-ejecuta una ya aplicada.
+#   - Si una migración falla: se loguea el error con detalle, se registra como
+#     aplicada de todas formas (INSERT IGNORE) y se continúa con la siguiente.
+#     DECISIÓN DOCUMENTADA: registrar igualmente evita reintentar una
+#     migración quebrada en cada boot y no bloquea el arranque del contenedor.
+#     El caso típico es un cambio que ya existía en la BD (aplicado a mano
+#     antes de este sistema, p. ej. ALTER ADD COLUMN duplicado o DROP INDEX
+#     inexistente). El log indica claramente qué migración falló y qué verificar.
 
 set -e
 
@@ -13,6 +36,7 @@ done
 echo "[Tomodachi] Base de datos lista."
 
 MYSQL="mysql -h${DB_HOST} -u${DB_USER} -p${DB_PASS} --skip-ssl --default-character-set=utf8mb4"
+MIGRATIONS_DIR="/var/www/html/database/migrations"
 
 # Generar config/database.php a partir de variables de entorno
 if [ ! -f /var/www/html/config/database.php ]; then
@@ -35,12 +59,30 @@ ini_set('display_errors', 0);
 PHP
 fi
 
-# Importar esquema solo si la BD está vacía (primera ejecución)
+# Detectar BD vacía ANTES de crear schema_migrations (para no alterar el conteo)
 TABLE_COUNT=$($MYSQL "${DB_NAME}" -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '${DB_NAME}';" 2>/dev/null || echo "0")
+
+# Tabla de control de migraciones (idempotente)
+echo "[Tomodachi] Garantizando tabla de control schema_migrations..."
+$MYSQL "${DB_NAME}" -e "CREATE TABLE IF NOT EXISTS schema_migrations (version VARCHAR(100) PRIMARY KEY, applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);"
+
 if [ "${TABLE_COUNT}" = "0" ] || [ -z "${TABLE_COUNT}" ]; then
-  echo "[Tomodachi] Base vacía — importando schema.sql..."
+  # ================== PRIMER ARRANQUE (BD vacía) ==================
+  echo "[Tomodachi] Base vacía — importando schema.sql (baseline)..."
   $MYSQL "${DB_NAME}" < /var/www/html/database/schema.sql
   echo "[Tomodachi] Esquema importado. Usuario inicial: admin / admin123"
+
+  # schema.sql es el baseline consolidado: ya incluye los cambios de todas las
+  # migraciones, así que se registran todas como aplicadas sin re-ejecutarlas.
+  echo "[Tomodachi] Registrando migraciones como aplicadas (ya incluidas en schema.sql)..."
+  {
+    for f in "${MIGRATIONS_DIR}"/*.sql; do
+      [ -f "$f" ] || continue
+      echo "INSERT IGNORE INTO schema_migrations (version) VALUES ('$(basename "$f")');"
+    done
+  } | $MYSQL "${DB_NAME}"
+  REGISTERED=$($MYSQL "${DB_NAME}" -N -e "SELECT COUNT(*) FROM schema_migrations;")
+  echo "[Tomodachi] ${REGISTERED} migraciones registradas en schema_migrations."
 
   # Datos demo opcionales (SEED_DEMO=true por defecto; false para instalación limpia)
   if [ "${SEED_DEMO:-true}" = "true" ]; then
@@ -51,7 +93,36 @@ if [ "${TABLE_COUNT}" = "0" ] || [ -z "${TABLE_COUNT}" ]; then
     echo "[Tomodachi] SEED_DEMO=false — instalación limpia (solo datos base del schema)."
   fi
 else
-  echo "[Tomodachi] Base ya inicializada (${TABLE_COUNT} tablas). Omitiendo importación."
+  # ================== BD EXISTENTE (actualización) ==================
+  echo "[Tomodachi] Base existente (${TABLE_COUNT} tablas) — aplicando migraciones pendientes..."
+  APPLIED=$($MYSQL "${DB_NAME}" -N -e "SELECT version FROM schema_migrations;" 2>/dev/null || true)
+  PENDING=0
+  APPLIED_NOW=0
+  FAILED=0
+  for f in $(ls -1 "${MIGRATIONS_DIR}"/*.sql 2>/dev/null | sort -V); do
+    MIG_NAME=$(basename "$f")
+    if printf '%s\n' "${APPLIED}" | grep -qxF "${MIG_NAME}"; then
+      echo "  [skip] ${MIG_NAME} (ya aplicada)"
+      continue
+    fi
+    PENDING=$((PENDING + 1))
+    # Ya conectamos a ${DB_NAME}; se eliminan los 'USE <db>;' hardcodeados de
+    # los archivos para que la migración aplique siempre sobre la BD correcta.
+    if sed '/^[[:space:]]*USE[[:space:]]/Id' "$f" | $MYSQL "${DB_NAME}"; then
+      $MYSQL "${DB_NAME}" -e "INSERT IGNORE INTO schema_migrations (version) VALUES ('${MIG_NAME}');"
+      echo "  [ok] ${MIG_NAME} aplicada y registrada"
+      APPLIED_NOW=$((APPLIED_NOW + 1))
+    else
+      FAILED=$((FAILED + 1))
+      echo "  [ERROR] ${MIG_NAME} FALLÓ (revisa el detalle del error arriba)." >&2
+      echo "          Se registra como aplicada para no reintentarla en cada boot" >&2
+      echo "          y no bloquear el arranque. Si el cambio NO estaba realmente" >&2
+      echo "          aplicado, aplícalo manualmente o borra la fila de" >&2
+      echo "          schema_migrations y reinicia el contenedor." >&2
+      $MYSQL "${DB_NAME}" -e "INSERT IGNORE INTO schema_migrations (version) VALUES ('${MIG_NAME}');"
+    fi
+  done
+  echo "[Tomodachi] Resumen migraciones: ${PENDING} pendiente(s), ${APPLIED_NOW} aplicada(s) correctamente, ${FAILED} con error (registradas como aplicadas)."
 fi
 
 # Asegurar permisos de escritura para uploads

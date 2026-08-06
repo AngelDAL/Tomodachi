@@ -36,6 +36,11 @@ cp .env.example .env   # opcional: ajusta puerto/credenciales
 docker compose up -d --build
 ```
 
+**Todo es automático**: el entrypoint del contenedor espera a que la base de
+datos esté lista, genera `config/database.php`, crea el esquema, aplica las
+migraciones pendientes y carga los datos demo (si `SEED_DEMO=true`, el
+default). **No es necesario copiar ni ejecutar ningún SQL a mano.**
+
 Accede a **http://localhost:8080**
 
 > Demo pública en **https://tomodachi.tabtap.dev** (Community Edition, datos
@@ -47,6 +52,23 @@ Credenciales iniciales:
 
 > ⚠️ Cambia la contraseña del administrador inmediatamente después del primer
 > inicio de sesión.
+
+### Actualizaciones
+
+Para actualizar a una versión nueva:
+
+```bash
+git pull
+docker compose up -d --build
+```
+
+El entrypoint detecta automáticamente las **migraciones pendientes** de
+`database/migrations/` (por ejemplo `001_add_product_image.sql`,
+`013_create_api_tokens.sql`) y las aplica en orden numérico, registrando cada
+una en la tabla `schema_migrations` para no re-ejecutarlas. **No hace falta
+ejecutar SQL manualmente en las actualizaciones.** Si alguna migración no se
+puede aplicar (p. ej. porque su cambio ya existía), se registra igualmente con
+un aviso en los logs para no bloquear el arranque.
 
 ### Configuración vía variables de entorno
 
@@ -96,16 +118,23 @@ mbstring, curl.
    ```bash
    mysql -u root -p < database/schema.sql
    ```
-3. Copia y configura:
+3. Aplica las migraciones en orden numérico (solo en instalación manual; en
+   Docker esto es automático):
+   ```bash
+   for f in database/migrations/*.sql; do
+     echo "Aplicando $f..."; mysql -u root -p tomodachi_pos < "$f"
+   done
+   ```
+4. Copia y configura:
    ```bash
    cp config/database.php.example config/database.php
    cp config/mail.php.example config/mail.php
    ```
-4. Instala dependencias PHP:
+5. Instala dependencias PHP:
    ```bash
    composer install
    ```
-5. Apunta el DocumentRoot de tu servidor web a la raíz del proyecto
+6. Apunta el DocumentRoot de tu servidor web a la raíz del proyecto
    (el `.htaccess` redirige a `public/` y protege `config/`, `includes/` y
    `database/`).
 

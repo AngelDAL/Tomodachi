@@ -1,13 +1,49 @@
 # Tomodachi CE — Reporte de pruebas
 
-Fecha: 2026-08-05
+Fecha: 2026-08-05 (actualizado con API tokens)
 Entorno: Docker (Dockerfile + docker-compose), puerto 8091
 Imagen: php:8.2-apache + MariaDB 10.11
 Modo: APP_MODE=OPEN_SOURCE, SEED_DEMO=true
 
 ## Resumen
 
-**18/18 pruebas pasaron. 0 fallaron.**
+**18/18 pruebas de la batería base pasaron** + **14/14 pruebas de API tokens** (a continuación).
+
+## Pruebas de API Tokens (Integraciones / Agentes IA)
+
+| # | Prueba | Esperado | Resultado |
+|---|---|---|---|
+| 1 | Login admin (sesión) | 200 | PASS |
+| 2 | Crear token read+custom, 30 días | success + prefix td_ | PASS |
+| 3 | Crear token write, sin expiración | expires_at null | PASS |
+| 4 | Leer tema con token (scope read) | 200, via=token | PASS |
+| 5 | Personalizar tema con token (scope custom) | 200, via=token | PASS |
+| 6 | Tema guardado visible vía sesión | primary_color correcto | PASS |
+| 7 | Token SOLO write intenta tema | **403** (custom exclusivo) | PASS |
+| 8 | Token inválido | 401 | PASS |
+| 9 | Sin auth | 401 | PASS |
+| 10 | Listar tokens (admin) | 3+ tokens visibles | PASS |
+| 11 | Token read+custom personaliza | 200 | PASS |
+| 12 | Revocar token → uso posterior | 401 | PASS |
+| 13 | Login demo (tienda 2) | 200 | PASS |
+| 14 | Revocar token de OTRA tienda | **403** (aislamiento) | PASS |
+| 15 | Token expirado (forzado en BD) | **401** | PASS |
+| 16 | last_used_at se actualiza al usar | registrado | PASS |
+
+## Bugs encontrados y corregidos durante las pruebas
+
+1. **Scope custom no era exclusivo** — theme.php permitía `custom` O `write`
+   para personalizar. Un token solo-write podía tocar el tema. Corregido:
+   solo `custom` (commit 68faea5). La prueba 7 lo detectó.
+
+## Cómo reproducir
+
+```bash
+cd Tomodachi && git checkout community-edition
+PORT=8091 SEED_DEMO=true docker compose up -d --build
+bash docker/test_suite.sh http://localhost:8091
+# API tokens: crear -> usar -> revocar (ver docs/API.md)
+```
 
 ## Pruebas ejecutadas
 

@@ -68,9 +68,11 @@ CREATE TABLE products (
     qr_code VARCHAR(100),
     price DECIMAL(10,2) NOT NULL,
     cost DECIMAL(10,2) DEFAULT 0.00,
-    current_stock INT DEFAULT 0,
-    min_stock INT DEFAULT 0,
+    current_stock DECIMAL(12,3) DEFAULT 0.000,
+    min_stock DECIMAL(12,3) DEFAULT 0.000,
     status ENUM('active', 'inactive') DEFAULT 'active',
+    is_bulk TINYINT(1) DEFAULT 0 COMMENT 'Indica si el producto se vende a granel (por peso/volumen)',
+    bulk_unit VARCHAR(20) DEFAULT 'kg' COMMENT 'Unidad de medida para granel: kg, g, L, mL, etc.',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE,
@@ -79,7 +81,8 @@ CREATE TABLE products (
     INDEX idx_product_name (product_name),
     INDEX idx_status (status),
     INDEX idx_store (store_id),
-    INDEX idx_category (category_id)
+    INDEX idx_category (category_id),
+    INDEX idx_is_bulk (is_bulk)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabla: inventory_movements (Movimientos de inventario)
@@ -89,9 +92,9 @@ CREATE TABLE inventory_movements (
     product_id INT NOT NULL,
     user_id INT NOT NULL,
     movement_type ENUM('entry', 'exit', 'adjustment', 'sale', 'return') NOT NULL,
-    quantity INT NOT NULL,
-    previous_stock INT NOT NULL,
-    new_stock INT NOT NULL,
+    quantity DECIMAL(12,3) NOT NULL,
+    previous_stock DECIMAL(12,3) NOT NULL,
+    new_stock DECIMAL(12,3) NOT NULL,
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE RESTRICT,
@@ -160,7 +163,7 @@ CREATE TABLE sale_details (
     detail_id INT AUTO_INCREMENT PRIMARY KEY,
     sale_id INT NOT NULL,
     product_id INT NOT NULL,
-    quantity INT NOT NULL,
+    quantity DECIMAL(12,3) NOT NULL,
     unit_price DECIMAL(10,2) NOT NULL,
     subtotal DECIMAL(10,2) NOT NULL,
     discount DECIMAL(10,2) DEFAULT 0.00,
@@ -202,6 +205,35 @@ CREATE TABLE api_tokens (
     UNIQUE KEY unique_token_hash (token_hash),
     INDEX idx_store (store_id),
     INDEX idx_revoked (revoked)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: promotions (Promociones)
+CREATE TABLE promotions (
+    promotion_id INT AUTO_INCREMENT PRIMARY KEY,
+    store_id INT NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    start_date DATETIME NOT NULL,
+    end_date DATETIME NOT NULL,
+    is_active TINYINT(1) DEFAULT 1,
+    type ENUM('simple_discount', 'bulk_discount', 'bundle', 'bill_discount') NOT NULL,
+    discount_type ENUM('percentage', 'fixed_amount', 'fixed_price') NOT NULL,
+    discount_value DECIMAL(10,2) NOT NULL,
+    min_purchase_amount DECIMAL(10,2) DEFAULT 0,
+    min_quantity INT DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: promotion_targets (Items/Objetivos de la Promoción)
+CREATE TABLE promotion_targets (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    promotion_id INT NOT NULL,
+    product_id INT NULL,
+    category_id INT NULL,
+    FOREIGN KEY (promotion_id) REFERENCES promotions(promotion_id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES categories(category_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Datos iniciales

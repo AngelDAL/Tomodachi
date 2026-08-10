@@ -199,18 +199,25 @@
             overflow: visible;
         }
 
-        #heroLogo .logo-path {
+        #heroLogo .logo-stroke {
             fill: none;
             stroke: var(--primary-color);
-            stroke-width: 22;
-            stroke-linecap: round;
+            stroke-width: 10;
+            stroke-linecap: butt;
             stroke-linejoin: round;
-            fill-opacity: 0;
-            transition: fill-opacity 0.6s ease;
+            /* invisible hasta que JS defina el dash real */
+            stroke-dasharray: 0 9999;
         }
 
-        #heroLogo.filled .logo-path {
+        #heroLogo .logo-fill {
             fill: var(--primary-color);
+            stroke: none;
+            fill-opacity: 0;
+        }
+
+        /* Fallback: si WAAPI no está disponible, el relleno queda visible
+           (solo tras la intro; el trazo sigue dibujándose por dash). */
+        #heroLogo.filled .logo-fill {
             fill-opacity: 1;
         }
 
@@ -229,12 +236,11 @@
         }
 
         .title-svg .letter {
-            fill: none;
+            fill: #ffffff;      /* relleno sólido; por-título ajusta el color */
             stroke-width: 3;
             stroke-linecap: round;
             stroke-linejoin: round;
-            fill-opacity: 0;
-            transition: fill-opacity 0.5s ease;
+            fill-opacity: 0;    /* invisible hasta que fillGroup lo anime */
         }
 
         .title-svg.filled .letter {
@@ -245,13 +251,13 @@
             width: min(430px, 82vw);
             filter: drop-shadow(0 0 14px rgba(227, 5, 122, 0.35));
         }
-        #titleBienvenido .letter { stroke: var(--primary-color); }
+        #titleBienvenido .letter { stroke: var(--primary-color); fill: var(--primary-color); }
 
         #titleTomodachi {
             width: min(540px, 90vw);
             filter: drop-shadow(0 4px 30px rgba(227, 5, 122, 0.4));
         }
-        #titleTomodachi .letter { stroke: #ffffff; }
+        #titleTomodachi .letter { stroke: #ffffff; fill: #ffffff; }
 
         .hero-kicker,
         .hero-sub,
@@ -691,10 +697,24 @@
                     <div class="hero-logo-wrap">
                         <svg id="heroLogo" viewBox="0 0 978 978" version="1.1" xmlns="http://www.w3.org/2000/svg"
                             style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+                            <defs>
+                                <!-- Recorte para revelar el relleno de abajo hacia arriba -->
+                                <clipPath id="logoFillClip">
+                                    <rect id="logoFillRect" x="0" y="0" width="978" height="978"/>
+                                </clipPath>
+                            </defs>
                             <g transform="matrix(1,0,0,1,-640.505536,-1753.937008)">
                                 <g transform="matrix(3.479065,0,0,3.479065,-4010.290738,-1296.905436)">
-                                    <path class="logo-path"
+                                    <path class="logo-stroke"
                                         d="M1439.144,903.435C1445.042,887.496 1460.24,876.915 1477.235,876.915C1494.231,876.915 1509.429,887.496 1515.327,903.435L1535.807,958.783L1591.155,979.263C1607.094,985.161 1617.676,1000.36 1617.676,1017.355C1617.676,1034.35 1607.094,1049.548 1591.155,1055.446L1535.807,1075.927L1515.327,1131.275C1509.429,1147.214 1494.231,1157.795 1477.235,1157.795C1460.24,1157.795 1445.042,1147.214 1439.144,1131.275L1418.663,1075.927L1363.316,1055.446C1347.377,1049.548 1336.795,1034.35 1336.795,1017.355C1336.795,1000.36 1347.377,985.161 1363.316,979.263L1418.663,958.783L1439.144,903.435ZM1477.235,958.616C1444.817,958.616 1418.497,984.936 1418.497,1017.355C1418.497,1049.774 1444.817,1076.093 1477.235,1076.093C1509.654,1076.093 1535.974,1049.774 1535.974,1017.355C1535.974,984.936 1509.654,958.616 1477.235,958.616ZM1477.235,987.986C1493.445,987.986 1506.605,1001.145 1506.605,1017.355C1506.605,1033.564 1493.445,1046.724 1477.235,1046.724C1461.026,1046.724 1447.866,1033.564 1447.866,1017.355C1447.866,1001.145 1461.026,987.986 1477.235,987.986Z" />
+                                </g>
+                            </g>
+                            <g clip-path="url(#logoFillClip)">
+                                <g transform="matrix(1,0,0,1,-640.505536,-1753.937008)">
+                                    <g transform="matrix(3.479065,0,0,3.479065,-4010.290738,-1296.905436)">
+                                        <path class="logo-fill"
+                                            d="M1439.144,903.435C1445.042,887.496 1460.24,876.915 1477.235,876.915C1494.231,876.915 1509.429,887.496 1515.327,903.435L1535.807,958.783L1591.155,979.263C1607.094,985.161 1617.676,1000.36 1617.676,1017.355C1617.676,1034.35 1607.094,1049.548 1591.155,1055.446L1535.807,1075.927L1515.327,1131.275C1509.429,1147.214 1494.231,1157.795 1477.235,1157.795C1460.24,1157.795 1445.042,1147.214 1439.144,1131.275L1418.663,1075.927L1363.316,1055.446C1347.377,1049.548 1336.795,1034.35 1336.795,1017.355C1336.795,1000.36 1347.377,985.161 1363.316,979.263L1418.663,958.783L1439.144,903.435ZM1477.235,958.616C1444.817,958.616 1418.497,984.936 1418.497,1017.355C1418.497,1049.774 1444.817,1076.093 1477.235,1076.093C1509.654,1076.093 1535.974,1049.774 1535.974,1017.355C1535.974,984.936 1509.654,958.616 1477.235,958.616ZM1477.235,987.986C1493.445,987.986 1506.605,1001.145 1506.605,1017.355C1506.605,1033.564 1493.445,1046.724 1477.235,1046.724C1461.026,1046.724 1447.866,1033.564 1447.866,1017.355C1447.866,1001.145 1461.026,987.986 1477.235,987.986Z" />
+                                    </g>
                                 </g>
                             </g>
                         </svg>
@@ -1118,11 +1138,12 @@
             const len = p.getTotalLength();
             p.style.strokeDasharray = len;
             p.style.strokeDashoffset = len;
-            // Web Animations API: más robusta que transición CSS por estilo inline
-            // (funciona en Chrome, Firefox, Safari y Android WebView).
+            // Web Animations API. fill:'both' es CLAVE: aplica el primer
+            // keyframe (invisible) DURANTE el delay; con 'forwards' el
+            // elemento se vería completo mientras espera su turno.
             p.animate(
                 [{ strokeDashoffset: len }, { strokeDashoffset: 0 }],
-                { duration: dur, delay: delay, easing: 'ease', fill: 'forwards' }
+                { duration: dur, delay: delay, easing: 'ease', fill: 'both' }
             );
         }
 
@@ -1132,11 +1153,31 @@
                 if (p.animate) {
                     p.animate(
                         [{ fillOpacity: 0 }, { fillOpacity: 1 }],
-                        { duration: 500, delay: delay + i * 40, easing: 'ease', fill: 'forwards' }
+                        { duration: 500, delay: delay + i * 40, easing: 'ease', fill: 'both' }
                     );
                 }
             });
             // Estado final garantizado también por CSS (fallback)
+            el.classList.add('filled');
+        }
+
+        // Relleno del logo de ABAJO HACIA ARRIBA: el rect del clipPath sube
+        // (translateY 978 -> 0) mientras el fill aparece.
+        function fillLogoUp(el, delay, dur) {
+            const rect = document.getElementById('logoFillRect');
+            const fillPath = el.querySelector('.logo-fill');
+            if (rect && rect.animate) {
+                rect.animate(
+                    [{ transform: 'translateY(978px)' }, { transform: 'translateY(0px)' }],
+                    { duration: dur, delay: delay, easing: 'ease-in-out', fill: 'both' }
+                );
+            }
+            if (fillPath && fillPath.animate) {
+                fillPath.animate(
+                    [{ fillOpacity: 0 }, { fillOpacity: 1 }],
+                    { duration: dur * 0.7, delay: delay, easing: 'ease', fill: 'both' }
+                );
+            }
             el.classList.add('filled');
         }
 
@@ -1149,25 +1190,27 @@
             buildTitle(document.getElementById('titleBienvenido'), window.TITLE_PATHS.bienvenido);
             buildTitle(document.getElementById('titleTomodachi'), window.TITLE_PATHS.tomodachi);
 
-            // 1. Logo: se dibuja y luego se rellena
-            const logoPath = document.querySelector('#heroLogo .logo-path');
+            // 1. Logo: EMPIEZA VACÍO (fill="none" + fill-opacity 0). Se dibuja
+            //    el trazo y, al terminar, el fill sube de abajo hacia arriba.
+            const strokePath = document.querySelector('#heroLogo .logo-stroke');
             const heroLogo = document.getElementById('heroLogo');
-            if (logoPath) {
-                drawPath(logoPath, 400, 1500);
-                fillGroup(heroLogo, 2100);
+            if (strokePath) {
+                drawPath(strokePath, 400, 1500);
+                fillLogoUp(heroLogo, 2050, 800);
             }
 
-            // 2. "Bienvenido a" letra por letra
+            // 2. "Bienvenido a" letra por letra. Stagger 100ms (0.1s): la
+            //    siguiente letra arranca antes de que termine la anterior.
             const bien = document.querySelectorAll('#titleBienvenido .letter');
-            bien.forEach((p, i) => drawPath(p, 1400 + i * 110, 600));
+            bien.forEach((p, i) => drawPath(p, 1350 + i * 100, 600));
 
             // 3. "Tomodachi" letra por letra (más grande, arranca después)
             const tomo = document.querySelectorAll('#titleTomodachi .letter');
-            tomo.forEach((p, i) => drawPath(p, 2500 + i * 130, 650));
+            tomo.forEach((p, i) => drawPath(p, 2450 + i * 100, 650));
 
             // 4. Relleno de letras + resto del contenido + pista + botón Omitir
             fillGroup(document.getElementById('titleBienvenido'), 3000);
-            fillGroup(document.getElementById('titleTomodachi'), 4100);
+            fillGroup(document.getElementById('titleTomodachi'), 4000);
             setTimeout(() => {
                 heroContent.classList.add('ready');
                 if (hint) hint.classList.add('visible');

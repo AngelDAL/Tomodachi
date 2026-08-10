@@ -29,6 +29,11 @@ body {
     padding: 24px;
 }
 
+/* Oculta la UI hasta que app.js decida (directo al servidor o bienvenida) */
+body.boot .screen {
+    visibility: hidden;
+}
+
 .screen {
     width: 100%;
     max-width: 420px;

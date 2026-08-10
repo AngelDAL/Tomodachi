@@ -4,11 +4,24 @@ const STORAGE_KEY = 'tomodachi_server_url';
 const input = document.getElementById('serverUrl');
 const hint = document.getElementById('hint');
 
-// Pre-rellenar con la última URL usada
-try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) input.value = saved;
-} catch (e) { /* almacenamiento no disponible */ }
+// Si ya elegimos servidor antes, ir directo a él (sin pantalla de
+// bienvenida). El botón "atrás" de Android vuelve aquí para cambiarlo.
+let saved = null;
+try { saved = localStorage.getItem(STORAGE_KEY); } catch (e) {}
+
+if (saved) {
+    // Navegar directo; el back de Android regresa a esta pantalla.
+    window.location.href = saved;
+} else {
+    initWelcome();
+}
+
+function initWelcome() {
+    document.body.classList.remove('boot'); // mostrar UI
+    document.getElementById('btnCloud').addEventListener('click', () => go(CLOUD_URL));
+    document.getElementById('btnConnect').addEventListener('click', () => go(input.value));
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(input.value); });
+}
 
 function go(url) {
     if (!url) {
@@ -23,7 +36,3 @@ function go(url) {
     try { localStorage.setItem(STORAGE_KEY, normalized); } catch (e) {}
     window.location.href = normalized;
 }
-
-document.getElementById('btnCloud').addEventListener('click', () => go(CLOUD_URL));
-document.getElementById('btnConnect').addEventListener('click', () => go(input.value));
-input.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(input.value); });

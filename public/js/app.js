@@ -54,15 +54,24 @@ async function checkSession() {
  */
 async function logout() {
     try {
-        const response = await fetch('../api/auth/logout.php');
+        const response = await fetch('../api/auth/logout.php', {
+            method: 'POST',
+            credentials: 'include'
+        });
         const dataResponse = await response.json();
-        if (dataResponse.success) {
-            // Limpiar configuración de tema cacheada
-            localStorage.removeItem('pos_theme_config');
-            window.location.href = 'login.html';
+        // Aunque el servidor diga "no hay sesión", el objetivo es salir:
+        // se limpia todo local y se va al login.
+        if (!dataResponse.success) {
+            console.warn('Logout sin sesión activa (no-op):', dataResponse.message);
         }
+        // Limpiar configuración de tema cacheada
+        localStorage.removeItem('pos_theme_config');
+        window.location.href = 'login.html';
     } catch (error) {
         console.error('Error al cerrar sesión:', error);
+        // Aún con error de red, salimos localmente
+        localStorage.removeItem('pos_theme_config');
+        window.location.href = 'login.html';
     }
 }
 

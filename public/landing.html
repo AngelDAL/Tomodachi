@@ -6,13 +6,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tomodachi POS - Sistema de Punto de Venta Open Source</title>
 
-    <!-- Check Session -->
+    <!-- Check Session + Onboarding -->
     <script>
+        // La presentación de bienvenida se muestra UNA sola vez por navegador.
+        // Si ya hay sesión -> dashboard. Si ya vio el onboarding -> login directo.
         fetch('../api/auth/verify_session.php')
             .then(response => response.json())
             .then(data => {
                 if (data.success && data.data.logged_in) {
                     window.location.href = 'dashboard.html';
+                } else if (localStorage.getItem('tomodachi_onboarding_done') === '1') {
+                    window.location.href = 'login.html';
                 }
             })
             .catch(console.error);
@@ -987,12 +991,23 @@
             // Ocultar la pista de deslizamiento al navegar
             const hint = document.getElementById('swipeHint');
             if (hint) hint.classList.remove('visible');
+            // Al llegar al login (última slide) la presentación ya se vio:
+            // la próxima visita irá directo a login.html
+            if (current >= total - 1) markOnboardingDone();
             // Toda interacción manual reinicia el auto-avance: nunca queda muerto
             startAutoTimer();
         }
 
-        // Botón Omitir: salta directo al login (última diapositiva)
-        if (skipBtn) skipBtn.addEventListener('click', () => goTo(total - 1));
+        function markOnboardingDone() {
+            try { localStorage.setItem('tomodachi_onboarding_done', '1'); } catch (e) { /* privado */ }
+        }
+
+        // Botón Omitir: salta directo al login (última diapositiva) y marca
+        // la presentación como vista (próxima vez -> login directo)
+        if (skipBtn) skipBtn.addEventListener('click', () => {
+            markOnboardingDone();
+            goTo(total - 1);
+        });
 
         document.getElementById('prevBtn').addEventListener('click', () => goTo(current - 1));
         document.getElementById('nextBtn').addEventListener('click', () => goTo(current + 1));
@@ -1062,6 +1077,7 @@
                 });
                 const data = await res.json();
                 if (data.success) {
+                    markOnboardingDone();
                     msg.className = 'auth-msg success';
                     msg.textContent = '¡Bienvenido! Entrando a tu empresa...';
                     setTimeout(() => {
@@ -1104,6 +1120,7 @@
                 });
                 const data = await res.json();
                 if (data.success) {
+                    markOnboardingDone();
                     msg.className = 'auth-msg success';
                     msg.textContent = '¡Empresa creada! Entrando al dashboard...';
                     setTimeout(() => { window.location.href = 'dashboard.html'; }, 800);

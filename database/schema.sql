@@ -149,6 +149,7 @@ CREATE TABLE sales (
     total DECIMAL(10,2) NOT NULL,
     payment_method ENUM('cash', 'card', 'transfer', 'mixed') NOT NULL,
     status ENUM('completed', 'cancelled', 'refunded') DEFAULT 'completed',
+    created_via VARCHAR(10) NOT NULL DEFAULT 'session' COMMENT 'session = interfaz (humano), token = API/agente',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE RESTRICT,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE RESTRICT,

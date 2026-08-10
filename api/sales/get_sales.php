@@ -42,7 +42,7 @@ try {
     $date = isset($_GET['date']) ? $_GET['date'] : date('Y-m-d');
 
     $params=[];
-    $sql='SELECT s.sale_id, s.store_id, s.user_id, s.register_id, s.sale_date, s.total, s.status, s.payment_method, (SELECT COALESCE(SUM(quantity), 0) FROM sale_details sd WHERE sd.sale_id = s.sale_id) as total_items FROM sales s WHERE DATE(s.sale_date) = ? AND s.store_id = ?';
+    $sql='SELECT s.sale_id, s.store_id, s.user_id, s.register_id, s.sale_date, s.total, s.status, s.payment_method, s.created_via, (SELECT COALESCE(SUM(quantity), 0) FROM sale_details sd WHERE sd.sale_id = s.sale_id) as total_items FROM sales s WHERE DATE(s.sale_date) = ? AND s.store_id = ?';
     $params[]=$date;
     $params[]=$store_id;
     $sql.=' ORDER BY sale_date DESC LIMIT 200';

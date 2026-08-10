@@ -86,6 +86,32 @@ pertenezcan a la tienda de la sesión (403 si no). El precio puede venir del
 cliente para reflejar promociones; la validación de precios en servidor es
 una mejora pendiente (ver MEJORAS_OPERATIVAS.md #1).
 
+`sale_details.php` devuelve los items con `product_name` y `category_name`
+(JOIN automático con productos/categorías) — un agente NO necesita llamadas
+adicionales para responder "¿qué se vendió?". Ejemplo de respuesta:
+
+```json
+{"success":true,"data":{
+  "sale_id":19,"store_id":2,"sale_date":"2026-08-10 17:11:20",
+  "total":"103.00","payment_method":"cash","status":"completed",
+  "created_via":"session",
+  "items":[
+    {"detail_id":12,"product_id":9,"product_name":"Capuchino","category_name":"Cafés",
+     "quantity":"1.000","unit_price":"38.00","subtotal":"38.00","total":"38.00"}
+  ]}}
+```
+
+### Campo `created_via` (quién registró la venta)
+
+Toda venta queda marcada con el origen de creación:
+- `session` — la registró un humano desde la interfaz (caja/POS).
+- `token` — la registró un agente/IA usando un API token.
+
+`get_sales.php` y `sale_details.php` devuelven este campo. Un agente puede
+filtrar "las ventas hechas por mí" (via=token) vs "las ventas del negocio"
+(via=session). Útil para responder correctamente preguntas como
+"¿cuál fue la última venta?" distinguiendo la del cajero de la del bot.
+
 ## Inventario (Inventory)
 
 | Método | Ruta | Descripción | Body/Query | Roles |

@@ -159,8 +159,9 @@ try {
     $db->beginTransaction();
     try {
         $user = $actor;
-        $sale_id = $db->insert('INSERT INTO sales (store_id, user_id, register_id, sale_date, subtotal, tax, discount, total, payment_method, status, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,NOW())',[
-            $store_id, $user['user_id'], $register_id, date('Y-m-d H:i:s'), $subtotal, $tax, $discount, $total, $payment_method, SALE_COMPLETED
+        $createdVia = ($user['via'] === 'token') ? 'token' : 'session';
+        $sale_id = $db->insert('INSERT INTO sales (store_id, user_id, register_id, sale_date, subtotal, tax, discount, total, payment_method, status, created_via, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,NOW())',[
+            $store_id, $user['user_id'], $register_id, date('Y-m-d H:i:s'), $subtotal, $tax, $discount, $total, $payment_method, SALE_COMPLETED, $createdVia
         ]);
 
         foreach ($productsToUpdate as $p) {

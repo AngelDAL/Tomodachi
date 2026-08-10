@@ -30,7 +30,7 @@ try {
     $sale_id = isset($_GET['sale_id']) ? (int)$_GET['sale_id'] : 0;
     if ($sale_id<=0) { Response::validationError(['sale_id'=>'Requerido']); }
     
-    $sale = $db->selectOne('SELECT sale_id, store_id, user_id, register_id, sale_date, subtotal, tax, discount, total, payment_method, status FROM sales WHERE sale_id = ?',[$sale_id]);
+    $sale = $db->selectOne('SELECT sale_id, store_id, user_id, register_id, sale_date, subtotal, tax, discount, total, payment_method, status, created_via FROM sales WHERE sale_id = ?',[$sale_id]);
     if (!$sale) { Response::notFound('Venta no existe'); }
 
     // Seguridad: el usuario solo puede ver detalles de ventas de su propia tienda
@@ -38,7 +38,7 @@ try {
         Response::error('No autorizado para ver ventas de otra tienda', 403);
     }
 
-    $items = $db->select('SELECT detail_id, product_id, quantity, unit_price, subtotal, discount, total FROM sale_details WHERE sale_id = ?',[$sale_id]);
+    $items = $db->select('SELECT sd.detail_id, sd.product_id, p.product_name, p.category_id, c.category_name, sd.quantity, sd.unit_price, sd.subtotal, sd.discount, sd.total FROM sale_details sd LEFT JOIN products p ON p.product_id = sd.product_id LEFT JOIN categories c ON c.category_id = p.category_id WHERE sd.sale_id = ?',[$sale_id]);
     $sale['items']=$items;
     Response::success($sale,'Detalle de venta');
 } catch (Exception $e) { Response::error('Error servidor: '.$e->getMessage(),500); }

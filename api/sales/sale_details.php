@@ -10,6 +10,7 @@ require_once '../../includes/Response.class.php';
 
 require_once '../../includes/Validator.class.php';
 require_once '../../includes/Auth.class.php';
+require_once '../../includes/ApiAuth.class.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
@@ -19,9 +20,11 @@ try {
     $db = new Database();
     $auth = new Auth($db);
 
-    if (!$auth->isLoggedIn()) { Response::unauthorized(); }
+    $apiAuth = new ApiAuth($db);
+    $actor = $apiAuth->requireActor($auth);
+    $apiAuth->requireScope($actor, 'read');
 
-    $currentUser = $auth->getCurrentUser();
+    $currentUser = $actor;
     $session_store_id = (int)$currentUser['store_id'];
 
     $sale_id = isset($_GET['sale_id']) ? (int)$_GET['sale_id'] : 0;

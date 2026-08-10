@@ -10,6 +10,7 @@ require_once '../../includes/Response.class.php';
 
 require_once '../../includes/Validator.class.php';
 require_once '../../includes/Auth.class.php';
+require_once '../../includes/ApiAuth.class.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
@@ -19,13 +20,18 @@ try {
     $db = new Database();
     $auth = new Auth($db);
 
-    if (!$auth->isLoggedIn()) { Response::unauthorized(); }
-    if (!$auth->hasRole([ROLE_ADMIN,ROLE_MANAGER,ROLE_CASHIER])) { Response::error('Permisos insuficientes',403); }
+    $apiAuth = new ApiAuth($db);
+    $actor = $apiAuth->requireActor($auth);
+    if ($actor['via'] === 'session') {
+        if (!$auth->hasRole([ROLE_ADMIN,ROLE_MANAGER,ROLE_CASHIER])) { Response::error('Permisos insuficientes',403); }
+    } else {
+        $apiAuth->requireScope($actor, 'write');
+    }
 
     $data = json_decode(file_get_contents('php://input'), true);
     if (!$data) { Response::validationError(['body'=>'JSON inválido']); }
 
-    $currentUser = $auth->getCurrentUser();
+    $currentUser = $actor;
 
     $register_id = isset($data['register_id']) ? (int)$data['register_id'] : 0;
     $counted_amount = isset($data['counted_amount']) ? (float)$data['counted_amount'] : null;
@@ -62,7 +68,7 @@ try {
     // --- INICIO LÓGICA DE CORREO ---
     try {
         // 1. Obtener datos de la tienda y usuario actual
-        $currentUser = $auth->getCurrentUser();
+        $currentUser = $actor;
         $store_id = $currentUser['store_id'];
         
         $store = $db->selectOne("SELECT store_name FROM stores WHERE store_id = ?", [$store_id]);

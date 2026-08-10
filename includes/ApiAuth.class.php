@@ -129,9 +129,15 @@ class ApiAuth {
         // 2. Intentar token
         $token = $this->authenticate();
         if ($token) {
+            // Las ventas/movimientos exigen user_id NOT NULL con FK. Un token no
+            // tiene usuario propio: las acciones se atribuyen al admin de la tienda.
+            $admin = $this->db->selectOne(
+                'SELECT user_id FROM users WHERE store_id = ? AND role IN (?, ?) AND status = ? ORDER BY user_id ASC LIMIT 1',
+                [$token['store_id'], ROLE_SUPER_ADMIN, ROLE_ADMIN, STATUS_ACTIVE]
+            );
             return [
                 'store_id' => $token['store_id'],
-                'user_id'  => null,
+                'user_id'  => $admin ? (int)$admin['user_id'] : null,
                 'via'      => 'token',
                 'scopes'   => $token['scopes'],
                 'role'     => null,
@@ -139,6 +145,19 @@ class ApiAuth {
         }
 
         return null;
+    }
+
+    /**
+     * Obtener el actor (sesión O token) o responder 401 si no hay ninguno.
+     * @param Auth $auth instancia de Auth (sesión)
+     * @return array actor autenticado
+     */
+    public function requireActor($auth) {
+        $actor = $this->getActor($auth);
+        if (!$actor) {
+            Response::unauthorized();
+        }
+        return $actor;
     }
 
     /**

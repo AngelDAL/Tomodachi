@@ -10,25 +10,31 @@ require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
 require_once '../../includes/Validator.class.php';
 require_once '../../includes/Auth.class.php';
+require_once '../../includes/ApiAuth.class.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
 $db = new Database();
 $auth = new Auth($db);
 
-if (!$auth->isLoggedIn()) {
-    Response::unauthorized();
-}
+$apiAuth = new ApiAuth($db);
+$actor = $apiAuth->requireActor($auth);
 
-$user = $auth->getCurrentUser();
-$store_id = $user['store_id'];
+$store_id = $actor['store_id'];
 
-// Solo admin puede editar configuración global de la tienda
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $user['role'] !== ROLE_ADMIN) {
-    Response::error('Permisos insuficientes', 403);
+// Solo admin (sesión) o token con scope write puede editar configuración global
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if ($actor['via'] === 'session') {
+        if ($actor['role'] !== ROLE_ADMIN) {
+            Response::error('Permisos insuficientes', 403);
+        }
+    } else {
+        $apiAuth->requireScope($actor, 'write');
+    }
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    $apiAuth->requireScope($actor, 'read');
     try {
         $store = $db->selectOne(
             'SELECT store_id, store_name, address, phone, theme_config, settings, logo_url, status 

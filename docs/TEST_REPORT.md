@@ -1,40 +1,73 @@
 # Tomodachi CE — Reporte de pruebas
 
-Fecha: 2026-08-05 (actualizado con API tokens)
+Fecha: 2026-08-10 (actualizado: tokens cableados en endpoints core)
 Entorno: Docker (Dockerfile + docker-compose), puerto 8091
 Imagen: php:8.2-apache + MariaDB 10.11
 Modo: APP_MODE=OPEN_SOURCE, SEED_DEMO=true
 
 ## Resumen
 
-**18/18 pruebas de la batería base pasaron** + **14/14 pruebas de API tokens** (a continuación).
+**25/25 pruebas de la batería automatizada pasaron** (18 base + 7 de API
+tokens integradas en `docker/test_suite.sh`). Además se verificaron
+manualmente 27 flujos con token (incluyendo stock, ventas y reportes).
 
 ## Pruebas de API Tokens (Integraciones / Agentes IA)
 
+### En la suite automatizada (`docker/test_suite.sh` sección 9)
+
 | # | Prueba | Esperado | Resultado |
 |---|---|---|---|
-| 1 | Login admin (sesión) | 200 | PASS |
-| 2 | Crear token read+custom, 30 días | success + prefix td_ | PASS |
-| 3 | Crear token write, sin expiración | expires_at null | PASS |
-| 4 | Leer tema con token (scope read) | 200, via=token | PASS |
-| 5 | Personalizar tema con token (scope custom) | 200, via=token | PASS |
-| 6 | Tema guardado visible vía sesión | primary_color correcto | PASS |
-| 7 | Token SOLO write intenta tema | **403** (custom exclusivo) | PASS |
-| 8 | Token inválido | 401 | PASS |
-| 9 | Sin auth | 401 | PASS |
-| 10 | Listar tokens (admin) | 3+ tokens visibles | PASS |
-| 11 | Token read+custom personaliza | 200 | PASS |
-| 12 | Revocar token → uso posterior | 401 | PASS |
-| 13 | Login demo (tienda 2) | 200 | PASS |
-| 14 | Revocar token de OTRA tienda | **403** (aislamiento) | PASS |
-| 15 | Token expirado (forzado en BD) | **401** | PASS |
-| 16 | last_used_at se actualiza al usar | registrado | PASS |
+| 19 | Crear token read+write | success + token td_ | PASS |
+| 20 | Token read: listar productos | 200 | PASS |
+| 21 | Token write: crear categoría | 200 | PASS |
+| 22 | Limpieza categoría de prueba | eliminada | PASS |
+| 23 | Token read-only en endpoint write | **403** (sin scope write) | PASS |
+| 24 | Token sin custom en theme | **403** (custom exclusivo) | PASS |
+| 25 | Revocar tokens de prueba | revocados | PASS |
+
+### Verificación manual adicional (2026-08-10)
+
+| # | Prueba | Esperado | Resultado |
+|---|---|---|---|
+| A | Token read: GET products | 200 | PASS |
+| B | Token read: POST categories | 403 sin write | PASS |
+| C | Token rw: GET products | 200 | PASS |
+| D | Token rw: POST categories | 200 | PASS |
+| E | Token write-only: GET products | 403 sin read | PASS |
+| F | Token write-only: POST categories | 200 | PASS |
+| G | Sin auth: GET products | 401 | PASS |
+| H | Sesión admin: GET products (regresión) | 200 | PASS |
+| I | Token read: dashboard_stats | 200 | PASS |
+| J | Token read: promotions/read | 200 | PASS |
+| K | Token rw: crear promoción | 200 | PASS |
+| L | Token read: theme GET | 200 (via=token) | PASS |
+| M | Token rw: theme POST sin custom | 403 | PASS |
+| N | Token rw: ajustar stock | 200 | PASS |
+| O | user_id del movimiento con token | admin (user_id=1), NO 0 | PASS |
+| P | Token read: get_sales | 200 | PASS |
+| Q | Token read: users/read | 200 | PASS |
+| R | Token read: current_register | 200 | PASS |
+| S | Token read: stores/settings GET | 200 | PASS |
+| T | Token rw: stores/update PUT | 200 | PASS |
+| U | Token rw: create_sale | 200 (sale creada, user_id=1) | PASS |
+| V | Token read: sale_details | 200 | PASS |
+| W | Token revocado → uso | 401 | PASS |
 
 ## Bugs encontrados y corregidos durante las pruebas
 
-1. **Scope custom no era exclusivo** — theme.php permitía `custom` O `write`
+1. **Tokens solo funcionaban en theme.php** — los ~50 endpoints usaban
+   exclusivamente sesión; un agente IA con token no podía leer ventas,
+   inventario ni reportes. Corregido cableando `ApiAuth` (getActor +
+   requireScope) en 23 endpoints core: inventario, ventas, reportes,
+   promociones, cajas, tiendas y users/read. (commit pendiente)
+
+2. **Ventas/movimientos rompían con token** — `user_id` es NOT NULL con FK
+   y un token no tiene usuario. `ApiAuth::getActor()` ahora atribuye las
+   acciones del token al admin de la tienda (user_id del admin).
+
+3. **Scope custom no era exclusivo** — theme.php permitía `custom` O `write`
    para personalizar. Un token solo-write podía tocar el tema. Corregido:
-   solo `custom` (commit 68faea5). La prueba 7 lo detectó.
+   solo `custom` (commit 68faea5).
 
 ## Cómo reproducir
 

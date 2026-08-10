@@ -2,7 +2,9 @@
 require_once '../../config/database.php';
 require_once '../../config/constants.php';
 require_once '../../includes/Database.class.php';
+require_once '../../includes/Response.class.php';
 require_once '../../includes/Auth.class.php';
+require_once '../../includes/ApiAuth.class.php';
 
 header('Content-Type: application/json');
 
@@ -10,14 +12,12 @@ try {
     $db = new Database();
     $auth = new Auth($db);
     
-    if (!$auth->isLoggedIn()) {
-        http_response_code(401);
-        echo json_encode(['success' => false, 'message' => 'Unauthorized']);
-        exit;
-    }
+    $apiAuth = new ApiAuth($db);
+    $actor = $apiAuth->requireActor($auth);
+    $apiAuth->requireScope($actor, 'read');
     
     $conn = $db->getConnection();
-    $currentUser = $auth->getCurrentUser();
+    $currentUser = $actor;
     
     $store_id = $currentUser['store_id'] ?? 1; // Default to store 1 if not set
     

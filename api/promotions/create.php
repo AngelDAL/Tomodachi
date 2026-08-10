@@ -5,6 +5,7 @@ require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
 require_once '../../includes/Validator.class.php';
 require_once '../../includes/Auth.class.php';
+require_once '../../includes/ApiAuth.class.php';
 
 // Verificar método
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -14,9 +15,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $db = new Database();
 $auth = new Auth($db);
 
-if (!$auth->isLoggedIn()) {
-    Response::unauthorized();
-}
+$apiAuth = new ApiAuth($db);
+$actor = $apiAuth->requireActor($auth);
+if ($actor['via'] === 'token') { $apiAuth->requireScope($actor, 'write'); }
 
 // Obtener datos
 $data = json_decode(file_get_contents('php://input'), true);
@@ -33,7 +34,7 @@ foreach ($required as $field) {
     }
 }
 
-$store_id = $_SESSION['store_id'];
+$store_id = $actor['store_id'];
 $name = Validator::sanitizeString($data['name']);
 $description = isset($data['description']) ? Validator::sanitizeString($data['description']) : '';
 // Fix Date Format (Convert to valid Y-m-d H:i:s)

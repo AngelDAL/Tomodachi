@@ -6,15 +6,19 @@ API REST en PHP puro. Base URL: `https://tomodachi.tabtap.dev` (o tu propio host
 
 - **Sesión de navegador**: `POST /api/auth/login.php` con `{username, password}`.
   El servidor setea una cookie de sesión (`tomodachi_session`, httponly).
-- **API Token (para agentes/IA)**: header `Authorization: Bearer td_...`
+- **API Token (para agentes/IA)**: header `Authorization: Bearer <token>`
   (o `X-API-Key`). Los tokens se gestionan en el panel
   **Integraciones** (`/public/integrations.html`) o vía los endpoints
   `api/api_tokens/*`. Cada token pertenece a UNA empresa y tiene scopes.
+  Un token solo se muestra UNA vez al crearlo: guárdalo.
 - **Todas las rutas (excepto auth públicas) requieren autenticación**. Si no,
   responden `401 {"success": false, "message": "No autorizado"}`.
 - **Aislamiento multi-tienda**: el backend usa SIEMPRE `store_id` de la sesión
   o del token. Si un endpoint recibe `store_id` por query/body, lo valida
   contra la identidad y responde `403` si no coincide.
+- **Atribución**: las acciones hechas con token (ventas, movimientos de stock)
+  quedan registradas con el `user_id` del admin de la tienda (los tokens no
+  tienen usuario propio).
 
 ## Scopes de API Token (estilo Home Assistant)
 
@@ -24,8 +28,25 @@ API REST en PHP puro. Base URL: `https://tomodachi.tabtap.dev` (o tu propio host
 | `write` | Crear/modificar (ventas, inventario, config) |
 | `custom` | Personalizar apariencia (tema, colores) — exclusivo para el tema |
 
+Regla de scopes por método HTTP:
+
+| Método | Scope requerido |
+|---|---|
+| `GET` | `read` |
+| `POST` / `PUT` / `DELETE` | `write` |
+| `GET/POST /api/stores/theme.php` | `read` / `custom` |
+
 Los tokens pueden tener expiración (`expires_in_days`) o ser eternos
-(`0`). Un token revocado o expirado responde `401`.
+(`0`). Un token revocado o expirado responde `401`. Un token sin el scope
+necesario responde `403 {"message": "El token no tiene permiso: <scope>"}`.
+
+### Endpoints que aceptan token
+
+Inventario, ventas, reportes, promociones, cajas, tiendas (read/settings/
+update) y usuarios (read). Endpoints que siguen siendo SOLO sesión:
+`auth/*`, `users/create|update|delete|profile`, `stores/create|import_data|
+upload_logo|save_background`, `terminals/*`, `super_admin/*`, `ai/*`,
+`sales/cart_sync.php` y subidas de imagen (`inventory/upload_image.php`).
 
 ## Formato de respuesta
 

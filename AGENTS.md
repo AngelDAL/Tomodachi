@@ -52,6 +52,40 @@ docker/        Dockerfile, docker-compose.yml, entrypoint.sh
 - SQL: tablas en español/inglés mixto, prefijo consistente (`store_id`,
   `product_id`, `sale_id`...).
 
+## Autenticación en endpoints (sesión O token) — OBLIGATORIO
+
+Todo endpoint nuevo DEBE aceptar sesión de navegador Y API token
+(`Authorization: Bearer`). Usa el patrón `ApiAuth` (NO solo `Auth`):
+
+```php
+require_once '../../includes/ApiAuth.class.php';
+
+$db = new Database();
+$auth = new Auth($db);
+$apiAuth = new ApiAuth($db);
+$actor = $apiAuth->requireActor($auth);   // 401 si no hay sesión ni token
+$store_id = $actor['store_id'];           // SIEMPRE usar esto, nunca $_SESSION directo
+
+// Método GET -> scope read; POST/PUT/DELETE -> scope write
+if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    $apiAuth->requireScope($actor, 'read');
+} else {
+    if ($actor['via'] === 'session') {
+        // checar rol de sesión como antes (hasRole / role)
+    } else {
+        $apiAuth->requireScope($actor, 'write');   // 403 si el token no tiene write
+    }
+}
+```
+
+- `getActor()` devuelve `['store_id', 'user_id', 'via' => 'session'|'token', 'scopes', 'role']`.
+- Con token, `role` es `null` y `user_id` es el admin de la tienda
+  (atribución). NO uses `$currentUser['role']` sin checar `via === 'session'`.
+- GET exige `read`; escritura exige `write`; el tema exige `custom` (POST).
+- Endpoints SOLO sesión (no cablear tokens): `auth/*`, `super_admin/*`,
+  `users/create|update|delete|profile`, `stores/create|import_data|upload_logo|save_background`,
+  `terminals/*`, `ai/*`, `sales/cart_sync.php`, `inventory/upload_image.php`.
+
 ## Flujo de trabajo recomendado
 
 1. Lee `docs/API.md` antes de tocar endpoints.

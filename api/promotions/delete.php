@@ -4,6 +4,7 @@ require_once '../../config/constants.php';
 require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
 require_once '../../includes/Auth.class.php';
+require_once '../../includes/ApiAuth.class.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     Response::error('Método no permitido', 405);
@@ -12,9 +13,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $db = new Database();
 $auth = new Auth($db);
 
-if (!$auth->isLoggedIn()) {
-    Response::unauthorized();
-}
+$apiAuth = new ApiAuth($db);
+$actor = $apiAuth->requireActor($auth);
+if ($actor['via'] === 'token') { $apiAuth->requireScope($actor, 'write'); }
 
 $data = json_decode(file_get_contents('php://input'), true);
 $promotion_id = isset($data['promotion_id']) ? $data['promotion_id'] : null;
@@ -23,7 +24,7 @@ if (!$promotion_id) {
     Response::error('ID de promoción requerido', 400);
 }
 
-$store_id = $_SESSION['store_id'];
+$store_id = $actor['store_id'];
 
 try {
     $conn = $db->getConnection();

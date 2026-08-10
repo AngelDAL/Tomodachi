@@ -9,13 +9,19 @@ require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
 require_once '../../includes/Validator.class.php';
 require_once '../../includes/Auth.class.php';
+require_once '../../includes/ApiAuth.class.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
 $db = new Database();
 $auth = new Auth($db);
-if (!$auth->isLoggedIn()) { Response::unauthorized(); }
-if (!$auth->hasRole(ROLE_ADMIN)) { Response::error('Solo admin puede actualizar tiendas',403); }
+$apiAuth = new ApiAuth($db);
+$actor = $apiAuth->requireActor($auth);
+if ($actor['via'] === 'session') {
+    if (!$auth->hasRole(ROLE_ADMIN)) { Response::error('Solo admin puede actualizar tiendas',403); }
+} else {
+    $apiAuth->requireScope($actor, 'write');
+}
 
 if ($_SERVER['REQUEST_METHOD'] !== 'PUT') { Response::error('Método no permitido',405); }
 
@@ -27,7 +33,7 @@ try {
     if ($store_id <= 0) { Response::validationError(['store_id'=>'Requerido']); }
 
     // Seguridad: el admin solo puede actualizar su propia tienda
-    $currentUser = $auth->getCurrentUser();
+    $currentUser = $actor;
     $session_store_id = isset($currentUser['store_id']) ? (int)$currentUser['store_id'] : 0;
     if ($store_id !== $session_store_id) {
         Response::error('No autorizado para actualizar otra tienda', 403);

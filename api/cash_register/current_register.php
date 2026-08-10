@@ -11,6 +11,7 @@ require_once '../../includes/Response.class.php';
 
 require_once '../../includes/Validator.class.php';
 require_once '../../includes/Auth.class.php';
+require_once '../../includes/ApiAuth.class.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
@@ -20,10 +21,15 @@ try {
     $db = new Database();
     $auth = new Auth($db);
 
-    if (!$auth->isLoggedIn()) { Response::unauthorized(); }
-    if (!$auth->hasRole([ROLE_ADMIN,ROLE_MANAGER,ROLE_CASHIER])) { Response::error('Permisos insuficientes',403); }
+    $apiAuth = new ApiAuth($db);
+    $actor = $apiAuth->requireActor($auth);
+    if ($actor['via'] === 'session') {
+        if (!$auth->hasRole([ROLE_ADMIN,ROLE_MANAGER,ROLE_CASHIER])) { Response::error('Permisos insuficientes',403); }
+    } else {
+        $apiAuth->requireScope($actor, 'read');
+    }
 
-    $currentUser = $auth->getCurrentUser();
+    $currentUser = $actor;
 
     $register_id = isset($_GET['register_id']) ? (int)$_GET['register_id'] : 0;
     $store_id = isset($_GET['store_id']) ? (int)$_GET['store_id'] : 0;

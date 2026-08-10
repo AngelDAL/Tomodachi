@@ -85,6 +85,39 @@ if [ "$rl" -ge 1 ]; then echo "PASS | Rate limit soporte (429 alcanzado)"; PASS=
 code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/public/login.html")
 check "Frontend login.html (200)" 200 "$code"
 
+# 9. API Tokens (agentes IA)
+tok_json=$(curl -s -b "$CJ" -X POST "$BASE/api/api_tokens/create.php" -H 'Content-Type: application/json' -d '{"name":"suite-token","scopes":["read","write"],"expires_in_days":1}')
+TOKEN=$(echo "$tok_json" | python3 -c "import json,sys; print(json.load(sys.stdin)['data']['token'])" 2>/dev/null)
+if [ -n "$TOKEN" ]; then echo "PASS | Crear API token read+write"; PASS=$((PASS+1)); else echo "FAIL | Crear API token read+write"; FAIL=$((FAIL+1)); TOKEN=""; fi
+
+code=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" "$BASE/api/inventory/products.php?store_id=1")
+check "Token read: listar productos (200)" 200 "$code"
+
+code=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" -X POST "$BASE/api/inventory/categories.php" -H 'Content-Type: application/json' -d '{"category_name":"Suite Cat"}')
+check "Token write: crear categoria (200)" 200 "$code"
+
+cat_id=$(curl -s -H "Authorization: Bearer $TOKEN" "$BASE/api/inventory/categories.php" | python3 -c "import json,sys; d=json.load(sys.stdin); print([c['category_id'] for c in d['data'] if c['category_name']=='Suite Cat'][-1] if d.get('data') else '')" 2>/dev/null)
+if [ -n "$cat_id" ]; then
+  curl -s -o /dev/null -b "$CJ" -X DELETE "$BASE/api/inventory/categories.php" -H 'Content-Type: application/json' -d "{\"category_id\":$cat_id}"
+  echo "PASS | Limpieza categoria de prueba"
+  PASS=$((PASS+1))
+fi
+
+tokr_json=$(curl -s -b "$CJ" -X POST "$BASE/api/api_tokens/create.php" -H 'Content-Type: application/json' -d '{"name":"suite-token-ro","scopes":["read"],"expires_in_days":1}')
+TOKR=$(echo "$tokr_json" | python3 -c "import json,sys; print(json.load(sys.stdin)['data']['token'])" 2>/dev/null)
+code=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKR" -X POST "$BASE/api/inventory/categories.php" -H 'Content-Type: application/json' -d '{"category_name":"No Debe Crear"}')
+check "Token read-only en write (403)" 403 "$code"
+
+code=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKR" -X POST "$BASE/api/stores/theme.php" -H 'Content-Type: application/json' -d '{"theme_config":{"primary_color":"#000000"}}')
+check "Token sin custom en theme (403)" 403 "$code"
+
+tok_id=$(echo "$tok_json" | python3 -c "import json,sys; print(json.load(sys.stdin)['data']['token_id'])" 2>/dev/null)
+tokr_id=$(echo "$tokr_json" | python3 -c "import json,sys; print(json.load(sys.stdin)['data']['token_id'])" 2>/dev/null)
+curl -s -o /dev/null -b "$CJ" -X POST "$BASE/api/api_tokens/revoke.php" -H 'Content-Type: application/json' -d "{\"token_id\":$tok_id}"
+curl -s -o /dev/null -b "$CJ" -X POST "$BASE/api/api_tokens/revoke.php" -H 'Content-Type: application/json' -d "{\"token_id\":$tokr_id}"
+echo "PASS | Revocar tokens de prueba"
+PASS=$((PASS+1))
+
 echo
 echo "===== RESULTADO: $PASS pasaron, $FAIL fallaron ====="
 rm -f "$CJ" "$CJ2"

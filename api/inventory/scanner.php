@@ -8,6 +8,7 @@ require_once '../../config/constants.php';
 require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
 require_once '../../includes/Auth.class.php';
+require_once '../../includes/ApiAuth.class.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
@@ -17,8 +18,10 @@ try {
     $db = new Database();
     $auth = new Auth($db);
 
-    if (!$auth->isLoggedIn()) { Response::unauthorized(); }
-    $currentUser = $auth->getCurrentUser();
+    $apiAuth = new ApiAuth($db);
+    $actor = $apiAuth->requireActor($auth);
+    $apiAuth->requireScope($actor, 'read');
+    $currentUser = $actor;
 
     // Aceptar 'barcode' (enviado por JS) o 'code'
     $code = isset($_GET['barcode']) ? trim($_GET['barcode']) : (isset($_GET['code']) ? trim($_GET['code']) : '');

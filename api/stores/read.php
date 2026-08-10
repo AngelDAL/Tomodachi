@@ -12,6 +12,7 @@ header('Content-Type: application/json; charset=utf-8');
 
 require_once '../../includes/Validator.class.php';
 require_once '../../includes/Auth.class.php';
+require_once '../../includes/ApiAuth.class.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -19,7 +20,9 @@ try {
     $db = new Database();
     $auth = new Auth($db);
 
-    if (!$auth->isLoggedIn()) { Response::unauthorized(); }
+    $apiAuth = new ApiAuth($db);
+    $actor = $apiAuth->requireActor($auth);
+    $apiAuth->requireScope($actor, 'read');
 
     $stores = $db->select('SELECT store_id, store_name, address, phone, status FROM stores',[]);
     Response::success($stores,'Listado tiendas');

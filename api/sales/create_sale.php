@@ -19,12 +19,18 @@ require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
 require_once '../../includes/Validator.class.php';
 require_once '../../includes/Auth.class.php';
+require_once '../../includes/ApiAuth.class.php';
 
 $db = new Database();
 $auth = new Auth($db);
 
-if (!$auth->isLoggedIn()) { Response::unauthorized(); }
-if (!in_array($auth->getCurrentUser()['role'],[ROLE_ADMIN,ROLE_MANAGER,ROLE_CASHIER])) { Response::error('Permisos insuficientes',403); }
+$apiAuth = new ApiAuth($db);
+$actor = $apiAuth->requireActor($auth);
+if ($actor['via'] === 'session') {
+    if (!in_array($actor['role'],[ROLE_ADMIN,ROLE_MANAGER,ROLE_CASHIER])) { Response::error('Permisos insuficientes',403); }
+} else {
+    $apiAuth->requireScope($actor, 'write');
+}
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') { Response::error('Método no permitido',405); }
 
 try {
@@ -48,7 +54,7 @@ try {
     if ($errors) { Response::validationError($errors); }
 
     // Seguridad: el usuario solo puede facturar en su propia tienda
-    $currentUser = $auth->getCurrentUser();
+    $currentUser = $actor;
     $session_store_id = (int)$currentUser['store_id'];
     if ($store_id !== $session_store_id) {
         Response::error('No autorizado para facturar en otra tienda', 403);
@@ -70,7 +76,7 @@ try {
         if (!$open) { Response::error('La caja especificada no está abierta en esta tienda',409); }
     } else {
         // Buscar caja del usuario actual
-        $user = $auth->getCurrentUser();
+        $user = $actor;
         $open = $db->selectOne('SELECT register_id FROM cash_registers WHERE store_id = ? AND user_id = ? AND status = ?',[$store_id, $user['user_id'], REGISTER_OPEN]);
         
         if (!$open) {
@@ -152,7 +158,7 @@ try {
     // Transacción
     $db->beginTransaction();
     try {
-        $user = $auth->getCurrentUser();
+        $user = $actor;
         $sale_id = $db->insert('INSERT INTO sales (store_id, user_id, register_id, sale_date, subtotal, tax, discount, total, payment_method, status, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,NOW())',[
             $store_id, $user['user_id'], $register_id, date('Y-m-d H:i:s'), $subtotal, $tax, $discount, $total, $payment_method, SALE_COMPLETED
         ]);

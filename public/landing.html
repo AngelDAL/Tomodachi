@@ -180,6 +180,160 @@
             letter-spacing: 0.5px;
         }
 
+        /* ===== Hero animado (slide 1) ===== */
+        .hero-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .hero-logo-wrap {
+            margin-bottom: 26px;
+            filter: drop-shadow(0 0 24px rgba(227, 5, 122, 0.45));
+        }
+
+        #heroLogo {
+            width: 92px;
+            height: 92px;
+            overflow: visible;
+        }
+
+        #heroLogo .logo-path {
+            fill: none;
+            stroke: var(--primary-color);
+            stroke-width: 22;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill-opacity: 0;
+            transition: fill-opacity 0.6s ease;
+        }
+
+        #heroLogo.filled .logo-path {
+            fill: var(--primary-color);
+            fill-opacity: 1;
+        }
+
+        .hero-title {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 22px;
+            width: 100%;
+        }
+
+        .title-svg {
+            overflow: visible;
+            height: auto;
+        }
+
+        .title-svg .letter {
+            fill: none;
+            stroke-width: 3;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill-opacity: 0;
+            transition: fill-opacity 0.5s ease;
+        }
+
+        .title-svg.filled .letter {
+            fill-opacity: 1;
+        }
+
+        #titleBienvenido {
+            width: min(430px, 82vw);
+            filter: drop-shadow(0 0 14px rgba(227, 5, 122, 0.35));
+        }
+        #titleBienvenido .letter { stroke: var(--primary-color); }
+
+        #titleTomodachi {
+            width: min(540px, 90vw);
+            filter: drop-shadow(0 4px 30px rgba(227, 5, 122, 0.4));
+        }
+        #titleTomodachi .letter { stroke: #ffffff; }
+
+        .hero-kicker,
+        .hero-sub,
+        .hero-badge {
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.7s ease, transform 0.7s ease;
+        }
+
+        .hero-content.ready .hero-kicker,
+        .hero-content.ready .hero-sub,
+        .hero-content.ready .hero-badge {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .hero-kicker {
+            margin-bottom: 14px;
+        }
+
+        .hero-sub {
+            max-width: 680px;
+            margin: 0 auto 0;
+        }
+
+        /* Pista de deslizamiento / navegación */
+        .swipe-hint {
+            position: absolute;
+            bottom: 88px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            color: rgba(255, 255, 255, 0.65);
+            font-size: 0.85rem;
+            letter-spacing: 0.4px;
+            opacity: 0;
+            transition: opacity 0.6s ease;
+            z-index: 8;
+            pointer-events: none;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .swipe-hint.visible {
+            opacity: 1;
+        }
+
+        .swipe-hint .swipe-chevrons {
+            display: flex;
+            gap: 18px;
+            font-size: 1rem;
+            animation: swipePulse 1.8s ease-in-out infinite;
+        }
+
+        .swipe-hint .swipe-chevrons i {
+            color: var(--primary-color);
+            text-shadow: 0 0 12px rgba(227, 5, 122, 0.6);
+        }
+
+        .swipe-hint .swipe-chevrons i:first-child {
+            animation: chevronLeft 1.8s ease-in-out infinite;
+        }
+        .swipe-hint .swipe-chevrons i:last-child {
+            animation: chevronRight 1.8s ease-in-out infinite;
+        }
+
+        @keyframes chevronLeft {
+            0%, 100% { transform: translateX(4px); opacity: 0.4; }
+            50% { transform: translateX(-6px); opacity: 1; }
+        }
+        @keyframes chevronRight {
+            0%, 100% { transform: translateX(-4px); opacity: 0.4; }
+            50% { transform: translateX(6px); opacity: 1; }
+        }
+        @keyframes swipePulse {
+            0%, 100% { opacity: 0.55; }
+            50% { opacity: 1; }
+        }
+
         /* ===== Navegación ===== */
         .nav-arrow {
             position: absolute;
@@ -494,7 +648,17 @@
                 overflow-wrap: anywhere;
                 word-break: break-all;
             }
-            .nav-arrow { display: none; }
+            .nav-arrow {
+                display: flex;
+                width: 42px;
+                height: 42px;
+                top: auto;
+                bottom: 76px;
+                font-size: 0.95rem;
+                background: rgba(255, 255, 255, 0.06);
+            }
+            .nav-arrow.prev { left: 14px; }
+            .nav-arrow.next { right: 14px; }
             .auth-card { padding: 24px 20px; max-width: 100%; }
             .auth-row { flex-direction: column; gap: 0; }
             /* La tarjeta de login puede exceder la altura en móviles pequeños:
@@ -521,26 +685,32 @@
 
         <div class="slides" id="slides">
 
-            <!-- ===== Slide 1: Hero ===== -->
-            <section class="slide">
-                <div class="slide-content">
-                    <div class="logo-row">
-                        <svg viewBox="0 0 978 978" version="1.1" xmlns="http://www.w3.org/2000/svg"
+            <!-- ===== Slide 1: Hero animado (bienvenida) ===== -->
+            <section class="slide" id="slideHero">
+                <div class="slide-content hero-content" id="heroContent">
+                    <div class="hero-logo-wrap">
+                        <svg id="heroLogo" viewBox="0 0 978 978" version="1.1" xmlns="http://www.w3.org/2000/svg"
                             style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
                             <g transform="matrix(1,0,0,1,-640.505536,-1753.937008)">
                                 <g transform="matrix(3.479065,0,0,3.479065,-4010.290738,-1296.905436)">
-                                    <path
+                                    <path class="logo-path"
                                         d="M1439.144,903.435C1445.042,887.496 1460.24,876.915 1477.235,876.915C1494.231,876.915 1509.429,887.496 1515.327,903.435L1535.807,958.783L1591.155,979.263C1607.094,985.161 1617.676,1000.36 1617.676,1017.355C1617.676,1034.35 1607.094,1049.548 1591.155,1055.446L1535.807,1075.927L1515.327,1131.275C1509.429,1147.214 1494.231,1157.795 1477.235,1157.795C1460.24,1157.795 1445.042,1147.214 1439.144,1131.275L1418.663,1075.927L1363.316,1055.446C1347.377,1049.548 1336.795,1034.35 1336.795,1017.355C1336.795,1000.36 1347.377,985.161 1363.316,979.263L1418.663,958.783L1439.144,903.435ZM1477.235,958.616C1444.817,958.616 1418.497,984.936 1418.497,1017.355C1418.497,1049.774 1444.817,1076.093 1477.235,1076.093C1509.654,1076.093 1535.974,1049.774 1535.974,1017.355C1535.974,984.936 1509.654,958.616 1477.235,958.616ZM1477.235,987.986C1493.445,987.986 1506.605,1001.145 1506.605,1017.355C1506.605,1033.564 1493.445,1046.724 1477.235,1046.724C1461.026,1046.724 1447.866,1033.564 1447.866,1017.355C1447.866,1001.145 1461.026,987.986 1477.235,987.986Z" />
                                 </g>
                             </g>
                         </svg>
-                        <span class="logo-name">Tomodachi</span>
                     </div>
-                    <span class="slide-kicker">Punto de Venta Open Source</span>
-                    <h2>El sistema de gestión para tu negocio</h2>
-                    <p>Ventas, inventario, cajas, promociones y reportes en un solo lugar. Instálalo en tu propio
-                        servidor, sin suscripciones ni cobros.</p>
-                    <div class="badge-open-source"><i class="fas fa-code-branch"></i> Self-hosted · Open Source · Apache 2.0</div>
+                    <div class="hero-title">
+                        <svg id="titleBienvenido" class="title-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+                        <svg id="titleTomodachi" class="title-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+                    </div>
+                    <span class="slide-kicker hero-kicker">Punto de Venta Open Source</span>
+                    <p class="hero-sub">Ventas, inventario, cajas, promociones y reportes en un solo lugar. Instálalo
+                        en tu propio servidor, sin suscripciones ni cobros.</p>
+                    <div class="badge-open-source hero-badge"><i class="fas fa-code-branch"></i> Self-hosted · Open Source · Apache 2.0</div>
+                </div>
+                <div class="swipe-hint" id="swipeHint">
+                    <div class="swipe-chevrons"><i class="fas fa-chevron-left"></i><i class="fas fa-chevron-right"></i></div>
+                    <span>Desliza o usa los botones para explorar</span>
                 </div>
             </section>
 
@@ -731,6 +901,7 @@
         <div class="slide-counter" id="slideCounter">1 / 8</div>
     </div>
 
+    <script src="js/title-paths.js"></script>
     <script>
         // ===== Carrusel =====
         const slides = document.querySelectorAll('.slide');
@@ -744,6 +915,7 @@
         let autoTimer = null;
         let isHovering = false;
         let touchStartX = 0;
+        let introDone = false;
 
         slides.forEach((_, i) => {
             const dot = document.createElement('button');
@@ -766,9 +938,23 @@
             // En escritorio, pausa mientras el ratón está encima
             if (isHovering) return;
             stopAutoTimer();
+            const delay = (current === 0 && !introDone) ? 16000 : 8000;
             autoTimer = setInterval(() => {
                 if (current < total - 1) goTo(current + 1);
-            }, 8000);
+            }, delay);
+        }
+
+        // Omitir: visible desde la 2da diapositiva, o en la 1ra tras la intro;
+        // oculto en la última (login)
+        function updateSkipVisibility() {
+            if (!skipBtn) return;
+            if (current === 0) {
+                skipBtn.style.display = introDone ? 'inline-flex' : 'none';
+            } else if (current < total - 1) {
+                skipBtn.style.display = 'inline-flex';
+            } else {
+                skipBtn.style.display = 'none';
+            }
         }
 
         function goTo(index) {
@@ -777,8 +963,10 @@
             dots.forEach((d, i) => d.classList.toggle('active', i === current));
             counter.textContent = (current + 1) + ' / ' + total;
             progressBar.style.width = (((current + 1) / total) * 100) + '%';
-            // Omitir: visible desde la 2da diapositiva, oculto en la última (login)
-            if (skipBtn) skipBtn.style.display = (current > 0 && current < total - 1) ? 'inline-flex' : 'none';
+            updateSkipVisibility();
+            // Ocultar la pista de deslizamiento al navegar
+            const hint = document.getElementById('swipeHint');
+            if (hint) hint.classList.remove('visible');
             // Toda interacción manual reinicia el auto-avance: nunca queda muerto
             startAutoTimer();
         }
@@ -912,6 +1100,87 @@
                 btn.innerHTML = '<i class="fas fa-building"></i> Crear mi empresa';
             }
         });
+
+        // ===== Intro animada (slide 1): logo + título con trazo =====
+        const SVG_NS = 'http://www.w3.org/2000/svg';
+
+        function buildTitle(el, data) {
+            el.setAttribute('viewBox', '0 ' + data.yMin + ' ' + data.width + ' ' + data.height);
+            data.letters.forEach((l) => {
+                const p = document.createElementNS(SVG_NS, 'path');
+                p.setAttribute('d', l.d);
+                p.classList.add('letter');
+                el.appendChild(p);
+            });
+        }
+
+        function drawPath(p, delay, dur) {
+            const len = p.getTotalLength();
+            p.style.strokeDasharray = len;
+            p.style.strokeDashoffset = len;
+            // Web Animations API: más robusta que transición CSS por estilo inline
+            // (funciona en Chrome, Firefox, Safari y Android WebView).
+            p.animate(
+                [{ strokeDashoffset: len }, { strokeDashoffset: 0 }],
+                { duration: dur, delay: delay, easing: 'ease', fill: 'forwards' }
+            );
+        }
+
+        function fillGroup(el, delay) {
+            const paths = el.querySelectorAll('path');
+            paths.forEach((p, i) => {
+                if (p.animate) {
+                    p.animate(
+                        [{ fillOpacity: 0 }, { fillOpacity: 1 }],
+                        { duration: 500, delay: delay + i * 40, easing: 'ease', fill: 'forwards' }
+                    );
+                }
+            });
+            // Estado final garantizado también por CSS (fallback)
+            el.classList.add('filled');
+        }
+
+        function runIntro() {
+            if (!window.TITLE_PATHS) return;
+            const heroContent = document.getElementById('heroContent');
+            const hint = document.getElementById('swipeHint');
+
+            // Títulos desde paths generados (Quicksand Bold)
+            buildTitle(document.getElementById('titleBienvenido'), window.TITLE_PATHS.bienvenido);
+            buildTitle(document.getElementById('titleTomodachi'), window.TITLE_PATHS.tomodachi);
+
+            // 1. Logo: se dibuja y luego se rellena
+            const logoPath = document.querySelector('#heroLogo .logo-path');
+            const heroLogo = document.getElementById('heroLogo');
+            if (logoPath) {
+                drawPath(logoPath, 400, 1500);
+                fillGroup(heroLogo, 2100);
+            }
+
+            // 2. "Bienvenido a" letra por letra
+            const bien = document.querySelectorAll('#titleBienvenido .letter');
+            bien.forEach((p, i) => drawPath(p, 1400 + i * 110, 600));
+
+            // 3. "Tomodachi" letra por letra (más grande, arranca después)
+            const tomo = document.querySelectorAll('#titleTomodachi .letter');
+            tomo.forEach((p, i) => drawPath(p, 2500 + i * 130, 650));
+
+            // 4. Relleno de letras + resto del contenido + pista + botón Omitir
+            fillGroup(document.getElementById('titleBienvenido'), 3000);
+            fillGroup(document.getElementById('titleTomodachi'), 4100);
+            setTimeout(() => {
+                heroContent.classList.add('ready');
+                if (hint) hint.classList.add('visible');
+                introDone = true;
+                updateSkipVisibility();
+                // Reinicia el auto-avance con el delay normal (8s) ahora que la intro terminó
+                startAutoTimer();
+            }, 4300);
+        }
+
+        if (document.getElementById('slideHero')) {
+            runIntro();
+        }
 
         // Avance automático cada 8s (pausa en la última slide).
         // Unificado en startAutoTimer()/stopAutoTimer(): se reinicia en cada

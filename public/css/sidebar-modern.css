@@ -76,7 +76,7 @@ html.sidebar-loading .main-content {
         
         transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         overflow: hidden;
-        z-index: 1300;
+        z-index: 20000;
     }
 
     .sidebar-header {

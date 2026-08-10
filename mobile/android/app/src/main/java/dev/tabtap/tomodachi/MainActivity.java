@@ -11,6 +11,9 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        // Plugin local: pantalla siempre encendida en la caja
+        registerPlugin(KeepAwakePlugin.class);
+
         super.onCreate(savedInstanceState);
 
         // Forzar que TODAS las URLs se carguen dentro del WebView de la app

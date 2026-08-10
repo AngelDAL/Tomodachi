@@ -14,6 +14,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Event listener para el botón principal (toggle)
   toggleScannerBtn.addEventListener('click', () => {
+    // En la app nativa: escáner de cámara del sistema (fuera del HTML)
+    if (window.TomodachiNative && window.TomodachiNative.isNative) {
+      window.TomodachiNative.scanBarcode()
+        .then(code => {
+          if (code && window.fetchByCode) window.fetchByCode(code);
+        })
+        .catch(err => {
+          console.error('Error escáner nativo:', err);
+          if (window.showNotification) showNotification('No se pudo leer el código. Intente de nuevo.', 'error');
+        });
+      return;
+    }
+    // En navegador normal: escáner HTML con cámara
     if (scannerContainer.classList.contains('hidden')) {
       startScanner();
     } else {

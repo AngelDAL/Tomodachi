@@ -365,6 +365,16 @@
     <script src="js/tour.js"></script>
     <script src="lib/animejs/anime.min.js"></script>
     <script src="js/sales.js"></script>
+    <script>
+        // En la app nativa: mantener la pantalla encendida mientras se vende
+        document.addEventListener('tomodachi-native-ready', () => {
+            if (window.TomodachiNative && window.TomodachiNative.isNative) {
+                window.TomodachiNative.keepAwake(true);
+                window.addEventListener('pagehide', () => window.TomodachiNative.keepAwake(false));
+                window.addEventListener('beforeunload', () => window.TomodachiNative.keepAwake(false));
+            }
+        });
+    </script>
     <!-- voice_commander removed -->
     <script>
         document.addEventListener('DOMContentLoaded', async () => {

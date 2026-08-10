@@ -15,6 +15,13 @@ function initSidebar() {
         document.head.appendChild(mobileLink);
     }
 
+    // Cargar el puente con la app nativa (si existe) en todas las vistas
+    if (!document.querySelector('script[src="js/capacitor-bridge.js"]')) {
+        const bridgeScript = document.createElement('script');
+        bridgeScript.src = 'js/capacitor-bridge.js';
+        document.head.appendChild(bridgeScript);
+    }
+
     const sidebarNav = document.querySelector('.sidebar-nav');
     if (!sidebarNav) return;
 
@@ -25,8 +32,7 @@ function initSidebar() {
         { href: 'inventory.html', icon: 'fa-box', text: 'Inventario' },
         { href: 'promotions.html', icon: 'fa-tags', text: 'Promociones' },
         { href: 'finance.html', icon: 'fa-wallet', text: 'Finanzas' },
-        { href: 'reports.html', icon: 'fa-chart-bar', text: 'Reportes', className: 'desktop-only-nav' }, // Keeping reports desktop-only for now as per original
-        { href: 'integrations.html', icon: 'fa-plug', text: 'Integraciones' }
+        { href: 'reports.html', icon: 'fa-chart-bar', text: 'Reportes', className: 'desktop-only-nav' } // Keeping reports desktop-only for now as per original
     ];
 
     // Current page detection
@@ -69,6 +75,9 @@ function initSidebar() {
             <div class="user-tooltip-menu" id="profileTooltipMenu">
                 <a href="profile.html" class="tooltip-item">
                     <i class="fas fa-cog"></i> Configuración
+                </a>
+                <a href="integrations.html" class="tooltip-item">
+                    <i class="fas fa-plug"></i> Integraciones
                 </a>
                 <a href="promotions.html" class="tooltip-item">
                     <i class="fas fa-tags"></i> Promociones

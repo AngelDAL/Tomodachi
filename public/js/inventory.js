@@ -210,6 +210,23 @@ function bindEvents() {
     }
 
     function startMiniScanner(target) {
+        // En la app nativa: cámara del sistema (fuera del HTML)
+        if (window.TomodachiNative && window.TomodachiNative.isNative) {
+            const input = target === scanBarcodeBtn ? barcodeInput : qrInput;
+            window.TomodachiNative.scanBarcode()
+                .then(code => {
+                    if (code && input) {
+                        input.value = code;
+                        input.style.backgroundColor = '#e8f0fe';
+                        setTimeout(() => input.style.backgroundColor = '', 1500);
+                    }
+                })
+                .catch(err => {
+                    console.error('Error escáner nativo:', err);
+                    if (window.showNotification) showNotification('No se pudo leer el código. Intente de nuevo.', 'error');
+                });
+            return;
+        }
         if (miniScannerInstance) stopMiniScanner();
         miniScanTarget = target;
         miniScannerContainer.classList.remove('hidden');

@@ -7,7 +7,7 @@ de servidor.
 ## Requisitos
 
 - Node 20+ / npm
-- JDK 17
+- JDK 21 (Capacitor 8 compila con source/target 21)
 - Android SDK (compileSdk 36)
 - Opcional: Android Studio para ejecutar en emulador/dispositivo
 

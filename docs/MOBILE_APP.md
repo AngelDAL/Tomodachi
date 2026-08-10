@@ -1,6 +1,6 @@
 # Tomodachi — App Android (plan)
 
-> Estado: **propuesta para revisión** · 2026-08-10
+> Estado: **fase 1 completada** · 2026-08-10
 > Objetivo: app Android que se conecta al servicio Tomodachi (Baburu
 > Cloud o self-hosted), con capacidades nativas: notificaciones push,
 > cámara/lector de códigos, wakelock en caja.
@@ -240,12 +240,21 @@ solo las notificaciones quedan desactivadas hasta configurarlo.
 
 | Fase | Alcance | Esfuerzo | Dependencias |
 |---|---|---|---|
-| **1. Shell + modos** | `mobile/` con pantalla de bienvenida (Baburu Cloud / URL propia), WebView, ícono, splash. APK instalable. | 1 sesión | Ninguna |
+| **1. Shell + modos** ✅ | `mobile/` con pantalla de bienvenida (Baburu Cloud / URL propia), WebView, ícono, splash. APK instalable. | 1 sesión | Ninguna |
 | **2. Bridge + scanner** | `capacitor-bridge.js` + botón escáner en ventas/inventario + wakelock en caja. | 1 sesión | Ninguna |
 | **3. Push** | Migración 014 + endpoints register/unregister/send + hook en login + build FCM. | 1-2 sesiones | Cuenta Firebase |
-| **4. CI + Releases** | Workflow GitHub Actions + firma + APK en Releases. | 1 sesión | Secretos del repo |
+| **4. CI + Releases** | Workflow GitHub Actions + firma + APK en Releases. | 1 sesión | Token con scope `workflow` |
 | **5. Play Store (opcional)** | AAB firmado, listing, política. | 1 sesión | $25 + cuenta dev |
 | **6. Notificaciones de negocio** | eventos venta/stock/caja + cron de promociones. | 1 sesión | Fase 3 |
+
+Progreso: **fase 1 completada** (2026-08-10) — `mobile/` con pantalla de
+bienvenida/modo, icono generado, APK debug compilado localmente
+(`dev.tabtap.tomodachi`, minSdk 24, 4 MB). Verificado con Playwright:
+Baburu Cloud → `https://tomodachi.tabtap.dev`, URL custom normalizada.
+
+> Nota build en ARM64 (Oracle Cloud): se requiere JDK 21 (no 17), y
+> aapt2 x86_64 se ejecuta vía qemu-user + binfmt con libc6/libgcc_s
+> amd64 instaladas en el host. En x86_64 el build es directo.
 
 Total estimado: **5-7 sesiones** para tener la app publicable.
 

@@ -303,19 +303,15 @@
     </div>
 
     <script src="js/sidebar-loader.js?v=3"></script>
+    <script src="js/app.js"></script>
     <script>
-        // Verificar sesión
-        fetch('../api/auth/verify_session.php')
-            .then(r => r.json())
-            .then(d => {
-                if (!d.success || !d.data.logged_in) {
-                    window.location.href = 'login.html';
-                    return;
-                }
-                initSidebar();
-                loadTokens();
-            })
-            .catch(() => window.location.href = 'login.html');
+        // Verificar sesión (modal de re-login si caducó y pidió sesión permanente)
+        (async () => {
+            const session = await requireSession();
+            if (!session) return;
+            initSidebar();
+            loadTokens();
+        })();
 
         // Crear token
         document.getElementById('createTokenForm').addEventListener('submit', async (e) => {

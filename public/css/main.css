@@ -1472,3 +1472,124 @@ table tr:hover {
         border-top: 8px solid white;
     }
 }
+
+/* ============================================================
+ * Modal de sesión caducada (re-login bonito)
+ * ============================================================ */
+.relogin-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 200000;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+.relogin-modal.show {
+    display: flex;
+}
+.relogin-content {
+    background: var(--bg-card, #ffffff);
+    border-radius: 20px;
+    padding: 2rem 2rem 1.8rem;
+    max-width: 400px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+    text-align: center;
+    animation: reloginPop 0.3s ease;
+}
+@keyframes reloginPop {
+    from { transform: scale(0.9) translateY(10px); opacity: 0; }
+    to   { transform: scale(1) translateY(0); opacity: 1; }
+}
+.relogin-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 1rem;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-color, #E3057A), var(--secondary-color, #7B2FBE));
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    box-shadow: 0 8px 20px rgba(227, 5, 122, 0.35);
+}
+.relogin-content h2 {
+    margin: 0 0 0.4rem;
+    font-size: 1.3rem;
+    color: var(--text-color, #1a1a2e);
+}
+.relogin-content p {
+    margin: 0 0 1.4rem;
+    color: #888;
+    font-size: 0.9rem;
+}
+.relogin-content form {
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+.relogin-content label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-color, #333);
+}
+.relogin-content input[type="text"],
+.relogin-content input[type="password"] {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+.relogin-content input[type="text"]:focus,
+.relogin-content input[type="password"]:focus {
+    border-color: var(--primary-color, #E3057A);
+}
+.relogin-remember {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 400 !important;
+    cursor: pointer;
+    margin-top: 0.2rem;
+}
+.relogin-remember input {
+    accent-color: var(--primary-color, #E3057A);
+}
+.relogin-btn {
+    margin-top: 0.6rem;
+    width: 100%;
+    padding: 0.85rem;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--primary-color, #E3057A), var(--secondary-color, #7B2FBE));
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+.relogin-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(227, 5, 122, 0.3);
+}
+.relogin-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+.relogin-error {
+    color: #e53e3e;
+    font-size: 0.85rem;
+    min-height: 1.2em;
+    text-align: center;
+    margin-top: 0.3rem;
+}

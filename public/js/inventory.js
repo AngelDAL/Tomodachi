@@ -61,10 +61,7 @@ const SEARCH_DEBOUNCE_DELAY = 500; // 500ms de espera después de dejar de escri
 // Inicializar cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', async function () {
     const session = await checkSession();
-    if (!session) {
-        window.location.href = 'login.html';
-        return;
-    }
+    if (!session) { requireSession(); return; }
     storeId = session.store_id || 1;
     initInventory();
 });

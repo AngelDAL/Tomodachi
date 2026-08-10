@@ -184,6 +184,8 @@ function renderRecentSalesList(list) {
 
         const tr = document.createElement('tr');
         tr.style.borderBottom = '1px solid #eee';
+        tr.style.cursor = 'pointer';
+        tr.title = `Clic para ver detalle de la venta #${item.sale_id}`;
         tr.innerHTML = `
             <td style="padding: 0.75rem; white-space: nowrap;" data-label="Fecha">${fullDate}</td>
             <td style="padding: 0.75rem;" data-label="Productos">
@@ -194,8 +196,87 @@ function renderRecentSalesList(list) {
             <td style="padding: 0.75rem; font-weight: bold;" data-label="Total">${formatCurrency(item.total)}</td>
             <td class="premium-locked" style="padding: 0.75rem; color: #27ae60; font-weight: bold;" data-label="Ganancia">${formatCurrency(item.profit)}</td>
         `;
+        // Clic en la fila -> detalle completo de la venta
+        tr.addEventListener('click', () => showSaleDetail(item.sale_id));
         tbody.appendChild(tr);
     });
+}
+
+/**
+ * Abre el modal con el detalle completo de una venta
+ * (productos, cantidades, precios) usando la API.
+ */
+async function showSaleDetail(saleId) {
+    const modal = document.getElementById('saleDetailModal');
+    const body = document.getElementById('saleDetailBody');
+    const title = document.getElementById('saleDetailTitle');
+    if (!modal || !body) return;
+
+    title.textContent = `Venta #${saleId}`;
+    body.innerHTML = '<div style="text-align:center; padding: 2rem;"><i class="fas fa-spinner fa-spin" style="font-size: 1.5rem; color: #999;"></i><p>Cargando detalle...</p></div>';
+    modal.classList.add('show');
+
+    try {
+        const resp = await fetch(`../api/sales/sale_details.php?sale_id=${saleId}`);
+        const data = await resp.json();
+        if (!data.success || !data.data) {
+            throw new Error(data.message || 'No se pudo cargar el detalle');
+        }
+        const d = data.data;
+
+        // Encabezado de la venta
+        const fecha = new Date(d.sale_date + ' UTC').toLocaleString('es-MX', {
+            day: '2-digit', month: '2-digit', year: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        });
+        const metodo = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', mixed: 'Mixto' }[d.payment_method] || d.payment_method;
+
+        let html = `
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 1rem; background: #f8f9fa; border-radius: 10px; padding: 0.9rem 1rem; margin-bottom: 1rem; font-size: 0.9rem;">
+                <div><strong>Fecha:</strong> ${fecha}</div>
+                <div><strong>Método:</strong> ${metodo}</div>
+                <div><strong>Subtotal:</strong> ${formatCurrency(d.subtotal)}</div>
+                <div><strong>Total:</strong> ${formatCurrency(d.total)}</div>
+                ${d.discount > 0 ? `<div><strong>Descuento:</strong> -${formatCurrency(d.discount)}</div>` : ''}
+                ${d.tax > 0 ? `<div><strong>Impuesto:</strong> ${formatCurrency(d.tax)}</div>` : ''}
+            </div>
+            <table class="dashboard-table" style="width:100%; font-size: 0.9rem;">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th style="text-align:center;">Cant.</th>
+                        <th style="text-align:right;">P. Unit.</th>
+                        <th style="text-align:right;">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        if (d.items && d.items.length) {
+            d.items.forEach(it => {
+                html += `
+                    <tr>
+                        <td data-label="Producto"><strong>${escapeHtml(it.product_name || 'Producto')}</strong>${it.category_name ? `<br><small style="color:#999;">${escapeHtml(it.category_name)}</small>` : ''}</td>
+                        <td data-label="Cant." style="text-align:center;">${it.quantity}</td>
+                        <td data-label="P. Unit." style="text-align:right;">${formatCurrency(it.unit_price)}</td>
+                        <td data-label="Total" style="text-align:right; font-weight:bold;">${formatCurrency(it.total)}</td>
+                    </tr>
+                `;
+            });
+        } else {
+            html += '<tr><td colspan="4" style="text-align:center; padding:1rem;">Sin productos registrados</td></tr>';
+        }
+        html += `</tbody></table>`;
+        body.innerHTML = html;
+    } catch (error) {
+        console.error('Error cargando detalle de venta:', error);
+        body.innerHTML = `<div style="text-align:center; padding: 2rem; color: #e74c3c;"><i class="fas fa-exclamation-triangle"></i><p>${escapeHtml(error.message)}</p></div>`;
+    }
+}
+
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = String(str ?? '');
+    return div.innerHTML;
 }
 
 let salesChart = null;
@@ -302,3 +383,19 @@ function renderSalesChart(chartData) {
         }
     });
 }
+
+// Cerrar modal de detalle de venta (botón X o clic fuera)
+document.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById('saleDetailModal');
+    if (!modal) return;
+    const closeBtn = document.getElementById('saleDetailClose');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => modal.classList.remove('show'));
+    }
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.classList.remove('show');
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') modal.classList.remove('show');
+    });
+});

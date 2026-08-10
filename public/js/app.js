@@ -397,3 +397,124 @@ function initSupport() {
 document.addEventListener('DOMContentLoaded', () => {
     initSupport();
 });
+
+/* ============================================================
+ * Sistema de sesión: verificación + modal de re-login
+ * ============================================================ */
+
+// Clave donde guardamos la preferencia "mantener sesión siempre"
+const KEEP_SESSION_KEY = 'tomodachi_keep_session';
+
+/**
+ * Verificar sesión y, si caducó, decidir el flujo:
+ * - Si el usuario pidió "mantener mi sesión activa siempre" → modal bonito
+ *   de re-login (no expulsa de la página en la que está).
+ * - Si no lo pidió (o es la primera visita) → login normal.
+ * Devuelve el usuario si hay sesión.
+ */
+async function requireSession() {
+    const session = await checkSession();
+    if (session) {
+        return session;
+    }
+    if (localStorage.getItem(KEEP_SESSION_KEY) === '1') {
+        // El usuario quiere sesión permanente: en vez de expulsarlo,
+        // le pedimos que vuelva a entrar en un modal.
+        showReloginModal();
+    } else {
+        window.location.href = 'login.html';
+    }
+    return null;
+}
+
+/**
+ * Modal bonito de "tu sesión ha caducado".
+ */
+function showReloginModal() {
+    // Evitar duplicados
+    if (document.getElementById('reloginModal')) {
+        document.getElementById('reloginModal').classList.add('show');
+        return;
+    }
+
+    const modal = document.createElement('div');
+    modal.className = 'modal relogin-modal';
+    modal.id = 'reloginModal';
+    modal.innerHTML = `
+        <div class="modal-content relogin-content">
+            <div class="relogin-icon"><i class="fas fa-clock"></i></div>
+            <h2>Tu sesión ha caducado</h2>
+            <p>Por seguridad, vuelve a iniciar sesión para continuar.</p>
+            <form id="reloginForm">
+                <label for="reloginUsername">Usuario</label>
+                <input type="text" id="reloginUsername" autocomplete="username" placeholder="Tu usuario" required>
+                <label for="reloginPassword">Contraseña</label>
+                <input type="password" id="reloginPassword" autocomplete="current-password" placeholder="Tu contraseña" required>
+                <label class="relogin-remember">
+                    <input type="checkbox" id="reloginRemember" checked>
+                    Mantener mi sesión activa siempre
+                </label>
+                <button type="submit" class="relogin-btn">
+                    <i class="fas fa-sign-in-alt"></i> Iniciar sesión
+                </button>
+                <div class="relogin-error" id="reloginError"></div>
+            </form>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    // Mostrar
+    requestAnimationFrame(() => modal.classList.add('show'));
+
+    // Enfocar usuario
+    setTimeout(() => {
+        const u = document.getElementById('reloginUsername');
+        if (u) u.focus();
+    }, 150);
+
+    // Submit
+    document.getElementById('reloginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.querySelector('.relogin-btn');
+        const errEl = document.getElementById('reloginError');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Entrando...';
+        errEl.textContent = '';
+
+        const username = document.getElementById('reloginUsername').value.trim();
+        const password = document.getElementById('reloginPassword').value;
+        const remember = document.getElementById('reloginRemember').checked;
+
+        try {
+            const resp = await fetch('../api/auth/login.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ username, password, remember })
+            });
+            const data = await resp.json();
+            if (data.success) {
+                if (remember) {
+                    localStorage.setItem(KEEP_SESSION_KEY, '1');
+                } else {
+                    localStorage.removeItem(KEEP_SESSION_KEY);
+                }
+                // Limpiar contenido antiguo en RAM al volver a entrar
+                localStorage.removeItem('pos_theme_config');
+                window.location.reload();
+            } else {
+                errEl.textContent = data.message || 'Usuario o contraseña incorrectos';
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Iniciar sesión';
+            }
+        } catch (error) {
+            errEl.textContent = 'Error de conexión. Intenta de nuevo.';
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Iniciar sesión';
+        }
+    });
+}
+
+// Exponer para uso global
+window.requireSession = requireSession;
+window.showReloginModal = showReloginModal;

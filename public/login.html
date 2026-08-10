@@ -249,6 +249,12 @@
                 const data = await response.json();
 
                 if (data.success) {
+                    // Guardar preferencia de sesión persistente
+                    if (remember) {
+                        localStorage.setItem('tomodachi_keep_session', '1');
+                    } else {
+                        localStorage.removeItem('tomodachi_keep_session');
+                    }
                     btn.innerHTML = '<i class="fas fa-check"></i> ¡Éxito!';
                     btn.style.background = '#48bb78';
                     setTimeout(() => {

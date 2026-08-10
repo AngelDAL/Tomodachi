@@ -1,9 +1,6 @@
 document.addEventListener('DOMContentLoaded', async () => {
     const session = await checkSession();
-    if (!session) {
-        window.location.href = 'login.html';
-        return;
-    }
+    if (!session) { requireSession(); return; }
 
     // Cargar datos del perfil
     loadProfile();

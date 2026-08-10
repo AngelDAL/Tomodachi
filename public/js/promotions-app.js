@@ -3,10 +3,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Verificar sesión (opcional, si ya existe en otro script, omitir)
     if (typeof checkSession === 'function') {
         const session = await checkSession();
-        if (!session) {
-            window.location.href = 'login.html';
-            return;
-        }
+        if (!session) { requireSession(); return; }
     }
 
     // Cargar logo de la tienda

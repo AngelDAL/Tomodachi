@@ -150,6 +150,19 @@
             </div>
         </main>
     </div>
+
+    <!-- Modal: Detalle de venta -->
+    <div id="saleDetailModal" class="modal" role="dialog" aria-modal="true" aria-label="Detalle de venta">
+        <div class="modal-content" style="max-width: 560px;">
+            <div class="modal-header">
+                <h2 id="saleDetailTitle">Detalle de Venta</h2>
+                <button type="button" class="modal-close" id="saleDetailClose" aria-label="Cerrar">&times;</button>
+            </div>
+            <div class="modal-body" id="saleDetailBody" style="max-height: 60vh; overflow-y: auto;">
+                <!-- Contenido inyectado por JS -->
+            </div>
+        </div>
+    </div>
     
     <script src="js/sidebar-loader.js?v=3"></script>
     <script src="js/app.js"></script>
@@ -160,10 +173,7 @@
         document.addEventListener('DOMContentLoaded', async () => {
             const session = await checkSession();
             
-            if (!session) {
-                window.location.href = 'login.html';
-                return;
-            }
+            if (!session) { requireSession(); return; }
             
             // Iniciar Tour si corresponde
             if (window.TourSystem) {

@@ -38,4 +38,6 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Cámara: escáner de códigos (ML Kit) en Ventas e Inventario -->
+    <uses-permission android:name="android.permission.CAMERA" />
 </manifest>

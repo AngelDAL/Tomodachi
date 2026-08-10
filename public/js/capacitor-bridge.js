@@ -52,8 +52,8 @@
                         B.requestPermissions()
                             .then(function (perm) {
                                 const status = perm && perm.camera;
-                                if (status === 'denied') {
-                                    reject(new Error('Permiso de cámara denegado'));
+                                if (status === 'denied' || status === 'denied_forever') {
+                                    reject(new Error('Para escanear, permite el acceso a la cámara en los ajustes de la app (Ajustes > Tomodachi > Permisos > Cámara).'));
                                 } else {
                                     doScan();
                                 }
@@ -76,9 +76,21 @@
         document.dispatchEvent(new CustomEvent('tomodachi-native-ready'));
     }
 
+    // El bridge nativo (window.Capacitor) se inyecta al cargar la página;
+    // si aún no está listo, reintentar unas veces antes de rendirse.
+    let attempts = 0;
+    function tryBoot() {
+        if (window.Capacitor && window.Capacitor.isNativePlatform) {
+            boot();
+        } else if (attempts < 8) {
+            attempts += 1;
+            setTimeout(tryBoot, 250);
+        }
+    }
+
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function () { setTimeout(boot, 0); });
+        document.addEventListener('DOMContentLoaded', function () { setTimeout(tryBoot, 0); });
     } else {
-        setTimeout(boot, 0);
+        setTimeout(tryBoot, 0);
     }
 })();

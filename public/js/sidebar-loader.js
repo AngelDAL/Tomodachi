@@ -76,9 +76,6 @@ function initSidebar() {
                 <a href="profile.html" class="tooltip-item">
                     <i class="fas fa-cog"></i> Configuración
                 </a>
-                <a href="integrations.html" class="tooltip-item">
-                    <i class="fas fa-plug"></i> Integraciones
-                </a>
                 <a href="promotions.html" class="tooltip-item">
                     <i class="fas fa-tags"></i> Promociones
                 </a>

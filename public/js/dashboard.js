@@ -214,7 +214,11 @@ async function showSaleDetail(saleId) {
 
     title.textContent = `Venta #${saleId}`;
     body.innerHTML = '<div style="text-align:center; padding: 2rem;"><i class="fas fa-spinner fa-spin" style="font-size: 1.5rem; color: #999;"></i><p>Cargando detalle...</p></div>';
-    modal.classList.add('show');
+    if (typeof modal.showModal === 'function') {
+        modal.showModal();
+    } else {
+        modal.classList.add('show');
+    }
 
     try {
         const resp = await fetch(`../api/sales/sale_details.php?sale_id=${saleId}`);
@@ -256,7 +260,7 @@ async function showSaleDetail(saleId) {
                 html += `
                     <tr>
                         <td data-label="Producto"><strong>${escapeHtml(it.product_name || 'Producto')}</strong>${it.category_name ? `<br><small style="color:#999;">${escapeHtml(it.category_name)}</small>` : ''}</td>
-                        <td data-label="Cant." style="text-align:center;">${it.quantity}</td>
+                        <td data-label="Cant." style="text-align:center;">${formatQuantity(it.quantity)}</td>
                         <td data-label="P. Unit." style="text-align:right;">${formatCurrency(it.unit_price)}</td>
                         <td data-label="Total" style="text-align:right; font-weight:bold;">${formatCurrency(it.total)}</td>
                     </tr>
@@ -277,6 +281,16 @@ function escapeHtml(str) {
     const div = document.createElement('div');
     div.textContent = String(str ?? '');
     return div.innerHTML;
+}
+
+/**
+ * Formatea cantidades: si no tienen decimales, las muestra como
+ * número entero (5 en vez de 5.000); si tienen, con hasta 2 decimales.
+ */
+function formatQuantity(qty) {
+    const n = Number(qty);
+    if (Number.isNaN(n)) return String(qty ?? '');
+    return Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, '');
 }
 
 let salesChart = null;
@@ -384,18 +398,26 @@ function renderSalesChart(chartData) {
     });
 }
 
-// Cerrar modal de detalle de venta (botón X o clic fuera)
+// Cerrar modal de detalle de venta (botón X, clic fuera, Escape)
 document.addEventListener('DOMContentLoaded', () => {
     const modal = document.getElementById('saleDetailModal');
     if (!modal) return;
     const closeBtn = document.getElementById('saleDetailClose');
+    const closeModal = () => {
+        if (typeof modal.close === 'function') {
+            modal.close();
+        } else {
+            modal.classList.remove('show');
+        }
+    };
     if (closeBtn) {
-        closeBtn.addEventListener('click', () => modal.classList.remove('show'));
+        closeBtn.addEventListener('click', closeModal);
     }
+    // Clic fuera del contenido cierra el diálogo (solo con dialog nativo)
     modal.addEventListener('click', (e) => {
-        if (e.target === modal) modal.classList.remove('show');
+        if (e.target === modal) closeModal();
     });
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') modal.classList.remove('show');
+        if (e.key === 'Escape' && modal.open) closeModal();
     });
 });

@@ -605,7 +605,8 @@
 }
 
 .btn-cancel:hover {
-    background: #ccc;
+    background: var(--bg-light);
+    filter: brightness(0.96);
 }
 
 .btn-save {
@@ -1898,8 +1899,9 @@
 }
 
 .icon-option:hover {
-    background: #eef6f0;
+    background: var(--primary-lighter);
     border-color: var(--primary-color);
+    filter: saturate(1.1);
 }
 
 .icon-empty {
@@ -2071,7 +2073,8 @@
 
 .image-upload-area:hover {
     border-color: var(--primary-color);
-    background: #f0f7ff;
+    background: var(--primary-lighter);
+    filter: saturate(1.1);
 }
 
 .upload-placeholder i {
@@ -2356,7 +2359,8 @@
 
 .add-image-zone:hover {
     border-color: var(--primary-color);
-    background: #fef2f8;
+    background: var(--primary-lighter);
+    filter: saturate(1.1);
 }
 
 .add-image-zone.has-image {
@@ -2654,7 +2658,8 @@
 }
 
 .mini-scanner-footer .btn-cancel:hover {
-    background: #f0f0f0;
+    background: var(--bg-light);
+    filter: brightness(0.96);
 }
 
 /* Responsive */

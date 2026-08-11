@@ -96,7 +96,7 @@ body {
 }
 
 .remove-btn {
-    background: #dc3545;
+    background: var(--danger-color);
     color: #fff;
     border: none;
     padding: 4px 8px;
@@ -105,7 +105,8 @@ body {
 }
 
 .remove-btn:hover {
-    background: #c12835;
+    background: var(--danger-dark);
+    filter: saturate(1.1) brightness(1.05);
 }
 
 .empty-cart {
@@ -128,7 +129,7 @@ body {
 .primary-btn {
     width: 100%;
     padding: 10px;
-    background: #28a745;
+    background: var(--success-color);
     border: none;
     color: #fff;
     font-weight: bold;
@@ -138,7 +139,7 @@ body {
 }
 
 .primary-btn:disabled {
-    background: #999;
+    background: var(--text-muted);
     cursor: not-allowed;
 }
 
@@ -200,15 +201,15 @@ body {
 }
 
 .notification-success {
-    background: #28a745;
+    background: var(--success-color);
 }
 
 .notification-error {
-    background: #dc3545;
+    background: var(--danger-color);
 }
 
 .notification-info {
-    background: #007bff;
+    background: var(--info-color);
 }
 
 /* Gallery Styles */
@@ -219,7 +220,7 @@ body {
 }
 
 .gallery-item {
-    background: #fff;
+    background: var(--bg-card);
     border: 1px solid #eee;
     border-radius: 6px;
     padding: 6px;
@@ -241,7 +242,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #fafafa;
+    background: var(--bg-lightest);
     overflow: hidden;
     border-radius: 4px;
 }
@@ -1823,4 +1824,22 @@ table tr:hover {
 .client-dialog .btn-primary:hover {
     background: var(--primary-dark);
     transform: translateY(-1px);
+}
+
+/* ============================================================
+ * Transición suave al cambiar de tema (claro ↔ oscuro)
+ * ============================================================ */
+html[data-theme] body,
+html[data-theme] .main-content,
+html[data-theme] .sidebar,
+html[data-theme] .modal-content,
+html[data-theme] .inv-controls,
+html[data-theme] .inventory-table,
+html[data-theme] .dashboard-table,
+html[data-theme] input,
+html[data-theme] select,
+html[data-theme] textarea {
+    transition: background-color var(--transition-normal),
+                color var(--transition-normal),
+                border-color var(--transition-normal);
 }

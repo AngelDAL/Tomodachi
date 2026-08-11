@@ -58,12 +58,12 @@
     cursor: pointer;
     transition: all 0.2s;
 }
-.promo-actions .btn-info { color: #0284c7; }
-.promo-actions .btn-info:hover { background: #e0f2fe; border-color: #0284c7; }
+.promo-actions .btn-info { color: var(--info-color); }
+.promo-actions .btn-info:hover { background: var(--info-color); border-color: var(--info-dark); color: #fff; filter: saturate(1.1) brightness(1.05); }
 .promo-actions .btn-primary { color: var(--primary-color); }
 .promo-actions .btn-primary:hover { background: var(--primary-light); border-color: var(--primary-color); }
-.promo-actions .btn-danger { color: #dc2626; }
-.promo-actions .btn-danger:hover { background: #fef2f2; border-color: #dc2626; }
+.promo-actions .btn-danger { color: var(--danger-color); }
+.promo-actions .btn-danger:hover { background: var(--danger-color); border-color: var(--danger-dark); color: #fff; filter: saturate(1.1) brightness(1.05); }
 
 /* Botón similar a inventario */
 .btn-add-product {
@@ -589,7 +589,8 @@ body.modal-open { overflow: hidden; }
 }
 
 #promoDrawer .drawer-actions .btn-cancel:hover {
-    background: #ccc;
+    background: var(--bg-light);
+    filter: brightness(0.96);
 }
 
 #promoDrawer .drawer-actions .btn-save {
@@ -1073,8 +1074,8 @@ body.modal-open { overflow: hidden; }
     background: var(--primary-light);
 }
 
-.promo-card-footer .promo-actions .btn-info:hover { border-color: #0284c7; color: #0284c7; background: #e0f2fe; }
-.promo-card-footer .promo-actions .btn-danger:hover { border-color: #dc2626; color: #dc2626; background: #fef2f2; }
+.promo-card-footer .promo-actions .btn-info:hover { border-color: var(--info-color); color: var(--info-color); background: var(--info-color); color:#fff; filter: saturate(1.1) brightness(1.05); }
+.promo-card-footer .promo-actions .btn-danger:hover { border-color: var(--danger-color); color: var(--danger-color); background: var(--danger-color); color:#fff; filter: saturate(1.1) brightness(1.05); }
 
 /* Responsive */
 @media (max-width: 768px) {

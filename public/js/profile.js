@@ -192,6 +192,14 @@ async function loadCompanySettings() {
 
             // Cargar configuración de tema
             if (store.theme_config) {
+                // Toggle oscuro/claro
+                const darkToggle = document.getElementById('darkModeToggle');
+                const darkMode = store.theme_config.dark_mode === true || store.theme_config.dark_mode === 'true';
+                if (darkToggle) {
+                    darkToggle.checked = darkMode;
+                    updateThemeModeLabel(darkMode);
+                }
+
                 const themeControls = document.getElementById('themeControls');
                 const inputs = themeControls.querySelectorAll('input[type="color"]');
 
@@ -237,6 +245,12 @@ document.getElementById('companyForm').addEventListener('submit', async (e) => {
     inputs.forEach(input => {
         themeConfig[input.name] = input.value;
     });
+
+    // Toggle oscuro/claro
+    const darkToggle = document.getElementById('darkModeToggle');
+    if (darkToggle) {
+        themeConfig.dark_mode = darkToggle.checked;
+    }
 
     // Recolectar configuración de negocio
     const settings = {
@@ -736,3 +750,29 @@ function arrayBufferToBase64(buffer) {
     }
     return btoa(binary);
 }
+
+// ==========================================
+// Toggle tema oscuro/claro (en vivo)
+// ==========================================
+function updateThemeModeLabel(dark) {
+    const label = document.getElementById('themeModeLabel');
+    if (label) label.textContent = dark ? 'Oscuro' : 'Claro';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const darkToggle = document.getElementById('darkModeToggle');
+    if (!darkToggle) return;
+
+    // Aplicar en vivo al alternar (sin guardar aún — el submit lo persiste)
+    darkToggle.addEventListener('change', () => {
+        const dark = darkToggle.checked;
+        updateThemeModeLabel(dark);
+        document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+        // Guardar en localStorage para que theme-init.js lo aplique en todas las páginas
+        try {
+            const saved = JSON.parse(localStorage.getItem('pos_theme_config') || '{}');
+            saved.dark_mode = dark;
+            localStorage.setItem('pos_theme_config', JSON.stringify(saved));
+        } catch (e) { /* noop */ }
+    });
+});

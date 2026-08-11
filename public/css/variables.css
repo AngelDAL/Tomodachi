@@ -1,13 +1,32 @@
-:root {
-    /* Brand Colors — Tema "Scarlet" (Remilia Scarlet, Mansión Escarlata)
-       Rojo escarlata/carmesí protagonista, acento azul noche (vestido),
-       vino para estados profundos. */
+/* ============================================================
+ * Tomodachi POS — Sistema de temas (Tema "Scarlet" por defecto)
+ *
+ * Un solo juego de variables controla TODO el tema. Los estilos
+ * usan estas variables — nunca colores hardcodeados — para que
+ * un usuario o un agente pueda personalizar completo desde una
+ * sola hoja (o desde la API /api/stores/theme.php).
+ *
+ * Tema claro: variables en :root.
+ * Tema oscuro: [data-theme="dark"] sobrescribe solo las que
+ * cambian (fondos, superficies, texto, bordes). Los colores de
+ * marca (primario, éxito, etc.) se mantienen y sus variantes
+ * hover se generan con filtros (saturate/brightness) para que
+ * SIEMPRE sigan el tema, sin necesidad de redefinir nada.
+ * ============================================================ */
+
+:root,
+[data-theme="light"] {
+    /* Brand Colors — Scarlet (Remilia) */
     --primary-color: #C62828;
     --primary-dark: #9E1B1B;
     --primary-darker: #6E1212;
     --primary-light: #FBE9E9;
     --primary-lighter: #FDF4F4;
     --primary-shadow: rgba(198, 40, 40, 0.22);
+    /* Variantes generadas por filtro (hover/active) */
+    --primary-hover: var(--primary-dark);
+    --primary-active: var(--primary-darker);
+    --primary-focus-ring: 0 0 0 3px var(--primary-shadow);
 
     --secondary-color: #1A237E;
     --secondary-dark: #12184F;
@@ -16,23 +35,26 @@
 
     /* Status Colors */
     --success-color: #2E7D32;
+    --success-dark: #1B5E20;
     --danger-color: #D32F2F;
     --danger-dark: #B71C1C;
     --warning-color: #F57C00;
     --warning-dark: #E65100;
     --info-color: #1976D2;
+    --info-dark: #0D47A1;
 
     /* Neutral Colors */
     --white: #ffffff;
     --black: #000000;
     --dark-color: #333333;
     --light-color: #f5f5f5;
-    
+
     /* Text Colors */
     --text-color: #333333;
     --text-medium: #555555;
     --text-light: #666666;
     --text-muted: #999999;
+    --text-on-primary: #ffffff;
 
     /* Backgrounds */
     --bg-body: #f4f7f6;
@@ -40,6 +62,7 @@
     --bg-light: #f5f5f5;
     --bg-lighter: #f8f8f8;
     --bg-lightest: #fafafa;
+    --bg-input: #ffffff;
 
     /* Borders & Shadows */
     --border-color: #e0e0e0;
@@ -67,4 +90,61 @@
     --transition-fast: 0.15s ease;
     --transition-normal: 0.3s ease;
     --transition-slow: 0.5s ease;
+}
+
+/* ============================================================
+ * TEMA OSCURO — sobrescribe superficies/texto/bordes.
+ * Los colores de marca no cambian (el rojo Scarlet funciona en
+ * oscuro); sus hovers se generan con filtros en los estilos.
+ * ============================================================ */
+[data-theme="dark"] {
+    --primary-color: #E53935;
+    --primary-dark: #C62828;
+    --primary-darker: #8E1B1B;
+    --primary-light: #4A1F1F;
+    --primary-lighter: #3A1A1A;
+    --primary-shadow: rgba(229, 57, 53, 0.30);
+    --primary-hover: #C62828;
+    --primary-active: #8E1B1B;
+    --primary-focus-ring: 0 0 0 3px rgba(229, 57, 53, 0.35);
+
+    --secondary-color: #7986CB;
+    --secondary-dark: #5C6BC0;
+    --secondary-darker: #3949AB;
+    --secondary-light: #1A1F3D;
+
+    --success-color: #66BB6A;
+    --success-dark: #43A047;
+    --danger-color: #EF5350;
+    --danger-dark: #E53935;
+    --warning-color: #FFA726;
+    --warning-dark: #F57C00;
+    --info-color: #42A5F5;
+    --info-dark: #1E88E5;
+
+    --white: #ffffff;
+    --black: #000000;
+    --dark-color: #E0E0E0;
+    --light-color: #1E1E1E;
+
+    --text-color: #E8E8E8;
+    --text-medium: #C0C0C0;
+    --text-light: #A0A0A0;
+    --text-muted: #808080;
+    --text-on-primary: #ffffff;
+
+    --bg-body: #121212;
+    --bg-card: #1E1E1E;
+    --bg-light: #2A2A2A;
+    --bg-lighter: #242424;
+    --bg-lightest: #1A1A1A;
+    --bg-input: #242424;
+
+    --border-color: #3A3A3A;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6);
+    --shadow-primary: 0 4px 14px rgba(229, 57, 53, 0.35);
+
+    color-scheme: dark;
 }

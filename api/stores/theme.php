@@ -72,10 +72,27 @@ try {
             Response::validationError(['theme_config' => 'Debe ser un objeto JSON']);
         }
 
-        // Validar que los valores sean colores hexadecimales válidos (básico)
+        // Validar valores: colores hex, booleanos (dark_mode) o cadenas CSS
+        // permitidas para variables de estilo (bg_card, border_color, etc.)
+        $colorKeys = ['primary_color', 'secondary_color', 'success_color', 'danger_color',
+                      'warning_color', 'info_color', 'dark_color', 'bg_body', 'text_color'];
         foreach ($theme_config as $key => $value) {
-            if (!is_string($value) || !preg_match('/^#[0-9a-fA-F]{3,8}$/', $value)) {
-                Response::validationError(['theme_config.' . $key => 'Valor de color inválido (usa #RRGGBB)']);
+            if ($key === 'dark_mode') {
+                if (!is_bool($value) && $value !== 'true' && $value !== 'false' && $value !== '0' && $value !== '1') {
+                    Response::validationError(['theme_config.dark_mode' => 'Debe ser true/false']);
+                }
+                continue;
+            }
+            // Variables de superficie permitidas como colores
+            $isColorKey = in_array($key, $colorKeys, true)
+                || in_array($key, ['bg_card', 'bg_light', 'border_color', 'primary_hover'], true);
+            if ($isColorKey) {
+                if (!is_string($value) || !preg_match('/^#[0-9a-fA-F]{3,8}$/', $value)) {
+                    Response::validationError(['theme_config.' . $key => 'Valor de color inválido (usa #RRGGBB)']);
+                }
+            } else {
+                // Claves desconocidas: ignorar silenciosamente para no romper la API
+                unset($theme_config[$key]);
             }
         }
 

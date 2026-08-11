@@ -70,7 +70,7 @@
 }
 
 #bulkQuantityModal .modal-close:hover {
-    color: #333;
+    color: var(--text-color);
     transform: scale(1.1);
 }
 
@@ -145,7 +145,8 @@
 }
 
 #bulkQuantityModal .btn-cancel:hover {
-    background: #d0d0d0;
+    background: var(--bg-light);
+    filter: brightness(0.95);
 }
 
 #bulkQuantityModal .btn-primary {
@@ -154,9 +155,10 @@
 }
 
 #bulkQuantityModal .btn-primary:hover {
-    background: var(--primary-dark, #1b5e20);
+    background: var(--primary-dark);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);
+    box-shadow: var(--shadow-primary);
+    filter: saturate(1.15) brightness(1.05);
 }
 
 #bulkQuantityModal .btn-primary:active {

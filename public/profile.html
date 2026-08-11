@@ -304,7 +304,7 @@
                                 </div>
                             </div>
 
-                            <h4 style="margin-top: 2rem; margin-bottom: 1rem;">Configuración de Negocio</h4>
+                            <h4 class="sub-section-title" style="margin-bottom: 1rem;"><i class="fas fa-store"></i> Configuración de Negocio</h4>
                             <div class="form-grid">
                                 <div class="form-group" style="grid-column: 1 / -1;">
                                     <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
@@ -336,7 +336,9 @@
                                 </div>
                             </div>
 
-                            <h4 style="margin-top: 2rem; margin-bottom: 1rem;">Integraciones</h4>
+                            <h4 class="sub-section-title" style="margin-top: 2.2rem; margin-bottom: 1rem;"><i class="fas fa-plug"></i> Integraciones</h4>
+                            <p class="sub-section-desc">Conecta tus asistentes y herramientas externas con claves de acceso.</p>
+                            <div class="sub-section-body">
                             <div style="background: var(--bg-light); padding: 1.5rem 2rem; border-radius: 8px; border: 1px dashed var(--border-color); display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
                                 <div style="display: flex; align-items: center; gap: 1rem;">
                                     <div style="font-size: 2rem; color: var(--primary-color);">
@@ -354,8 +356,11 @@
                                     <i class="fas fa-plug"></i> Ir a Integraciones
                                 </a>
                             </div>
+                            </div>
 
-                            <h4 style="margin-top: 2rem; margin-bottom: 1rem;">Importar Datos</h4>
+                            <h4 class="sub-section-title" style="margin-top: 2.2rem; margin-bottom: 1rem;"><i class="fas fa-file-import"></i> Importar Datos</h4>
+                            <p class="sub-section-desc">Carga tus productos, precios y existencias desde un archivo Excel.</p>
+                            <div class="sub-section-body">
                             <div style="background: var(--bg-light); padding: 2rem; border-radius: 8px; border: 1px dashed var(--border-color); text-align: center;">
                                 <div style="font-size: 3rem; color: var(--primary-color); margin-bottom: 1rem;">
                                     <i class="fas fa-file-excel"></i>
@@ -371,9 +376,11 @@
                                 <input type="file" id="importExcelInput" accept=".xlsx, .xls" style="display: none;">
                                 <div id="importStatus" style="margin-top: 10px; font-size: 0.9rem; font-weight: bold;"></div>
                             </div>
+                            </div>
 
-                            <h4 style="margin-top: 2rem; margin-bottom: 1rem;">Personalización (Tema) <span style="font-size: 0.7em; background: var(--dark-color); color: gold; padding: 2px 6px; border-radius: 4px; vertical-align: middle; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">PREMIUM</span></h4>
-                            <p style="margin-bottom: 1rem; color: var(--text-light); font-size: 0.9rem;">Personaliza los colores de tu tienda. Los cambios se verán reflejado en tiempo real.</p>
+                            <h4 class="sub-section-title" style="margin-top: 2.2rem; margin-bottom: 1rem;"><i class="fas fa-palette"></i> Personalización</h4>
+                            <p class="sub-section-desc">Personaliza los colores de tu tienda y el modo de tema. Los cambios se ven reflejados en tiempo real.</p>
+                            <div class="sub-section-body">
 
                             <div class="form-group" style="display: flex; align-items: center; gap: 12px; margin-bottom: 1.2rem; padding: 12px 16px; background: var(--bg-light); border-radius: 10px; flex-wrap: wrap;">
                                 <label style="margin: 0; font-weight: 600; flex: 1; min-width: 140px;"><i class="fas fa-circle-half-stroke" style="margin-right: 6px; color: var(--primary-color);"></i> Modo de tema</label>
@@ -385,7 +392,7 @@
                                 <span style="font-size: 0.85rem; color: var(--text-muted);" id="themeModeLabel">Automático</span>
                             </div>
                             
-                            <div class="theme-customizer-container premium-locked" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+                            <div class="theme-customizer-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
                                 <!-- Controles de Color -->
                                 <div class="form-grid" id="themeControls" style="grid-template-columns: 1fr;">
                                     <h5 style="margin-bottom: 1rem; color: var(--text-medium);">Paleta de Colores</h5>
@@ -526,6 +533,7 @@
 
                                     </div>
                                 </div>
+                            </div>
                             </div>
 
                             <div style="margin-top: 2rem;">

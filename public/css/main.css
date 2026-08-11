@@ -2041,3 +2041,42 @@ html[data-theme] textarea {
     background: var(--bg-light);
     z-index: 1;
 }
+
+/* ============================================================
+ * Sub-secciones de Mi Perfil — titulares claros con separador
+ * ============================================================ */
+.sub-section {
+    margin-top: 2.2rem;
+    padding-top: 1.8rem;
+    border-top: 1px solid var(--border-color);
+}
+.sub-section:first-of-type {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+}
+.sub-section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 2.2rem 0 0.3rem;
+    padding-top: 1.8rem;
+    border-top: 1px solid var(--border-color);
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-color);
+}
+.sub-section-title i {
+    color: var(--primary-color);
+    font-size: 1rem;
+    width: 20px;
+    text-align: center;
+}
+.sub-section-desc {
+    margin: 0 0 1.2rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+.sub-section-body {
+    padding: 0 0.25rem;
+}

@@ -43,6 +43,7 @@
     --warning-dark: #E65100;
     --info-color: #1976D2;
     --info-dark: #0D47A1;
+    --info-light: #E3F2FD;
 
     /* Neutral Colors */
     --white: #ffffff;
@@ -131,6 +132,7 @@
     --warning-dark: #F57C00;
     --info-color: #42A5F5;
     --info-dark: #1E88E5;
+    --info-light: #0D2440;
 
     --white: #ffffff;
     --black: #000000;

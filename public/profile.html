@@ -66,7 +66,7 @@
             display: block;
         }
         .card {
-            background: white;
+            background: var(--bg-card);
             padding: 2rem;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -110,7 +110,7 @@
             overflow-y: auto;
         }
         .modal-content {
-            background: white;
+            background: var(--bg-card);
             margin: 5% auto;
             padding: 2rem;
             border-radius: 8px;
@@ -506,7 +506,7 @@
                                                 <span style="background: var(--warning-color); color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">Pendiente</span>
                                                 <span style="background: var(--danger-color); color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">Cancelado</span>
                                             </div>
-                                            <div style="background: rgba(33, 150, 243, 0.1); border-left: 4px solid var(--info-color); padding: 10px; border-radius: 0 4px 4px 0;">
+                                            <div style="background: var(--info-light); border-left: 4px solid var(--info-color); padding: 10px; border-radius: 0 4px 4px 0;">
                                                 <p style="color: var(--text-color); margin: 0; font-size: 0.9rem;">Este es un mensaje de información del sistema.</p>
                                             </div>
                                         </div>
@@ -514,7 +514,7 @@
                                         <!-- Tarjeta -->
                                         <div>
                                             <h6 style="color: var(--text-color); margin-bottom: 0.5rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;">Tarjetas</h6>
-                                            <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 3px solid var(--primary-color);">
+                                            <div style="background: var(--bg-card); padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 3px solid var(--primary-color);">
                                                 <h4 style="color: var(--text-color); margin-top: 0; margin-bottom: 5px;">Producto Ejemplo</h4>
                                                 <p style="color: var(--text-light); font-size: 0.9rem; margin-bottom: 10px;">Descripción breve del producto.</p>
                                                 <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -567,7 +567,7 @@
 
     <!-- Modal Crear Usuario -->
     <div id="userModal" class="modal" style="display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 1000;">
-        <div class="modal-content" style="background:white; margin: 10% auto; padding: 2rem; width: 90%; max-width: 500px; border-radius: 8px;">
+        <div class="modal-content" style="background:var(--bg-card); margin: 10% auto; padding: 2rem; width: 90%; max-width: 500px; border-radius: 8px;">
             <h3>Nuevo Usuario</h3>
             <form id="createUserForm">
                 <div class="form-group">
@@ -616,7 +616,7 @@
                 
                 <div class="steps-container" style="display: flex; justify-content: space-around; margin-bottom: 3rem; flex-wrap: wrap; gap: 20px;">
                     <div class="step-item" style="flex: 1; min-width: 200px;">
-                        <div style="width: 60px; height: 60px; background: var(--info-color); color: var(--info-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin: 0 auto 1rem;">
+                        <div style="width: 60px; height: 60px; background: var(--info-color); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin: 0 auto 1rem;">
                             <i class="fas fa-file-csv"></i>
                         </div>
                         <h4 style="margin-bottom: 0.5rem;">1. Prepara tu Excel</h4>
@@ -631,7 +631,7 @@
                     </div>
 
                     <div class="step-item" style="flex: 1; min-width: 200px;">
-                        <div style="width: 60px; height: 60px; background: var(--success-color); color: var(--success-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin: 0 auto 1rem;">
+                        <div style="width: 60px; height: 60px; background: var(--success-color); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin: 0 auto 1rem;">
                             <i class="fas fa-upload"></i>
                         </div>
                         <h4 style="margin-bottom: 0.5rem;">2. Sube el Archivo</h4>
@@ -645,7 +645,7 @@
                     </div>
 
                     <div class="step-item" style="flex: 1; min-width: 200px;">
-                        <div style="width: 60px; height: 60px; background: var(--warning-color); color: var(--warning-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin: 0 auto 1rem;">
+                        <div style="width: 60px; height: 60px; background: var(--warning-color); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin: 0 auto 1rem;">
                             <i class="fas fa-check-double"></i>
                         </div>
                         <h4 style="margin-bottom: 0.5rem;">3. Confirma</h4>
@@ -655,7 +655,7 @@
                     </div>
                 </div>
 
-                <div style="background: var(--info-color); padding: 1rem; border-radius: 8px; margin-bottom: 2rem; text-align: left; border-left: 4px solid #2196F3;">
+                <div style="background: var(--info-color); padding: 1rem; border-radius: 8px; margin-bottom: 2rem; text-align: left; border-left: 4px solid var(--info-dark);">
                     <h5 style="margin-bottom: 0.5rem; color: var(--info-dark);"><i class="fas fa-lightbulb"></i> Tip Pro:</h5>
                     <p style="margin: 0; font-size: 0.9rem;">
                         No te preocupes por el orden de las columnas, el sistema te permitirá elegir qué columna corresponde a cada dato en el siguiente paso.
@@ -688,7 +688,7 @@
                         <h4 style="margin-bottom: 1rem; font-size: 1rem;">Mapeo de Columnas</h4>
                         <form id="mappingForm">
                             <div class="form-group" style="margin-bottom: 10px;">
-                                <label style="font-size: 0.9rem;">Nombre del Producto <span style="color:red">*</span></label>
+                                <label style="font-size: 0.9rem;">Nombre del Producto <span style="color:var(--danger-color)">*</span></label>
                                 <select id="map_name" class="column-select" style="width: 100%; padding: 5px;"></select>
                             </div>
                             <div class="form-group" style="margin-bottom: 10px;">

@@ -1735,34 +1735,38 @@ table tr:hover {
 
 /* ============================================================
  * Borde de ticket (solo modal de detalle de venta)
- * Máscara real: la parte inferior del modal se recorta con
- * dientes redondeados y el backdrop se ve a través de los
- * huecos. No depende de colores (usa máscara, no SVG coloreado).
+ * Dientes del color del papel (siguen el tema) apuntando hacia
+ * abajo, como un recibo cortado. El fondo oscuro se ve entre
+ * los dientes. Máscara de UNA sola capa (sin composite) sobre
+ * un ::after con el color del fondo del modal — determinista.
  * ============================================================ */
 .sale-detail-dialog .modal-content {
     border-radius: 14px 14px 0 0;   /* esquinas superiores redondeadas, inferior "cortado" */
     padding-bottom: 2rem;
     position: relative;
+    overflow: visible;
     color: var(--text-color, #1a1a2e);  /* texto oscuro con contraste sobre fondo claro */
+}
+.sale-detail-dialog .modal-content::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -20px;              /* cuelga debajo del borde del modal */
+    height: 20px;
+    pointer-events: none;
+    background-color: var(--bg-card, #ffffff);   /* color del papel, sigue el tema */
+    /* Máscara: solo los dientes son opacos (negro) → se ven del color
+       del papel; el resto transparente → se ve el backdrop entre dientes. */
+    -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='20' viewBox='0 0 32 20'><path d='M0 0 L4 10 Q8 17 12 10 L16 0 L20 10 Q24 17 28 10 L32 0 Z' fill='%23000'/></svg>");
+    -webkit-mask-size: 32px 20px;
+    -webkit-mask-repeat: repeat-x;
+    -webkit-mask-position: bottom left;
 
-    /* Máscara: capa base opaca + capa de dientes en el borde inferior.
-       Con composite exclude/xor, la intersección (los dientes) se
-       vuelve transparente → el fondo se recorta como ticket. */
-    -webkit-mask-image:
-        linear-gradient(#000 0 0),
-        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='14' viewBox='0 0 24 14'><path d='M0 0 L3 7 Q6 11 9 7 L12 0 L15 7 Q18 11 21 7 L24 0 Z' fill='%23000'/></svg>");
-    -webkit-mask-size: 100% 100%, 24px 14px;
-    -webkit-mask-repeat: no-repeat, repeat-x;
-    -webkit-mask-position: 0 0, 0 100%;
-    -webkit-mask-composite: xor;
-
-    mask-image:
-        linear-gradient(#000 0 0),
-        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='14' viewBox='0 0 24 14'><path d='M0 0 L3 7 Q6 11 9 7 L12 0 L15 7 Q18 11 21 7 L24 0 Z' fill='%23000'/></svg>");
-    mask-size: 100% 100%, 24px 14px;
-    mask-repeat: no-repeat, repeat-x;
-    mask-position: 0 0, 0 100%;
-    mask-composite: exclude;
+    mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='20' viewBox='0 0 32 20'><path d='M0 0 L4 10 Q8 17 12 10 L16 0 L20 10 Q24 17 28 10 L32 0 Z' fill='%23000'/></svg>");
+    mask-size: 32px 20px;
+    mask-repeat: repeat-x;
+    mask-position: bottom left;
 }
 .sale-detail-dialog .modal-header h2 {
     color: var(--text-color, #1a1a2e);

@@ -1590,7 +1590,7 @@
 
 .profit-item:hover {
     border-color: var(--border-color);
-    background: white;
+    background: var(--bg-card);
 }
 
 .profit-item .label {
@@ -1665,7 +1665,7 @@
 }
 
 .product-card {
-    background: white;
+    background: var(--bg-card);
     border: 1px solid #eaeaea;
     border-radius: 12px;
     padding: 0;
@@ -1723,7 +1723,7 @@
     flex: 1;
     justify-content: space-between;
     gap: 10px;
-    background: white;
+    background: var(--bg-card);
 }
 
 .product-name {
@@ -1870,7 +1870,7 @@
     padding: 6px;
     border: 1px solid var(--border-light);
     border-radius: 8px;
-    background: #fff;
+    background: var(--bg-card);
     max-height: 200px;
     overflow: auto;
     margin-top: 6px;
@@ -1884,7 +1884,7 @@
     gap: 8px;
     padding: 8px 10px;
     border: 1px solid var(--border-lighter);
-    background: #f9f9f9;
+    background: var(--bg-lightest);
     border-radius: 8px;
     cursor: pointer;
     font-size: 0.9rem;
@@ -1907,7 +1907,7 @@
 .icon-empty {
     grid-column: 1/-1;
     text-align: center;
-    color: #888;
+    color: var(--text-muted);
     padding: 8px;
 }
 
@@ -1933,7 +1933,7 @@
     align-items: center;
     justify-content: center;
     border-radius: 10px;
-    background: #fff;
+    background: var(--bg-card);
     border: 2px solid var(--primary-color);
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
@@ -1956,7 +1956,7 @@
 
 .icon-picked {
     font-size: 0.9rem;
-    color: #555;
+    color: var(--text-medium);
     font-weight: 600;
 }
 
@@ -1993,7 +1993,7 @@
     border: 1px solid var(--border-light);
     border-radius: 10px;
     padding: 10px 8px;
-    background: #fff;
+    background: var(--bg-card);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -2010,7 +2010,7 @@
 
 .icon-card .icon-es {
     font-size: 0.8rem;
-    color: #444;
+    color: var(--text-medium);
     text-align: center;
 }
 
@@ -2029,7 +2029,7 @@
 .icon-empty {
     grid-column: 1/-1;
     text-align: center;
-    color: #888;
+    color: var(--text-muted);
     padding: 8px;
 }
 /* AI Studio Styles */
@@ -2068,7 +2068,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: white;
+    background: var(--bg-card);
 }
 
 .image-upload-area:hover {
@@ -2091,8 +2091,8 @@
     font-weight: bold;
 }
 
-.status-waiting { background: #e9ecef; color: #666; }
-.status-analyzing { background: #fff3cd; color: #856404; }
+.status-waiting { background: #e9ecef; color: var(--text-light); }
+.status-analyzing { background: var(--bg-card)3cd; color: #856404; }
 .status-success { background: #d4edda; color: #155724; }
 .status-error { background: #f8d7da; color: #721c24; }
 
@@ -2353,7 +2353,7 @@
     justify-content: center;
     cursor: pointer;
     transition: all 0.2s ease;
-    background: #fafafa;
+    background: var(--bg-lightest);
     overflow: hidden;
 }
 
@@ -2366,7 +2366,7 @@
 .add-image-zone.has-image {
     border-style: solid;
     border-color: var(--border-color);
-    background: #fff;
+    background: var(--bg-card);
     min-height: 180px;
 }
 
@@ -2395,7 +2395,7 @@
 .add-image-placeholder span {
     font-size: 0.9rem;
     font-weight: 500;
-    color: #999;
+    color: var(--text-muted);
 }
 
 .add-image-placeholder small {
@@ -2413,7 +2413,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #fff;
+    background: var(--bg-card);
 }
 
 .add-image-preview img {
@@ -2470,7 +2470,7 @@
     border: 2px solid var(--border-color);
     border-radius: var(--border-radius);
     overflow: hidden;
-    background: #fff;
+    background: var(--bg-card);
     transition: border-color 0.2s;
 }
 
@@ -2644,17 +2644,17 @@
     display: flex;
     justify-content: center;
     padding: 8px;
-    background: #f5f5f5;
+    background: var(--bg-light);
 }
 
 .mini-scanner-footer .btn-cancel {
     font-size: 0.8rem;
     padding: 6px 16px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border-color);
     border-radius: 6px;
-    background: white;
+    background: var(--bg-card);
     cursor: pointer;
-    color: #666;
+    color: var(--text-light);
 }
 
 .mini-scanner-footer .btn-cancel:hover {

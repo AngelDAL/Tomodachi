@@ -46,11 +46,11 @@
     /* Neutral Colors */
     --white: #ffffff;
     --black: #000000;
-    --dark-color: #333333;
+    --dark-color: #1a1a2e;
     --light-color: #f5f5f5;
 
     /* Text Colors */
-    --text-color: #333333;
+    --text-color: var(--text-color)333;
     --text-medium: #555555;
     --text-light: #666666;
     --text-muted: #999999;
@@ -124,7 +124,7 @@
 
     --white: #ffffff;
     --black: #000000;
-    --dark-color: #E0E0E0;
+    --dark-color: #0d0d0d;
     --light-color: #1E1E1E;
 
     --text-color: #E8E8E8;

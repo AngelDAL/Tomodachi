@@ -64,13 +64,11 @@ async function logout() {
         if (!dataResponse.success) {
             console.warn('Logout sin sesión activa (no-op):', dataResponse.message);
         }
-        // Limpiar configuración de tema cacheada
-        localStorage.removeItem('pos_theme_config');
+        // pos_theme_config NO se borra — es preferencia persistente del dispositivo
         window.location.href = 'login.html';
     } catch (error) {
         console.error('Error al cerrar sesión:', error);
         // Aún con error de red, salimos localmente
-        localStorage.removeItem('pos_theme_config');
         window.location.href = 'login.html';
     }
 }
@@ -324,8 +322,18 @@ async function loadStoreSettings() {
             // 2. Aplicar Tema (Variables CSS)
             if (store.theme_config) {
                 applyTheme(store.theme_config);
-                // Guardar en caché para carga rápida
-                localStorage.setItem('pos_theme_config', JSON.stringify(store.theme_config));
+                // Guardar en caché para carga rápida, PERO solo si el usuario
+                // no tiene una preferencia local (theme_mode). Si la tiene,
+                // la config del sidebar tiene prioridad sobre la BD.
+                const localTheme = JSON.parse(localStorage.getItem('pos_theme_config') || '{}');
+                if (!localTheme.theme_mode && localTheme.dark_mode === undefined) {
+                    // Primera vez o sin preferencia local → usar config de la BD
+                    localStorage.setItem('pos_theme_config', JSON.stringify(store.theme_config));
+                } else {
+                    // El usuario tiene preferencia local → fusionar (colores de BD, modo local)
+                    const merged = { ...store.theme_config, ...localTheme };
+                    localStorage.setItem('pos_theme_config', JSON.stringify(merged));
+                }
             }
 
             // 3. Guardar nombre de la tienda para uso global (ej. tickets)
@@ -579,7 +587,7 @@ function showReloginModal() {
                     localStorage.removeItem(KEEP_SESSION_KEY);
                 }
                 // Limpiar contenido antiguo en RAM al volver a entrar
-                localStorage.removeItem('pos_theme_config');
+                // NOTA: pos_theme_config NO se borra — es preferencia persistente del usuario
                 window.location.reload();
             } else {
                 errEl.textContent = data.message || 'Usuario o contraseña incorrectos';

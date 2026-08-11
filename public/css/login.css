@@ -534,7 +534,7 @@ dialog.privacy-modal.close .modal-wrapper {
 }
 
 .error-message {
-    background-color: #fff5f5;
+    background-color: var(--bg-card)5f5;
     color: var(--error-color);
     padding: 0.75rem;
     border-radius: 6px;

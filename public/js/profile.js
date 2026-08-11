@@ -192,8 +192,11 @@ async function loadCompanySettings() {
 
             // Cargar configuración de tema
             if (store.theme_config) {
-                // Modo de tema (light/dark/auto) — sincronizar con ThemeSystem
-                const savedMode = store.theme_config.theme_mode
+                // Modo de tema: respetar preferencia local del usuario (ThemeSystem)
+                // Si el usuario ya eligió un modo en el sidebar, ese tiene prioridad.
+                // Si no, usar la config de la BD.
+                const localMode = window.ThemeSystem ? window.ThemeSystem.getMode() : null;
+                const savedMode = localMode || store.theme_config.theme_mode
                     || (store.theme_config.dark_mode === true || store.theme_config.dark_mode === 'true' ? 'dark'
                         : store.theme_config.dark_mode === false || store.theme_config.dark_mode === 'false' ? 'light' : 'auto');
                 if (window.ThemeSystem) {

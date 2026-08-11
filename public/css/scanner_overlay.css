@@ -104,7 +104,7 @@
         display: block !important; /* Romper el grid/flex normal */
         height: 100%;
         padding-top: 60vh; /* Empujar contenido hacia abajo */
-        background: white;
+        background: var(--bg-card);
     }
 
     /* Forzar visibilidad y posición de la columna del carrito */

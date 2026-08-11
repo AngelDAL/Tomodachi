@@ -15,7 +15,7 @@
 }
 
 .stat-card {
-    background-color: white;
+    background-color: var(--bg-card);
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -38,7 +38,7 @@
 
 .stat-info h3 {
     font-size: 0.9rem;
-    color: #666;
+    color: var(--text-light);
     margin-bottom: 5px;
 }
 
@@ -49,7 +49,7 @@
 }
 
 .welcome-message {
-    background-color: white;
+    background-color: var(--bg-card);
     padding: 40px;
     border-radius: 8px;
     text-align: center;
@@ -62,7 +62,7 @@
 }
 
 .welcome-message p {
-    color: #666;
+    color: var(--text-light);
 }
 
 /* Grids Layout */
@@ -77,7 +77,7 @@
 /* Cards Sections */
 .chart-section,
 .list-section {
-    background: white;
+    background: var(--bg-card);
     padding: 1.5rem;
     border-radius: 10px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
@@ -108,7 +108,7 @@
 }
 
 .report-card {
-    background: white;
+    background: var(--bg-card);
     border-radius: 10px;
     padding: 25px;
     text-align: center;
@@ -143,7 +143,7 @@
 
 .report-selection-container {
     display: none; /* Hidden by default, shown when a report is selected */
-    background: white;
+    background: var(--bg-card);
     padding: 20px;
     border-radius: 10px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
@@ -156,7 +156,7 @@
     justify-content: space-between;
     margin-bottom: 20px;
     padding-bottom: 15px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--border-color);
     min-height: 40px;
 }
 
@@ -164,8 +164,8 @@
     position: static;
     transform: none;
     background: transparent;
-    border: 1px solid #ddd;
-    color: #666;
+    border: 1px solid var(--border-color);
+    color: var(--text-light);
     font-size: 0.95rem;
     cursor: pointer;
     display: flex;
@@ -179,7 +179,7 @@
 }
 
 .btn-back-floating:hover {
-    background-color: white;
+    background-color: var(--bg-card);
     color: var(--primary-color);
     border-color: var(--primary-color);
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
@@ -218,13 +218,13 @@
 #reportTable th {
     border-bottom: 2px solid #f0f0f0;
     font-weight: bold;
-    color: #333 !important;
+    color: var(--text-color) !important;
     white-space: nowrap;
-    background-color: #f5f5f5;
+    background-color: var(--bg-light);
 }
 
 .dashboard-table td {
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--border-color);
 }
 
 /* Mobile Responsiveness */
@@ -267,9 +267,9 @@
 
     .dashboard-table tr {
         margin-bottom: 1rem;
-        border: 1px solid #eee;
+        border: 1px solid var(--border-color);
         border-radius: 8px;
-        background: #fff;
+        background: var(--bg-card);
         box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         /* Separator between products/rows */
         border-left: 4px solid var(--primary-color); 
@@ -292,7 +292,7 @@
     .dashboard-table td::before {
         content: attr(data-label);
         font-weight: 600;
-        color: #666;
+        color: var(--text-light);
         margin-right: 1rem;
         text-align: left;
         flex: 1;
@@ -306,7 +306,7 @@
 
 .btn-icon {
     background: none;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border-color);
     border-radius: 4px;
     width: 32px;
     height: 32px;
@@ -314,12 +314,12 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    color: #666;
+    color: var(--text-light);
     transition: all 0.2s;
 }
 
 .btn-icon:hover:not(:disabled) {
-    background: #f5f5f5;
+    background: var(--bg-light);
     color: var(--primary-color);
     border-color: var(--primary-color);
 }
@@ -331,7 +331,7 @@
 
 /* Reports Module Styles */
 .reports-header {
-    background: white;
+    background: var(--bg-card);
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -340,7 +340,7 @@
 
 .reports-header h2 {
     font-weight: bold;
-    color: #333;
+    color: var(--text-color);
     margin-top: 0;
 }
 
@@ -361,7 +361,7 @@
     display: block;
     margin-bottom: 5px;
     font-weight: bold;
-    color: #333;
+    color: var(--text-color);
 }
 
 .report-actions {
@@ -372,7 +372,7 @@
 }
 
 .report-results {
-    background: white;
+    background: var(--bg-card);
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -387,7 +387,7 @@
     align-items: center;
     justify-content: center;
     height: 100%;
-    color: #999;
+    color: var(--text-muted);
     padding: 50px;
 }
 
@@ -453,7 +453,7 @@
     border-radius: 30px; /* Más circular */
     font-size: 1rem;
     font-family: inherit;
-    background-color: white;
+    background-color: var(--bg-card);
     color: var(--text-color, #333);
     transition: all 0.2s ease;
     appearance: none;
@@ -501,7 +501,7 @@ body.plan-free .premium-locked::after {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background-color: #333;
+    background-color: var(--text-color);
     color: #f7d794; /* Gold variant */
     padding: 5px 10px;
     border-radius: 4px;
@@ -523,7 +523,7 @@ body.plan-free a.premium-locked.btn::after {
     content: "\f023"; /* FontAwesome Lock Icon */
     font-family: "Font Awesome 5 Free";
     font-weight: 900;
-    color: #555;
+    color: var(--text-medium);
     background: none;
     box-shadow: none;
     font-size: 1.2rem;

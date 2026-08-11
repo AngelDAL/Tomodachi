@@ -20,6 +20,7 @@ require_once '../../includes/Response.class.php';
 require_once '../../includes/Validator.class.php';
 require_once '../../includes/Auth.class.php';
 require_once '../../includes/ApiAuth.class.php';
+require_once '../../includes/Pricing.class.php';
 
 $db = new Database();
 $auth = new Auth($db);
@@ -64,9 +65,10 @@ try {
     $storeInfo = $db->selectOne('SELECT store_id, settings FROM stores WHERE store_id = ? AND status = ?',[$store_id,STATUS_ACTIVE]);
     if (!$storeInfo) { Response::error('Tienda no válida',404); }
     
-    // Configuración de stock negativo
+    // Configuración de stock negativo y control de caja
     $storeSettings = $storeInfo['settings'] ? json_decode($storeInfo['settings'], true) : [];
     $allowNegativeStock = isset($storeSettings['allow_negative_stock']) && $storeSettings['allow_negative_stock'];
+    $requireOpenRegister = isset($storeSettings['require_open_register']) && $storeSettings['require_open_register'];
 
     // Obtener caja abierta
     // Prioridad: 1. register_id enviado, 2. Caja abierta por el usuario actual, 3. Única caja abierta en la tienda
@@ -90,6 +92,11 @@ try {
         }
 
         if (!$open) {
+            // C2: si la tienda exige apertura formal de caja, NO abrir
+            // automáticamente — pedir que un encargado abra la caja.
+            if ($requireOpenRegister) {
+                Response::error('No hay caja abierta. Abra la caja (Finanzas → Abrir caja) antes de vender.', 409);
+            }
             // Si no hay caja abierta, intentar abrir una automáticamente (fallback)
             // Buscar terminal disponible o crear una
             $terminals = $db->select('SELECT terminal_id FROM terminals WHERE store_id = ? AND status = "active"', [$store_id]);
@@ -113,47 +120,36 @@ try {
         }
     }
 
-    // Cálculo de totales y validaciones de stock
-    $subtotal = 0.0;
-    $productsToUpdate = [];
-    foreach ($items as $idx=>$it) {
-        $pid = isset($it['product_id']) ? (int)$it['product_id'] : 0;
-        // Permitir decimales para venta a granel
-        $qty = isset($it['quantity']) ? (float)$it['quantity'] : 0;
-        
-        // Aceptamos el precio del frontend para reflejar descuentos/promociones calculados por el cliente (JS)
-        $requestedPrice = isset($it['price']) ? (float)$it['price'] : null;
+    // Cálculo de totales y validaciones de stock — FUENTE DE VERDAD DEL SERVIDOR.
+    // El precio que mande el cliente/agente se IGNORA: se recalcula desde la BD
+    // (products.price) + promociones activas mediante Pricing.class.php.
+    $pricing = new Pricing($db);
+    $pricingResult = $pricing->calculate($store_id, $items, $allowNegativeStock);
 
-        if ($pid<=0 || $qty<=0) { Response::validationError(['items'=>'Datos inválidos en item índice '.$idx]); }
-        
-        // Obtenemos precio real de la base de datos y stock (solo de la tienda del usuario)
-        $prod = $db->selectOne('SELECT product_id, product_name, status, price, current_stock FROM products WHERE product_id = ? AND store_id = ? AND status = ?',[$pid,$store_id,STATUS_ACTIVE]);
-        
-        if (!$prod) { Response::error('Producto inactivo o inexistente en esta tienda ID '.$pid,404); }
-        
-        // Si se envió un precio específico (promoción), usarlo. De lo contrario, usar precio base.
-        $price = ($requestedPrice !== null) ? $requestedPrice : (float)$prod['price'];
-        
-        $stockActual = (float)$prod['current_stock'];
-        
-        // Validar stock solo si NO se permite stock negativo
-        if (!$allowNegativeStock && $stockActual < $qty) { 
-            Response::error("Stock insuficiente para el producto '{$prod['product_name']}'. (Puede activar 'Stock negativo' en Configuración de Tienda si lo requiere)",409); 
-        }
-        
-        $lineSubtotal = $qty * $price;
-        $subtotal += $lineSubtotal;
-        $productsToUpdate[] = [
-            'product_id'=>$pid,
-            'quantity'=>$qty,
-            'price'=>$price,
-            'previous_stock'=>$stockActual,
-            'new_stock'=>$stockActual - $qty
-        ];
+    // Descuento manual del cajero (opcional, validado): solo puede reducir,
+    // nunca superar el subtotal ya calculado por el servidor.
+    $manualDiscount = max(0.0, (float)$discount);
+    if ($manualDiscount > $pricingResult['subtotal']) {
+        Response::validationError(['discount' => 'El descuento no puede exceder el subtotal']);
     }
 
-    $total = $subtotal - $discount + $tax;
+    $subtotal = $pricingResult['subtotal'];
+    $total = $subtotal - $manualDiscount + $tax;
     if ($total < 0) { Response::error('Total negativo',400); }
+
+    $productsToUpdate = [];
+    foreach ($pricingResult['lines'] as $line) {
+        $productsToUpdate[] = [
+            'product_id' => $line['product_id'],
+            'quantity' => $line['quantity'],
+            'price' => $line['unit_price'],
+            'unit_cost' => $line['unit_cost'],
+            'discount' => $line['discount'],
+            'promotion_id' => $line['promotion_id'],
+            'previous_stock' => $line['current_stock'],
+            'new_stock' => $line['current_stock'] - $line['quantity']
+        ];
+    }
 
     // Transacción
     $db->beginTransaction();
@@ -171,10 +167,11 @@ try {
             $db->insert('INSERT INTO inventory_movements (store_id, product_id, user_id, movement_type, quantity, previous_stock, new_stock, notes, created_at) VALUES (?,?,?,?,?,?,?,?,NOW())',[
                 $store_id,$p['product_id'],$user['user_id'],MOVEMENT_SALE,$p['quantity'],$p['previous_stock'],$p['new_stock'],'Venta #'.$sale_id
             ]);
-            // Detalle venta
+            // Detalle venta (con costo histórico y promoción aplicada)
             $lineSubtotal = $p['quantity'] * $p['price'];
-            $db->insert('INSERT INTO sale_details (sale_id, product_id, quantity, unit_price, subtotal, discount, total) VALUES (?,?,?,?,?,?,?)',[
-                $sale_id,$p['product_id'],$p['quantity'],$p['price'],$lineSubtotal,0,$lineSubtotal
+            $lineDiscount = round($p['quantity'] * $p['discount'], 2);
+            $db->insert('INSERT INTO sale_details (sale_id, product_id, quantity, unit_price, unit_cost, subtotal, discount, promotion_id, total) VALUES (?,?,?,?,?,?,?,?,?)',[
+                $sale_id,$p['product_id'],$p['quantity'],$p['price'],$p['unit_cost'],$lineSubtotal,$lineDiscount,$p['promotion_id'],$lineSubtotal - $lineDiscount
             ]);
         }
 

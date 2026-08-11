@@ -74,10 +74,11 @@ Códigos: 200 OK · 400 validación · 401 no autenticado · 403 sin permisos ·
 
 | Método | Ruta | Descripción | Body/Query | Roles |
 |---|---|---|---|---|
-| POST | `/api/sales/create_sale.php` | Crear venta | `{store_id, items:[{product_id, quantity, price?}], payment_method, discount?, tax?, cash_amount?, register_id?}` | admin/manager/cashier |
+| POST | `/api/sales/create_sale.php` | Crear venta | `{store_id, items:[{product_id, quantity}], payment_method, discount?, tax?, cash_amount?, register_id?}` | admin/manager/cashier |
 | GET | `/api/sales/get_sales.php` | Listar ventas del día | `?store_id=&date=YYYY-MM-DD` | auth |
 | GET | `/api/sales/sale_details.php` | Detalle de venta | `?sale_id=` | auth |
 | POST | `/api/sales/cancel_sale.php` | Cancelar venta (devuelve stock) | `{sale_id}` | admin/manager |
+| POST | `/api/sales/refund_sale.php` | **Devolución parcial** (reingresa stock, movimiento de caja) | `{sale_id, reason?, items:[{product_id, quantity}]}` | admin/manager |
 | POST | `/api/sales/cart_sync.php` | Sincronizar carrito (kiosko/display) | ver archivo | auth |
 | GET | `/api/sales/cart_sse.php` | SSE para customer display | `?session=UUID` | público (UUID = llave) |
 
@@ -238,3 +239,20 @@ solo en modo `SAAS` con API keys configuradas en `api/ai/config.php`.
 3. Respeta roles: cashier no crea usuarios; manager no cancela ventas.
 4. Para datos de prueba usa la tienda demo (store_id 1, admin/admin123).
 5. Cambia la contraseña admin después del primer uso.
+
+### Cierre Z / Auditoría diaria
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET | `/api/reports/close_z.php` | Auditoría del día: ventas por método, cancelaciones, devoluciones, movimientos de caja y efectivo esperado | `?date=YYYY-MM-DD&register_id=` |
+
+### Precios y promociones (validación en servidor)
+
+Desde la Fase A, `create_sale.php` **ignora el `price` enviado por el cliente**
+y recalcula todo con `includes/Pricing.class.php`:
+- Precio base = `products.price` de la BD.
+- Promociones activas (simple_discount, bulk_discount, bundle, bill_discount)
+  aplicadas en el servidor, con `promotion_id` guardado por línea.
+- `sale_details.unit_cost` guarda el costo histórico al momento de la venta
+  (los reportes de ganancia usan ese costo, no el actual).
+- `discount` manual del cajero se valida (no puede exceder el subtotal).

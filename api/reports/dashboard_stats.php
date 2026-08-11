@@ -26,7 +26,7 @@ try {
     $end_date = isset($_GET['end_date']) ? str_replace('T', ' ', $_GET['end_date']) : date('Y-m-t 23:59:59');
 
     if ($type === 'sales') {
-        // Sales Report
+        // Sales History Report (profit con costo histórico C5)
         $stmt = $conn->prepare("
             SELECT 
                 s.sale_id, 
@@ -34,7 +34,7 @@ try {
                 u.username, 
                 s.payment_method, 
                 s.total, 
-                (s.total - SUM(sd.quantity * IFNULL(p.cost, 0))) as profit
+                (s.total - SUM(sd.quantity * COALESCE(sd.unit_cost, p.cost, 0))) as profit
             FROM sales s
             JOIN users u ON s.user_id = u.user_id
             JOIN sale_details sd ON s.sale_id = sd.sale_id
@@ -190,9 +190,10 @@ try {
     $stmt->execute([$store_id]);
     $dailySales = $stmt->fetch(PDO::FETCH_ASSOC)['total_sales'];
 
-    // 1.1 Daily Cost (for Profit)
+    // 1.1 Daily Cost (for Profit) — usa costo HISTÓRICO de la venta (C5),
+    // con fallback al costo actual para ventas anteriores a la migración.
     $stmt = $conn->prepare("
-        SELECT COALESCE(SUM(sd.quantity * COALESCE(p.cost, 0)), 0) as total_cost
+        SELECT COALESCE(SUM(sd.quantity * COALESCE(sd.unit_cost, p.cost, 0)), 0) as total_cost
         FROM sales s
         JOIN sale_details sd ON s.sale_id = sd.sale_id
         JOIN products p ON sd.product_id = p.product_id
@@ -248,13 +249,13 @@ try {
     $stmt->execute([$store_id]);
     $topProducts = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // 5. Recent Sales History
+    // 5. Recent Sales History (profit con costo histórico C5)
     $stmt = $conn->prepare("
         SELECT 
             s.sale_id, 
             s.sale_date, 
             s.total,
-            (s.total - SUM(sd.quantity * COALESCE(p.cost, 0))) as profit,
+            (s.total - SUM(sd.quantity * COALESCE(sd.unit_cost, p.cost, 0))) as profit,
             GROUP_CONCAT(CONCAT(COALESCE(p.image_path, ''), ':::', p.product_name) SEPARATOR '|||') as products_info
         FROM sales s
         JOIN sale_details sd ON s.sale_id = sd.sale_id
@@ -302,11 +303,11 @@ try {
     $stmt->execute([$store_id]);
     $revenueData = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
-    // 6.2 Get Cost per day
+    // 6.2 Get Cost per day (costo histórico C5)
     $stmt = $conn->prepare("
         SELECT 
             DATE(s.sale_date) as date, 
-            SUM(sd.quantity * COALESCE(p.cost, 0)) as total_cost
+            SUM(sd.quantity * COALESCE(sd.unit_cost, p.cost, 0)) as total_cost
         FROM sales s
         JOIN sale_details sd ON s.sale_id = sd.sale_id
         JOIN products p ON sd.product_id = p.product_id

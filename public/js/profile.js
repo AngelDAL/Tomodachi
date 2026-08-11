@@ -187,6 +187,7 @@ async function loadCompanySettings() {
             // Cargar configuración de negocio
             if (store.settings) {
                 document.getElementById('allowNegativeStock').checked = !!store.settings.allow_negative_stock;
+                document.getElementById('requireOpenRegister').checked = !!store.settings.require_open_register;
             }
 
             // Cargar configuración de tema
@@ -239,7 +240,8 @@ document.getElementById('companyForm').addEventListener('submit', async (e) => {
 
     // Recolectar configuración de negocio
     const settings = {
-        allow_negative_stock: document.getElementById('allowNegativeStock').checked
+        allow_negative_stock: document.getElementById('allowNegativeStock').checked,
+        require_open_register: document.getElementById('requireOpenRegister').checked
     };
 
     const data = {

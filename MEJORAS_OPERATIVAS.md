@@ -14,9 +14,9 @@ Este documento contiene las mejoras operativas identificadas para el sistema Tom
 
 | # | Mejora | Archivos involucrados | Estado | Notas |
 |---|--------|----------------------|--------|-------|
-| 1 | **Validar precios y promociones en el servidor** — Mover la lógica de descuentos/promociones del navegador al backend; recalcular totales en el servidor; guardar `promotion_id` por línea de venta. | `public/js/sales.js`, `api/sales/create_sale.php`, `api/promotions/`, base de datos | [ ] | |
+| 1 | **Validar precios y promociones en el servidor** — Mover la lógica de descuentos/promociones del navegador al backend; recalcular totales en el servidor; guardar `promotion_id` por línea de venta. | `includes/Pricing.class.php`, `api/sales/create_sale.php` | [x] | Fase A: Pricing.class.php + migración 015 |
 | 2 | **Sincronizar `database/schema.sql` con migraciones** — Incluir en `schema.sql` tablas y campos finales: promociones, terminales, venta a granel, configuración de tienda, etc. Corregir migraciones duplicadas (`003`, `006`, `010/011`). | `database/schema.sql`, `database/migrations/` | [ ] | |
-| 3 | **Guardar costo histórico en `sale_details`** — Agregar `unit_cost` a `sale_details` y poblarlo al crear la venta; actualizar reportes para usar costo histórico. | `database/schema.sql`, `api/sales/create_sale.php`, `api/reports/` | [ ] | |
+| 3 | **Guardar costo histórico en `sale_details`** — Agregar `unit_cost` a `sale_details` y poblarlo al crear la venta; actualizar reportes para usar costo histórico. | `database/schema.sql`, `api/sales/create_sale.php`, `api/reports/` | [x] | Fase A: migración 015 + reportes con COALESCE(unit_cost, cost) |
 
 ---
 
@@ -24,8 +24,8 @@ Este documento contiene las mejoras operativas identificadas para el sistema Tom
 
 | # | Mejora | Archivos involucrados | Estado | Notas |
 |---|--------|----------------------|--------|-------|
-| 4 | **Implementar devoluciones y reembolsos parciales** — Permitir devolver productos individuales de una venta sin cancelar toda la transacción; reingresar stock opcionalmente. | Nuevo `api/sales/refund_sale.php`, `database/schema.sql`, `public/js/sales.js`, `public/sales.html` | [ ] | |
-| 5 | **Control de apertura de caja** — Eliminar o hacer opcional el fallback que abre caja automáticamente con `$0.00`; exigir apertura formal antes de vender. | `api/sales/create_sale.php` | [ ] | |
+| 4 | **Implementar devoluciones y reembolsos parciales** — Permitir devolver productos individuales de una venta sin cancelar toda la transacción; reingresar stock opcionalmente. | `api/sales/refund_sale.php`, `database/migrations/016_add_refunds.sql` | [x] | Fase A: endpoint refund + tablas sale_refunds |
+| 5 | **Control de apertura de caja** — Eliminar o hacer opcional el fallback que abre caja automáticamente con `$0.00`; exigir apertura formal antes de vender. | `api/sales/create_sale.php`, `public/profile.html`, `public/js/profile.js` | [x] | Fase A: setting require_open_register |
 | 6 | **Tabla de pagos de venta (`sale_payments`)** — Registrar desglose completo de pagos mixtos (efectivo, tarjeta, transferencia) para conciliación. | `database/schema.sql`, `api/sales/create_sale.php`, `public/js/sales.js`, `public/sales.html` | [ ] | |
 | 7 | **Módulo de clientes y asociación a ventas** — Crear tabla `customers`; permitir asociar venta a cliente; base para facturación y fidelización. | `database/schema.sql`, `public/sales.html`, `public/js/sales.js`, `api/sales/create_sale.php` | [ ] | |
 

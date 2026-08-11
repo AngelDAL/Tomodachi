@@ -187,6 +187,27 @@ function initPOS() {
   loadCategoriesAndProducts();
   loadActivePromotions();
 
+  // Preferencias de impresión térmica (ancho y copias)
+  const ticketWidthSel = document.getElementById('ticketWidthSelect');
+  const ticketCopiesInput = document.getElementById('ticketCopiesInput');
+  if (ticketWidthSel && typeof getTicketPrefs === 'function') {
+    const prefs = getTicketPrefs();
+    ticketWidthSel.value = prefs.width;
+    if (ticketCopiesInput) ticketCopiesInput.value = prefs.copies;
+    ticketWidthSel.addEventListener('change', () => {
+      try { localStorage.setItem('tomodachi_ticket_width', ticketWidthSel.value); } catch (e) {}
+    });
+  }
+  if (ticketCopiesInput) {
+    ticketCopiesInput.addEventListener('change', () => {
+      let v = parseInt(ticketCopiesInput.value, 10) || 1;
+      if (v < 1) v = 1;
+      if (v > 5) v = 5;
+      ticketCopiesInput.value = v;
+      try { localStorage.setItem('tomodachi_ticket_copies', String(v)); } catch (e) {}
+    });
+  }
+
   // Iniciar sync si hay sesión activa
   if (displaySessionUUID) {
     startSyncInterval();
@@ -1557,17 +1578,27 @@ async function finalizeSale() {
       }
 
       // Preparar datos para ticket
+      const subtotalCart = CART.reduce((s, i) => s + (i.subtotal != null ? i.subtotal : i.unit_price * i.quantity), 0);
       const ticketData = {
-        items: [...CART],
-        total: CART.reduce((s, i) => s + i.subtotal, 0),
-        date: new Date().toLocaleString(),
+        items: CART.map(i => ({
+          product_name: i.product_name,
+          quantity: i.quantity,
+          unit_price: i.unit_price,
+          total: i.subtotal != null ? i.subtotal : i.unit_price * i.quantity
+        })),
+        subtotal: subtotalCart,
+        discount: parseFloat((discountInput && discountInput.value) || 0),
+        tax: parseFloat((taxInput && taxInput.value) || 0),
+        total: resData.total != null ? resData.total : CART.reduce((s, i) => s + i.subtotal, 0),
+        date: new Date().toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
         sale_id: resData.sale_id || '---',
-        cashier: resData.cashier_name || 'Cajero'
+        cashier: resData.cashier_name || 'Cajero',
+        payment_method: paymentMethodSelect ? paymentMethodSelect.value : 'cash',
+        qr_payload: `TOMODISALE|${resData.sale_id || ''}|${(resData.total != null ? resData.total : 0).toFixed(2)}`
       };
 
       // Guardar en historial local
       saveSaleToHistory(ticketData);
-
       // Imprimir ticket si está habilitado
       const printEnabled = document.getElementById('printTicketCheckbox') && document.getElementById('printTicketCheckbox').checked;
       if (printEnabled) {
@@ -2250,6 +2281,13 @@ function playSound(filename) {
 }
 
 function printTicket(data) {
+  // Usar el módulo térmico (thermal-print.js) si está cargado;
+  // si no, mantener el comportamiento anterior.
+  if (typeof window.printThermalTicket === 'function') {
+    window.printThermalTicket(data);
+    return;
+  }
+
   const win = window.open('', 'PrintTicket', 'width=400,height=600');
   if (!win) {
     showNotification('Habilita pop-ups para imprimir ticket', 'warning');

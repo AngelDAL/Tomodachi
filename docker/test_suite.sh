@@ -118,6 +118,65 @@ curl -s -o /dev/null -b "$CJ" -X POST "$BASE/api/api_tokens/revoke.php" -H 'Cont
 echo "PASS | Revocar tokens de prueba"
 PASS=$((PASS+1))
 
+# ===== Sección 10: Fase A (precios servidor, devoluciones, cierre Z) =====
+# C1: el servidor ignora el precio manipulado y cobra el de BD.
+# Buscar un producto activo de la tienda del admin (store 1) para no depender de la demo.
+pid_suite=$(curl -s -b "$CJ" "$BASE/api/inventory/products.php" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['data'][0]['product_id'] if d.get('data') else '')" 2>/dev/null)
+if [ -n "$pid_suite" ]; then
+  # Precio real de BD
+  real_price=$(curl -s -b "$CJ" "$BASE/api/inventory/products.php" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['data'][0]['price'] if d.get('data') else '0')" 2>/dev/null)
+  # Intentar vender con precio $0.01
+  sale_json=$(curl -s -b "$CJ" -X POST "$BASE/api/sales/create_sale.php" -H 'Content-Type: application/json' -d "{\"store_id\":1,\"items\":[{\"product_id\":$pid_suite,\"quantity\":1,\"price\":0.01}],\"payment_method\":\"cash\"}")
+  sale_total=$(echo "$sale_json" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['data']['total'] if d.get('data') else '0')" 2>/dev/null)
+  if [ -n "$sale_total" ] && [ "$sale_total" != "0" ] && [ "$(echo "$sale_total > 0.01" | bc 2>/dev/null)" = "1" ] || [ "$sale_total" = "$real_price" ]; then
+    echo "PASS | C1: precio manipulado ($0.01) rechazado, cobró \$$sale_total"
+    PASS=$((PASS+1))
+    # Cancelar la venta de prueba para no dejar basura
+    sale_id_suite=$(echo "$sale_json" | python3 -c "import json,sys; print(json.load(sys.stdin)['data']['sale_id'])" 2>/dev/null)
+    curl -s -o /dev/null -b "$CJ" -X POST "$BASE/api/sales/cancel_sale.php" -H 'Content-Type: application/json' -d "{\"sale_id\":$sale_id_suite}"
+  else
+    echo "FAIL | C1: precio manipulado aceptado (total=$sale_total)"
+    FAIL=$((FAIL+1))
+  fi
+else
+  echo "SKIP | C1: sin productos en tienda admin"
+fi
+
+# C4: devolución parcial — crear venta en tienda admin (store 1) y devolver parte
+if [ -n "$pid_suite" ]; then
+  v_json=$(curl -s -b "$CJ" -X POST "$BASE/api/sales/create_sale.php" -H 'Content-Type: application/json' -d "{\"store_id\":1,\"items\":[{\"product_id\":$pid_suite,\"quantity\":2}],\"payment_method\":\"cash\"}")
+  v_id=$(echo "$v_json" | python3 -c "import json,sys; print(json.load(sys.stdin)['data']['sale_id'])" 2>/dev/null)
+  if [ -n "$v_id" ]; then
+    refund_json=$(curl -s -b "$CJ" -X POST "$BASE/api/sales/refund_sale.php" -H 'Content-Type: application/json' -d "{\"sale_id\":$v_id,\"reason\":\"suite\",\"items\":[{\"product_id\":$pid_suite,\"quantity\":1}]}")
+    refund_ok=$(echo "$refund_json" | python3 -c "import json,sys; print(json.load(sys.stdin).get('success'))" 2>/dev/null)
+    if [ "$refund_ok" = "True" ]; then
+      echo "PASS | C4: devolución parcial registrada (venta #$v_id)"
+      PASS=$((PASS+1))
+      # Cancelar la venta restante para no dejar basura (devuelve el stock sobrante)
+      curl -s -o /dev/null -b "$CJ" -X POST "$BASE/api/sales/cancel_sale.php" -H 'Content-Type: application/json' -d "{\"sale_id\":$v_id}"
+    else
+      echo "FAIL | C4: devolución parcial falló ($refund_json)"
+      FAIL=$((FAIL+1))
+    fi
+  else
+    echo "FAIL | C4: no se pudo crear venta de prueba"
+    FAIL=$((FAIL+1))
+  fi
+else
+  echo "SKIP | C4: sin productos en tienda admin"
+fi
+
+# Cierre Z: endpoint responde y trae resumen
+z_json=$(curl -s -b "$CJ" "$BASE/api/reports/close_z.php?date=$(date +%F)")
+z_ok=$(echo "$z_json" | python3 -c "import json,sys; print(json.load(sys.stdin).get('success'))" 2>/dev/null)
+if [ "$z_ok" = "True" ]; then
+  echo "PASS | Cierre Z: auditoría diaria responde"
+  PASS=$((PASS+1))
+else
+  echo "FAIL | Cierre Z: no responde ($z_json)"
+  FAIL=$((FAIL+1))
+fi
+
 echo
 echo "===== RESULTADO: $PASS pasaron, $FAIL fallaron ====="
 rm -f "$CJ" "$CJ2"

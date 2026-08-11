@@ -359,19 +359,20 @@ body.modal-open { overflow: hidden; }
 
 /* Profit Analysis Box */
 .profit-analysis {
-    background: var(--info-color);
-    border: 1px solid var(--info-color);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-left: 4px solid var(--info-color);
     border-radius: 8px;
     padding: 12px;
     margin-top: 16px;
-    color: #ffffff;
+    color: var(--text-color);
 }
-.profit-title { font-weight: 700; font-size: 0.85rem; margin-bottom: 8px; color: #ffffff; }
-.profit-row { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 4px; color: rgba(255,255,255,0.92); }
+.profit-title { font-weight: 700; font-size: 0.85rem; margin-bottom: 8px; color: var(--info-color); }
+.profit-row { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 4px; color: var(--text-medium); }
 .profit-value { font-weight: 600; }
-.profit-diff { font-weight: 700; padding-top: 4px; border-top: 1px dashed rgba(255,255,255,0.4); margin-top: 4px; color: #ffffff; }
-.profit-diff.positive { color: #A5D6A7; }
-.profit-diff.negative { color: #EF9A9A; }
+.profit-diff { font-weight: 700; padding-top: 4px; border-top: 1px dashed var(--border-color); margin-top: 4px; color: var(--text-color); }
+.profit-diff.positive { color: var(--success-color); }
+.profit-diff.negative { color: var(--danger-color); }
 
 .modal-footer {
     padding: 16px 24px;

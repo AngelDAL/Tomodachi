@@ -340,15 +340,10 @@ function renderProductsGrid(products) {
     grid.innerHTML = products.map(p => {
         const isSelected = selectedTargets.some(t => t.id == p.product_id);
 
-        const imgSrc = getRelativeImagePath(p.image_path);
-        const onErrorParams = "this.onerror=null;this.parentElement.innerHTML='<div class=\'product-item-noimg\'><i class=\'fas fa-box\'></i></div>';";
-
         return `
             <div class="product-item-card ${isSelected ? "selected" : ""}" onclick="toggleProductSelection(${p.product_id})" title="${p.product_name}">
                 <div class="product-item-img-wrapper">
-                    ${imgSrc
-                        ? `<img src="${imgSrc}" alt="${p.product_name}" onerror="${onErrorParams}">`
-                        : '<div class="product-item-noimg"><i class="fas fa-box"></i></div>'}
+                    <div class="product-item-noimg"><i class="fas fa-box"></i></div>
                     ${isSelected ? '<div class="selected-indicator"><i class="fas fa-check"></i></div>' : ''}
                 </div>
                 <div class="product-item-content">
@@ -379,13 +374,8 @@ function renderSelectedProductsList() {
     section.style.display = 'block';
 
     list.innerHTML = selectedTargets.map(t => {
-        let imgTag = '';
-        if (t.image_path) {
-            const imgPath = getRelativeImagePath(t.image_path);
-            imgTag = `<img src="${imgPath}" alt="img">`;
-        } else {
-            imgTag = `<div style="width:24px;height:24px;background:var(--dark-color);border-radius:50%;margin-right:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-box" style="font-size:10px;color:var(--text-muted);"></i></div>`;
-        }
+        // Vector siempre (sin imagen del producto)
+        const imgTag = `<div style="width:24px;height:24px;background:var(--dark-color);border-radius:50%;margin-right:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-box" style="font-size:10px;color:var(--text-muted);"></i></div>`;
 
         return `
             <div class="selected-chip">
@@ -1144,14 +1134,10 @@ function renderDrawerProducts(products) {
     }
     grid.innerHTML = products.map(p => {
         const isSelected = selectedTargets.some(t => t.id == p.product_id);
-        const imgSrc = getRelativeImagePath(p.image_path);
-        const onErrorParams = "this.onerror=null;this.parentElement.innerHTML='<div class=\\'product-item-noimg\\'><i class=\\'fas fa-box\\'></i></div>';";
         return `
             <div class="product-item-card ${isSelected ? 'selected' : ''}" onclick="toggleDrawerProduct(${p.product_id})" title="${p.product_name}">
                 <div class="product-item-img-wrapper">
-                    ${imgSrc
-                        ? `<img src="${imgSrc}" alt="${p.product_name}" onerror="${onErrorParams}">`
-                        : '<div class="product-item-noimg"><i class="fas fa-box"></i></div>'}
+                    <div class="product-item-noimg"><i class="fas fa-box"></i></div>
                     ${isSelected ? '<div class="selected-indicator"><i class="fas fa-check"></i></div>' : ''}
                 </div>
                 <div class="product-item-content">
@@ -1198,13 +1184,8 @@ function renderDrawerSelected() {
     }
     section.style.display = 'block';
     list.innerHTML = selectedTargets.map(t => {
-        let imgTag = '';
-        if (t.image_path) {
-            const imgPath = getRelativeImagePath(t.image_path);
-            imgTag = `<img src="${imgPath}" alt="img">`;
-        } else {
-            imgTag = `<div style="width:24px;height:24px;background:var(--dark-color);border-radius:50%;margin-right:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-box" style="font-size:10px;color:var(--text-muted);"></i></div>`;
-        }
+        // Vector siempre (sin imagen del producto)
+        const imgTag = `<div style="width:24px;height:24px;background:var(--dark-color);border-radius:50%;margin-right:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-box" style="font-size:10px;color:var(--text-muted);"></i></div>`;
         return `
             <div class="selected-chip">
                 ${imgTag}

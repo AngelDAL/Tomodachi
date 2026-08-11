@@ -1819,7 +1819,7 @@ table tr:hover {
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px var(--primary-shadow);
-    background: var(--white);
+    background: var(--bg-input);
 }
 .client-dialog .btn-primary:hover {
     background: var(--primary-dark);

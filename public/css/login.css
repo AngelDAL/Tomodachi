@@ -177,7 +177,7 @@ dialog.privacy-modal[open]::backdrop {
 }
 
 .modal-wrapper {
-    background: var(--white);
+    background: var(--bg-card);
     border-radius: 16px;
     overflow: hidden;
     opacity: 0;
@@ -350,7 +350,7 @@ dialog.privacy-modal.close .modal-wrapper {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--white);
+    background: var(--bg-card);
     position: relative;
 }
 
@@ -608,7 +608,7 @@ dialog.privacy-modal.close .modal-wrapper {
         flex-direction: column;
         align-items: center; /* Align to center horizontally */
         justify-content: flex-start;
-        background: var(--white);
+        background: var(--bg-card);
         border-top-left-radius: 20px;
         border-top-right-radius: 20px;
         margin-top: -40px; /* Overlap slightly */

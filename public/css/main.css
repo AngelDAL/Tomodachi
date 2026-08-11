@@ -1702,3 +1702,56 @@ table tr:hover {
     color: var(--secondary-color, #7B2FBE);
     transform: scale(1.15);
 }
+
+/* ============================================================
+ * Skeleton loader (estado de carga de contenido)
+ * ============================================================ */
+.skeleton {
+    position: relative;
+    overflow: hidden;
+    background: #e9ecef;
+    border-radius: 6px;
+}
+.skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent);
+    animation: skeletonShimmer 1.3s ease infinite;
+}
+@keyframes skeletonShimmer {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+.skeleton-table-row {
+    display: grid;
+    grid-template-columns: 1.6fr 0.5fr 0.7fr 0.7fr;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+.skeleton-table-row .skeleton { height: 16px; }
+
+/* ============================================================
+ * Borde de ticket (solo modal de detalle de venta)
+ * Dientes redondeados en la parte inferior, como recibo cortado.
+ * ============================================================ */
+.sale-detail-dialog .modal-content {
+    border-radius: 14px 14px 0 0;   /* esquinas superiores redondeadas, inferior "cortado" */
+    padding-bottom: 2rem;
+    position: relative;
+    color: var(--bg-card, #ffffff);  /* currentColor del SVG = fondo del modal */
+}
+.sale-detail-dialog .modal-content::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 14px;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='14' viewBox='0 0 24 14'><path d='M0 0 L3 7 Q6 11 9 7 L12 0 L15 7 Q18 11 21 7 L24 0 Z' fill='currentColor'/></svg>");
+    background-repeat: repeat-x;
+    background-size: 24px 14px;
+}

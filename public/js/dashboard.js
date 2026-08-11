@@ -213,7 +213,9 @@ async function showSaleDetail(saleId) {
     if (!modal || !body) return;
 
     title.textContent = `Venta #${saleId}`;
-    body.innerHTML = '<div style="text-align:center; padding: 2rem;"><i class="fas fa-spinner fa-spin" style="font-size: 1.5rem; color: #999;"></i><p>Cargando detalle...</p></div>';
+    body.innerHTML = (typeof saleDetailSkeletonHTML === 'function')
+        ? saleDetailSkeletonHTML()
+        : '<div style="text-align:center; padding: 2rem;"><i class="fas fa-spinner fa-spin" style="font-size: 1.5rem; color: #999;"></i><p>Cargando detalle...</p></div>';
     if (typeof modal.showModal === 'function') {
         modal.showModal();
     } else {

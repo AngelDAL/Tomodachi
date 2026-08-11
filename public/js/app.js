@@ -518,3 +518,25 @@ function showReloginModal() {
 // Exponer para uso global
 window.requireSession = requireSession;
 window.showReloginModal = showReloginModal;
+
+/* ============================================================
+ * Skeleton loader para el modal de detalle de venta
+ * Imita la estructura real (cabecera + tabla) para que no haya
+ * salto de tamaño entre el estado de carga y el contenido.
+ * ============================================================ */
+function saleDetailSkeletonHTML() {
+    return `
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 1rem; background: #f8f9fa; border-radius: 10px; padding: 0.9rem 1rem; margin-bottom: 1rem;">
+            <div class="skeleton" style="height: 16px; width: 80%;"></div>
+            <div class="skeleton" style="height: 16px; width: 60%;"></div>
+            <div class="skeleton" style="height: 16px; width: 55%;"></div>
+            <div class="skeleton" style="height: 16px; width: 70%;"></div>
+        </div>
+        <div class="skeleton" style="height: 16px; width: 40%; margin-bottom: 0.8rem;"></div>
+        <div class="skeleton-table-row"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>
+        <div class="skeleton-table-row"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>
+    `;
+}
+window.saleDetailSkeletonHTML = saleDetailSkeletonHTML;

@@ -613,7 +613,7 @@ window.showReloginModal = showReloginModal;
  * ============================================================ */
 function saleDetailSkeletonHTML() {
     return `
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 1rem; background: #f8f9fa; border-radius: 10px; padding: 0.9rem 1rem; margin-bottom: 1rem;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 1rem; background: var(--bg-light); border-radius: 10px; padding: 0.9rem 1rem; margin-bottom: 1rem;">
             <div class="skeleton" style="height: 16px; width: 80%;"></div>
             <div class="skeleton" style="height: 16px; width: 60%;"></div>
             <div class="skeleton" style="height: 16px; width: 55%;"></div>

@@ -33,12 +33,12 @@
         }
 
         .header h1 {
-            color: #333;
+            color: var(--text-color);
             margin-bottom: 10px;
         }
 
         .header p {
-            color: #666;
+            color: var(--text-light);
             font-size: 0.95rem;
         }
 
@@ -63,7 +63,7 @@
         }
 
         .card h2 {
-            color: #333;
+            color: var(--text-color);
             margin-bottom: 15px;
             display: flex;
             align-items: center;
@@ -81,7 +81,7 @@
         label {
             display: block;
             margin-bottom: 5px;
-            color: #333;
+            color: var(--text-color);
             font-weight: 600;
             font-size: 0.9rem;
         }
@@ -146,7 +146,7 @@
 
         .btn-secondary {
             background: var(--bg-light);
-            color: #333;
+            color: var(--text-color);
         }
 
         .btn-secondary:hover {
@@ -220,7 +220,7 @@
 
         .weight-unit {
             font-size: 1.2rem;
-            color: #666;
+            color: var(--text-light);
         }
 
         .log {
@@ -270,7 +270,7 @@
         }
 
         .simulator-section h3 {
-            color: #333;
+            color: var(--text-color);
             margin-bottom: 10px;
             font-size: 0.95rem;
         }
@@ -353,7 +353,7 @@
             <div class="card">
                 <h2><i class="fas fa-flask"></i> Simulador</h2>
 
-                <p style="color: #666; margin-bottom: 15px; font-size: 0.9rem;">
+                <p style="color: var(--text-light); margin-bottom: 15px; font-size: 0.9rem;">
                     Simula datos de balanza para pruebas sin hardware real
                 </p>
 
@@ -405,22 +405,22 @@
         <div class="card" style="margin-top: 20px;">
             <h2><i class="fas fa-question-circle"></i> Ayuda</h2>
 
-            <h3 style="color: #333; margin: 15px 0 10px;">Cómo usar:</h3>
-            <ol style="color: #666; line-height: 1.8; margin-left: 20px;">
+            <h3 style="color: var(--text-color); margin: 15px 0 10px;">Cómo usar:</h3>
+            <ol style="color: var(--text-light); line-height: 1.8; margin-left: 20px;">
                 <li>Selecciona el protocolo compatible con tu balanza</li>
                 <li>Haz clic en "Conectar" y selecciona el puerto COM de tu balanza</li>
                 <li>Si está conectada, deberías ver los pesos en tiempo real</li>
                 <li>Usa el simulador para pruebas sin hardware real</li>
             </ol>
 
-            <h3 style="color: #333; margin: 15px 0 10px;">Protocolos soportados:</h3>
-            <ul style="color: #666; line-height: 1.8; margin-left: 20px;">
+            <h3 style="color: var(--text-color); margin: 15px 0 10px;">Protocolos soportados:</h3>
+            <ul style="color: var(--text-light); line-height: 1.8; margin-left: 20px;">
                 <li><strong>Genérico:</strong> Formato simple "1234.56" (9600 baud)</li>
                 <li><strong>Datalogic:</strong> Formato "ST,GS,1234.56,g" (9600 baud)</li>
                 <li><strong>Excell:</strong> Formato "+1234.56g" (1200 baud)</li>
             </ul>
 
-            <h3 style="color: #333; margin: 15px 0 10px;">Navegadores soportados:</h3>
+            <h3 style="color: var(--text-color); margin: 15px 0 10px;">Navegadores soportados:</h3>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 10px;">
                 <div style="padding: 10px; background: var(--bg-light); border-radius: 6px; text-align: center;">
                     <i class="fab fa-chrome" style="color: var(--danger-color); margin-right: 5px;"></i>

@@ -63,7 +63,7 @@ async function loadTerminals() {
             } else {
                 content += `
                     <div class="terminal-info">
-                        <p style="color: #666; font-style: italic;">Caja cerrada. Inicie sesión para comenzar a vender.</p>
+                        <p style="color: var(--text-light); font-style: italic;">Caja cerrada. Inicie sesión para comenzar a vender.</p>
                     </div>
                     <div class="terminal-actions">
                         <button class="btn-primary" onclick="openOpenRegisterModal(${term.terminal_id}, '${term.terminal_name}')">
@@ -159,14 +159,14 @@ function renderMovementsList(movements, initialAmount, openingDate) {
 
     list.innerHTML = processedMovements.map(m => {
         let icon = 'fa-circle';
-        let color = '#666';
+        let color = getComputedStyle(document.documentElement).getPropertyValue('--text-light').trim() || '#666';
         let typeLabel = 'Movimiento';
         let amountClass = '';
         let sign = '';
 
         if (m.type === 'opening') {
             icon = 'fa-lock-open';
-            color = '#666';
+            color = getComputedStyle(document.documentElement).getPropertyValue('--text-light').trim() || '#666';
             typeLabel = 'Apertura';
             amountClass = 'text-muted';
         } else if (m.movement_type === 'sale') {
@@ -190,14 +190,14 @@ function renderMovementsList(movements, initialAmount, openingDate) {
         }
 
         return `
-            <div class="movement-item" style="display:flex; gap:10px; padding:12px 10px; border-bottom:1px solid #eee; align-items:center;">
+            <div class="movement-item" style="display:flex; gap:10px; padding:12px 10px; border-bottom:1px solid var(--border-color); align-items:center;">
                 <div style="width:35px; height:35px; border-radius:50%; background:${color}20; color:${color}; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
                     <i class="fas ${icon}"></i>
                 </div>
                 <div style="flex:1; min-width:0;">
                     <div style="font-weight:600; font-size:0.95em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${typeLabel}</div>
-                    <div style="font-size:0.85em; color:#666; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${m.description || '-'}</div>
-                    <div style="font-size:0.75em; color:#999;">
+                    <div style="font-size:0.85em; color:var(--text-light); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${m.description || '-'}</div>
+                    <div style="font-size:0.75em; color:var(--text-muted);">
                         <i class="fas fa-user"></i> ${m.user_name} &bull; ${new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                     </div>
                 </div>
@@ -205,7 +205,7 @@ function renderMovementsList(movements, initialAmount, openingDate) {
                     <div style="font-weight:bold; font-size:1.1em;" class="${amountClass}">
                         ${sign}${formatCurrency(m.amount)}
                     </div>
-                    <div style="font-size:0.75em; color:#999; margin-top:2px;">
+                    <div style="font-size:0.75em; color:var(--text-muted); margin-top:2px;">
                         Acum: ${formatCurrency(m.accumulated)}
                     </div>
                 </div>

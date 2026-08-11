@@ -104,14 +104,14 @@ function renderTopProductsList(list) {
     
     list.forEach(item => {
         const tr = document.createElement('tr');
-        tr.style.borderBottom = '1px solid #eee';
+        tr.style.borderBottom = '1px solid var(--border-color)';
         
         let imgHtml = '';
         const imagePath = getRelativeImagePath(item.image_path);
         if (imagePath) {
-            imgHtml = `<img src="${imagePath}" alt="${item.product_name}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;" onerror="this.outerHTML='<div style=\\'width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: #f0f0f0; border-radius: 4px; color: #999;\\'><i class=\\'fas fa-box\\'></i></div>'">`;
+            imgHtml = `<img src="${imagePath}" alt="${item.product_name}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;" onerror="this.outerHTML='<div style=\\'width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: var(--bg-light); border-radius: 4px; color: var(--text-muted);\\'><i class=\\'fas fa-box\\'></i></div>'">`;
         } else {
-            imgHtml = `<div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: #f0f0f0; border-radius: 4px; color: #999;"><i class="fas fa-box"></i></div>`;
+            imgHtml = `<div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: var(--bg-light); border-radius: 4px; color: var(--text-muted);"><i class="fas fa-box"></i></div>`;
         }
 
         tr.innerHTML = `
@@ -137,11 +137,11 @@ function renderLowStockList(list) {
 
     list.forEach(item => {
         const tr = document.createElement('tr');
-        tr.style.borderBottom = '1px solid #eee';
+        tr.style.borderBottom = '1px solid var(--border-color)';
         tr.innerHTML = `
             <td style="padding: 0.75rem;" data-label="Producto">${item.product_name}</td>
             <td style="padding: 0.75rem; color: var(--danger-color); font-weight: bold;" data-label="Stock">${item.current_stock}</td>
-            <td style="padding: 0.75rem; color: #7f8c8d;" data-label="Mínimo">${item.min_stock}</td>
+            <td style="padding: 0.75rem; color: var(--text-light);" data-label="Mínimo">${item.min_stock}</td>
         `;
         tbody.appendChild(tr);
     });
@@ -171,19 +171,19 @@ function renderRecentSalesList(list) {
         item.products.slice(0, 5).forEach(prod => { // Limit to 5 icons to prevent overflow
             const imagePath = getRelativeImagePath(prod.image);
             if (imagePath) {
-                productsHtml += `<img src="${imagePath}" alt="${prod.name}" title="${prod.name}" style="width: 30px; height: 30px; object-fit: cover; border-radius: 4px; border: 1px solid #eee;" onerror="this.outerHTML='<div title=\\'${prod.name}\\' style=\\'width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; background: #f0f0f0; border-radius: 4px; color: #999;\\'><i class=\\'fas fa-box\\'></i></div>'">`;
+                productsHtml += `<img src="${imagePath}" alt="${prod.name}" title="${prod.name}" style="width: 30px; height: 30px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border-color);" onerror="this.outerHTML='<div title=\\'${prod.name}\\' style=\\'width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; background: var(--bg-light); border-radius: 4px; color: var(--text-muted);\\'><i class=\\'fas fa-box\\'></i></div>'">`;
             } else {
-                productsHtml += `<div title="${prod.name}" style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; background: #f0f0f0; border-radius: 4px; color: #999;"><i class="fas fa-box"></i></div>`;
+                productsHtml += `<div title="${prod.name}" style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; background: var(--bg-light); border-radius: 4px; color: var(--text-muted);"><i class="fas fa-box"></i></div>`;
             }
         });
         
         if (item.products.length > 5) {
-            productsHtml += `<div title="${item.products.length - 5} más..." style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; background: #e0e0e0; border-radius: 4px; color: var(--text-light); font-size: 0.8rem;">+${item.products.length - 5}</div>`;
+            productsHtml += `<div title="${item.products.length - 5} más..." style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; background: var(--bg-light); border-radius: 4px; color: var(--text-light); font-size: 0.8rem;">+${item.products.length - 5}</div>`;
         }
         productsHtml += '</div>';
 
         const tr = document.createElement('tr');
-        tr.style.borderBottom = '1px solid #eee';
+        tr.style.borderBottom = '1px solid var(--border-color)';
         tr.style.cursor = 'pointer';
         tr.title = `Clic para ver detalle de la venta #${item.sale_id}`;
         tr.innerHTML = `
@@ -215,7 +215,7 @@ async function showSaleDetail(saleId) {
     title.textContent = `Venta #${saleId}`;
     body.innerHTML = (typeof saleDetailSkeletonHTML === 'function')
         ? saleDetailSkeletonHTML()
-        : '<div style="text-align:center; padding: 2rem;"><i class="fas fa-spinner fa-spin" style="font-size: 1.5rem; color: #999;"></i><p>Cargando detalle...</p></div>';
+        : '<div style="text-align:center; padding: 2rem;"><i class="fas fa-spinner fa-spin" style="font-size: 1.5rem; color: var(--text-muted);"></i><p>Cargando detalle...</p></div>';
     if (typeof modal.showModal === 'function') {
         modal.showModal();
     } else {
@@ -238,7 +238,7 @@ async function showSaleDetail(saleId) {
         const metodo = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', mixed: 'Mixto' }[d.payment_method] || d.payment_method;
 
         let html = `
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 1rem; background: #f8f9fa; border-radius: 10px; padding: 0.9rem 1rem; margin-bottom: 1rem; font-size: 0.9rem;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 1rem; background: var(--bg-light); border-radius: 10px; padding: 0.9rem 1rem; margin-bottom: 1rem; font-size: 0.9rem;">
                 <div><strong>Fecha:</strong> ${fecha}</div>
                 <div><strong>Método:</strong> ${metodo}</div>
                 <div><strong>Subtotal:</strong> ${formatCurrency(d.subtotal)}</div>
@@ -261,7 +261,7 @@ async function showSaleDetail(saleId) {
             d.items.forEach(it => {
                 html += `
                     <tr>
-                        <td data-label="Producto"><strong>${escapeHtml(it.product_name || 'Producto')}</strong>${it.category_name ? `<br><small style="color:#999;">${escapeHtml(it.category_name)}</small>` : ''}</td>
+                        <td data-label="Producto"><strong>${escapeHtml(it.product_name || 'Producto')}</strong>${it.category_name ? `<br><small style="color:var(--text-muted);">${escapeHtml(it.category_name)}</small>` : ''}</td>
                         <td data-label="Cant." style="text-align:center;">${formatQuantity(it.quantity)}</td>
                         <td data-label="P. Unit." style="text-align:right;">${formatCurrency(it.unit_price)}</td>
                         <td data-label="Total" style="text-align:right; font-weight:bold;">${formatCurrency(it.total)}</td>
@@ -308,6 +308,7 @@ function renderSalesChart(chartData) {
     // Get colors from CSS variables
     const styles = getComputedStyle(document.documentElement);
     const primaryColor = styles.getPropertyValue('--primary-color').trim();
+    const gridColor = styles.getPropertyValue('--border-color').trim() || '#f0f0f0';
     const secondaryColor = styles.getPropertyValue('--secondary-color').trim();
 
     // Helper to convert hex to rgba
@@ -383,7 +384,7 @@ function renderSalesChart(chartData) {
             scales: {
                 y: {
                     beginAtZero: true,
-                    grid: { borderDash: [2, 4], color: '#f0f0f0' },
+                    grid: { borderDash: [2, 4], color: gridColor },
                     ticks: {
                         callback: function (value) {
                             return new Intl.NumberFormat('es-MX', {

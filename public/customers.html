@@ -71,7 +71,7 @@
                             </tr>
                         </thead>
                         <tbody id="customersTableBody">
-                            <tr><td colspan="6" style="text-align:center; padding:2rem; color:#999;">
+                            <tr><td colspan="6" style="text-align:center; padding:2rem; color:var(--text-muted);">
                                 <i class="fas fa-spinner fa-spin"></i> Cargando clientes...
                             </td></tr>
                         </tbody>
@@ -189,7 +189,7 @@
             document.getElementById('totalBalance').textContent = fmtMXN(totalBal);
 
             if (!list.length) {
-                body.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:2rem; color:#999;">Sin clientes registrados. Crea el primero con "Nuevo Cliente".</td></tr>`;
+                body.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:2rem; color:var(--text-muted);">Sin clientes registrados. Crea el primero con "Nuevo Cliente".</td></tr>`;
                 return;
             }
             body.innerHTML = list.map(c => `
@@ -200,7 +200,7 @@
                     <td data-label="Límite">${Number(c.credit_limit) > 0 ? fmtMXN(c.credit_limit) : 'Sin límite'}</td>
                     <td data-label="Estado"><span style="color:${c.status === 'active' ? 'var(--success-color)' : 'var(--danger-color)'};">${c.status === 'active' ? 'Activo' : 'Inactivo'}</span></td>
                     <td data-label="Acciones">
-                        <button class="btn btn-sm" onclick="event.stopPropagation(); openCustomerModal(${c.customer_id})" title="Editar" style="margin-right:6px; padding:4px 10px; border-radius:6px; border:none; background:#f0f0f0; cursor:pointer;"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-sm" onclick="event.stopPropagation(); openCustomerModal(${c.customer_id})" title="Editar" style="margin-right:6px; padding:4px 10px; border-radius:6px; border:none; background:var(--bg-light); cursor:pointer;"><i class="fas fa-edit"></i></button>
                         <button class="btn btn-sm" onclick="event.stopPropagation(); deleteCustomer(${c.customer_id})" title="Eliminar" style="padding:4px 10px; border-radius:6px; border:none; background:#fdeaea; color: var(--danger-color); cursor:pointer;"><i class="fas fa-trash"></i></button>
                     </td>
                 </tr>
@@ -305,7 +305,7 @@
                         <td data-label="Total" style="text-align:right;">${fmtMXN(s.total)}</td>
                         <td data-label="Pagado" style="text-align:right; color: var(--success-color);">${fmtMXN(s.amount_paid)}</td>
                         <td data-label="Estado">${s.status === 'completed' ? (Number(s.amount_paid) >= Number(s.total) ? 'Pagada' : 'Apartado') : s.status}</td>
-                    </tr>`).join('') || '<tr><td colspan="5" style="text-align:center; color:#999;">Sin ventas</td></tr>';
+                    </tr>`).join('') || '<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">Sin ventas</td></tr>';
 
                 let payRows = (payments || []).map(p => `
                     <tr>
@@ -313,22 +313,22 @@
                         <td data-label="Monto" style="text-align:right; color: var(--success-color);">+${fmtMXN(p.amount)}</td>
                         <td data-label="Método">${p.payment_method || 'cash'}</td>
                         <td data-label="Notas">${esc(p.notes || '—')}</td>
-                    </tr>`).join('') || '<tr><td colspan="4" style="text-align:center; color:#999;">Sin abonos</td></tr>';
+                    </tr>`).join('') || '<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Sin abonos</td></tr>';
 
                 body.innerHTML = `
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1rem;">
                         <div style="background: var(--primary-lighter); border-radius:10px; padding:10px 14px;">
-                            <div style="font-size:0.8rem; color:#666;">SALDO PENDIENTE</div>
+                            <div style="font-size:0.8rem; color:var(--text-light);">SALDO PENDIENTE</div>
                             <div style="font-size:1.3rem; font-weight:800; color: var(--warning-color);">${fmtMXN(customer.balance)}</div>
                         </div>
                         <div style="background: var(--primary-lighter); border-radius:10px; padding:10px 14px;">
-                            <div style="font-size:0.8rem; color:#666;">COMPRAS TOTALES</div>
+                            <div style="font-size:0.8rem; color:var(--text-light);">COMPRAS TOTALES</div>
                             <div style="font-size:1.3rem; font-weight:800; color: var(--success-color);">${customer.total_purchases || 0}</div>
                         </div>
                     </div>
                     <div style="display:flex; gap:10px; margin-bottom: 1.2rem;">
-                        <input type="number" id="paymentAmountInput" min="0.01" step="0.01" placeholder="Monto del abono" style="flex:1; padding:9px; border-radius:8px; border:1px solid #ddd;">
-                        <select id="paymentMethodInput" style="padding:9px; border-radius:8px; border:1px solid #ddd;">
+                        <input type="number" id="paymentAmountInput" min="0.01" step="0.01" placeholder="Monto del abono" style="flex:1; padding:9px; border-radius:8px; border:1px solid var(--border-color);">
+                        <select id="paymentMethodInput" style="padding:9px; border-radius:8px; border:1px solid var(--border-color);">
                             <option value="cash">Efectivo</option>
                             <option value="card">Tarjeta</option>
                             <option value="transfer">Transferencia</option>

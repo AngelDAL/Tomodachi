@@ -214,7 +214,7 @@ function bindEvents() {
                 .then(code => {
                     if (code && input) {
                         input.value = code;
-                        input.style.backgroundColor = '#e8f0fe';
+                        input.style.backgroundColor = 'var(--primary-light)';
                         setTimeout(() => input.style.backgroundColor = '', 1500);
                     }
                 })
@@ -248,7 +248,7 @@ function bindEvents() {
                         const input = target === scanBarcodeBtn ? barcodeInput : qrInput;
                         if (input) {
                             input.value = decodedText;
-                            input.style.backgroundColor = '#e8f0fe';
+                            input.style.backgroundColor = 'var(--primary-light)';
                             setTimeout(() => input.style.backgroundColor = '', 1500);
                         }
                         stopMiniScanner();
@@ -1194,14 +1194,14 @@ function renderCategoriesList() {
     if (!list) return;
     
     if (categories.length === 0) {
-        list.innerHTML = '<li style="padding: 10px; text-align: center; color: #999;">No hay categorías registradas</li>';
+        list.innerHTML = '<li style="padding: 10px; text-align: center; color: var(--text-muted);">No hay categorías registradas</li>';
         return;
     }
     
     list.innerHTML = categories.map(cat => `
-        <li style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; gap: 15px;">
+        <li style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--border-color); gap: 15px;">
             <div style="display: flex; align-items: center; gap: 15px; flex: 1;">
-                <div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: #f8f9fa; border-radius: 8px; color: var(--primary-color); flex-shrink: 0;">
+                <div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: var(--bg-light); border-radius: 8px; color: var(--primary-color); flex-shrink: 0;">
                     <i class="fas ${cat.icon_class || 'fa-tag'}" style="font-size: 1.2rem;"></i>
                 </div>
                 <div style="font-weight: 600; font-size: 1rem;">${escapeHtml(cat.category_name)}</div>
@@ -1211,8 +1211,8 @@ function renderCategoriesList() {
                     <i class="fas fa-trash"></i>
                 </button>
                 <div id="confirm-del-${cat.category_id}" style="display: none; gap: 5px; align-items: center;">
-                    <span style="font-size: 0.8em; color: #d9534f; margin-right: 5px;">¿Borrar?</span>
-                    <button type="button" class="btn-danger" style="padding: 2px 6px; font-size: 0.8em; background: #d9534f;" onclick="executeDeleteCategory(${cat.category_id})" title="Sí, borrar">
+                    <span style="font-size: 0.8em; color: var(--danger-color); margin-right: 5px;">¿Borrar?</span>
+                    <button type="button" class="btn-danger" style="padding: 2px 6px; font-size: 0.8em; background: var(--danger-color);" onclick="executeDeleteCategory(${cat.category_id})" title="Sí, borrar">
                         <i class="fas fa-check"></i>
                     </button>
                     <button type="button" class="btn-secondary" style="padding: 2px 6px; font-size: 0.8em;" onclick="cancelDeleteCategory(${cat.category_id})" title="Cancelar">
@@ -1424,7 +1424,7 @@ window.fetchByCode = function(code) {
             if (barcodeInput) {
                 barcodeInput.value = code; // Usar código original
                 // Resaltar que se llenó automáticamente
-                barcodeInput.style.backgroundColor = '#e8f0fe';
+                barcodeInput.style.backgroundColor = 'var(--primary-light)';
                 setTimeout(() => barcodeInput.style.backgroundColor = '', 2000);
                 
                 // Enfocar nombre

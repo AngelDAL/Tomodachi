@@ -561,7 +561,7 @@
                         
                         <div class="ai-tabs" style="display: flex; gap: 5px; margin-bottom: 15px; background: #eee; padding: 4px; border-radius: 8px;">
                             <button class="ai-tab active" onclick="switchAIMode('enhance')" style="flex: 1; border: none; background: white; padding: 8px; border-radius: 6px; cursor: pointer; font-weight: 600; color: var(--primary-color); box-shadow: 0 2px 4px rgba(0,0,0,0.1);">Mejorar</button>
-                            <button class="ai-tab" onclick="switchAIMode('studio')" style="flex: 1; border: none; background: transparent; padding: 8px; border-radius: 6px; cursor: pointer; font-weight: 600; color: #666;">Estudio</button>
+                            <button class="ai-tab" onclick="switchAIMode('studio')" style="flex: 1; border: none; background: transparent; padding: 8px; border-radius: 6px; cursor: pointer; font-weight: 600; color: var(--text-light);">Estudio</button>
                         </div>
 
                         <!-- MODO MEJORAR (Original) -->
@@ -603,7 +603,7 @@
                         <div id="modeStudio" class="ai-mode-content" style="display:none;">
                             <div class="form-group">
                                 <label>Tipo de Fondo</label>
-                                <select id="studioBgType" class="form-control" onchange="toggleStudioOptions()" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ddd;">
+                                <select id="studioBgType" class="form-control" onchange="toggleStudioOptions()" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color);">
                                     <option value="generate">Generar Escenario (IA)</option>
                                     <option value="white">Fondo Blanco / Transparente</option>
                                 </select>
@@ -681,7 +681,7 @@
                             </button>
                             <div class="ai-suggestions">
                                 <label>Sugerencia de Descripción:</label>
-                                <p id="aiDescriptionSuggestion" style="font-size: 0.9em; font-style: italic; color: #666; background: var(--bg-light); padding: 10px; border-radius: 5px; margin-top: 5px;"></p>
+                                <p id="aiDescriptionSuggestion" style="font-size: 0.9em; font-style: italic; color: var(--text-light); background: var(--bg-light); padding: 10px; border-radius: 5px; margin-top: 5px;"></p>
                                 <button class="btn-secondary btn-sm" onclick="copyAIDescription()" style="margin-top: 5px; width: 100%;">Copiar Descripción</button>
                             </div>
                         </div>
@@ -726,7 +726,7 @@
     .btn-strength {
         flex: 1;
         padding: 10px;
-        border: 1px solid #ddd;
+        border: 1px solid var(--border-color);
         background: var(--bg-light);
         border-radius: 6px;
         cursor: pointer;
@@ -737,7 +737,7 @@
         gap: 5px;
         font-size: 0.9em;
     }
-    .btn-strength i { font-size: 1.2em; color: #666; }
+    .btn-strength i { font-size: 1.2em; color: var(--text-light); }
     .btn-strength.active {
         background: var(--info-color);
         border-color: var(--info-color);
@@ -802,14 +802,14 @@
     .comp-label {
         font-size: 0.85em;
         font-weight: bold;
-        color: #555;
+        color: var(--text-medium);
         width: 60px;
         text-align: center;
     }
     .mobile-hint {
         text-align: center;
         font-size: 0.8em;
-        color: #999;
+        color: var(--text-muted);
         margin-top: -5px;
     }
 </style>

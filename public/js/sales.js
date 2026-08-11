@@ -874,7 +874,7 @@ function promptBulkQuantity(prod) {
           <button class="modal-close" onclick="closeBulkModal()"><i class="fas fa-times"></i></button>
         </div>
         <div class="modal-body">
-          <p style="margin-bottom: 10px; color: #666;">
+          <p style="margin-bottom: 10px; color: var(--text-light);">
             <strong>Precio por ${unit}:</strong> ${formatCurrency(prod.unit_price)}
           </p>
           <div class="form-group">
@@ -887,7 +887,7 @@ function promptBulkQuantity(prod) {
               <p style="color: var(--success-color); margin: 0; font-size: 0.9rem; font-weight: 600;">
                 <i class="fas fa-balance-scale"></i> Leyendo balanza...
               </p>
-              <p style="color: #558b2f; margin: 5px 0 0 0; font-size: 0.85rem;">
+              <p style="color: var(--success-color); margin: 5px 0 0 0; font-size: 0.85rem;">
                 Peso actual: <strong id="bulkScaleWeight">--.--</strong> ${unit}
               </p>
             </div>
@@ -1080,7 +1080,7 @@ function injectCartTabsUI() {
             width: 100%;
             background: var(--bg-light);
             padding: 10px 10px 0;
-            border-bottom: 1px solid #dee2e6;
+            border-bottom: 1px solid var(--border-color);
             gap: 5px;
             overflow-x: auto;
             scrollbar-width: none; /* Firefox */
@@ -1093,7 +1093,7 @@ function injectCartTabsUI() {
             padding: 12px 5px;
             border: 1px solid transparent;
             background: var(--border-color);
-            color: #6c757d;
+            color: var(--text-light);
             border-radius: 8px 8px 0 0;
             cursor: pointer;
             position: relative;
@@ -1106,13 +1106,13 @@ function injectCartTabsUI() {
             font-size: 0.9rem;
             outline: none;
         }
-        .cart-tab-btn:hover { background: #dee2e6; }
+        .cart-tab-btn:hover { background: var(--bg-light); }
         
         .cart-tab-btn.active {
-            background: #fff;
+            background: var(--bg-card);
             color: var(--primary-color, #2e7d32);
-            border-color: #dee2e6;
-            border-bottom-color: #fff;
+            border-color: var(--border-color);
+            border-bottom-color: var(--bg-card);
             margin-bottom: -1px;
             box-shadow: 0 -2px 4px rgba(0,0,0,0.02);
             font-weight: 700;
@@ -1218,7 +1218,7 @@ function setupHistoryModal() {
   
     async function renderHistoryContent() {
         if(!body) return;
-        body.innerHTML = `<div class="empty-state" style="text-align:center; padding: 20px; color: #888;">
+        body.innerHTML = `<div class="empty-state" style="text-align:center; padding: 20px; color: var(--text-muted);">
             <i class="fas fa-spinner fa-spin fa-2x"></i><p>Cargando historial...</p>
         </div>`;
         
@@ -1234,7 +1234,7 @@ function setupHistoryModal() {
             const data = await res.json();
             
             if(!data.success || !data.data || data.data.length === 0) {
-                 body.innerHTML = `<div class="empty-state" style="text-align:center; padding: 20px; color: #888;">
+                 body.innerHTML = `<div class="empty-state" style="text-align:center; padding: 20px; color: var(--text-muted);">
                     <i class="fas fa-history fa-2x"></i><p>No hay ventas recientes.</p>
                  </div>`;
                  return;
@@ -1248,19 +1248,19 @@ function setupHistoryModal() {
                                  sale.payment_method === 'transfer' ? 'Transferencia' : 'Mixto';
 
                 return `
-                <div class="history-card" style="border-left: 4px solid var(--primary-color); padding: 12px; margin-bottom: 10px; background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                <div class="history-card" style="border-left: 4px solid var(--primary-color); padding: 12px; margin-bottom: 10px; background: var(--bg-card); border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
                     <div class="history-card-header" style="display: flex; justify-content: space-between; margin-bottom: 6px; border-bottom: 1px dashed #eee; padding-bottom: 6px;">
                         <span class="h-id" style="font-weight: bold;">#${sale.sale_id}</span>
-                        <span class="h-date" style="font-size: 0.85rem; color: #888;">${date}</span>
+                        <span class="h-date" style="font-size: 0.85rem; color: var(--text-muted);">${date}</span>
                     </div>
-                    <div class="history-card-body" style="font-size: 0.9rem; color: #555;">
+                    <div class="history-card-body" style="font-size: 0.9rem; color: var(--text-medium);">
                         <div style="display: flex; justify-content: space-between;">
                             <span>Items: <strong>${sale.total_items || '?'}</strong></span>
                             <span>Pago: <strong>${payMethod}</strong></span>
                         </div>
                     </div>
                     <div class="history-card-footer" style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;">
-                        <div class="h-total-price" style="font-size: 1.1rem; font-weight: bold; color: #333;">$${total}</div>
+                        <div class="h-total-price" style="font-size: 1.1rem; font-weight: bold; color: var(--text-color);">$${total}</div>
                         <button class="btn-reprint" onclick="viewSaleDetails(${sale.sale_id})" style="background: var(--bg-light); border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;"><i class="fas fa-eye"></i> Ver</button>
                     </div>
                 </div>
@@ -1294,7 +1294,7 @@ function renderHistoryView() {
   let html = '';
 
   if (sales.length === 0) {
-    html += '<div class="empty-cart" style="text-align: center; padding: 20px; color: #999;">No hay ventas recientes registradas en este dispositivo.</div>';
+    html += '<div class="empty-cart" style="text-align: center; padding: 20px; color: var(--text-muted);">No hay ventas recientes registradas en este dispositivo.</div>';
   } else {
     html += sales.map((s, idx) => `
             <div class="history-item-card">
@@ -1818,7 +1818,7 @@ function renderGallery(list, animate = false) {
   productGallery.style.display = 'grid';
 
   if (!list || list.length === 0) {
-    productGallery.innerHTML = '<div class="empty-state" style="grid-column: 1/-1; text-align: center; padding: 40px; color: #999;"><i class="fas fa-search" style="font-size: 2rem; margin-bottom: 10px;"></i><p>No se encontraron productos</p></div>';
+    productGallery.innerHTML = '<div class="empty-state" style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);"><i class="fas fa-search" style="font-size: 2rem; margin-bottom: 10px;"></i><p>No se encontraron productos</p></div>';
     return;
   }
 
@@ -1831,7 +1831,7 @@ function renderGallery(list, animate = false) {
     let priceHtml = '';
     if (hasPromo) {
          priceHtml = `
-            <span class="original-price" style="text-decoration: line-through; font-size: 0.8em; color: #999;">${formatCurrency(p.price)}</span>
+            <span class="original-price" style="text-decoration: line-through; font-size: 0.8em; color: var(--text-muted);">${formatCurrency(p.price)}</span>
             <span class="promo-price" style="color: var(--danger-color); font-weight: bold;">${formatCurrency(promoPrice)}</span>
          `;
     } else {
@@ -1854,7 +1854,7 @@ function renderGallery(list, animate = false) {
            title="${escapeHtml(p.product_name)}">
              
         <div class="img-wrap">
-            ${imagePath ? `<img src="${imagePath}" loading="lazy" alt="${escapeHtml(p.product_name)}" onerror="this.parentNode.innerHTML='<i class=\\'fas fa-box\\'></i>'">` : '<i class="fas fa-box" style="color:#eee; font-size:1.5rem;"></i>'}
+            ${imagePath ? `<img src="${imagePath}" loading="lazy" alt="${escapeHtml(p.product_name)}" onerror="this.parentNode.innerHTML='<i class=\\'fas fa-box\\'></i>'">` : '<i class="fas fa-box" style="color:var(--text-light); font-size:1.5rem;"></i>'}
             ${stockBadge}
         </div>
         
@@ -2250,7 +2250,7 @@ function showScannedProductOverlay(product) {
           `<div style="width: 120px; height: 120px; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.9); border-radius: 8px; color: #ccc; font-size: 3rem;"><i class="fas fa-box"></i></div>`
         }
         <div class="scanned-info">
-          <h3 style="margin:0 0 5px; font-size:1.1rem; color:#222; font-weight: 700; text-shadow: 0 1px 1px rgba(255,255,255,0.8);">${escapeHtml(product.product_name)}</h3>
+          <h3 style="margin:0 0 5px; font-size:1.1rem; color:var(--text-color); font-weight: 700; text-shadow: 0 1px 1px rgba(255,255,255,0.8);">${escapeHtml(product.product_name)}</h3>
           <span class="price" style="font-size:1.4rem; font-weight:bold; color:var(--primary-color); text-shadow: 0 2px 0 rgba(255,255,255,1);">${formatCurrency(product.price)}</span>
         </div>
       </div>
@@ -2351,7 +2351,7 @@ function printTicket(data) {
         table { width: 100%; border-collapse: collapse; }
         .total { margin-top: 10px; border-top: 1px dashed #000; padding-top: 10px; text-align: right; font-weight: bold; font-size: 14px; }
         .footer { margin-top: 20px; text-align: center; font-size: 10px; }
-        .powered-by { font-size: 8px; color: #888; margin-top: 5px; }
+        .powered-by { font-size: 8px; color: var(--text-muted); margin-top: 5px; }
       </style>
     </head>
     <body>
@@ -2483,7 +2483,7 @@ function showParkedSalesList() {
                 <strong>${s.timestamp}</strong><br>
                 ${s.items.length} items - Total: ${formatCurrency(s.total)}
             </div>
-            <button onclick="restoreParkedSale(${s.id}); document.getElementById('${modalId}').style.display='none';" style="background: #4caf50; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">Recuperar</button>
+            <button onclick="restoreParkedSale(${s.id}); document.getElementById('${modalId}').style.display='none';" style="background: var(--success-color); color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">Recuperar</button>
         </div>
     `).join('');
 
@@ -2560,7 +2560,7 @@ function injectMoneyPanelStyles() {
         /* Estilos comunes */
         .money-panel-tooltip {
             background: white;
-            border: 1px solid #ddd;
+            border: 1px solid var(--border-color);
             box-shadow: 0 4px 20px rgba(0,0,0,0.15);
             border-radius: 8px;
             padding: 15px;
@@ -2626,19 +2626,19 @@ function injectMoneyPanelStyles() {
         @keyframes fadeIn { from { opacity: 0; transform: translate(-50%, -45%); } to { opacity: 1; transform: translate(-50%, -50%); } }
 
         .money-section { margin-bottom: 15px; }
-        .money-section-title { font-size: 0.75rem; color: #888; margin-bottom: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        .money-section-title { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
         .money-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
         
         .money-btn {
             position: relative;
-            border: 1px solid #e0e0e0;
-            background: #fff;
+            border: 1px solid var(--border-color);
+            background: var(--bg-card);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: bold;
-            color: #333;
+            color: var(--text-color);
             transition: all 0.1s;
             user-select: none;
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
@@ -2650,7 +2650,7 @@ function injectMoneyPanelStyles() {
         .money-btn.bill {
             height: 45px;
             border-radius: 4px;
-            background: linear-gradient(135deg, #fdfbf7 0%, #f4f1ea 100%);
+            background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-light) 100%);
             color: var(--success-color);
             border-color: #c8e6c9;
             font-family: 'Courier New', monospace;
@@ -2680,7 +2680,7 @@ function injectMoneyPanelStyles() {
         .money-btn.coin.silver {
             border-color: #bdc3c7;
             background: radial-gradient(circle at 30% 30%, #fff 0%, #bdc3c7 100%);
-            color: #555;
+            color: var(--text-medium);
         }
         .money-btn.coin.copper {
             border-color: #d35400;
@@ -2738,16 +2738,16 @@ function injectMoneyPanelStyles() {
             justify-content: space-between;
             margin-top: 10px;
             padding-top: 10px;
-            border-top: 1px solid #eee;
+            border-top: 1px solid var(--border-color);
         }
         .btn-money-action {
             font-size: 0.8rem;
             padding: 6px 12px;
             background: var(--bg-light);
-            border: 1px solid #ddd;
+            border: 1px solid var(--border-color);
             border-radius: 4px;
             cursor: pointer;
-            color: #555;
+            color: var(--text-medium);
         }
         .btn-money-action:hover { background: #eee; }
         .btn-money-action.clear { color: #d32f2f; border-color: #ffcdd2; background: #ffebee; }
@@ -2852,8 +2852,8 @@ function createMoneyPanel() {
   const bills = [20, 50, 100, 200, 500, 1000];
 
   let html = `
-        <div class="money-panel-header" style="text-align: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
-            <div style="font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Total Acumulado</div>
+        <div class="money-panel-header" style="text-align: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color);">
+            <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Total Acumulado</div>
             <div id="money-panel-total" style="font-size: 2.2rem; font-weight: 800; color: var(--primary-color, #2e7d32); line-height: 1.2; margin-top: 5px;">$0.00</div>
         </div>
 
@@ -3137,29 +3137,29 @@ async function showScaleProtocolDialog() {
             <h3><i class="fas fa-balance-scale"></i> Seleccionar Protocolo</h3>
           </div>
           <div class="modal-body">
-            <p style="color: #666; margin-bottom: 15px;">
+            <p style="color: var(--text-light); margin-bottom: 15px;">
               Selecciona el protocolo compatible con tu balanza:
             </p>
             <div class="form-group">
-              <label style="display: flex; align-items: center; padding: 10px; border: 2px solid #e0e0e0; border-radius: 6px; cursor: pointer; margin-bottom: 10px; transition: all 0.2s;">
+              <label style="display: flex; align-items: center; padding: 10px; border: 2px solid var(--border-color); border-radius: 6px; cursor: pointer; margin-bottom: 10px; transition: all 0.2s;">
                 <input type="radio" name="protocol" value="generic" checked style="margin-right: 10px;">
                 <span>
                   <strong>Genérico</strong><br>
-                  <small style="color: #999;">9600 baud, 8N1</small>
+                  <small style="color: var(--text-muted);">9600 baud, 8N1</small>
                 </span>
               </label>
-              <label style="display: flex; align-items: center; padding: 10px; border: 2px solid #e0e0e0; border-radius: 6px; cursor: pointer; margin-bottom: 10px; transition: all 0.2s;">
+              <label style="display: flex; align-items: center; padding: 10px; border: 2px solid var(--border-color); border-radius: 6px; cursor: pointer; margin-bottom: 10px; transition: all 0.2s;">
                 <input type="radio" name="protocol" value="datalogic" style="margin-right: 10px;">
                 <span>
                   <strong>Datalogic</strong><br>
-                  <small style="color: #999;">9600 baud, 8O2</small>
+                  <small style="color: var(--text-muted);">9600 baud, 8O2</small>
                 </span>
               </label>
-              <label style="display: flex; align-items: center; padding: 10px; border: 2px solid #e0e0e0; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
+              <label style="display: flex; align-items: center; padding: 10px; border: 2px solid var(--border-color); border-radius: 6px; cursor: pointer; transition: all 0.2s;">
                 <input type="radio" name="protocol" value="excell" style="margin-right: 10px;">
                 <span>
                   <strong>Excell</strong><br>
-                  <small style="color: #999;">1200 baud, 8N1</small>
+                  <small style="color: var(--text-muted);">1200 baud, 8N1</small>
                 </span>
               </label>
             </div>

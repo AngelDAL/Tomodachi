@@ -50,7 +50,7 @@
     --light-color: #f5f5f5;
 
     /* Text Colors */
-    --text-color: var(--text-color)333;
+    --text-color: var(--text-color);
     --text-medium: #555555;
     --text-light: #666666;
     --text-muted: #999999;

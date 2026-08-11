@@ -216,7 +216,7 @@
 
 .dashboard-table th,
 #reportTable th {
-    border-bottom: 2px solid #f0f0f0;
+    border-bottom: 2px solid var(--border-color);
     font-weight: bold;
     color: var(--text-color) !important;
     white-space: nowrap;
@@ -281,7 +281,7 @@
         align-items: center;
         text-align: right;
         padding: 0.75rem 1rem;
-        border-bottom: 1px solid #f5f5f5;
+        border-bottom: 1px solid var(--border-color);
         min-height: 40px;
     }
 
@@ -429,12 +429,12 @@
 }
 
 .btn-secondary {
-    background-color: #6c757d;
+    background-color: var(--text-light);
     color: white;
 }
 
 .btn-secondary:hover {
-    background-color: #5a6268;
+    background-color: var(--text-medium);
 }
 
 .btn-danger {
@@ -449,7 +449,7 @@
 .form-control {
     width: 100%;
     padding: 12px 20px;
-    border: 1px solid var(--border-input, #ddd);
+    border: 1px solid var(--border-color);
     border-radius: 30px; /* Más circular */
     font-size: 1rem;
     font-family: inherit;
@@ -502,7 +502,7 @@ body.plan-free .premium-locked::after {
     left: 50%;
     transform: translate(-50%, -50%);
     background-color: var(--text-color);
-    color: #f7d794; /* Gold variant */
+    color: var(--warning-color); /* Gold variant */
     padding: 5px 10px;
     border-radius: 4px;
     font-size: 0.8rem;

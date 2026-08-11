@@ -44,7 +44,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 16px;
-    border-bottom: 1px solid #e0e0e0;
+    border-bottom: 1px solid var(--border-color);
 }
 
 #bulkQuantityModal .modal-header h3 {
@@ -93,7 +93,7 @@
 #bulkQuantityModal .form-group input {
     width: 100%;
     padding: 12px;
-    border: 2px solid #e0e0e0;
+    border: 2px solid var(--border-color);
     border-radius: 8px;
     font-size: 1rem;
     transition: all 0.2s;
@@ -124,7 +124,7 @@
     display: flex;
     gap: 10px;
     padding: 16px;
-    border-top: 1px solid #e0e0e0;
+    border-top: 1px solid var(--border-color);
     justify-content: flex-end;
 }
 
@@ -140,7 +140,7 @@
 }
 
 #bulkQuantityModal .btn-cancel {
-    background: #e0e0e0;
+    background: var(--bg-light);
     color: var(--text-color);
 }
 

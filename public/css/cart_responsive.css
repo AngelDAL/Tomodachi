@@ -35,7 +35,7 @@
     flex-shrink: 0;
     border-radius: 8px;
     overflow: hidden;
-    background: #f4f4f4;
+    background: var(--bg-light);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -49,7 +49,7 @@
 }
 
 .cart-item-img-placeholder {
-    color: #ccc;
+    color: var(--text-muted);
     font-size: 1.2rem;
 }
 
@@ -85,19 +85,19 @@
 
 .cart-orig-price {
     text-decoration: line-through;
-    color: #aaa;
+    color: var(--text-muted);
     font-weight: 400;
     font-size: 0.85rem;
     margin-right: 4px;
 }
 
 .cart-disc-price {
-    color: #dc3545;
+    color: var(--danger-color);
 }
 
 .cart-disc-badge {
     display: inline-block;
-    background: #dc3545;
+    background: var(--danger-color);
     color: #fff;
     font-size: 0.65rem;
     font-weight: 700;
@@ -270,7 +270,7 @@
 .product-search-container {
     padding: 12px 16px;
     background: var(--bg-card);
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--border-color);
     position: sticky; /* Sticky para que al scroll se quede arriba */
     top: 0;
     z-index: 20;
@@ -279,7 +279,7 @@
 .product-search-container .search-wrapper {
     display: flex;
     align-items: center;
-    background: #f4f6f8;
+    background: var(--bg-light);
     border-radius: 20px;
     padding: 6px 12px;
     border: 1px solid transparent;
@@ -293,7 +293,7 @@
 }
 
 .product-search-container .search-icon {
-    color: #aaa;
+    color: var(--text-muted);
     margin-right: 8px;
 }
 
@@ -388,7 +388,7 @@
     .product-filters {
         flex-shrink: 0;
         padding: 8px 12px;
-        border-bottom: 1px solid #f9f9f9;
+        border-bottom: 1px solid var(--border-color);
         background: var(--bg-card);
     }
 
@@ -448,7 +448,7 @@
     height: 38px;
     border-radius: 50%;
     border: none;
-    background: #e0e0e0; /* Gris solicitado */
+    background: var(--bg-light); /* Gris solicitado */
     color: var(--text-medium);
     cursor: pointer;
     display: flex;
@@ -461,7 +461,7 @@
 }
 
 .config-btn-circle:hover {
-    background: #d0d0d0;
+    background: var(--bg-light);
     color: var(--text-color);
 }
 
@@ -503,7 +503,7 @@
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    border-bottom: 1px solid #f5f5f5;
+    border-bottom: 1px solid var(--border-color);
     margin-bottom: 4px;
 }
 
@@ -523,7 +523,7 @@
 }
 
 .dropdown-item:hover {
-    background: #f8f9fa;
+    background: var(--bg-light);
     color: var(--primary-color);
 }
 
@@ -674,7 +674,7 @@
     .view-switch-btn.active {
         color: var(--primary-color);
         border-bottom-color: var(--primary-color);
-        background: #fcfcfc;
+        background: var(--bg-lightest);
     }
 
     .view-switch-btn i {
@@ -722,7 +722,7 @@
         flex-shrink: 0;
         background: var(--bg-card);
         z-index: 50; /* Sobreponer contenido scrolleado */
-        border-top: 1px solid #eee;
+        border-top: 1px solid var(--border-color);
         box-shadow: 0 -4px 12px rgba(0,0,0,0.08); /* Sombra hacia arriba para destacar */
         padding-bottom: max(16px, env(safe-area-inset-bottom)); /* iPhone X fix */
     }
@@ -736,7 +736,7 @@
 /* Dropdown extras */
 .dropdown-divider {
     height: 1px;
-    background: #eee;
+    background: var(--bg-light);
     margin: 6px 12px;
 }
 

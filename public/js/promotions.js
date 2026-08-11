@@ -334,7 +334,7 @@ async function loadProductsForGrid() {
 function renderProductsGrid(products) {
     const grid = document.getElementById("productsGrid");
     if (products.length === 0) {
-        grid.innerHTML = "<div style='grid-column: 1/-1; text-align:center; padding: 20px; color:#64748b;'>No se encontraron productos</div>";
+        grid.innerHTML = "<div style='grid-column: 1/-1; text-align:center; padding: 20px; color:var(--text-light);'>No se encontraron productos</div>";
         return;
     }
     grid.innerHTML = products.map(p => {
@@ -388,7 +388,7 @@ function renderSelectedProductsList() {
             const imgPath = getRelativeImagePath(t.image_path);
             imgTag = `<img src="${imgPath}" alt="img">`;
         } else {
-            imgTag = `<div style="width:24px;height:24px;background:#334155;border-radius:50%;margin-right:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-box" style="font-size:10px;color:#cbd5e1;"></i></div>`;
+            imgTag = `<div style="width:24px;height:24px;background:var(--dark-color);border-radius:50%;margin-right:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-box" style="font-size:10px;color:#cbd5e1;"></i></div>`;
         }
 
         return `
@@ -749,7 +749,7 @@ function renderPromotions(promotions) {
     list.className = "promotions-grid";
 
     if (!promotions || promotions.length === 0) {
-        list.innerHTML = "<p style='text-align:center; color:#888; padding:40px 0; grid-column: 1 / -1;'><i class='fas fa-tags' style='font-size:2rem; color:#ddd; margin-bottom:10px; display:block;'></i>No hay promociones activas.<br><small style='color:#aaa;'>Crea una nueva para empezar</small></p>";
+        list.innerHTML = "<p style='text-align:center; color:var(--text-muted); padding:40px 0; grid-column: 1 / -1;'><i class='fas fa-tags' style='font-size:2rem; color:var(--text-muted); margin-bottom:10px; display:block;'></i>No hay promociones activas.<br><small style='color:var(--text-muted);'>Crea una nueva para empezar</small></p>";
         document.getElementById('promoPagination').style.display = 'none';
         return;
     }
@@ -1040,7 +1040,7 @@ function updateDrawerFields() {
                     <i class="fas fa-cubes"></i>
                     <input type="number" name="min_quantity" class="form-control" value="2" min="1" required>
                 </div>
-                <small style="font-size:0.75rem; color:#888;">Suma total de productos para el paquete.</small>
+                <small style="font-size:0.75rem; color:var(--text-muted);">Suma total de productos para el paquete.</small>
             </div>
         `;
     } else {
@@ -1143,7 +1143,7 @@ async function loadProductsForDrawer() {
 function renderDrawerProducts(products) {
     const grid = document.getElementById("drawerProductsGrid");
     if (products.length === 0) {
-        grid.innerHTML = "<div style='grid-column:1/-1; text-align:center; padding:20px; color:#64748b;'>No se encontraron productos</div>";
+        grid.innerHTML = "<div style='grid-column:1/-1; text-align:center; padding:20px; color:var(--text-light);'>No se encontraron productos</div>";
         return;
     }
     grid.innerHTML = products.map(p => {
@@ -1206,7 +1206,7 @@ function renderDrawerSelected() {
             const imgPath = getRelativeImagePath(t.image_path);
             imgTag = `<img src="${imgPath}" alt="img">`;
         } else {
-            imgTag = `<div style="width:24px;height:24px;background:#334155;border-radius:50%;margin-right:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-box" style="font-size:10px;color:#cbd5e1;"></i></div>`;
+            imgTag = `<div style="width:24px;height:24px;background:var(--dark-color);border-radius:50%;margin-right:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-box" style="font-size:10px;color:#cbd5e1;"></i></div>`;
         }
         return `
             <div class="selected-chip">

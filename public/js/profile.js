@@ -395,17 +395,17 @@ function confirmToggleUserStatus(userId, newStatus) {
     if (newStatus === 'inactive') {
         title.textContent = '¿Desactivar usuario?';
         msg.textContent = 'El usuario perderá acceso al sistema.';
-        iconContainer.style.background = '#fee2e2';
+        iconContainer.style.background = 'var(--danger-color)';
         icon.className = 'fas fa-exclamation-triangle';
-        icon.style.color = '#dc2626';
+        icon.style.color = 'var(--danger-dark)';
         confirmBtn.className = 'btn-danger';
         confirmBtn.textContent = 'Sí, desactivar';
     } else {
         title.textContent = '¿Activar usuario?';
         msg.textContent = 'El usuario recuperará acceso al sistema.';
-        iconContainer.style.background = '#dcfce7';
+        iconContainer.style.background = 'var(--success-color)';
         icon.className = 'fas fa-check-circle';
-        icon.style.color = '#16a34a';
+        icon.style.color = 'var(--success-dark)';
         confirmBtn.className = 'btn-save'; // o btn-primary
         confirmBtn.textContent = 'Sí, activar';
     }
@@ -698,7 +698,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const sub = await reg.pushManager.getSubscription();
             if (sub) {
                 btn.innerHTML = '<i class="fas fa-bell-slash"></i> Desactivar notificaciones';
-                btn.style.background = '#e74c3c';
+                btn.style.background = 'var(--danger-color)';
             } else {
                 btn.innerHTML = '<i class="fas fa-bell"></i> Activar notificaciones en este dispositivo';
                 btn.style.background = 'var(--primary-color)';

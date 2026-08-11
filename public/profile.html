@@ -31,7 +31,7 @@
             background: none;
             font-size: 1rem;
             cursor: pointer;
-            color: #666;
+            color: var(--text-light);
             border-bottom: 2px solid transparent;
             margin-bottom: -2px;
         }
@@ -86,7 +86,7 @@
             width: 40px;
             height: 40px;
             border-radius: 4px;
-            border: 1px solid #ddd;
+            border: 1px solid var(--border-color);
         }
         .badge {
             padding: 0.25rem 0.5rem;
@@ -128,7 +128,7 @@
         .close {
             font-size: 1.5rem;
             cursor: pointer;
-            color: #666;
+            color: var(--text-light);
         }
         .close:hover {
             color: #000;
@@ -262,7 +262,7 @@
                                     <input type="checkbox" name="show_onboarding" id="showOnboarding" style="width: auto;">
                                     <span>Mostrar tutorial de bienvenida</span>
                                 </label>
-                                <p style="font-size: 0.85rem; color: #666; margin-top: 5px; margin-left: 24px;">
+                                <p style="font-size: 0.85rem; color: var(--text-light); margin-top: 5px; margin-left: 24px;">
                                     Si se activa, se mostrarán guías de ayuda al navegar por el sistema.
                                 </p>
                             </div>
@@ -281,7 +281,7 @@
                         <form id="companyForm">
                             <div class="form-grid">
                                 <div class="form-group" style="grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 1rem;">
-                                    <div style="width: 100px; height: 100px; border-radius: 50%; overflow: hidden; border: 2px solid #eee; position: relative;">
+                                    <div style="width: 100px; height: 100px; border-radius: 50%; overflow: hidden; border: 2px solid var(--border-color); position: relative;">
                                         <img id="companyLogoPreview" src="assets/images/default-logo.png" alt="Logo" style="width: 100%; height: 100%; object-fit: cover;">
                                     </div>
                                     <label for="companyLogoInput" class="btn btn-secondary" style="cursor: pointer; font-size: 0.9rem; padding: 5px 10px;">
@@ -311,7 +311,7 @@
                                         <input type="checkbox" name="allow_negative_stock" id="allowNegativeStock" style="width: auto;">
                                         <span>Permitir ventas sin stock (Stock negativo)</span>
                                     </label>
-                                    <p style="font-size: 0.85rem; color: #666; margin-top: 5px; margin-left: 24px;">
+                                    <p style="font-size: 0.85rem; color: var(--text-light); margin-top: 5px; margin-left: 24px;">
                                         Si se activa, se podrán realizar ventas aunque el inventario sea 0 o menor.
                                     </p>
                                 </div>
@@ -320,7 +320,7 @@
                                         <input type="checkbox" name="require_open_register" id="requireOpenRegister" style="width: auto;">
                                         <span>Exigir apertura de caja antes de vender</span>
                                     </label>
-                                    <p style="font-size: 0.85rem; color: #666; margin-top: 5px; margin-left: 24px;">
+                                    <p style="font-size: 0.85rem; color: var(--text-light); margin-top: 5px; margin-left: 24px;">
                                         Si se activa, el punto de venta no venderá hasta que un encargado abra la caja
                                         formalmente con su monto inicial (recomendado para control de efectivo).
                                     </p>
@@ -329,7 +329,7 @@
                                     <button type="button" id="pushSubscribeBtn" class="btn" style="padding: 9px 16px; border-radius: 8px; background: var(--primary-color); color: #fff; border: none; cursor: pointer;">
                                         <i class="fas fa-bell"></i> Activar notificaciones en este dispositivo
                                     </button>
-                                    <p style="font-size: 0.85rem; color: #666; margin-top: 5px;">
+                                    <p style="font-size: 0.85rem; color: var(--text-light); margin-top: 5px;">
                                         Recibe avisos (ventas, stock bajo) aun con la app cerrada. Requiere
                                         configuración de llaves VAPID en el servidor (ver docs/PUSH.md).
                                     </p>
@@ -344,7 +344,7 @@
                                     </div>
                                     <div>
                                         <h5 style="margin-bottom: 0.3rem; font-size: 1.05rem;">Conecta tus asistentes y herramientas</h5>
-                                        <p style="color: #666; font-size: 0.9rem; max-width: 480px;">
+                                        <p style="color: var(--text-light); font-size: 0.9rem; max-width: 480px;">
                                             Crea claves de acceso para que tus herramientas se conecten a tu sistema:
                                             reportes automáticos, asistentes de IA, apps externas y más.
                                         </p>
@@ -361,7 +361,7 @@
                                     <i class="fas fa-file-excel"></i>
                                 </div>
                                 <h5 style="margin-bottom: 0.5rem; font-size: 1.2rem;">¿Tienes tus productos en un Excel?</h5>
-                                <p style="margin-bottom: 1.5rem; color: #666; max-width: 600px; margin-left: auto; margin-right: auto;">
+                                <p style="margin-bottom: 1.5rem; color: var(--text-light); max-width: 600px; margin-left: auto; margin-right: auto;">
                                     Si vienes de otro sistema o tienes un inventario previo, usa nuestra herramienta de importación para cargar todos tus productos, precios y existencias en segundos.
                                 </p>
                                 <button type="button" class="btn btn-primary" onclick="openImportGuide()">
@@ -373,7 +373,7 @@
                             </div>
 
                             <h4 style="margin-top: 2rem; margin-bottom: 1rem;">Personalización (Tema) <span style="font-size: 0.7em; background: #333; color: gold; padding: 2px 6px; border-radius: 4px; vertical-align: middle; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">PREMIUM</span></h4>
-                            <p style="margin-bottom: 1rem; color: #666; font-size: 0.9rem;">Personaliza los colores de tu tienda. Los cambios se verán reflejado en tiempo real.</p>
+                            <p style="margin-bottom: 1rem; color: var(--text-light); font-size: 0.9rem;">Personaliza los colores de tu tienda. Los cambios se verán reflejado en tiempo real.</p>
 
                             <div class="form-group" style="display: flex; align-items: center; gap: 12px; margin-bottom: 1.2rem; padding: 12px 16px; background: var(--bg-light); border-radius: 10px; flex-wrap: wrap;">
                                 <label style="margin: 0; font-weight: 600; flex: 1; min-width: 140px;"><i class="fas fa-circle-half-stroke" style="margin-right: 6px; color: var(--primary-color);"></i> Modo de tema</label>
@@ -388,96 +388,96 @@
                             <div class="theme-customizer-container premium-locked" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
                                 <!-- Controles de Color -->
                                 <div class="form-grid" id="themeControls" style="grid-template-columns: 1fr;">
-                                    <h5 style="margin-bottom: 1rem; color: #555;">Paleta de Colores</h5>
+                                    <h5 style="margin-bottom: 1rem; color: var(--text-medium);">Paleta de Colores</h5>
                                     
                                     <!-- Brand Colors -->
                                     <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
                                         <label style="margin: 0;">Color Primario</label>
                                         <div class="color-picker-group">
                                             <input type="color" name="primary_color" data-var="--primary-color" value="#4c77af" style="cursor: pointer;">
-                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid #ddd; border-radius: 4px; padding: 2px;">
+                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid var(--border-color); border-radius: 4px; padding: 2px;">
                                         </div>
                                     </div>
                                     <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
                                         <label style="margin: 0;">Color Secundario</label>
                                         <div class="color-picker-group">
                                             <input type="color" name="secondary_color" data-var="--secondary-color" value="#2196F3" style="cursor: pointer;">
-                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid #ddd; border-radius: 4px; padding: 2px;">
+                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid var(--border-color); border-radius: 4px; padding: 2px;">
                                         </div>
                                     </div>
 
-                                    <h5 style="margin: 1rem 0 0.5rem; color: #555;">Estados</h5>
+                                    <h5 style="margin: 1rem 0 0.5rem; color: var(--text-medium);">Estados</h5>
                                     <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
                                         <label style="margin: 0;">Éxito</label>
                                         <div class="color-picker-group">
                                             <input type="color" name="success_color" data-var="--success-color" value="#4CAF50" style="cursor: pointer;">
-                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid #ddd; border-radius: 4px; padding: 2px;">
+                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid var(--border-color); border-radius: 4px; padding: 2px;">
                                         </div>
                                     </div>
                                     <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
                                         <label style="margin: 0;">Peligro / Error</label>
                                         <div class="color-picker-group">
                                             <input type="color" name="danger_color" data-var="--danger-color" value="#f44336" style="cursor: pointer;">
-                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid #ddd; border-radius: 4px; padding: 2px;">
+                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid var(--border-color); border-radius: 4px; padding: 2px;">
                                         </div>
                                     </div>
                                     <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
                                         <label style="margin: 0;">Advertencia</label>
                                         <div class="color-picker-group">
                                             <input type="color" name="warning_color" data-var="--warning-color" value="#ff9800" style="cursor: pointer;">
-                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid #ddd; border-radius: 4px; padding: 2px;">
+                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid var(--border-color); border-radius: 4px; padding: 2px;">
                                         </div>
                                     </div>
                                     <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
                                         <label style="margin: 0;">Información</label>
                                         <div class="color-picker-group">
                                             <input type="color" name="info_color" data-var="--info-color" value="#2196F3" style="cursor: pointer;">
-                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid #ddd; border-radius: 4px; padding: 2px;">
+                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid var(--border-color); border-radius: 4px; padding: 2px;">
                                         </div>
                                     </div>
 
-                                    <h5 style="margin: 1rem 0 0.5rem; color: #555;">Interfaz</h5>
+                                    <h5 style="margin: 1rem 0 0.5rem; color: var(--text-medium);">Interfaz</h5>
                                     <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
                                         <label style="margin: 0;">Barra Lateral (Oscuro)</label>
                                         <div class="color-picker-group">
                                             <input type="color" name="dark_color" data-var="--dark-color" value="#333333" style="cursor: pointer;">
-                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid #ddd; border-radius: 4px; padding: 2px;">
+                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid var(--border-color); border-radius: 4px; padding: 2px;">
                                         </div>
                                     </div>
                                     <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
                                         <label style="margin: 0;">Fondo Principal</label>
                                         <div class="color-picker-group">
                                             <input type="color" name="bg_body" data-var="--bg-body" value="#f4f7f6" style="cursor: pointer;">
-                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid #ddd; border-radius: 4px; padding: 2px;">
+                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid var(--border-color); border-radius: 4px; padding: 2px;">
                                         </div>
                                     </div>
                                     <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
                                         <label style="margin: 0;">Texto Principal</label>
                                         <div class="color-picker-group">
                                             <input type="color" name="text_color" data-var="--text-color" value="#333333" style="cursor: pointer;">
-                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid #ddd; border-radius: 4px; padding: 2px;">
+                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid var(--border-color); border-radius: 4px; padding: 2px;">
                                         </div>
                                     </div>
                                     <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
                                         <label style="margin: 0;">Fondo Tarjetas</label>
                                         <div class="color-picker-group">
                                             <input type="color" name="bg_card" data-var="--bg-card" value="#ffffff" style="cursor: pointer;">
-                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid #ddd; border-radius: 4px; padding: 2px;">
+                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid var(--border-color); border-radius: 4px; padding: 2px;">
                                         </div>
                                     </div>
                                     <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
                                         <label style="margin: 0;">Bordes</label>
                                         <div class="color-picker-group">
                                             <input type="color" name="border_color" data-var="--border-color" value="#e0e0e0" style="cursor: pointer;">
-                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid #ddd; border-radius: 4px; padding: 2px;">
+                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid var(--border-color); border-radius: 4px; padding: 2px;">
                                         </div>
                                     </div>
                                 </div>
 
                                 <!-- Panel de Vista Previa -->
                                 <div class="preview-panel">
-                                    <h5 style="margin-bottom: 1rem; color: #555;">Vista Previa de Componentes</h5>
-                                    <div style="background: var(--bg-body); padding: 1.5rem; border: 1px solid #ddd; border-radius: 8px; box-shadow: inset 0 0 10px rgba(0,0,0,0.05);">
+                                    <h5 style="margin-bottom: 1rem; color: var(--text-medium);">Vista Previa de Componentes</h5>
+                                    <div style="background: var(--bg-body); padding: 1.5rem; border: 1px solid var(--border-color); border-radius: 8px; box-shadow: inset 0 0 10px rgba(0,0,0,0.05);">
                                         
                                         <!-- Navbar Simulado -->
                                         <div style="background: var(--dark-color); color: white; padding: 10px 15px; border-radius: 4px; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
@@ -516,7 +516,7 @@
                                             <h6 style="color: var(--text-color); margin-bottom: 0.5rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;">Tarjetas</h6>
                                             <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 3px solid var(--primary-color);">
                                                 <h4 style="color: var(--text-color); margin-top: 0; margin-bottom: 5px;">Producto Ejemplo</h4>
-                                                <p style="color: #666; font-size: 0.9rem; margin-bottom: 10px;">Descripción breve del producto.</p>
+                                                <p style="color: var(--text-light); font-size: 0.9rem; margin-bottom: 10px;">Descripción breve del producto.</p>
                                                 <div style="display: flex; justify-content: space-between; align-items: center;">
                                                     <span style="font-weight: bold; color: var(--primary-color);">$150.00</span>
                                                     <button style="background: var(--success-color); color: white; border: none; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center;"><i class="fas fa-plus"></i></button>
@@ -620,13 +620,13 @@
                             <i class="fas fa-file-csv"></i>
                         </div>
                         <h4 style="margin-bottom: 0.5rem;">1. Prepara tu Excel</h4>
-                        <p style="font-size: 0.9rem; color: #666;">
+                        <p style="font-size: 0.9rem; color: var(--text-light);">
                             Asegúrate que tu archivo tenga encabezados como: 
                             <strong>Nombre, Código, Precio, Costo, Stock</strong>.
                         </p>
                     </div>
                     
-                    <div class="step-arrow" style="display: flex; align-items: center; color: #ccc; font-size: 1.5rem;">
+                    <div class="step-arrow" style="display: flex; align-items: center; color: var(--text-muted); font-size: 1.5rem;">
                         <i class="fas fa-chevron-right"></i>
                     </div>
 
@@ -635,12 +635,12 @@
                             <i class="fas fa-upload"></i>
                         </div>
                         <h4 style="margin-bottom: 0.5rem;">2. Sube el Archivo</h4>
-                        <p style="font-size: 0.9rem; color: #666;">
+                        <p style="font-size: 0.9rem; color: var(--text-light);">
                             Selecciona el archivo .xlsx o .xls desde tu dispositivo.
                         </p>
                     </div>
 
-                    <div class="step-arrow" style="display: flex; align-items: center; color: #ccc; font-size: 1.5rem;">
+                    <div class="step-arrow" style="display: flex; align-items: center; color: var(--text-muted); font-size: 1.5rem;">
                         <i class="fas fa-chevron-right"></i>
                     </div>
 
@@ -649,7 +649,7 @@
                             <i class="fas fa-check-double"></i>
                         </div>
                         <h4 style="margin-bottom: 0.5rem;">3. Confirma</h4>
-                        <p style="font-size: 0.9rem; color: #666;">
+                        <p style="font-size: 0.9rem; color: var(--text-light);">
                             Verifica que las columnas coincidan y confirma la importación.
                         </p>
                     </div>
@@ -678,7 +678,7 @@
                 <span class="close" onclick="closeImportModal()">&times;</span>
             </div>
             <div class="modal-body">
-                <p style="margin-bottom: 1rem; color: #666;">
+                <p style="margin-bottom: 1rem; color: var(--text-light);">
                     Asocia las columnas de tu archivo Excel con los campos del sistema.
                 </p>
                 
@@ -717,7 +717,7 @@
                     <!-- Columna Derecha: Vista Previa -->
                     <div>
                         <h4 style="margin-bottom: 1rem; font-size: 1rem;">Vista Previa (Primeros 5 registros)</h4>
-                        <div style="overflow-x: auto; border: 1px solid #eee; border-radius: 4px;">
+                        <div style="overflow-x: auto; border: 1px solid var(--border-color); border-radius: 4px;">
                             <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
                                 <thead style="background: var(--bg-lightest);">
                                     <tr>
@@ -732,7 +732,7 @@
                                 </tbody>
                             </table>
                         </div>
-                        <div id="importSummary" style="margin-top: 1rem; font-size: 0.9rem; color: #555;"></div>
+                        <div id="importSummary" style="margin-top: 1rem; font-size: 0.9rem; color: var(--text-medium);"></div>
                     </div>
                 </div>
             </div>
@@ -754,8 +754,8 @@
                     <i id="toggleUserIcon" class="fas fa-exclamation-triangle" style="font-size: 30px;"></i>
                 </div>
             </div>
-            <h2 id="toggleUserTitle" style="margin-bottom: 10px; color: #333; font-size: 1.2rem;">¿Confirmar acción?</h2>
-            <p id="toggleUserMsg" style="color: #666; margin-bottom: 25px; font-size: 0.95rem;">...</p>
+            <h2 id="toggleUserTitle" style="margin-bottom: 10px; color: var(--text-color); font-size: 1.2rem;">¿Confirmar acción?</h2>
+            <p id="toggleUserMsg" style="color: var(--text-light); margin-bottom: 25px; font-size: 0.95rem;">...</p>
             
             <div style="display: flex; gap: 10px; justify-content: center;">
                 <button type="button" class="btn-secondary" onclick="closeToggleUserStatusModal()" style="min-width: 100px;">Cancelar</button>

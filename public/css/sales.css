@@ -105,7 +105,7 @@
     display: flex;
     gap: 10px;
     background: var(--bg-card);
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--border-color);
     flex-wrap: wrap;
 }
 
@@ -246,19 +246,19 @@
 }
 
 .btn-scale:hover {
-    border-color: #ff9800;
-    background: var(--bg-card)3e0;
-    color: #ff9800;
+    border-color: var(--warning-color);
+    background: var(--primary-light);
+    color: var(--warning-color);
 }
 
 .btn-scale.connected {
-    border-color: #4caf50;
-    background: #e8f5e9;
-    color: #4caf50;
+    border-color: var(--success-color);
+    background: var(--success-color);
+    color: #fff;
 }
 
 .btn-scale:active {
-    background: #ffe0b2;
+    background: var(--warning-color);
 }
 
 .btn-customer-display {
@@ -278,19 +278,20 @@
 }
 
 .btn-customer-display:hover {
-    border-color: #667eea;
-    background: #eff6ff;
-    color: #667eea;
+    border-color: var(--info-color);
+    background: var(--info-color);
+    color: #fff;
 }
 
 .btn-customer-display.active {
-    border-color: #4caf50;
-    background: #e8f5e9;
-    color: #4caf50;
+    border-color: var(--success-color);
+    background: var(--success-color);
+    color: #fff;
 }
 
 .btn-customer-display:active {
-    background: #dcedc8;
+    background: var(--success-color);
+    filter: brightness(0.9);
 }
 
 /* History Button (Same Style) */
@@ -420,7 +421,7 @@
 }
 
 .btn-checkout-primary:disabled {
-    background: #e0e0e0;
+    background: var(--bg-light);
     color: var(--text-muted);
     cursor: not-allowed;
     box-shadow: none;
@@ -446,8 +447,8 @@
 }
 
 .scale-status-indicator.connected {
-    background: #e8f5e9;
-    color: #4caf50;
+    background: var(--success-color);
+    color: #fff;
     font-weight: 600;
 }
 
@@ -608,7 +609,7 @@
     border-radius: 50px;
     border: 2px solid #e0e0e0;
     font-size: 1.1rem;
-    background: #fcfcfc;
+    background: var(--bg-lightest);
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
 }
 
@@ -650,7 +651,7 @@
 .action-btn:hover {
     background: var(--bg-light);
     transform: translateY(-1px);
-    border-color: #d0d0d0;
+    border-color: var(--border-color);
 }
 
 .action-btn:active {
@@ -696,7 +697,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: #f8f9fa;
+    background: var(--bg-light);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -791,7 +792,7 @@
 }
 
 .g-price .promo-price {
-    color: #dc3545;
+    color: var(--danger-color);
 }
 
 /* History Modal Specifics */
@@ -963,7 +964,7 @@
     flex: 1;
     overflow: hidden;
     position: relative;
-    background: #f8f9fa;
+    background: var(--bg-light);
     /* Fondo suave */
 }
 
@@ -1008,7 +1009,7 @@
 .cart-summary-footer {
     margin-top: auto;
     padding: 16px;
-    background: #fbfbfb;
+    background: var(--bg-lightest);
     border-top: 1px solid #f0f0f0;
 }
 
@@ -1083,7 +1084,7 @@
     .view-switch-btn.active {
         color: var(--primary-color);
         border-bottom-color: var(--primary-color);
-        background: #fcfcfc;
+        background: var(--bg-lightest);
     }
 
     .view-switch-btn i {
@@ -1213,7 +1214,7 @@
 .cart-table td {
     padding: 10px;
     text-align: left;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .cart-table th {
@@ -1547,13 +1548,13 @@
 
 .products-main::-webkit-scrollbar-thumb,
 .cart-items::-webkit-scrollbar-thumb {
-    background: #d0d0d0;
+    background: var(--border-color);
     border-radius: 4px;
 }
 
 .products-main::-webkit-scrollbar-thumb:hover,
 .cart-items::-webkit-scrollbar-thumb:hover {
-    background: #a0a0a0;
+    background: var(--text-muted);
 }
 
 /* Totales */
@@ -1830,14 +1831,14 @@
 .gallery-grid::-webkit-scrollbar-thumb,
 .results-list::-webkit-scrollbar-thumb,
 .cart-content::-webkit-scrollbar-thumb {
-    background: #d0d0d0;
+    background: var(--border-color);
     border-radius: 4px;
 }
 
 .gallery-grid::-webkit-scrollbar-thumb:hover,
 .results-list::-webkit-scrollbar-thumb:hover,
 .cart-content::-webkit-scrollbar-thumb:hover {
-    background: #a0a0a0;
+    background: var(--text-muted);
 }
 
 /* =================== BARRA DE CHECKOUT (REDISEÑO GRID) =================== */
@@ -1899,7 +1900,7 @@
     font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: #6b7280;
+    color: var(--text-light);
     font-weight: 700;
     display: flex;
     align-items: center;
@@ -1915,17 +1916,17 @@
 }
 
 .total-value {
-    color: #059669;
+    color: var(--success-color);
 }
 
 /* Green-600 */
 .change-value {
-    color: #4b5563;
+    color: var(--text-medium);
 }
 
 /* Gray-600 */
 .change-value.negative {
-    color: #dc2626;
+    color: var(--danger-color);
 }
 
 /* Red-600 */
@@ -1938,10 +1939,10 @@
     border-radius: 8px;
     width: 160px;
     font-weight: 700;
-    color: #111827;
+    color: var(--text-color);
     text-align: right;
     transition: all 0.2s;
-    background: #f9fafb;
+    background: var(--bg-light);
 }
 
 #scaleStatusIndicator {
@@ -1949,7 +1950,7 @@
 }
 
 .received-item .checkout-input:focus {
-    border-color: #059669;
+    border-color: var(--success-color);
     background: var(--bg-card);
     outline: none;
     box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
@@ -1987,8 +1988,8 @@
 }
 
 .btn-finalize-sale:disabled {
-    background: #d1d5db;
-    color: #9ca3af;
+    background: var(--border-color);
+    color: var(--text-muted);
     cursor: not-allowed;
     box-shadow: none;
 }
@@ -2191,7 +2192,7 @@
 
 /* 3. Cambio (Gris) */
 .checkout-item.change-item .checkout-value {
-    color: #757575 !important;
+    color: var(--text-light) !important;
     /* Gris */
 }
 
@@ -2545,7 +2546,7 @@
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--border-color);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -2641,7 +2642,7 @@
 }
 
 .gallery-item .item-indicators .fa-star {
-    color: #f1c40f;
+    color: var(--warning-color);
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
     background: rgba(0, 0, 0, 0.2);
 }

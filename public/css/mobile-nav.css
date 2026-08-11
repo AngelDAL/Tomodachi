@@ -171,7 +171,7 @@
         z-index: 100000;
         
         display: block !important; /* Force display context */
-        background: #fff;
+        background: var(--bg-card);
         border-radius: 12px;
         box-shadow: 0 4px 20px rgba(0,0,0,0.15);
         padding: 5px 0;
@@ -187,7 +187,7 @@
     .tooltip-item {
         padding: 12px 20px;
         font-size: 1rem;
-        border-bottom: 1px solid #f0f0f0;
+        border-bottom: 1px solid var(--border-color);
     }
 
     .tooltip-item:last-child {

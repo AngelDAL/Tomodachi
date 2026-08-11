@@ -33,18 +33,15 @@
             document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
 
             // 2) Variables de color personalizadas (opcional)
+            // Solo colores de MARCA (no cambian con claro/oscuro). Las superficies
+            // (bg-body, text-card, etc.) las controla el CSS de [data-theme].
             const varMap = {
                 'primary_color': '--primary-color',
                 'secondary_color': '--secondary-color',
                 'success_color': '--success-color',
                 'danger_color': '--danger-color',
                 'warning_color': '--warning-color',
-                'info_color': '--info-color',
-                'dark_color': '--dark-color',
-                'bg_body': '--bg-body',
-                'text_color': '--text-color',
-                'bg_card': '--bg-card',
-                'border_color': '--border-color'
+                'info_color': '--info-color'
             };
 
             const root = document.documentElement;

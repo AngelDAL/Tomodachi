@@ -325,13 +325,24 @@ async function loadStoreSettings() {
                 // Guardar en caché para carga rápida, PERO solo si el usuario
                 // no tiene una preferencia local (theme_mode). Si la tiene,
                 // la config del sidebar tiene prioridad sobre la BD.
+                // Nota: las superficies (bg_card, border_color, dark_color, bg_body,
+                // text_color) se filtran del caché — las controla el CSS del tema,
+                // y si quedaran aplicadas inline romperían el cambio claro/oscuro.
+                const SURFACE_KEYS = ['dark_color', 'bg_body', 'text_color', 'bg_card', 'border_color', 'bg_light'];
+                const stripSurfaces = (obj) => {
+                    const out = {};
+                    for (const [k, v] of Object.entries(obj)) {
+                        if (!SURFACE_KEYS.includes(k)) out[k] = v;
+                    }
+                    return out;
+                };
                 const localTheme = JSON.parse(localStorage.getItem('pos_theme_config') || '{}');
                 if (!localTheme.theme_mode && localTheme.dark_mode === undefined) {
                     // Primera vez o sin preferencia local → usar config de la BD
-                    localStorage.setItem('pos_theme_config', JSON.stringify(store.theme_config));
+                    localStorage.setItem('pos_theme_config', JSON.stringify(stripSurfaces(store.theme_config)));
                 } else {
                     // El usuario tiene preferencia local → fusionar (colores de BD, modo local)
-                    const merged = { ...store.theme_config, ...localTheme };
+                    const merged = { ...stripSurfaces(store.theme_config), ...stripSurfaces(localTheme) };
                     localStorage.setItem('pos_theme_config', JSON.stringify(merged));
                 }
             }
@@ -355,27 +366,22 @@ function applyTheme(themeConfig) {
     // Pero en el HTML pusimos data-var="--primary-color".
     // Vamos a iterar sobre las claves del objeto y mapear si es necesario, o usar un mapa fijo.
     
+    // IMPORTANTE: solo se aplican colores de MARCA (que no cambian con el tema claro/oscuro).
+    // Las SUPERFICIES (bg-body, text-color, bg-card, border-color, dark-color) las controla
+    // el CSS de [data-theme] — si se aplicaran como inline, pisarían el tema activo y
+    // el cambio claro/oscuro no funcionaría (bug reportado).
     const varMap = {
         'primary_color': '--primary-color',
         'secondary_color': '--secondary-color',
         'success_color': '--success-color',
         'danger_color': '--danger-color',
         'warning_color': '--warning-color',
-        'info_color': '--info-color',
-        'dark_color': '--dark-color',
-        'bg_body': '--bg-body',
-        'text_color': '--text-color'
+        'info_color': '--info-color'
     };
 
     for (const [key, value] of Object.entries(themeConfig)) {
         if (varMap[key] && value) {
             document.documentElement.style.setProperty(varMap[key], value);
-            
-            // Calcular variantes oscuras/claras automáticamente si es necesario
-            if (key === 'primary_color') {
-                // Simple darken logic could go here if we wanted to generate --primary-dark automatically
-                // But for now, let's stick to what the user picked.
-            }
         }
     }
 }

@@ -208,9 +208,11 @@ async function loadCompanySettings() {
                 const themeControls = document.getElementById('themeControls');
                 const inputs = themeControls.querySelectorAll('input[type="color"]');
                 // Valores por defecto desde el CSS en vivo (lo que está aplicado ahora)
+                // SOLO marcas: las superficies (bg-body, text-card, etc.) las controla
+                // el CSS de [data-theme], no la config (si se aplican inline rompen
+                // el cambio claro/oscuro).
                 const liveVars = ['--primary-color', '--secondary-color', '--success-color', '--danger-color',
-                                 '--warning-color', '--info-color', '--dark-color', '--bg-body', '--text-color',
-                                 '--bg-card', '--border-color'];
+                                 '--warning-color', '--info-color'];
                 const liveMap = {};
                 liveVars.forEach(v => {
                     try { liveMap[v] = getComputedStyle(document.documentElement).getPropertyValue(v).trim(); } catch (e) {}
@@ -257,7 +259,12 @@ document.getElementById('companyForm').addEventListener('submit', async (e) => {
     const themeConfig = {};
     const themeControls = document.getElementById('themeControls');
     const inputs = themeControls.querySelectorAll('input[type="color"]');
+    // Solo claves de marca se guardan; las superficies (bg_card, border_color,
+    // dark_color, bg_body, text_color) las controla el tema claro/oscuro y no
+    // deben persistirse (romperían el cambio de tema si se aplican inline).
+    const surfaceKeys = ['dark_color', 'bg_body', 'text_color', 'bg_card', 'border_color', 'bg_light'];
     inputs.forEach(input => {
+        if (surfaceKeys.includes(input.name)) return;
         themeConfig[input.name] = input.value;
     });
 

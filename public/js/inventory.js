@@ -317,17 +317,17 @@ function bindEvents() {
                         
                         const data = await response.json();
                         if (data.success) {
-                            showNotification('✓ Imagen actualizada correctamente', 'success');
+                            showNotification('Imagen actualizada correctamente', 'success');
                             // Actualizar lista de productos en segundo plano
                             loadProducts();
                         } else {
-                            showNotification('✗ Error al actualizar imagen: ' + (data.message || 'Desconocido'), 'error');
+                            showNotification('Error al actualizar imagen: ' + (data.message || 'Desconocido'), 'error');
                         }
                     };
                     base64Reader.readAsDataURL(file);
                 } catch (error) {
                     console.error('Error subiendo imagen:', error);
-                    showNotification('✗ Error de conexión al subir imagen', 'error');
+                    showNotification('Error de conexión al subir imagen', 'error');
                 }
             }
         });
@@ -623,7 +623,7 @@ async function submitAddProduct() {
                 await uploadImageForNewProduct(newProductId, imageInput.files[0]);
             }
 
-            showNotification('✓ Producto agregado correctamente', 'success');
+            showNotification('Producto agregado correctamente', 'success');
             closeAddProductModal();
 
             // Recargar productos
@@ -631,11 +631,11 @@ async function submitAddProduct() {
                 loadProducts();
             }, 500);
         } else {
-            showNotification('✗ Error: ' + (data.message || 'No se pudo agregar el producto'), 'error');
+            showNotification('Error: ' + (data.message || 'No se pudo agregar el producto'), 'error');
         }
     } catch (error) {
         console.error('Error:', error);
-        showNotification('✗ Error al agregar el producto', 'error');
+        showNotification('Error al agregar el producto', 'error');
     }
 }
 
@@ -704,7 +704,7 @@ async function uploadImageAuto(file) {
             const data = await response.json();
 
             if (data.success) {
-                showNotification('✓ Imagen subida correctamente', 'success');
+                showNotification('Imagen subida correctamente', 'success');
                 // Limpiar
                 document.getElementById('productImage').value = '';
                 selectedFile = null;
@@ -712,11 +712,11 @@ async function uploadImageAuto(file) {
                 // Recargar productos
                 setTimeout(() => loadProducts(), 800);
             } else {
-                showNotification('✗ Error: ' + (data.error?.image_base64 || data.message || 'No se pudo subir la imagen'), 'error');
+                showNotification('Error: ' + (data.error?.image_base64 || data.message || 'No se pudo subir la imagen'), 'error');
             }
         } catch (error) {
             console.error('Error:', error);
-            showNotification('✗ Error al subir la imagen', 'error');
+            showNotification('Error al subir la imagen', 'error');
         }
     };
     reader.readAsDataURL(file);
@@ -1021,10 +1021,10 @@ async function submitEditProduct() {
             if (!stockData.success) {
                 showNotification('Producto guardado, pero error al actualizar stock: ' + stockData.message, 'warning');
             } else {
-                showNotification('✓ Producto y stock actualizados', 'success');
+                showNotification('Producto y stock actualizados', 'success');
             }
         } else {
-            showNotification('✓ Cambios guardados', 'success');
+            showNotification('Cambios guardados', 'success');
         }
 
         closeProductDetails();
@@ -1032,7 +1032,7 @@ async function submitEditProduct() {
 
     } catch (error) {
         console.error('Error:', error);
-        showNotification('✗ Error: ' + error.message, 'error');
+        showNotification('Error: ' + error.message, 'error');
     }
 }
 
@@ -1055,7 +1055,7 @@ async function uploadImageFromDetails(file) {
             const data = await response.json();
 
             if (data.success) {
-                showNotification('✓ Imagen actualizada', 'success');
+                showNotification('Imagen actualizada', 'success');
                 // Actualizar vista previa en modal
                 const img = document.getElementById('detailImage');
                 img.src = e.target.result;
@@ -1063,11 +1063,11 @@ async function uploadImageFromDetails(file) {
                 // Recargar lista de fondo
                 loadProducts();
             } else {
-                showNotification('✗ Error al subir imagen', 'error');
+                showNotification('Error al subir imagen', 'error');
             }
         } catch (error) {
             console.error('Error:', error);
-            showNotification('✗ Error de conexión', 'error');
+            showNotification('Error de conexión', 'error');
         }
     };
     reader.readAsDataURL(file);
@@ -1142,18 +1142,18 @@ async function saveStock(input) {
         const data = await response.json();
 
         if (data.success) {
-            showNotification('✓ Stock actualizado', 'success');
+            showNotification('Stock actualizado', 'success');
             // Actualizar el producto en el array local
             const product = products.find(p => p.product_id == productId);
             if (product) product.current_stock = newStock;
         } else {
-            showNotification('✗ Error: ' + (data.message || 'No se pudo actualizar stock'), 'error');
+            showNotification('Error: ' + (data.message || 'No se pudo actualizar stock'), 'error');
             const product = products.find(p => p.product_id == productId);
             if (product) input.value = product.current_stock || 0;
         }
     } catch (error) {
         console.error('Error:', error);
-        showNotification('✗ Error al actualizar stock', 'error');
+        showNotification('Error al actualizar stock', 'error');
         const product = products.find(p => p.product_id == productId);
         if (product) input.value = product.current_stock || 0;
     }

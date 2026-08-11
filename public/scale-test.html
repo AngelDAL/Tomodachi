@@ -506,11 +506,11 @@
 
                 const success = await scaleManager.requestPort();
                 if (success) {
-                    addLog('✓ Puerto conectado exitosamente', 'success');
+                    addLog('Puerto conectado exitosamente', 'success');
                     updateStatus();
                 }
             } catch (error) {
-                addLog(`✗ Error: ${error.message}`, 'error');
+                addLog(`Error: ${error.message}`, 'error');
             }
         });
 
@@ -522,17 +522,17 @@
 
         simulateBtn.addEventListener('click', () => {
             if (!scaleManager.isConnected) {
-                addLog('✗ Debes estar conectado para simular', 'error');
+                addLog('Debes estar conectado para simular', 'error');
                 return;
             }
 
             const weight = parseFloat(simulateWeightInput.value);
             if (isNaN(weight)) {
-                addLog('✗ Peso inválido', 'error');
+                addLog('Peso inválido', 'error');
                 return;
             }
 
-            addLog(`📊 Simulando peso: ${weight.toFixed(3)}...`, 'info');
+            addLog(`Simulando peso: ${weight.toFixed(3)}...`, 'info');
             scaleManager.simulateWeight(weight, 'kg');
         });
 
@@ -558,7 +558,7 @@
 
         // Callbacks de ScaleManager
         scaleManager.on('onConnect', (data) => {
-            addLog('✓ Conectado correctamente', 'success');
+            addLog('Conectado correctamente', 'success');
             updateStatus();
         });
 
@@ -574,7 +574,7 @@
         });
 
         scaleManager.on('onError', (data) => {
-            addLog(`✗ Error: ${data.message}`, 'error');
+            addLog(`Error: ${data.message}`, 'error');
         });
 
         // Inicializar

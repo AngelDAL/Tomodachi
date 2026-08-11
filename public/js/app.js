@@ -87,7 +87,7 @@ function showNotification(message, type = 'info') {
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
     // Limpiar mensaje de prefijos si ya vienen con iconos del CSS
-    const cleanMessage = message.replace(/^[✓✕ℹ⚠]\s?/, '');
+    const cleanMessage = message.replace(/^[\u2713\u2715\u2139\u26a0]\s?/, '');
     notification.textContent = cleanMessage;
 
     document.body.appendChild(notification);

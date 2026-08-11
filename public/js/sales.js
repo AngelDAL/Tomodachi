@@ -335,7 +335,7 @@ function bindEvents() {
                     displaySessionUUID = json.data.session;
                     try { localStorage.setItem('tomodachi_display_session', displaySessionUUID); } catch (_) {}
                     startSyncInterval();
-                    showNotification('✓ Enlace generado. El display se actualiza automáticamente', 'success');
+                    showNotification('Enlace generado. El display se actualiza automáticamente', 'success');
                 }
 
                 if (!displaySessionUUID) {
@@ -349,7 +349,7 @@ function bindEvents() {
                 const url = baseUrl + '?cart=' + displaySessionUUID;
 
                 navigator.clipboard.writeText(url).then(() => {
-                    showNotification('✓ Enlace copiado al portapapeles', 'success');
+                    showNotification('Enlace copiado al portapapeles', 'success');
                 }).catch(() => {
                     const textarea = document.createElement('textarea');
                     textarea.value = url;
@@ -357,7 +357,7 @@ function bindEvents() {
                     textarea.select();
                     document.execCommand('copy');
                     document.body.removeChild(textarea);
-                    showNotification('✓ Enlace copiado al portapapeles', 'success');
+                    showNotification('Enlace copiado al portapapeles', 'success');
                 });
             } catch (e) {
                 console.error('Error al crear sesión:', e);
@@ -2023,8 +2023,8 @@ function showContextMenu(e, item) {
   nameEl.textContent = item.querySelector('h4')?.textContent || item.querySelector('.g-name')?.textContent || 'Producto';
   
   const prefs = getPrefs();
-  favCheck.textContent = prefs.favorites.includes(_ctxProductId) ? '✓' : '';
-  pinCheck.textContent = prefs.pinned.includes(_ctxProductId) ? '✓' : '';
+  favCheck.innerHTML = prefs.favorites.includes(_ctxProductId) ? '<i class="fas fa-star"></i>' : '';
+  pinCheck.innerHTML = prefs.pinned.includes(_ctxProductId) ? '<i class="fas fa-thumbtack"></i>' : '';
 
   const x = (e.touches && e.touches[0]) ? e.touches[0].clientX : e.clientX;
   const y = (e.touches && e.touches[0]) ? e.touches[0].clientY : e.clientY;
@@ -2061,13 +2061,13 @@ function handleContextAction(action, productId, categoryId) {
   switch (action) {
     case 'favorite': {
       const nowFav = toggleFavorite(productId);
-      showNotification(nowFav ? '★ Añadido a favoritos' : '☆ Quitado de favoritos', 'info');
+      showNotification(nowFav ? 'Añadido a favoritos' : 'Quitado de favoritos', 'info');
       applyPrefsAndRender();
       break;
     }
     case 'pin': {
       const nowPinned = togglePinned(productId);
-      showNotification(nowPinned ? '📌 Producto fijado al inicio' : '📌 Producto desfijado', 'info');
+      showNotification(nowPinned ? 'Producto fijado al inicio' : 'Producto desfijado', 'info');
       applyPrefsAndRender();
       break;
     }
@@ -2175,8 +2175,8 @@ function applyPrefsAndRender() {
   const pinCheck = document.getElementById('ctxPinCheck');
   if (favCheck && _ctxProductId) {
     const prefs = getPrefs();
-    favCheck.textContent = prefs.favorites.includes(_ctxProductId) ? '✓' : '';
-    pinCheck.textContent = prefs.pinned.includes(_ctxProductId) ? '✓' : '';
+    favCheck.innerHTML = prefs.favorites.includes(_ctxProductId) ? '<i class="fas fa-star"></i>' : '';
+    pinCheck.innerHTML = prefs.pinned.includes(_ctxProductId) ? '<i class="fas fa-thumbtack"></i>' : '';
   }
 }
 
@@ -2267,7 +2267,7 @@ function showScannedProductOverlay(product) {
 
 // Función para pruebas visuales con flujo real
 function probarEfectosVisuales(barcode = '7501234567890') {
-  console.log(`🎬 Iniciando prueba de escáner con código: ${barcode}...`);
+  console.log(`Iniciando prueba de escáner con código: ${barcode}...`);
 
   // 1. Referencias al DOM
   const scannerContainer = document.getElementById('scannerContainer');
@@ -2275,7 +2275,7 @@ function probarEfectosVisuales(barcode = '7501234567890') {
   const productsMain = document.querySelector('.products-main');
 
   if (!scannerContainer || !toggleBtn) {
-    console.error("❌ No se encontraron elementos del escáner.");
+    console.error("No se encontraron elementos del escáner.");
     return;
   }
 
@@ -2289,11 +2289,11 @@ function probarEfectosVisuales(barcode = '7501234567890') {
     scannerContainer.style.minHeight = "300px";
   }
 
-  console.log("📷 Escáner activo. Simulando lectura...");
+  console.log("Escáner activo. Simulando lectura...");
 
   // 3. Simular delay de lectura y llamar al flujo real
   setTimeout(() => {
-    console.log(`📡 Consultando API con código: ${barcode}`);
+    console.log(`Consultando API con código: ${barcode}`);
     // Llamada real al backend
     fetchByCode(barcode);
 

@@ -388,7 +388,7 @@ function renderSelectedProductsList() {
             const imgPath = getRelativeImagePath(t.image_path);
             imgTag = `<img src="${imgPath}" alt="img">`;
         } else {
-            imgTag = `<div style="width:24px;height:24px;background:var(--dark-color);border-radius:50%;margin-right:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-box" style="font-size:10px;color:#cbd5e1;"></i></div>`;
+            imgTag = `<div style="width:24px;height:24px;background:var(--dark-color);border-radius:50%;margin-right:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-box" style="font-size:10px;color:var(--text-muted);"></i></div>`;
         }
 
         return `
@@ -1206,7 +1206,7 @@ function renderDrawerSelected() {
             const imgPath = getRelativeImagePath(t.image_path);
             imgTag = `<img src="${imgPath}" alt="img">`;
         } else {
-            imgTag = `<div style="width:24px;height:24px;background:var(--dark-color);border-radius:50%;margin-right:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-box" style="font-size:10px;color:#cbd5e1;"></i></div>`;
+            imgTag = `<div style="width:24px;height:24px;background:var(--dark-color);border-radius:50%;margin-right:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-box" style="font-size:10px;color:var(--text-muted);"></i></div>`;
         }
         return `
             <div class="selected-chip">

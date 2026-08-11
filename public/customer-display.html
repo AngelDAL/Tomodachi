@@ -1054,7 +1054,7 @@
             qrCopyBtn.addEventListener('click', () => {
                 const url = getDisplayUrl();
                 navigator.clipboard.writeText(url).then(() => {
-                    qrCopyBtn.textContent = '✓ Copiado';
+                    qrCopyBtn.innerHTML = '<i class="fas fa-check"></i> Copiado';
                     setTimeout(() => { qrCopyBtn.innerHTML = '<i class="fas fa-copy"></i> Copiar enlace'; }, 2000);
                 }).catch(() => {
                     qrUrlBox.select();

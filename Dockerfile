@@ -39,6 +39,13 @@ RUN if [ -f composer.json ]; then composer install --no-dev --no-interaction --p
 COPY docker/apache-tomodachi.conf /etc/apache2/sites-available/000-default.conf
 RUN a2enmod rewrite
 
+# Sesiones persistentes: guardar las sesiones PHP en un directorio propio
+# montado como volumen Docker (sobreviven a rebuilds/recreación del contenedor).
+RUN mkdir -p /var/lib/php/sessions \
+    && chown www-data:www-data /var/lib/php/sessions \
+    && echo "session.save_path = /var/lib/php/sessions" > /usr/local/etc/php/conf.d/99-sessions.ini \
+    && echo "session.gc_maxlifetime = 31536000" >> /usr/local/etc/php/conf.d/99-sessions.ini
+
 # Permisos
 RUN chown -R www-data:www-data /var/www/html \
     && chmod +x /var/www/html/docker/entrypoint.sh

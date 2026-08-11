@@ -39,6 +39,11 @@ RUN if [ -f composer.json ]; then composer install --no-dev --no-interaction --p
 COPY docker/apache-tomodachi.conf /etc/apache2/sites-available/000-default.conf
 RUN a2enmod rewrite
 
+# Assets por defecto (fuera del volumen app_uploads para poder sembrarlos al arranque)
+RUN mkdir -p /opt/tomodachi-assets/products
+COPY public/assets/images/default-logo.png /opt/tomodachi-assets/default-logo.png
+COPY public/assets/images/products/default-product.svg /opt/tomodachi-assets/products/default-product.svg
+
 # Sesiones persistentes: guardar las sesiones PHP en un directorio propio
 # montado como volumen Docker (sobreviven a rebuilds/recreación del contenedor).
 RUN mkdir -p /var/lib/php/sessions \

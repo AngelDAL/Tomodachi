@@ -56,7 +56,7 @@ try {
     if (!$items || !is_array($items)) { Response::validationError(['items' => 'Lista vacía']); }
 
     // Venta
-    $sale = $db->selectOne('SELECT sale_id, store_id, register_id, payment_method, status, total, refunded_amount FROM sales WHERE sale_id = ?', [$sale_id]);
+    $sale = $db->selectOne('SELECT sale_id, store_id, register_id, payment_method, status, total, refunded_amount, customer_id FROM sales WHERE sale_id = ?', [$sale_id]);
     if (!$sale) { Response::notFound('Venta no existe'); }
     if ($sale['status'] !== SALE_COMPLETED) { Response::error('Solo ventas completadas admiten devoluciones', 409); }
 
@@ -155,6 +155,11 @@ try {
                 'INSERT INTO cash_movements (register_id, user_id, movement_type, amount, description, created_at) VALUES (?,?,?,?,?,NOW())',
                 [$register_id, $currentUser['user_id'], 'withdrawal', $totalRefund, 'Devolución venta #' . $sale_id]
             );
+        }
+
+        // Si la venta era apartado, la devolución reduce el saldo pendiente del cliente
+        if ($sale['payment_method'] === PAYMENT_CREDIT && !empty($sale['customer_id']) && $totalRefund > 0) {
+            $db->update('UPDATE customers SET balance = GREATEST(balance - ?, 0) WHERE customer_id = ?', [$totalRefund, $sale['customer_id']]);
         }
 
         $db->commit();

@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="view-transition" content="same-origin">
+    <title>Clientes - Tomodachi</title>
+    <link rel="stylesheet" href="css/fonts.css">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/sidebar-modern.css">
+    <link rel="stylesheet" href="css/mobile-nav.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <script src="js/theme-init.js"></script>
+</head>
+<body>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <div class="app-container">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <button class="sidebar-close" id="sidebarClose" aria-label="Cerrar menú"><i class="fas fa-times"></i></button>
+                <h2>Tomodachi</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <!-- Navigation Loaded by js/sidebar-loader.js?v=3 -->
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="inventory-container">
+                <section class="inv-controls">
+                    <div class="controls-top">
+                        <div class="search-section">
+                            <div class="search-header">
+                                <h3><i class="fas fa-users"></i> Clientes</h3>
+                            </div>
+                            <div class="search-bar">
+                                <div class="search-input-wrapper">
+                                    <i class="fas fa-search search-icon"></i>
+                                    <input type="text" id="customerSearchInput" placeholder="Buscar por nombre o teléfono..." aria-label="Buscar clientes" class="search-input">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="inv-actions">
+                            <button id="addCustomerBtn" class="btn btn-primary" style="padding: 0.7rem 1.4rem; border-radius: 8px;">
+                                <i class="fas fa-user-plus"></i> Nuevo Cliente
+                            </button>
+                        </div>
+                    </div>
+                    <div class="customer-summary" style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 12px;">
+                        <div class="summary-chip" style="background:#eefaf3; border-radius:10px; padding: 8px 14px; font-size:0.9rem;">
+                            <i class="fas fa-users" style="color:#27ae60;"></i> <strong id="totalCustomers">0</strong> clientes
+                        </div>
+                        <div class="summary-chip" style="background:#fff7ee; border-radius:10px; padding: 8px 14px; font-size:0.9rem;">
+                            <i class="fas fa-hand-holding-dollar" style="color:#e67e22;"></i> Apartado total: <strong id="totalBalance">$0.00</strong>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="inv-table-section">
+                    <table class="inventory-table" id="customersTable" style="width:100%; border-collapse: collapse;">
+                        <thead>
+                            <tr>
+                                <th>Cliente</th>
+                                <th>Teléfono</th>
+                                <th>Saldo (apartado)</th>
+                                <th>Límite</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customersTableBody">
+                            <tr><td colspan="6" style="text-align:center; padding:2rem; color:#999;">
+                                <i class="fas fa-spinner fa-spin"></i> Cargando clientes...
+                            </td></tr>
+                        </tbody>
+                    </table>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal: Nuevo/Editar cliente -->
+    <dialog id="customerModal" class="sale-detail-dialog" aria-label="Cliente">
+        <div class="modal-content" style="max-width: 480px; border: none; border-radius: 14px; padding: 1.6rem; background: var(--bg-card, #fff);">
+            <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem;">
+                <h2 id="customerModalTitle" style="margin:0; font-size:1.25rem; color: var(--text-color, #1a1a2e);">Nuevo Cliente</h2>
+                <button id="customerModalClose" class="modal-close" aria-label="Cerrar" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color: var(--primary-color);">×</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="customerIdInput">
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label style="display:block; font-size:0.85rem; margin-bottom:4px;">Nombre completo *</label>
+                    <input type="text" id="customerNameInput" class="form-input" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd;" placeholder="Nombre del cliente">
+                </div>
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label style="display:block; font-size:0.85rem; margin-bottom:4px;">Teléfono</label>
+                    <input type="text" id="customerPhoneInput" class="form-input" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd;" placeholder="555-1234">
+                </div>
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label style="display:block; font-size:0.85rem; margin-bottom:4px;">Email</label>
+                    <input type="email" id="customerEmailInput" class="form-input" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd;" placeholder="cliente@correo.com">
+                </div>
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label style="display:block; font-size:0.85rem; margin-bottom:4px;">Dirección</label>
+                    <input type="text" id="customerAddressInput" class="form-input" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd;" placeholder="Dirección (opcional)">
+                </div>
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label style="display:block; font-size:0.85rem; margin-bottom:4px;">Límite de crédito (0 = sin límite)</label>
+                    <input type="number" id="customerLimitInput" class="form-input" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd;" min="0" step="0.01" value="0">
+                </div>
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label style="display:block; font-size:0.85rem; margin-bottom:4px;">Notas</label>
+                    <input type="text" id="customerNotesInput" class="form-input" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd;" placeholder="Notas (opcional)">
+                </div>
+                <div style="display:flex; gap:10px; justify-content:flex-end;">
+                    <button id="customerCancelBtn" class="btn" style="padding:8px 16px; border-radius:6px; background:#eee; border:none; cursor:pointer;">Cancelar</button>
+                    <button id="customerSaveBtn" class="btn btn-primary" style="padding:8px 20px; border-radius:6px; background: var(--primary-color); color:#fff; border:none; cursor:pointer;">
+                        <i class="fas fa-save"></i> Guardar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </dialog>
+
+    <!-- Modal: Detalle del cliente (historial + abono) -->
+    <dialog id="customerDetailModal" class="sale-detail-dialog" aria-label="Detalle del cliente">
+        <div class="modal-content" style="max-width: 640px; border: none; border-radius: 14px; padding: 1.6rem; background: var(--bg-card, #fff);">
+            <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem;">
+                <h2 id="customerDetailTitle" style="margin:0; font-size:1.25rem; color: var(--text-color, #1a1a2e);">Detalle del Cliente</h2>
+                <button id="customerDetailClose" class="modal-close" aria-label="Cerrar" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color: var(--primary-color);">×</button>
+            </div>
+            <div class="modal-body" style="max-height: 65vh; overflow-y: auto;">
+                <div id="customerDetailBody"></div>
+            </div>
+        </div>
+    </dialog>
+
+    <script src="js/sidebar-loader.js?v=3"></script>
+    <script src="js/app.js"></script>
+    <script>
+        // Verificar sesión (modal de re-login si caducó y pidió sesión permanente)
+        (async () => {
+            const session = await checkSession();
+            if (!session) {
+                if (typeof requireSession === 'function') { requireSession(); }
+                return;
+            }
+            initCustomers();
+        })();
+
+        let CUSTOMERS = [];
+
+        function fmtMXN(n) {
+            return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(Number(n) || 0);
+        }
+
+        function esc(s) {
+            const d = document.createElement('div');
+            d.textContent = String(s ?? '');
+            return d.innerHTML;
+        }
+
+        async function initCustomers() {
+            await loadCustomers();
+            bindCustomerEvents();
+        }
+
+        async function loadCustomers(search) {
+            const body = document.getElementById('customersTableBody');
+            try {
+                let url = '../api/customers/customers.php';
+                if (search) url += `?search=${encodeURIComponent(search)}`;
+                const res = await fetch(url);
+                const data = await res.json();
+                if (!data.success) throw new Error(data.message);
+                CUSTOMERS = data.data || [];
+                renderCustomers(CUSTOMERS);
+            } catch (e) {
+                body.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:2rem; color:#e74c3c;">Error: ${esc(e.message)}</td></tr>`;
+            }
+        }
+
+        function renderCustomers(list) {
+            const body = document.getElementById('customersTableBody');
+            document.getElementById('totalCustomers').textContent = list.length;
+            const totalBal = list.reduce((s, c) => s + (Number(c.balance) || 0), 0);
+            document.getElementById('totalBalance').textContent = fmtMXN(totalBal);
+
+            if (!list.length) {
+                body.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:2rem; color:#999;">Sin clientes registrados. Crea el primero con "Nuevo Cliente".</td></tr>`;
+                return;
+            }
+            body.innerHTML = list.map(c => `
+                <tr style="cursor:pointer;" onclick="openCustomerDetail(${c.customer_id})" title="Ver historial y abonar">
+                    <td data-label="Cliente"><strong>${esc(c.full_name)}</strong></td>
+                    <td data-label="Teléfono">${esc(c.phone || '—')}</td>
+                    <td data-label="Saldo" style="color: ${Number(c.balance) > 0 ? '#e67e22' : '#27ae60'}; font-weight:600;">${fmtMXN(c.balance)}</td>
+                    <td data-label="Límite">${Number(c.credit_limit) > 0 ? fmtMXN(c.credit_limit) : 'Sin límite'}</td>
+                    <td data-label="Estado"><span style="color:${c.status === 'active' ? '#27ae60' : '#e74c3c'};">${c.status === 'active' ? 'Activo' : 'Inactivo'}</span></td>
+                    <td data-label="Acciones">
+                        <button class="btn btn-sm" onclick="event.stopPropagation(); openCustomerModal(${c.customer_id})" title="Editar" style="margin-right:6px; padding:4px 10px; border-radius:6px; border:none; background:#f0f0f0; cursor:pointer;"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-sm" onclick="event.stopPropagation(); deleteCustomer(${c.customer_id})" title="Eliminar" style="padding:4px 10px; border-radius:6px; border:none; background:#fdeaea; color:#e74c3c; cursor:pointer;"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function bindCustomerEvents() {
+            document.getElementById('customerSearchInput').addEventListener('input', debounce(e => {
+                loadCustomers(e.target.value.trim());
+            }, 350));
+
+            document.getElementById('addCustomerBtn').addEventListener('click', () => openCustomerModal());
+            document.getElementById('customerModalClose').addEventListener('click', closeCustomerModal);
+            document.getElementById('customerCancelBtn').addEventListener('click', closeCustomerModal);
+            document.getElementById('customerSaveBtn').addEventListener('click', saveCustomer);
+
+            const detailModal = document.getElementById('customerDetailModal');
+            document.getElementById('customerDetailClose').addEventListener('click', () => detailModal.close());
+            detailModal.addEventListener('click', e => { if (e.target === detailModal) detailModal.close(); });
+            document.addEventListener('keydown', e => { if (e.key === 'Escape' && detailModal.open) detailModal.close(); });
+        }
+
+        function debounce(fn, ms) {
+            let t;
+            return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+        }
+
+        function openCustomerModal(id) {
+            document.getElementById('customerModalTitle').textContent = id ? 'Editar Cliente' : 'Nuevo Cliente';
+            const c = id ? CUSTOMERS.find(x => x.customer_id === id) : null;
+            document.getElementById('customerIdInput').value = c ? c.customer_id : '';
+            document.getElementById('customerNameInput').value = c ? c.full_name : '';
+            document.getElementById('customerPhoneInput').value = c ? (c.phone || '') : '';
+            document.getElementById('customerEmailInput').value = c ? (c.email || '') : '';
+            document.getElementById('customerAddressInput').value = c ? (c.address || '') : '';
+            document.getElementById('customerLimitInput').value = c ? (c.credit_limit || 0) : 0;
+            document.getElementById('customerNotesInput').value = c ? (c.notes || '') : '';
+            document.getElementById('customerModal').showModal();
+        }
+
+        function closeCustomerModal() {
+            document.getElementById('customerModal').close();
+        }
+
+        async function saveCustomer() {
+            const id = document.getElementById('customerIdInput').value;
+            const name = document.getElementById('customerNameInput').value.trim();
+            if (!name) { alert('El nombre es requerido'); return; }
+            const payload = {
+                full_name: name,
+                phone: document.getElementById('customerPhoneInput').value.trim(),
+                email: document.getElementById('customerEmailInput').value.trim(),
+                address: document.getElementById('customerAddressInput').value.trim(),
+                credit_limit: parseFloat(document.getElementById('customerLimitInput').value) || 0,
+                notes: document.getElementById('customerNotesInput').value.trim()
+            };
+            try {
+                const res = await fetch('../api/customers/customers.php', {
+                    method: id ? 'PUT' : 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(id ? { customer_id: Number(id), ...payload } : payload)
+                });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.message);
+                closeCustomerModal();
+                loadCustomers(document.getElementById('customerSearchInput').value.trim());
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
+        async function deleteCustomer(id) {
+            const c = CUSTOMERS.find(x => x.customer_id === id);
+            if (!confirm(`¿Eliminar al cliente "${c ? c.full_name : ''}"? No se puede si tiene saldo pendiente.`)) return;
+            try {
+                const res = await fetch('../api/customers/customers.php', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ customer_id: id })
+                });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.message);
+                loadCustomers(document.getElementById('customerSearchInput').value.trim());
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
+        async function openCustomerDetail(id) {
+            try {
+                const res = await fetch(`../api/customers/customers.php?id=${id}`);
+                const data = await res.json();
+                if (!data.success) throw new Error(data.message);
+                const { customer, sales, payments } = data.data;
+                document.getElementById('customerDetailTitle').textContent = customer.full_name;
+                const body = document.getElementById('customerDetailBody');
+
+                let salesRows = (sales || []).map(s => `
+                    <tr>
+                        <td data-label="Venta">#${s.sale_id}</td>
+                        <td data-label="Fecha">${new Date(s.sale_date).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
+                        <td data-label="Total" style="text-align:right;">${fmtMXN(s.total)}</td>
+                        <td data-label="Pagado" style="text-align:right; color:#27ae60;">${fmtMXN(s.amount_paid)}</td>
+                        <td data-label="Estado">${s.status === 'completed' ? (Number(s.amount_paid) >= Number(s.total) ? 'Pagada' : 'Apartado') : s.status}</td>
+                    </tr>`).join('') || '<tr><td colspan="5" style="text-align:center; color:#999;">Sin ventas</td></tr>';
+
+                let payRows = (payments || []).map(p => `
+                    <tr>
+                        <td data-label="Fecha">${new Date(p.created_at).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
+                        <td data-label="Monto" style="text-align:right; color:#27ae60;">+${fmtMXN(p.amount)}</td>
+                        <td data-label="Método">${p.payment_method || 'cash'}</td>
+                        <td data-label="Notas">${esc(p.notes || '—')}</td>
+                    </tr>`).join('') || '<tr><td colspan="4" style="text-align:center; color:#999;">Sin abonos</td></tr>';
+
+                body.innerHTML = `
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1rem;">
+                        <div style="background:#fff7ee; border-radius:10px; padding:10px 14px;">
+                            <div style="font-size:0.8rem; color:#666;">SALDO PENDIENTE</div>
+                            <div style="font-size:1.3rem; font-weight:800; color:#e67e22;">${fmtMXN(customer.balance)}</div>
+                        </div>
+                        <div style="background:#eefaf3; border-radius:10px; padding:10px 14px;">
+                            <div style="font-size:0.8rem; color:#666;">COMPRAS TOTALES</div>
+                            <div style="font-size:1.3rem; font-weight:800; color:#27ae60;">${customer.total_purchases || 0}</div>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:10px; margin-bottom: 1.2rem;">
+                        <input type="number" id="paymentAmountInput" min="0.01" step="0.01" placeholder="Monto del abono" style="flex:1; padding:9px; border-radius:8px; border:1px solid #ddd;">
+                        <select id="paymentMethodInput" style="padding:9px; border-radius:8px; border:1px solid #ddd;">
+                            <option value="cash">Efectivo</option>
+                            <option value="card">Tarjeta</option>
+                            <option value="transfer">Transferencia</option>
+                        </select>
+                        <button onclick="submitPayment(${customer.customer_id})" class="btn btn-primary" style="padding:9px 16px; border-radius:8px; background:var(--primary-color); color:#fff; border:none; cursor:pointer;">
+                            <i class="fas fa-hand-holding-dollar"></i> Abonar
+                        </button>
+                    </div>
+                    <h3 style="font-size:1rem; margin: 0 0 8px;"><i class="fas fa-receipt"></i> Historial de ventas</h3>
+                    <table class="dashboard-table" style="width:100%; font-size:0.85rem; margin-bottom: 1.2rem;">
+                        <thead><tr><th>Venta</th><th>Fecha</th><th style="text-align:right;">Total</th><th style="text-align:right;">Pagado</th><th>Estado</th></tr></thead>
+                        <tbody>${salesRows}</tbody>
+                    </table>
+                    <h3 style="font-size:1rem; margin: 0 0 8px;"><i class="fas fa-coins"></i> Abonos</h3>
+                    <table class="dashboard-table" style="width:100%; font-size:0.85rem;">
+                        <thead><tr><th>Fecha</th><th style="text-align:right;">Monto</th><th>Método</th><th>Notas</th></tr></thead>
+                        <tbody>${payRows}</tbody>
+                    </table>
+                `;
+                document.getElementById('customerDetailModal').showModal();
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
+        async function submitPayment(customerId) {
+            const amount = parseFloat(document.getElementById('paymentAmountInput').value);
+            if (!amount || amount <= 0) { alert('Monto inválido'); return; }
+            const payment_method = document.getElementById('paymentMethodInput').value;
+            try {
+                const res = await fetch('../api/customers/payments.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ customer_id: customerId, amount, payment_method })
+                });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.message);
+                openCustomerDetail(customerId);
+                loadCustomers(document.getElementById('customerSearchInput').value.trim());
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -646,3 +646,93 @@ document.getElementById('btnConfirmImport').addEventListener('click', async () =
     }
 });
 
+
+// ==========================================
+// Notificaciones push (Fase B)
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('pushSubscribeBtn');
+    if (!btn) return;
+
+    const updateBtnState = async () => {
+        try {
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                btn.innerHTML = '<i class="fas fa-bell-slash"></i> Notificaciones no soportadas';
+                btn.disabled = true;
+                return;
+            }
+            const reg = await navigator.serviceWorker.ready;
+            const sub = await reg.pushManager.getSubscription();
+            if (sub) {
+                btn.innerHTML = '<i class="fas fa-bell-slash"></i> Desactivar notificaciones';
+                btn.style.background = '#e74c3c';
+            } else {
+                btn.innerHTML = '<i class="fas fa-bell"></i> Activar notificaciones en este dispositivo';
+                btn.style.background = 'var(--primary-color)';
+            }
+        } catch (e) {
+            console.warn('Push check:', e);
+        }
+    };
+
+    btn.addEventListener('click', async () => {
+        try {
+            const reg = await navigator.serviceWorker.ready;
+            const existing = await reg.pushManager.getSubscription();
+            if (existing) {
+                // Desuscribir
+                await existing.unsubscribe();
+                await fetch('../api/push/unsubscribe.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ endpoint: existing.endpoint })
+                });
+                showNotification('Notificaciones desactivadas', 'info');
+            } else {
+                // Suscribir (vapid key viene del servidor; si no está configurada, falla el envío pero se guarda la sub)
+                const keyResp = await fetch('../api/push/public_key.php').then(r => r.json()).catch(() => ({ key: null }));
+                const sub = await reg.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: keyResp.key ? keyResp.key : urlBase64ToUint8Array('BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkMcZ4-mSf9vJtUyWx0QFq0Q4wYf0E2YqQk9QF4Y1s')
+                });
+                await fetch('../api/push/subscribe.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        endpoint: sub.endpoint,
+                        p256dh: arrayBufferToBase64(sub.getKey('p256dh')),
+                        auth: arrayBufferToBase64(sub.getKey('auth')),
+                        device_name: navigator.userAgent.slice(0, 80)
+                    })
+                });
+                showNotification('Notificaciones activadas', 'success');
+            }
+            await updateBtnState();
+        } catch (e) {
+            console.error('Push subscribe error:', e);
+            showNotification('No se pudo activar notificaciones: ' + e.message, 'error');
+        }
+    });
+
+    updateBtnState();
+});
+
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
+function arrayBufferToBase64(buffer) {
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+}

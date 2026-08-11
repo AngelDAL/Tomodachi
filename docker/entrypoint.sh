@@ -129,6 +129,13 @@ fi
 mkdir -p /var/www/html/public/assets/images/products
 mkdir -p /var/www/html/public/assets/images/logos
 mkdir -p /var/www/html/public/assets/images/backgrounds
+# Sembrar assets por defecto en el volumen (sin sobreescribir los del usuario)
+if [ -f /opt/tomodachi-assets/default-logo.png ] && [ ! -f /var/www/html/public/assets/images/default-logo.png ]; then
+  cp /opt/tomodachi-assets/default-logo.png /var/www/html/public/assets/images/default-logo.png
+fi
+if [ -f /opt/tomodachi-assets/products/default-product.svg ] && [ ! -f /var/www/html/public/assets/images/products/default-product.svg ]; then
+  cp /opt/tomodachi-assets/products/default-product.svg /var/www/html/public/assets/images/products/default-product.svg
+fi
 chown -R www-data:www-data /var/www/html/public/assets/images
 
 echo "[Tomodachi] Iniciando Apache..."

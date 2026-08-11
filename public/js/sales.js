@@ -208,6 +208,17 @@ function initPOS() {
     });
   }
 
+  // Fiado: mostrar selector de cliente cuando el método es credit
+  const custSelectorGroup = document.getElementById('customerSelectorGroup');
+  if (paymentMethodSelect && custSelectorGroup) {
+    const updateCustomerSelector = () => {
+      const isCredit = paymentMethodSelect.value === 'credit';
+      custSelectorGroup.style.display = isCredit ? 'block' : 'none';
+      if (isCredit) loadCustomersIntoSelect();
+    };
+    paymentMethodSelect.addEventListener('change', updateCustomerSelector);
+  }
+
   // Iniciar sync si hay sesión activa
   if (displaySessionUUID) {
     startSyncInterval();
@@ -1528,6 +1539,10 @@ function recalcChange() {
       if (method === 'cash' || method === 'mixed') {
         const received = parseFloat(checkoutReceivedInput.value) || 0;
         canFinalize = received >= total && total > 0;
+      } else if (method === 'credit') {
+        // Fiado: requiere cliente seleccionado
+        const custSel = document.getElementById('customerSelect');
+        canFinalize = total > 0 && custSel && parseInt(custSel.value, 10) > 0;
       } else {
         canFinalize = total > 0;
       }
@@ -1554,7 +1569,7 @@ async function finalizeSale() {
   const method = paymentMethodSelect ? paymentMethodSelect.value : 'cash';
   const payload = {
     store_id: CURRENT_STORE_ID,
-    items: CART.map(i => ({ product_id: i.product_id, quantity: i.quantity, price: i.unit_price })),
+    items: CART.map(i => ({ product_id: i.product_id, quantity: i.quantity })),
     payment_method: method,
     discount: (discountInput && discountInput.value) ? parseFloat(discountInput.value) : 0,
     tax: (taxInput && taxInput.value) ? parseFloat(taxInput.value) : 0
@@ -1563,6 +1578,13 @@ async function finalizeSale() {
   // Añadir cash_amount si es necesario
   if ((method === 'cash' || method === 'mixed') && checkoutReceivedInput) {
     payload.cash_amount = parseFloat(checkoutReceivedInput.value) || 0;
+  }
+
+  // Fiado: cliente y pago parcial
+  if (method === 'credit') {
+    const custSel = document.getElementById('customerSelect');
+    payload.customer_id = custSel ? parseInt(custSel.value, 10) || 0 : 0;
+    payload.amount_paid = parseFloat((document.getElementById('apartadoPaidInput') || {}).value) || 0;
   }
 
   try {
@@ -1622,7 +1644,22 @@ async function finalizeSale() {
       showNotification(resData.message || 'Error venta', 'error');
     }
   } catch (e) {
-    showNotification('Error al procesar venta', 'error');
+    // Modo offline: si falló la red (sin internet), encolar la venta
+    if ((e instanceof TypeError || e.name === 'TypeError' || e.message.includes('Failed to fetch')) && typeof window.offlineEnqueueSale === 'function') {
+      try {
+        await window.offlineEnqueueSale(payload);
+        showNotification('Sin conexión: venta guardada, se sincronizará al recuperar internet', 'warning');
+        // Limpiar carrito (quedó encolado)
+        CART = [];
+        MULTI_CARTS[CURRENT_TAB] = [];
+        localStorage.setItem('tomodachi_multi_carts', JSON.stringify(MULTI_CARTS));
+        renderCart();
+      } catch (qe) {
+        showNotification('No se pudo guardar la venta offline', 'error');
+      }
+    } else {
+      showNotification('Error al procesar venta: ' + e.message, 'error');
+    }
   } finally {
     finalizeSaleBtn.disabled = false;
   }
@@ -3678,5 +3715,26 @@ function isTarget(item, promo) {
         (t.product_id && t.product_id == item.product_id) || 
         (t.category_id && t.category_id == item.category_id)
     );
+}
+
+// ==========================================
+// Fiado: cargar clientes en el selector del POS
+// ==========================================
+async function loadCustomersIntoSelect() {
+  const custSel = document.getElementById('customerSelect');
+  if (!custSel) return;
+  try {
+    const res = await fetch('../api/customers/customers.php');
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+    const prev = custSel.value;
+    custSel.innerHTML = '<option value="">— Seleccionar cliente —</option>' +
+      (data.data || []).map(c =>
+        `<option value="${c.customer_id}" ${Number(c.balance) > 0 ? 'data-balance="' + c.balance + '"' : ''}>${c.full_name}${Number(c.balance) > 0 ? ' (adeuda ' + new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(c.balance) + ')' : ''}</option>`
+      ).join('');
+    if (prev) custSel.value = prev;
+  } catch (e) {
+    console.error('Error cargando clientes:', e);
+  }
 }
 

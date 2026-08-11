@@ -141,22 +141,26 @@ CREATE TABLE sales (
     sale_id INT AUTO_INCREMENT PRIMARY KEY,
     store_id INT NOT NULL,
     user_id INT NOT NULL,
+    customer_id INT NULL,
     register_id INT NOT NULL,
     sale_date DATETIME DEFAULT CURRENT_TIMESTAMP,
     subtotal DECIMAL(10,2) NOT NULL,
     tax DECIMAL(10,2) DEFAULT 0.00,
     discount DECIMAL(10,2) DEFAULT 0.00,
     total DECIMAL(10,2) NOT NULL,
-    payment_method ENUM('cash', 'card', 'transfer', 'mixed') NOT NULL,
+    amount_paid DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT 'Monto efectivamente pagado al momento de la venta (resto = fiado)',
+    payment_method ENUM('cash', 'card', 'transfer', 'mixed', 'credit') NOT NULL,
     status ENUM('completed', 'cancelled', 'refunded') DEFAULT 'completed',
     refunded_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT 'Monto total devuelto acumulado (devoluciones parciales)',
     created_via VARCHAR(10) NOT NULL DEFAULT 'session' COMMENT 'session = interfaz (humano), token = API/agente',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE RESTRICT,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE RESTRICT,
+    FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE SET NULL,
     FOREIGN KEY (register_id) REFERENCES cash_registers(register_id) ON DELETE RESTRICT,
     INDEX idx_store_date (store_id, sale_date),
     INDEX idx_status (status),
+    INDEX idx_customer (customer_id),
     INDEX idx_register (register_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -219,8 +223,61 @@ CREATE TABLE cash_movements (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (register_id) REFERENCES cash_registers(register_id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE RESTRICT,
-    INDEX idx_register_date (register_id, created_at),
-    INDEX idx_movement_type (movement_type)
+    INDEX idx_register (register_id),
+    INDEX idx_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: customers (Clientes / fiado)
+CREATE TABLE customers (
+    customer_id INT AUTO_INCREMENT PRIMARY KEY,
+    store_id INT NOT NULL,
+    full_name VARCHAR(150) NOT NULL,
+    phone VARCHAR(30) NULL,
+    email VARCHAR(150) NULL,
+    address VARCHAR(255) NULL,
+    balance DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT 'Saldo pendiente (fiado)',
+    credit_limit DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT '0 = sin límite',
+    notes VARCHAR(255) NULL,
+    status ENUM('active', 'inactive') DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE,
+    INDEX idx_store (store_id),
+    INDEX idx_phone (phone)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: customer_payments (Abonos al fiado)
+CREATE TABLE customer_payments (
+    payment_id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT NOT NULL,
+    store_id INT NOT NULL,
+    user_id INT NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    payment_method ENUM('cash', 'card', 'transfer') DEFAULT 'cash',
+    notes VARCHAR(255) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE,
+    FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE RESTRICT,
+    INDEX idx_customer (customer_id),
+    INDEX idx_store_date (store_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: push_subscriptions (Notificaciones FCM)
+CREATE TABLE push_subscriptions (
+    sub_id INT AUTO_INCREMENT PRIMARY KEY,
+    store_id INT NOT NULL,
+    user_id INT NOT NULL,
+    endpoint VARCHAR(500) NOT NULL,
+    p256dh VARCHAR(300) NOT NULL,
+    auth VARCHAR(200) NOT NULL,
+    device_name VARCHAR(100) NULL,
+    last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    UNIQUE KEY uq_endpoint (endpoint(255)),
+    INDEX idx_store (store_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabla: api_tokens (Tokens para integraciones externas / agentes IA)

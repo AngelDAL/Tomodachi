@@ -46,12 +46,16 @@ try {
     $discount = isset($data['discount']) ? (float)$data['discount'] : 0.0;
     $tax = isset($data['tax']) ? (float)$data['tax'] : 0.0;
     $cash_amount = isset($data['cash_amount']) ? (float)$data['cash_amount'] : null;
+    $customer_id = isset($data['customer_id']) ? (int)$data['customer_id'] : 0;
+    // Para apartado: cuánto pagó el cliente AHORA (el resto queda como saldo).
+    $amount_paid = isset($data['amount_paid']) ? (float)$data['amount_paid'] : 0.0;
 
     $errors=[];
     if ($store_id<=0) $errors['store_id']='Requerido';
     if (!$items || !is_array($items)) $errors['items']='Lista vacía';
-    if (!in_array($payment_method,[PAYMENT_CASH,PAYMENT_CARD,PAYMENT_TRANSFER,PAYMENT_MIXED])) $errors['payment_method']='Método inválido';
+    if (!in_array($payment_method,[PAYMENT_CASH,PAYMENT_CARD,PAYMENT_TRANSFER,PAYMENT_MIXED,PAYMENT_CREDIT])) $errors['payment_method']='Método inválido';
     if ($payment_method===PAYMENT_MIXED && ($cash_amount===null || $cash_amount<0)) $errors['cash_amount']='Requerido en pago mixto';
+    if ($payment_method===PAYMENT_CREDIT && $customer_id<=0) $errors['customer_id']='Requerido para apartado';
     if ($errors) { Response::validationError($errors); }
 
     // Seguridad: el usuario solo puede facturar en su propia tienda
@@ -137,6 +141,27 @@ try {
     $total = $subtotal - $manualDiscount + $tax;
     if ($total < 0) { Response::error('Total negativo',400); }
 
+    // Validación de apartado (después de conocer el total)
+    if ($payment_method === PAYMENT_CREDIT && ($amount_paid < 0 || $amount_paid > $total)) {
+        Response::validationError(['amount_paid' => 'Monto inválido para apartado']);
+    }
+    // Si no es apartado, amount_paid = total (pago completo)
+    if ($payment_method !== PAYMENT_CREDIT) { $amount_paid = $total; }
+
+    // Si hay cliente asociado, validar que exista en la tienda
+    $customer = null;
+    if ($customer_id > 0) {
+        $customer = $db->selectOne('SELECT customer_id, full_name, balance, credit_limit, status FROM customers WHERE customer_id = ? AND store_id = ?', [$customer_id, $store_id]);
+        if (!$customer || $customer['status'] !== 'active') { Response::error('Cliente inválido', 404); }
+        if ($payment_method === PAYMENT_CREDIT) {
+            // Validar límite de crédito (0 = sin límite)
+            $newBalance = (float)$customer['balance'] + ($total - $amount_paid);
+            if ((float)$customer['credit_limit'] > 0 && $newBalance > (float)$customer['credit_limit']) {
+                Response::error("El saldo del cliente excede su límite de crédito ($" . number_format($customer['credit_limit'], 2) . ")", 409);
+            }
+        }
+    }
+
     $productsToUpdate = [];
     foreach ($pricingResult['lines'] as $line) {
         $productsToUpdate[] = [
@@ -156,9 +181,21 @@ try {
     try {
         $user = $actor;
         $createdVia = ($user['via'] === 'token') ? 'token' : 'session';
-        $sale_id = $db->insert('INSERT INTO sales (store_id, user_id, register_id, sale_date, subtotal, tax, discount, total, payment_method, status, created_via, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,NOW())',[
-            $store_id, $user['user_id'], $register_id, date('Y-m-d H:i:s'), $subtotal, $tax, $discount, $total, $payment_method, SALE_COMPLETED, $createdVia
+        $sale_id = $db->insert('INSERT INTO sales (store_id, user_id, customer_id, register_id, sale_date, subtotal, tax, discount, total, amount_paid, payment_method, status, created_via, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())',[
+            $store_id, $user['user_id'], ($customer_id > 0 ? $customer_id : null), $register_id, date('Y-m-d H:i:s'), $subtotal, $tax, $discount, $total, $amount_paid, $payment_method, SALE_COMPLETED, $createdVia
         ]);
+
+        // Si es apartado, incrementar balance del cliente
+        if ($payment_method === PAYMENT_CREDIT && $customer_id > 0) {
+            $debtAmount = $total - $amount_paid;
+            if ($debtAmount > 0) {
+                $db->update('UPDATE customers SET balance = balance + ? WHERE customer_id = ?', [$debtAmount, $customer_id]);
+            }
+            // Si pagó parte en efectivo, registrar el movimiento de caja
+            if ($amount_paid > 0) {
+                $db->insert('INSERT INTO cash_movements (register_id, user_id, movement_type, amount, description, created_at) VALUES (?,?,?,?,?,NOW())', [ $register_id, $user['user_id'], 'sale', $amount_paid, 'Venta #'.$sale_id.' (apartado, pago parcial)' ]);
+            }
+        }
 
         foreach ($productsToUpdate as $p) {
             // Actualizar inventario en tabla products

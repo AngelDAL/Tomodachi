@@ -30,6 +30,11 @@ try {
     $actor = $apiAuth->requireActor($auth);
     $apiAuth->requireScope($actor, 'read');
 
+    // Cierre Z: solo admin/manager (es información sensible de caja)
+    if ($actor['via'] === 'session' && !$auth->hasRole([ROLE_ADMIN, ROLE_MANAGER])) {
+        Response::error('Permisos insuficientes', 403);
+    }
+
     $currentUser = $actor;
     $store_id = (int)$currentUser['store_id'];
 

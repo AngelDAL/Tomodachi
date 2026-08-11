@@ -30,7 +30,7 @@ try {
     $sale_id = isset($_GET['sale_id']) ? (int)$_GET['sale_id'] : 0;
     if ($sale_id<=0) { Response::validationError(['sale_id'=>'Requerido']); }
     
-    $sale = $db->selectOne('SELECT sale_id, store_id, user_id, register_id, sale_date, subtotal, tax, discount, total, refunded_amount, payment_method, status, created_via FROM sales WHERE sale_id = ?',[$sale_id]);
+    $sale = $db->selectOne('SELECT s.sale_id, s.store_id, s.user_id, s.customer_id, c.full_name AS customer_name, s.register_id, s.sale_date, s.subtotal, s.tax, s.discount, s.total, s.amount_paid, s.refunded_amount, s.payment_method, s.status, s.created_via FROM sales s LEFT JOIN customers c ON c.customer_id = s.customer_id WHERE s.sale_id = ?',[$sale_id]);
     if (!$sale) { Response::notFound('Venta no existe'); }
 
     // Seguridad: el usuario solo puede ver detalles de ventas de su propia tienda

@@ -1,4 +1,4 @@
-function initSidebar() {
+async function initSidebar() {
     // 0. Load Modern Sidebar CSS only if not already present in the head
     if (!document.querySelector('link[href="css/sidebar-modern.css"]')) {
         const link = document.createElement('link');
@@ -26,13 +26,15 @@ function initSidebar() {
     if (!sidebarNav) return;
 
     // Define menu items
+    // roles: opcional — si existe, solo esos roles ven el item (permisos granulares B4)
     const menuItems = [
         { href: 'dashboard.html', icon: 'fa-chart-line', text: 'Dashboard' },
         { href: 'sales.html', icon: 'fa-cash-register', text: 'Punto de Venta' },
         { href: 'inventory.html', icon: 'fa-box', text: 'Inventario' },
+        { href: 'customers.html', icon: 'fa-users', text: 'Clientes' },
         { href: 'promotions.html', icon: 'fa-tags', text: 'Promociones' },
-        { href: 'finance.html', icon: 'fa-wallet', text: 'Finanzas' },
-        { href: 'reports.html', icon: 'fa-chart-bar', text: 'Reportes', className: 'desktop-only-nav' } // Keeping reports desktop-only for now as per original
+        { href: 'finance.html', icon: 'fa-wallet', text: 'Finanzas', roles: ['admin', 'manager', 'super_admin'] },
+        { href: 'reports.html', icon: 'fa-chart-bar', text: 'Reportes', roles: ['admin', 'manager', 'super_admin'], className: 'desktop-only-nav' } // Keeping reports desktop-only for now as per original
     ];
 
     // Current page detection
@@ -42,7 +44,21 @@ function initSidebar() {
     // Helper to generate menu HTML
     let menuHTML = '';
     
+    // Obtener rol del usuario para permisos granulares (B4)
+    let currentRole = null;
+    try {
+        const sessRes = await fetch('../api/auth/verify_session.php');
+        const sessData = await sessRes.json();
+        if (sessData.success && sessData.data && sessData.data.user) {
+            currentRole = sessData.data.user.role || null;
+        }
+    } catch (e) { console.warn('No se pudo obtener el rol:', e); }
+
     menuItems.forEach(item => {
+        // Permisos granulares: ocultar items restringidos según rol
+        if (item.roles && currentRole && !item.roles.includes(currentRole)) {
+            return; // no renderizar
+        }
         // Active state logic
         // Simple check: active if href matches current page
         // Handling special cases if needed (e.g. index.html -> dashboard.html mapping?)

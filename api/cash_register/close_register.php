@@ -36,9 +36,22 @@ try {
     $register_id = isset($data['register_id']) ? (int)$data['register_id'] : 0;
     $counted_amount = isset($data['counted_amount']) ? (float)$data['counted_amount'] : null;
     $notes = isset($data['notes']) ? substr(trim($data['notes']),0,255) : null;
+    // Arqueo por denominaciones (B7): [{denomination: 100, count: 5}, ...]
+    $denominations = isset($data['denominations']) ? $data['denominations'] : null;
 
     $errors = [];
     if ($register_id <= 0) { $errors['register_id'] = 'Requerido'; }
+    // Si vienen denominaciones, counted_amount se calcula; si no, debe venir explícito
+    $denominationTotal = 0.0;
+    if (is_array($denominations) && count($denominations) > 0) {
+        foreach ($denominations as $d) {
+            $denom = (float)($d['denomination'] ?? 0);
+            $cnt = (int)($d['count'] ?? 0);
+            if ($denom <= 0) { $errors['denominations'] = 'Denominación inválida'; break; }
+            $denominationTotal += $denom * $cnt;
+        }
+        $counted_amount = round($denominationTotal, 2);
+    }
     if ($counted_amount === null || $counted_amount < 0) { $errors['counted_amount'] = 'Monto contado inválido'; }
     if ($errors) { Response::validationError($errors); }
 

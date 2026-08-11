@@ -332,6 +332,25 @@ document.getElementById('closeRegisterForm').addEventListener('submit', async (e
         notes: formData.get('notes')
     };
 
+    // Arqueo por denominaciones: si el usuario llenó alguna, enviarla
+    // (el backend autocalcula counted_amount si vienen denominaciones)
+    const denomInputs = document.querySelectorAll('.denom-count');
+    const denominations = [];
+    let denomHasValue = false;
+    denomInputs.forEach(inp => {
+        const count = parseInt(inp.value, 10) || 0;
+        if (count > 0) {
+            denomHasValue = true;
+            denominations.push({ denomination: parseFloat(inp.dataset.denom), count });
+        }
+    });
+    if (denomHasValue) {
+        data.denominations = denominations;
+        // Calculamos el total aquí también para mostrarlo en la respuesta si difiere
+        const denomTotal = denominations.reduce((s, d) => s + d.denomination * d.count, 0);
+        data.counted_amount = Math.round(denomTotal * 100) / 100;
+    }
+
     try {
         const res = await fetch('../api/cash_register/close_register.php', {
             method: 'POST',
@@ -456,4 +475,40 @@ document.getElementById('countedAmount').addEventListener('input', function(e) {
 
 function formatCurrency(amount) {
     return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
+}
+
+// ==========================================
+// Arqueo por denominaciones (Fase B)
+// ==========================================
+function calcDenominationTotal() {
+    let total = 0;
+    document.querySelectorAll('.denom-count').forEach(inp => {
+        const count = parseFloat(inp.value) || 0;
+        total += (parseFloat(inp.dataset.denom) || 0) * count;
+    });
+    return Math.round(total * 100) / 100;
+}
+
+function updateDenominationTotal() {
+    const el = document.getElementById('denominationTotal');
+    if (el) el.textContent = formatCurrency(calcDenominationTotal());
+}
+
+// Calcular en vivo
+document.querySelectorAll('.denom-count').forEach(inp => {
+    inp.addEventListener('input', updateDenominationTotal);
+});
+
+// Botón: usar el total de denominaciones como dinero contado
+const applyDenomBtn = document.getElementById('applyDenominationsBtn');
+if (applyDenomBtn) {
+    applyDenomBtn.addEventListener('click', function() {
+        const total = calcDenominationTotal();
+        const countedInput = document.getElementById('countedAmount');
+        if (countedInput) {
+            countedInput.value = total.toFixed(2);
+            countedInput.dispatchEvent(new Event('input')); // dispara el cálculo de diferencia
+            notify('Dinero contado actualizado con el arqueo', 'success');
+        }
+    });
 }

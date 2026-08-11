@@ -202,7 +202,23 @@
                                             <option value="card">Tarjeta</option>
                                             <option value="transfer">Transferencia</option>
                                             <option value="mixed">Mixto</option>
+                                            <option value="credit">Apartado (a crédito)</option>
                                         </select>
+                                    </div>
+
+                                    <div class="adjustment-group" id="customerSelectorGroup" style="display:none;">
+                                        <label>Cliente (para apartado)</label>
+                                        <select id="customerSelect" class="form-select">
+                                            <option value="">— Seleccionar cliente —</option>
+                                        </select>
+                                        <div id="apartadoAmountRow" style="display:none; margin-top: 8px;">
+                                            <label>Pago ahora (opcional)</label>
+                                            <input type="number" id="apartadoPaidInput" min="0" step="0.01" placeholder="0.00" class="form-input">
+                                            <small style="display:block; color:#888; margin-top:4px;">El resto queda como saldo pendiente del cliente (apartado).</small>
+                                        </div>
+                                        <a href="customers.html" style="font-size:0.8rem; color: var(--primary-color); margin-top:6px; display:inline-block;">
+                                            <i class="fas fa-user-plus"></i> Crear cliente
+                                        </a>
                                     </div>
 
                                     <div class="adjustment-row">
@@ -376,6 +392,7 @@
     <script src="lib/html5-qrcode/html5-qrcode.min.js"></script>
     <script src="lib/qrcodejs/qrcode.min.js"></script>
     <script src="js/thermal-print.js"></script>
+    <script src="js/offline.js"></script>
     <script src="js/scanner.js"></script>
     <script src="js/tour.js"></script>
     <script src="lib/animejs/anime.min.js"></script>

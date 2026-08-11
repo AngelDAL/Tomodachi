@@ -177,6 +177,61 @@ else
   FAIL=$((FAIL+1))
 fi
 
+# ===== Sección 11: Fase B (clientes/apartado, permisos, push, arqueo) =====
+# B2: CRUD clientes
+c_json=$(curl -s -b "$CJ" -X POST "$BASE/api/customers/customers.php" -H 'Content-Type: application/json' -d '{"full_name":"Suite Cliente","phone":"000","credit_limit":100}')
+c_id=$(echo "$c_json" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['data']['customer_id'] if d.get('data') else '')" 2>/dev/null)
+if [ -n "$c_id" ]; then
+  echo "PASS | Cliente creado (id $c_id)"
+  PASS=$((PASS+1))
+  # B2: venta apartado
+  v2_json=$(curl -s -b "$CJ" -X POST "$BASE/api/sales/create_sale.php" -H 'Content-Type: application/json' -d "{\"store_id\":1,\"items\":[{\"product_id\":$pid_suite,\"quantity\":1}],\"payment_method\":\"credit\",\"customer_id\":$c_id,\"amount_paid\":1}")
+  v2_ok=$(echo "$v2_json" | python3 -c "import json,sys; print(json.load(sys.stdin).get('success'))" 2>/dev/null)
+  if [ "$v2_ok" = "True" ]; then
+    echo "PASS | Venta apartado (credit) registrada"
+    PASS=$((PASS+1))
+    # B2: abono
+    p_json=$(curl -s -b "$CJ" -X POST "$BASE/api/customers/payments.php" -H 'Content-Type: application/json' -d "{\"customer_id\":$c_id,\"amount\":5,\"payment_method\":\"cash\"}")
+    p_ok=$(echo "$p_json" | python3 -c "import json,sys; print(json.load(sys.stdin).get('success'))" 2>/dev/null)
+    if [ "$p_ok" = "True" ]; then
+      echo "PASS | Abono a cliente registrado"
+      PASS=$((PASS+1))
+    else
+      echo "FAIL | Abono falló ($p_json)"
+      FAIL=$((FAIL+1))
+    fi
+  else
+    echo "FAIL | Venta apartado falló ($v2_json)"
+    FAIL=$((FAIL+1))
+  fi
+  # Limpiar cliente
+  curl -s -o /dev/null -b "$CJ" -X DELETE "$BASE/api/customers/customers.php" -H 'Content-Type: application/json' -d "{\"customer_id\":$c_id}"
+else
+  echo "FAIL | Cliente no creado ($c_json)"
+  FAIL=$((FAIL+1))
+fi
+
+# B6: push public_key responde
+pk_json=$(curl -s -b "$CJ" "$BASE/api/push/public_key.php")
+pk_ok=$(echo "$pk_json" | python3 -c "import json,sys; print(json.load(sys.stdin).get('success'))" 2>/dev/null)
+if [ "$pk_ok" = "True" ]; then
+  echo "PASS | Push: public_key.php responde"
+  PASS=$((PASS+1))
+else
+  echo "FAIL | Push: public_key.php falló"
+  FAIL=$((FAIL+1))
+fi
+
+# B7: arqueo por denominaciones en close_register (validar con caja inexistente da 404/409, no 422 por denominaciones)
+denom_code=$(curl -s -o /dev/null -w "%{http_code}" -b "$CJ" -X POST "$BASE/api/cash_register/close_register.php" -H 'Content-Type: application/json' -d '{"register_id":999999,"denominations":[{"denomination":100,"count":2}]}')
+if [ "$denom_code" = "404" ] || [ "$denom_code" = "409" ]; then
+  echo "PASS | Arqueo por denominaciones aceptado por backend (HTTP $denom_code en caja inexistente)"
+  PASS=$((PASS+1))
+else
+  echo "FAIL | Arqueo por denominaciones (HTTP $denom_code)"
+  FAIL=$((FAIL+1))
+fi
+
 echo
 echo "===== RESULTADO: $PASS pasaron, $FAIL fallaron ====="
 rm -f "$CJ" "$CJ2"

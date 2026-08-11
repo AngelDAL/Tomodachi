@@ -32,6 +32,7 @@ define('PAYMENT_CASH', 'cash');
 define('PAYMENT_CARD', 'card');
 define('PAYMENT_TRANSFER', 'transfer');
 define('PAYMENT_MIXED', 'mixed');
+define('PAYMENT_CREDIT', 'credit');
 
 // Tipos de movimiento de inventario
 define('MOVEMENT_ENTRY', 'entry');
@@ -56,3 +57,12 @@ define('PLAN_PREMIUM', 'premium');
 // 'SAAS': Verifica suscripción y planes (para el proveedor que ofrece hosting gestionado)
 $envAppMode = getenv('APP_MODE');
 define('APP_MODE', in_array($envAppMode, ['OPEN_SOURCE', 'SAAS'], true) ? $envAppMode : 'OPEN_SOURCE');
+
+// Notificaciones Push (Web Push / FCM) — Fase B
+// Genera las llaves con: npx web-push generate-vapid-keys
+// Formato esperado: 'B...' (base64url, sin padding '==')
+// Si quedan vacías, el envío de notificaciones responde 503 (la suscripción
+// de dispositivos sigue funcionando).
+define('VAPID_PUBLIC_KEY', getenv('VAPID_PUBLIC_KEY') ?: '');
+define('VAPID_PRIVATE_KEY', getenv('VAPID_PRIVATE_KEY') ?: '');
+define('VAPID_SUBJECT', getenv('VAPID_SUBJECT') ?: 'mailto:admin@tomodachi.local');

@@ -22,8 +22,13 @@
         if (savedTheme) {
             const themeConfig = JSON.parse(savedTheme);
 
-            // 1) Tema oscuro/claro
-            const darkMode = themeConfig.dark_mode === true || themeConfig.dark_mode === 'true';
+            // 1) Tema oscuro/claro/auto
+            const themeMode = themeConfig.theme_mode;
+            let darkMode;
+            if (themeMode === 'light') darkMode = false;
+            else if (themeMode === 'dark') darkMode = true;
+            else if (themeMode === 'auto') darkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            else darkMode = themeConfig.dark_mode === true || themeConfig.dark_mode === 'true';
             appliedDark = darkMode;
             document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
 
@@ -63,7 +68,12 @@
         if (e.key === 'pos_theme_config') {
             try {
                 const cfg = JSON.parse(e.newValue);
-                const dark = cfg.dark_mode === true || cfg.dark_mode === 'true';
+                const m = cfg.theme_mode;
+                let dark;
+                if (m === 'light') dark = false;
+                else if (m === 'dark') dark = true;
+                else if (m === 'auto') dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                else dark = cfg.dark_mode === true || cfg.dark_mode === 'true';
                 document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
             } catch (err) { /* noop */ }
         }

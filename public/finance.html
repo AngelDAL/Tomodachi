@@ -109,7 +109,7 @@
             width: 50px;
             height: 50px;
             border-radius: 50%;
-            background: #e3f2fd;
+            background: var(--info-color);
             color: var(--primary-color);
             display: flex;
             align-items: center;
@@ -208,7 +208,7 @@
                         <input type="text" id="closeTerminalName" readonly class="form-control-plaintext">
                     </div>
                     
-                    <div class="info-box" style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
+                    <div class="info-box" style="background: var(--bg-light); padding: 15px; border-radius: 5px; margin-bottom: 15px;">
                         <div class="info-row"><span>Saldo Inicial:</span> <span id="closeInitial"></span></div>
                         <div class="info-row"><span>Ventas:</span> <span id="closeSales"></span></div>
                         <div class="info-row"><span>Entradas:</span> <span id="closeEntries"></span></div>
@@ -314,7 +314,7 @@
             </div>
             <div class="drawer-body" style="display: flex; flex-direction: column; height: 100%;">
                 
-                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: center; border: 1px solid #e9ecef;">
+                <div style="background: var(--bg-light); padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: center; border: 1px solid #e9ecef;">
                     <div style="font-size: 0.9em; color: #666; margin-bottom: 5px;">Monto Esperado Actual</div>
                     <div id="historyExpectedAmount" style="font-size: 1.8em; font-weight: bold; color: var(--text-color);">$0.00</div>
                 </div>

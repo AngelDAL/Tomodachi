@@ -681,7 +681,7 @@
                             </button>
                             <div class="ai-suggestions">
                                 <label>Sugerencia de Descripción:</label>
-                                <p id="aiDescriptionSuggestion" style="font-size: 0.9em; font-style: italic; color: #666; background: #f5f5f5; padding: 10px; border-radius: 5px; margin-top: 5px;"></p>
+                                <p id="aiDescriptionSuggestion" style="font-size: 0.9em; font-style: italic; color: #666; background: var(--bg-light); padding: 10px; border-radius: 5px; margin-top: 5px;"></p>
                                 <button class="btn-secondary btn-sm" onclick="copyAIDescription()" style="margin-top: 5px; width: 100%;">Copiar Descripción</button>
                             </div>
                         </div>
@@ -727,7 +727,7 @@
         flex: 1;
         padding: 10px;
         border: 1px solid #ddd;
-        background: #f8f9fa;
+        background: var(--bg-light);
         border-radius: 6px;
         cursor: pointer;
         transition: all 0.2s;
@@ -739,12 +739,12 @@
     }
     .btn-strength i { font-size: 1.2em; color: #666; }
     .btn-strength.active {
-        background: #e3f2fd;
-        border-color: #2196f3;
-        color: #1976d2;
+        background: var(--info-color);
+        border-color: var(--info-color);
+        color: var(--info-color);
         font-weight: bold;
     }
-    .btn-strength.active i { color: #1976d2; }
+    .btn-strength.active i { color: var(--info-color); }
 
     /* Comparador de Imágenes */
     .comparison-container {
@@ -761,7 +761,7 @@
         overflow: hidden;
         border-radius: 8px;
         box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        background: #f0f0f0;
+        background: var(--bg-light);
     }
     .comp-img {
         position: absolute;

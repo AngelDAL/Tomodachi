@@ -883,8 +883,8 @@ function promptBulkQuantity(prod) {
                    style="width: 100%; padding: 10px; font-size: 1.1rem;" autofocus>
           </div>
           ${hasScale ? `
-            <div style="margin-top: 10px; padding: 10px; background: #e8f5e9; border-radius: 6px; text-align: center;">
-              <p style="color: #2e7d32; margin: 0; font-size: 0.9rem; font-weight: 600;">
+            <div style="margin-top: 10px; padding: 10px; background: var(--success-color); border-radius: 6px; text-align: center;">
+              <p style="color: var(--success-color); margin: 0; font-size: 0.9rem; font-weight: 600;">
                 <i class="fas fa-balance-scale"></i> Leyendo balanza...
               </p>
               <p style="color: #558b2f; margin: 5px 0 0 0; font-size: 0.85rem;">
@@ -892,7 +892,7 @@ function promptBulkQuantity(prod) {
               </p>
             </div>
           ` : ''}
-          <div id="bulkTotalPreview" style="margin-top: 15px; padding: 10px; background: #f0f0f0; border-radius: 6px; text-align: center;">
+          <div id="bulkTotalPreview" style="margin-top: 15px; padding: 10px; background: var(--bg-light); border-radius: 6px; text-align: center;">
             <strong>Total: $0.00</strong>
           </div>
         </div>
@@ -1078,7 +1078,7 @@ function injectCartTabsUI() {
         #cartTabsContainer {
             display: flex;
             width: 100%;
-            background: #f8f9fa;
+            background: var(--bg-light);
             padding: 10px 10px 0;
             border-bottom: 1px solid #dee2e6;
             gap: 5px;
@@ -1092,7 +1092,7 @@ function injectCartTabsUI() {
             min-width: 60px;
             padding: 12px 5px;
             border: 1px solid transparent;
-            background: #e9ecef;
+            background: var(--border-color);
             color: #6c757d;
             border-radius: 8px 8px 0 0;
             cursor: pointer;
@@ -1124,7 +1124,7 @@ function injectCartTabsUI() {
         
         /* Badge de contador */
         .tab-badge {
-            background: #dc3545;
+            background: var(--danger-color);
             color: white;
             font-size: 0.7rem;
             padding: 2px 6px;
@@ -1261,7 +1261,7 @@ function setupHistoryModal() {
                     </div>
                     <div class="history-card-footer" style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;">
                         <div class="h-total-price" style="font-size: 1.1rem; font-weight: bold; color: #333;">$${total}</div>
-                        <button class="btn-reprint" onclick="viewSaleDetails(${sale.sale_id})" style="background: #f0f0f0; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;"><i class="fas fa-eye"></i> Ver</button>
+                        <button class="btn-reprint" onclick="viewSaleDetails(${sale.sale_id})" style="background: var(--bg-light); border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;"><i class="fas fa-eye"></i> Ver</button>
                     </div>
                 </div>
             `}).join('');
@@ -1832,7 +1832,7 @@ function renderGallery(list, animate = false) {
     if (hasPromo) {
          priceHtml = `
             <span class="original-price" style="text-decoration: line-through; font-size: 0.8em; color: #999;">${formatCurrency(p.price)}</span>
-            <span class="promo-price" style="color: #dc3545; font-weight: bold;">${formatCurrency(promoPrice)}</span>
+            <span class="promo-price" style="color: var(--danger-color); font-weight: bold;">${formatCurrency(promoPrice)}</span>
          `;
     } else {
          priceHtml = `<span class="current-price">${formatCurrency(p.price)}</span>`;
@@ -2442,7 +2442,7 @@ function updateParkedSalesIndicator() {
       indicator = document.createElement('button');
       indicator.id = 'parkedSalesBtn';
       indicator.className = 'btn-parked-sales';
-      indicator.style.cssText = 'margin: 5px; padding: 5px 10px; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; display: none; font-size: 0.8rem;';
+      indicator.style.cssText = 'margin: 5px; padding: 5px 10px; background: var(--warning-color); color: white; border: none; border-radius: 4px; cursor: pointer; display: none; font-size: 0.8rem;';
       indicator.onclick = showParkedSalesList;
 
       if (target.classList.contains('cart-header')) {
@@ -2478,7 +2478,7 @@ function showParkedSalesList() {
   }
 
   const listHtml = PARKED_SALES.map(s => `
-        <div style="background: #f5f5f5; padding: 10px; margin-bottom: 10px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
+        <div style="background: var(--bg-light); padding: 10px; margin-bottom: 10px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
             <div>
                 <strong>${s.timestamp}</strong><br>
                 ${s.items.length} items - Total: ${formatCurrency(s.total)}
@@ -2644,14 +2644,14 @@ function injectMoneyPanelStyles() {
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
         .money-btn:active { transform: scale(0.96); }
-        .money-btn:hover { background: #f9f9f9; border-color: #ccc; }
+        .money-btn:hover { background: var(--bg-lightest); border-color: #ccc; }
         
         /* Billetes */
         .money-btn.bill {
             height: 45px;
             border-radius: 4px;
             background: linear-gradient(135deg, #fdfbf7 0%, #f4f1ea 100%);
-            color: #2e7d32;
+            color: var(--success-color);
             border-color: #c8e6c9;
             font-family: 'Courier New', monospace;
             font-size: 1.1rem;
@@ -2743,7 +2743,7 @@ function injectMoneyPanelStyles() {
         .btn-money-action {
             font-size: 0.8rem;
             padding: 6px 12px;
-            background: #f5f5f5;
+            background: var(--bg-light);
             border: 1px solid #ddd;
             border-radius: 4px;
             cursor: pointer;

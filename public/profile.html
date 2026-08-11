@@ -93,9 +93,9 @@
             border-radius: 4px;
             font-size: 0.8rem;
         }
-        .badge-admin { background: #e3f2fd; color: #1976d2; }
-        .badge-manager { background: #e8f5e9; color: #2e7d32; }
-        .badge-cashier { background: #fff3e0; color: #f57c00; }
+        .badge-admin { background: var(--info-color); color: var(--info-color); }
+        .badge-manager { background: var(--success-color); color: var(--success-color); }
+        .badge-cashier { background: var(--warning-color); color: var(--warning-color); }
 
         /* Modal Styles */
         .modal {
@@ -240,7 +240,7 @@
                                 </div>
                                 <div class="form-group">
                                     <label>Rol</label>
-                                    <input type="text" id="userRoleDisplay" disabled style="background: #f5f5f5;">
+                                    <input type="text" id="userRoleDisplay" disabled style="background: var(--bg-light);">
                                 </div>
                             </div>
                             
@@ -337,7 +337,7 @@
                             </div>
 
                             <h4 style="margin-top: 2rem; margin-bottom: 1rem;">Integraciones</h4>
-                            <div style="background: #f8f9fa; padding: 1.5rem 2rem; border-radius: 8px; border: 1px dashed #ccc; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+                            <div style="background: var(--bg-light); padding: 1.5rem 2rem; border-radius: 8px; border: 1px dashed #ccc; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
                                 <div style="display: flex; align-items: center; gap: 1rem;">
                                     <div style="font-size: 2rem; color: var(--primary-color);">
                                         <i class="fas fa-plug"></i>
@@ -356,7 +356,7 @@
                             </div>
 
                             <h4 style="margin-top: 2rem; margin-bottom: 1rem;">Importar Datos</h4>
-                            <div style="background: #f8f9fa; padding: 2rem; border-radius: 8px; border: 1px dashed #ccc; text-align: center;">
+                            <div style="background: var(--bg-light); padding: 2rem; border-radius: 8px; border: 1px dashed #ccc; text-align: center;">
                                 <div style="font-size: 3rem; color: var(--primary-color); margin-bottom: 1rem;">
                                     <i class="fas fa-file-excel"></i>
                                 </div>
@@ -375,15 +375,14 @@
                             <h4 style="margin-top: 2rem; margin-bottom: 1rem;">Personalización (Tema) <span style="font-size: 0.7em; background: #333; color: gold; padding: 2px 6px; border-radius: 4px; vertical-align: middle; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">PREMIUM</span></h4>
                             <p style="margin-bottom: 1rem; color: #666; font-size: 0.9rem;">Personaliza los colores de tu tienda. Los cambios se verán reflejado en tiempo real.</p>
 
-                            <div class="form-group" style="display: flex; align-items: center; gap: 12px; margin-bottom: 1.2rem; padding: 12px 16px; background: var(--bg-light); border-radius: 10px;">
-                                <label style="margin: 0; font-weight: 600; flex: 1;"><i class="fas fa-moon" style="margin-right: 6px; color: var(--primary-color);"></i> Tema oscuro</label>
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                    <span style="font-size: 0.85rem; color: var(--text-muted);" id="themeModeLabel">Claro</span>
-                                    <label class="switch" style="position: relative; display: inline-block; width: 48px; height: 26px;">
-                                        <input type="checkbox" id="darkModeToggle" style="opacity: 0; width: 0; height: 0;">
-                                        <span class="slider" style="position: absolute; cursor: pointer; inset: 0; background: var(--border-color); border-radius: 26px; transition: var(--transition-fast);"></span>
-                                    </label>
+                            <div class="form-group" style="display: flex; align-items: center; gap: 12px; margin-bottom: 1.2rem; padding: 12px 16px; background: var(--bg-light); border-radius: 10px; flex-wrap: wrap;">
+                                <label style="margin: 0; font-weight: 600; flex: 1; min-width: 140px;"><i class="fas fa-circle-half-stroke" style="margin-right: 6px; color: var(--primary-color);"></i> Modo de tema</label>
+                                <div style="display: flex; gap: 8px;" id="themeModeButtons">
+                                    <button type="button" class="theme-mode-btn" data-mode="light" style="flex:1; padding: 7px 14px; border-radius: 8px; border: 1px solid var(--border-color); background: transparent; cursor: pointer; font-size: 0.85rem; transition: all var(--transition-fast);"><i class="fas fa-sun"></i> Claro</button>
+                                    <button type="button" class="theme-mode-btn" data-mode="dark" style="flex:1; padding: 7px 14px; border-radius: 8px; border: 1px solid var(--border-color); background: transparent; cursor: pointer; font-size: 0.85rem; transition: all var(--transition-fast);"><i class="fas fa-moon"></i> Oscuro</button>
+                                    <button type="button" class="theme-mode-btn" data-mode="auto" style="flex:1; padding: 7px 14px; border-radius: 8px; border: 1px solid var(--border-color); background: transparent; cursor: pointer; font-size: 0.85rem; transition: all var(--transition-fast);"><i class="fas fa-circle-half-stroke"></i> Auto</button>
                                 </div>
+                                <span style="font-size: 0.85rem; color: var(--text-muted);" id="themeModeLabel">Automático</span>
                             </div>
                             
                             <div class="theme-customizer-container premium-locked" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
@@ -456,6 +455,20 @@
                                         <label style="margin: 0;">Texto Principal</label>
                                         <div class="color-picker-group">
                                             <input type="color" name="text_color" data-var="--text-color" value="#333333" style="cursor: pointer;">
+                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid #ddd; border-radius: 4px; padding: 2px;">
+                                        </div>
+                                    </div>
+                                    <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                                        <label style="margin: 0;">Fondo Tarjetas</label>
+                                        <div class="color-picker-group">
+                                            <input type="color" name="bg_card" data-var="--bg-card" value="#ffffff" style="cursor: pointer;">
+                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid #ddd; border-radius: 4px; padding: 2px;">
+                                        </div>
+                                    </div>
+                                    <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                                        <label style="margin: 0;">Bordes</label>
+                                        <div class="color-picker-group">
+                                            <input type="color" name="border_color" data-var="--border-color" value="#e0e0e0" style="cursor: pointer;">
                                             <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid #ddd; border-radius: 4px; padding: 2px;">
                                         </div>
                                     </div>
@@ -603,7 +616,7 @@
                 
                 <div class="steps-container" style="display: flex; justify-content: space-around; margin-bottom: 3rem; flex-wrap: wrap; gap: 20px;">
                     <div class="step-item" style="flex: 1; min-width: 200px;">
-                        <div style="width: 60px; height: 60px; background: #e3f2fd; color: #1976d2; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin: 0 auto 1rem;">
+                        <div style="width: 60px; height: 60px; background: var(--info-color); color: var(--info-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin: 0 auto 1rem;">
                             <i class="fas fa-file-csv"></i>
                         </div>
                         <h4 style="margin-bottom: 0.5rem;">1. Prepara tu Excel</h4>
@@ -618,7 +631,7 @@
                     </div>
 
                     <div class="step-item" style="flex: 1; min-width: 200px;">
-                        <div style="width: 60px; height: 60px; background: #e8f5e9; color: #2e7d32; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin: 0 auto 1rem;">
+                        <div style="width: 60px; height: 60px; background: var(--success-color); color: var(--success-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin: 0 auto 1rem;">
                             <i class="fas fa-upload"></i>
                         </div>
                         <h4 style="margin-bottom: 0.5rem;">2. Sube el Archivo</h4>
@@ -632,7 +645,7 @@
                     </div>
 
                     <div class="step-item" style="flex: 1; min-width: 200px;">
-                        <div style="width: 60px; height: 60px; background: #fff3e0; color: #f57c00; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin: 0 auto 1rem;">
+                        <div style="width: 60px; height: 60px; background: var(--warning-color); color: var(--warning-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin: 0 auto 1rem;">
                             <i class="fas fa-check-double"></i>
                         </div>
                         <h4 style="margin-bottom: 0.5rem;">3. Confirma</h4>
@@ -642,8 +655,8 @@
                     </div>
                 </div>
 
-                <div style="background: #f0f7ff; padding: 1rem; border-radius: 8px; margin-bottom: 2rem; text-align: left; border-left: 4px solid #2196F3;">
-                    <h5 style="margin-bottom: 0.5rem; color: #1565c0;"><i class="fas fa-lightbulb"></i> Tip Pro:</h5>
+                <div style="background: var(--info-color); padding: 1rem; border-radius: 8px; margin-bottom: 2rem; text-align: left; border-left: 4px solid #2196F3;">
+                    <h5 style="margin-bottom: 0.5rem; color: var(--info-dark);"><i class="fas fa-lightbulb"></i> Tip Pro:</h5>
                     <p style="margin: 0; font-size: 0.9rem;">
                         No te preocupes por el orden de las columnas, el sistema te permitirá elegir qué columna corresponde a cada dato en el siguiente paso.
                     </p>
@@ -671,7 +684,7 @@
                 
                 <div class="import-grid">
                     <!-- Columna Izquierda: Mapeo -->
-                    <div style="background: #f9f9f9; padding: 1rem; border-radius: 8px;">
+                    <div style="background: var(--bg-lightest); padding: 1rem; border-radius: 8px;">
                         <h4 style="margin-bottom: 1rem; font-size: 1rem;">Mapeo de Columnas</h4>
                         <form id="mappingForm">
                             <div class="form-group" style="margin-bottom: 10px;">
@@ -706,7 +719,7 @@
                         <h4 style="margin-bottom: 1rem; font-size: 1rem;">Vista Previa (Primeros 5 registros)</h4>
                         <div style="overflow-x: auto; border: 1px solid #eee; border-radius: 4px;">
                             <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
-                                <thead style="background: #f1f1f1;">
+                                <thead style="background: var(--bg-lightest);">
                                     <tr>
                                         <th style="padding: 8px; text-align: left;">Nombre</th>
                                         <th style="padding: 8px; text-align: left;">Código</th>

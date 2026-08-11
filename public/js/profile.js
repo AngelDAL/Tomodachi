@@ -192,22 +192,30 @@ async function loadCompanySettings() {
 
             // Cargar configuración de tema
             if (store.theme_config) {
-                // Toggle oscuro/claro
-                const darkToggle = document.getElementById('darkModeToggle');
-                const darkMode = store.theme_config.dark_mode === true || store.theme_config.dark_mode === 'true';
-                if (darkToggle) {
-                    darkToggle.checked = darkMode;
-                    updateThemeModeLabel(darkMode);
+                // Modo de tema (light/dark/auto) — sincronizar con ThemeSystem
+                const savedMode = store.theme_config.theme_mode
+                    || (store.theme_config.dark_mode === true || store.theme_config.dark_mode === 'true' ? 'dark'
+                        : store.theme_config.dark_mode === false || store.theme_config.dark_mode === 'false' ? 'light' : 'auto');
+                if (window.ThemeSystem) {
+                    window.ThemeSystem.setMode(savedMode);
                 }
+                updateThemeModeButtons(savedMode);
+                updateThemeModeLabel(savedMode === 'dark' ? 'Oscuro' : savedMode === 'light' ? 'Claro' : 'Automático');
 
                 const themeControls = document.getElementById('themeControls');
                 const inputs = themeControls.querySelectorAll('input[type="color"]');
+                // Valores por defecto desde el CSS en vivo (lo que está aplicado ahora)
+                const liveVars = ['--primary-color', '--secondary-color', '--success-color', '--danger-color',
+                                 '--warning-color', '--info-color', '--dark-color', '--bg-body', '--text-color',
+                                 '--bg-card', '--border-color'];
+                const liveMap = {};
+                liveVars.forEach(v => {
+                    try { liveMap[v] = getComputedStyle(document.documentElement).getPropertyValue(v).trim(); } catch (e) {}
+                });
 
                 inputs.forEach(input => {
                     const cssVar = input.getAttribute('data-var');
                     // Quitamos '--' para buscar en el objeto JSON (ej: primary-color)
-                    // O asumimos que guardamos con el nombre de la variable completo o una clave mapeada.
-                    // Vamos a usar el 'name' del input como clave en el JSON.
                     const key = input.name;
 
                     if (store.theme_config[key]) {
@@ -221,8 +229,12 @@ async function loadCompanySettings() {
                             document.documentElement.style.setProperty(cssVar, color);
                         }
                     } else {
-                        // Si no hay config guardada, poner el valor por defecto del input (que ya viene del HTML o CSS)
-                        if (input.nextElementSibling) {
+                        // Si no hay config guardada, usar el valor REALMENTE aplicado
+                        const live = liveMap[cssVar];
+                        if (live && /^#[0-9a-fA-F]{6}$/.test(live)) {
+                            input.value = live;
+                            if (input.nextElementSibling) input.nextElementSibling.value = live;
+                        } else if (input.nextElementSibling) {
                             input.nextElementSibling.value = input.value;
                         }
                     }
@@ -246,10 +258,14 @@ document.getElementById('companyForm').addEventListener('submit', async (e) => {
         themeConfig[input.name] = input.value;
     });
 
-    // Toggle oscuro/claro
-    const darkToggle = document.getElementById('darkModeToggle');
-    if (darkToggle) {
-        themeConfig.dark_mode = darkToggle.checked;
+    // Modo de tema (light/dark/auto)
+    const activeModeBtn = document.querySelector('.theme-mode-btn.active');
+    const themeMode = activeModeBtn ? activeModeBtn.getAttribute('data-mode') : (window.ThemeSystem ? window.ThemeSystem.getMode() : 'auto');
+    if (themeMode) {
+        themeConfig.theme_mode = themeMode;
+        if (themeMode === 'dark') themeConfig.dark_mode = true;
+        else if (themeMode === 'light') themeConfig.dark_mode = false;
+        else delete themeConfig.dark_mode;
     }
 
     // Recolectar configuración de negocio
@@ -752,27 +768,47 @@ function arrayBufferToBase64(buffer) {
 }
 
 // ==========================================
-// Toggle tema oscuro/claro (en vivo)
+// Modo de tema claro/oscuro/auto (en vivo)
 // ==========================================
-function updateThemeModeLabel(dark) {
+function updateThemeModeLabel(text) {
     const label = document.getElementById('themeModeLabel');
-    if (label) label.textContent = dark ? 'Oscuro' : 'Claro';
+    if (label) label.textContent = text;
+}
+
+function updateThemeModeButtons(mode) {
+    document.querySelectorAll('.theme-mode-btn').forEach(btn => {
+        const active = btn.getAttribute('data-mode') === mode;
+        btn.classList.toggle('active', active);
+        btn.style.background = active ? 'var(--primary-color)' : 'transparent';
+        btn.style.color = active ? '#fff' : 'var(--text-color)';
+        btn.style.borderColor = active ? 'var(--primary-color)' : 'var(--border-color)';
+    });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    const darkToggle = document.getElementById('darkModeToggle');
-    if (!darkToggle) return;
+    const modeBtns = document.querySelectorAll('.theme-mode-btn');
+    if (!modeBtns.length) return;
 
-    // Aplicar en vivo al alternar (sin guardar aún — el submit lo persiste)
-    darkToggle.addEventListener('change', () => {
-        const dark = darkToggle.checked;
-        updateThemeModeLabel(dark);
-        document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-        // Guardar en localStorage para que theme-init.js lo aplique en todas las páginas
-        try {
-            const saved = JSON.parse(localStorage.getItem('pos_theme_config') || '{}');
-            saved.dark_mode = dark;
-            localStorage.setItem('pos_theme_config', JSON.stringify(saved));
-        } catch (e) { /* noop */ }
+    // Aplicar en vivo al elegir modo (sin guardar aún — el submit lo persiste)
+    modeBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const mode = btn.getAttribute('data-mode');
+            updateThemeModeButtons(mode);
+            updateThemeModeLabel(mode === 'dark' ? 'Oscuro' : mode === 'light' ? 'Claro' : 'Automático');
+            if (window.ThemeSystem) {
+                window.ThemeSystem.setMode(mode);
+            } else {
+                document.documentElement.setAttribute('data-theme', mode === 'dark' ? 'dark' : 'light');
+            }
+            // Guardar en localStorage para que theme-init.js lo aplique en todas las páginas
+            try {
+                const saved = JSON.parse(localStorage.getItem('pos_theme_config') || '{}');
+                saved.theme_mode = mode;
+                if (mode === 'dark') saved.dark_mode = true;
+                else if (mode === 'light') saved.dark_mode = false;
+                else delete saved.dark_mode;
+                localStorage.setItem('pos_theme_config', JSON.stringify(saved));
+            } catch (e) { /* noop */ }
+        });
     });
 });

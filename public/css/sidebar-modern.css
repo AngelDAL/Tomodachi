@@ -214,3 +214,18 @@ html.sidebar-loading .main-content {
         width: 200px;
     }
 }
+
+/* ============================================================
+ * Switcher rápido de tema (Claro / Oscuro / Automático)
+ * ============================================================ */
+.theme-quick-switcher {
+    padding: 8px 0 !important;
+    cursor: default !important;
+}
+.theme-quick-btn {
+    transition: all var(--transition-fast);
+}
+.theme-quick-btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.2);
+}

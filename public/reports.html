@@ -323,7 +323,7 @@
                 
                 // Footer row
                 html += `
-                    <tr style="background-color: #f8f9fa; font-weight: bold;">
+                    <tr style="background-color: var(--bg-light); font-weight: bold;">
                         <td colspan="4" style="text-align: right;">TOTALES:</td>
                         <td>$${totalSales.toFixed(2)}</td>
                         <td>$${totalProfit.toFixed(2)}</td>
@@ -361,7 +361,7 @@
                 });
 
                 html += `
-                    <tr style="background-color: #f8f9fa; font-weight: bold;">
+                    <tr style="background-color: var(--bg-light); font-weight: bold;">
                         <td colspan="5" style="text-align: right;">TOTALES:</td>
                         <td>$${totalCostVal.toFixed(2)}</td>
                         <td>$${totalPriceVal.toFixed(2)}</td>
@@ -731,7 +731,7 @@
             }
 
             const summary = getReportSummary();
-            let summaryHtml = `<div style="margin-bottom: 20px; padding: 10px; background: #f8f9fa; border-radius: 5px; border-left: 5px solid ${primaryColor};"><h3>Resumen</h3><ul style="list-style: none; padding: 0;">`;
+            let summaryHtml = `<div style="margin-bottom: 20px; padding: 10px; background: var(--bg-light); border-radius: 5px; border-left: 5px solid ${primaryColor};"><h3>Resumen</h3><ul style="list-style: none; padding: 0;">`;
             for (const [key, value] of Object.entries(summary)) {
                 summaryHtml += `<li style="margin-bottom: 5px;"><strong>${key}:</strong> ${value}</li>`;
             }
@@ -923,13 +923,13 @@
                         border-color: var(--primary-color);
                     }
                     .qr-product-card.no-qr {
-                        background: #f8f9fa;
+                        background: var(--bg-light);
                         opacity: 0.9;
                         border: 1px dashed #ccc;
                     }
                     .qr-product-card.no-qr:hover {
                         border-color: #666;
-                        background: #f0f0f0;
+                        background: var(--bg-light);
                     }
                     .qr-product-img {
                         width: 100px;
@@ -1176,8 +1176,8 @@
                 const imgPath = getRelativeImagePath(rawImg);
                 
                 const imgHtml = imgPath 
-                    ? `<img src="${imgPath}" alt="img" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;" onerror="this.outerHTML='<div style=\\'width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: #f0f0f0; border-radius: 4px; color: #999;\\'><i class=\\'fas fa-box\\'></i></div>'">`
-                    : `<div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: #f0f0f0; border-radius: 4px; color: #999;"><i class="fas fa-box"></i></div>`;
+                    ? `<img src="${imgPath}" alt="img" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;" onerror="this.outerHTML='<div style=\\'width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: var(--bg-light); border-radius: 4px; color: #999;\\'><i class=\\'fas fa-box\\'></i></div>'">`
+                    : `<div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: var(--bg-light); border-radius: 4px; color: #999;"><i class="fas fa-box"></i></div>`;
 
                 return `
                 <tr>
@@ -1194,7 +1194,7 @@
                                onchange="updateItemQuantity(${item.id}, this.value)">
                     </td>
                     <td>
-                        <button class="btn-icon" onclick="removeFromQRList(${item.id})" style="color: #dc3545;">
+                        <button class="btn-icon" onclick="removeFromQRList(${item.id})" style="color: var(--danger-color);">
                             <i class="fas fa-trash"></i>
                         </button>
                     </td>
@@ -1463,7 +1463,7 @@
                 const metodo = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', mixed: 'Mixto' }[d.payment_method] || d.payment_method;
 
                 let html = `
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 1rem; background: #f8f9fa; border-radius: 10px; padding: 0.9rem 1rem; margin-bottom: 1rem; font-size: 0.9rem;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 1rem; background: var(--bg-light); border-radius: 10px; padding: 0.9rem 1rem; margin-bottom: 1rem; font-size: 0.9rem;">
                         <div><strong>Fecha:</strong> ${fecha}</div>
                         <div><strong>Método:</strong> ${metodo}</div>
                         <div><strong>Subtotal:</strong> ${formatCurrency(d.subtotal)}</div>
@@ -1500,7 +1500,7 @@
                 body.innerHTML = html;
             } catch (error) {
                 console.error('Error cargando detalle de venta:', error);
-                body.innerHTML = `<div style="text-align:center; padding: 2rem; color: #e74c3c;"><i class="fas fa-exclamation-triangle"></i><p>${escapeHtml(error.message)}</p></div>`;
+                body.innerHTML = `<div style="text-align:center; padding: 2rem; color: var(--danger-color);"><i class="fas fa-exclamation-triangle"></i><p>${escapeHtml(error.message)}</p></div>`;
             }
         }
 

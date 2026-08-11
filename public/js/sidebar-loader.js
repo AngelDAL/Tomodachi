@@ -117,9 +117,20 @@ async function initSidebar() {
 
             <div class="nav-separator" style="margin: 10px 0; border-top: 1px solid rgba(255,255,255,0.1);"></div>
 
-            <a href="#" class="nav-item desktop-only-nav js-support-btn" id="supportBtn" style="color: #aaa; font-size: 0.9em;">
-                <span><i class="fas fa-headset"></i></span> <span class="nav-text">Soporte/Sugerencias</span>
-            </a>
+            <div class="nav-item theme-quick-switcher" style="flex-direction: column; align-items: stretch; gap: 4px; padding: 6px 0;">
+                <span style="font-size: 0.75rem; color: var(--text-muted, #aaa); padding: 0 12px; text-transform: uppercase; letter-spacing: 0.5px;">Tema</span>
+                <div style="display: flex; gap: 6px; padding: 0 12px;">
+                    <button type="button" class="theme-quick-btn" data-theme-mode="light" title="Tema claro" style="flex:1; padding: 6px 0; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: transparent; color: inherit; cursor: pointer; font-size: 0.85rem; transition: all var(--transition-fast);">
+                        <i class="fas fa-sun"></i>
+                    </button>
+                    <button type="button" class="theme-quick-btn" data-theme-mode="dark" title="Tema oscuro" style="flex:1; padding: 6px 0; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: transparent; color: inherit; cursor: pointer; font-size: 0.85rem; transition: all var(--transition-fast);">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    <button type="button" class="theme-quick-btn" data-theme-mode="auto" title="Automático (sigue el sistema)" style="flex:1; padding: 6px 0; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: transparent; color: inherit; cursor: pointer; font-size: 0.85rem; transition: all var(--transition-fast);">
+                        <i class="fas fa-circle-half-stroke"></i>
+                    </button>
+                </div>
+            </div>
         </div>
     `;
 

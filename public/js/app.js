@@ -393,6 +393,85 @@ function initSupport() {
     });
 }
 
+/* ============================================================
+ * Sistema de temas: claro / oscuro / automático
+ * (usado por el sidebar rápido y el panel de configuración)
+ * ============================================================ */
+const ThemeSystem = (function () {
+    // Modo actual: 'light' | 'dark' | 'auto' (persistido en localStorage)
+    let mode = 'auto';
+    let mediaQuery = null;
+
+    function readStored() {
+        try {
+            const saved = JSON.parse(localStorage.getItem('pos_theme_config') || '{}');
+            return saved.theme_mode || saved.dark_mode === true || saved.dark_mode === 'true' ? 'dark' : (saved.dark_mode === false || saved.dark_mode === 'false' ? 'light' : 'auto');
+        } catch (e) { return 'auto'; }
+    }
+
+    function saveMode(m) {
+        try {
+            const saved = JSON.parse(localStorage.getItem('pos_theme_config') || '{}');
+            saved.theme_mode = m;
+            if (m === 'dark') saved.dark_mode = true;
+            else if (m === 'light') saved.dark_mode = false;
+            else delete saved.dark_mode;
+            localStorage.setItem('pos_theme_config', JSON.stringify(saved));
+        } catch (e) { /* noop */ }
+    }
+
+    function systemPrefersDark() {
+        return mediaQuery ? mediaQuery.matches : false;
+    }
+
+    function apply() {
+        const dark = mode === 'dark' || (mode === 'auto' && systemPrefersDark());
+        document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+        // Actualizar botones activos del sidebar
+        document.querySelectorAll('.theme-quick-btn').forEach(btn => {
+            const active = btn.getAttribute('data-theme-mode') === mode;
+            btn.style.background = active ? 'var(--primary-color)' : 'transparent';
+            btn.style.color = active ? '#fff' : 'inherit';
+            btn.style.borderColor = active ? 'var(--primary-color)' : 'rgba(255,255,255,0.2)';
+        });
+        document.dispatchEvent(new CustomEvent('tomodachi:themechange', { detail: { mode, dark } }));
+    }
+
+    function init() {
+        mode = readStored();
+        mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        if (typeof mediaQuery.addEventListener === 'function') {
+            mediaQuery.addEventListener('change', () => { if (mode === 'auto') apply(); });
+        }
+        apply();
+
+        // Delegar clics en los botones rápidos (funcionan aunque el sidebar
+        // se inyecte después)
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('.theme-quick-btn');
+            if (!btn) return;
+            setMode(btn.getAttribute('data-theme-mode'));
+        });
+    }
+
+    function setMode(m) {
+        if (!['light', 'dark', 'auto'].includes(m)) return;
+        mode = m;
+        saveMode(m);
+        apply();
+    }
+
+    function getMode() { return mode; }
+
+    return { init, setMode, getMode, apply };
+})();
+
+// Inicializar al cargar (después de theme-init.js que corre en el head)
+document.addEventListener('DOMContentLoaded', () => ThemeSystem.init());
+
+// Exponer global
+window.ThemeSystem = ThemeSystem;
+
 // Inicializar soporte al cargar
 document.addEventListener('DOMContentLoaded', () => {
     initSupport();

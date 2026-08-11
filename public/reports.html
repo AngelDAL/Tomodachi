@@ -169,10 +169,16 @@
             document.getElementById('endDate').value = toLocalISOString(lastDay);
         });
 
-        document.getElementById('logoutBtn').addEventListener('click', async (e) => {
-            e.preventDefault();
-            await logout();
-        });
+        // Logout: el sidebar-loader.js ya adjunta sus propios listeners al
+        // inyectar el sidebar; aquí solo añadimos el nuestro si el botón ya
+        // existe (evita TypeError si aún no fue generado).
+        const logoutBtnEl = document.getElementById('logoutBtn');
+        if (logoutBtnEl) {
+            logoutBtnEl.addEventListener('click', async (e) => {
+                e.preventDefault();
+                await logout();
+            });
+        }
 
         function selectReport(type, title, iconClass) {
             currentReportType = type;

@@ -32,6 +32,7 @@
     --secondary-dark: #12184F;
     --secondary-darker: #0B0F33;
     --secondary-light: #E8EAF6;
+    --secondary-contrast: #ffffff;
 
     /* Status Colors */
     --success-color: #2E7D32;
@@ -120,6 +121,7 @@
     --secondary-dark: #5C6BC0;
     --secondary-darker: #3949AB;
     --secondary-light: #1A1F3D;
+    --secondary-contrast: #ffffff;
 
     --success-color: #66BB6A;
     --success-dark: #43A047;

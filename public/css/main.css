@@ -843,7 +843,17 @@ body {
 
 .btn-secondary {
     background-color: var(--secondary-color);
-    color: white;
+    color: var(--secondary-contrast);
+    border: none;
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-weight: 600;
+    transition: all var(--transition-fast);
+}
+.btn-secondary:hover {
+    background-color: var(--secondary-dark);
+    color: var(--secondary-contrast);
+    transform: translateY(-1px);
 }
 
 .btn-danger {

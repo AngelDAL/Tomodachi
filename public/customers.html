@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="css/sidebar-modern.css">
     <link rel="stylesheet" href="css/mobile-nav.css">
     <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/inventory.css">
     <script src="js/theme-init.js"></script>
 </head>
 <body>
@@ -48,11 +49,11 @@
                         </div>
                     </div>
                     <div class="customer-summary" style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 12px;">
-                        <div class="summary-chip" style="background:#eefaf3; border-radius:10px; padding: 8px 14px; font-size:0.9rem;">
-                            <i class="fas fa-users" style="color:#27ae60;"></i> <strong id="totalCustomers">0</strong> clientes
+                        <div class="summary-chip" style="background: var(--primary-lighter); border: 1px solid var(--primary-light); border-radius: 10px; padding: 8px 14px; font-size:0.9rem;">
+                            <i class="fas fa-users" style="color: var(--primary-color);"></i> <strong id="totalCustomers">0</strong> clientes
                         </div>
-                        <div class="summary-chip" style="background:#fff7ee; border-radius:10px; padding: 8px 14px; font-size:0.9rem;">
-                            <i class="fas fa-hand-holding-dollar" style="color:#e67e22;"></i> Apartado total: <strong id="totalBalance">$0.00</strong>
+                        <div class="summary-chip" style="background: var(--primary-lighter); border: 1px solid var(--primary-light); border-radius: 10px; padding: 8px 14px; font-size:0.9rem;">
+                            <i class="fas fa-hand-holding-dollar" style="color: var(--warning-color);"></i> Apartado total: <strong id="totalBalance">$0.00</strong>
                         </div>
                     </div>
                 </section>
@@ -81,41 +82,41 @@
     </div>
 
     <!-- Modal: Nuevo/Editar cliente -->
-    <dialog id="customerModal" class="sale-detail-dialog" aria-label="Cliente">
-        <div class="modal-content" style="max-width: 480px; border: none; border-radius: 14px; padding: 1.6rem; background: var(--bg-card, #fff);">
-            <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem;">
-                <h2 id="customerModalTitle" style="margin:0; font-size:1.25rem; color: var(--text-color, #1a1a2e);">Nuevo Cliente</h2>
-                <button id="customerModalClose" class="modal-close" aria-label="Cerrar" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color: var(--primary-color);">×</button>
+    <dialog id="customerModal" class="client-dialog" aria-label="Cliente">
+        <div class="modal-content" style="max-width: 500px; border: none; border-radius: 14px; padding: 2.2rem; background: var(--bg-card, #fff);">
+            <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.4rem;">
+                <h2 id="customerModalTitle" style="margin:0; font-size:1.3rem; color: var(--text-color, #1a1a2e);"><i class="fas fa-user" style="color: var(--primary-color); margin-right: 8px;"></i>Nuevo Cliente</h2>
+                <button id="customerModalClose" class="modal-close" aria-label="Cerrar" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color: var(--primary-color);">×</button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="customerIdInput">
-                <div class="form-group" style="margin-bottom: 12px;">
-                    <label style="display:block; font-size:0.85rem; margin-bottom:4px;">Nombre completo *</label>
-                    <input type="text" id="customerNameInput" class="form-input" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd;" placeholder="Nombre del cliente">
-                </div>
-                <div class="form-group" style="margin-bottom: 12px;">
-                    <label style="display:block; font-size:0.85rem; margin-bottom:4px;">Teléfono</label>
-                    <input type="text" id="customerPhoneInput" class="form-input" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd;" placeholder="555-1234">
-                </div>
-                <div class="form-group" style="margin-bottom: 12px;">
-                    <label style="display:block; font-size:0.85rem; margin-bottom:4px;">Email</label>
-                    <input type="email" id="customerEmailInput" class="form-input" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd;" placeholder="cliente@correo.com">
-                </div>
-                <div class="form-group" style="margin-bottom: 12px;">
-                    <label style="display:block; font-size:0.85rem; margin-bottom:4px;">Dirección</label>
-                    <input type="text" id="customerAddressInput" class="form-input" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd;" placeholder="Dirección (opcional)">
-                </div>
-                <div class="form-group" style="margin-bottom: 12px;">
-                    <label style="display:block; font-size:0.85rem; margin-bottom:4px;">Límite de crédito (0 = sin límite)</label>
-                    <input type="number" id="customerLimitInput" class="form-input" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd;" min="0" step="0.01" value="0">
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label style="display:block; font-size:0.85rem; margin-bottom:6px; color: var(--text-medium);">Nombre completo *</label>
+                    <input type="text" id="customerNameInput" class="form-input" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-lightest); transition: border-color var(--transition-fast), box-shadow var(--transition-fast);" placeholder="Nombre del cliente">
                 </div>
                 <div class="form-group" style="margin-bottom: 16px;">
-                    <label style="display:block; font-size:0.85rem; margin-bottom:4px;">Notas</label>
-                    <input type="text" id="customerNotesInput" class="form-input" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd;" placeholder="Notas (opcional)">
+                    <label style="display:block; font-size:0.85rem; margin-bottom:6px; color: var(--text-medium);">Teléfono</label>
+                    <input type="text" id="customerPhoneInput" class="form-input" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-lightest);" placeholder="555-1234">
                 </div>
-                <div style="display:flex; gap:10px; justify-content:flex-end;">
-                    <button id="customerCancelBtn" class="btn" style="padding:8px 16px; border-radius:6px; background:#eee; border:none; cursor:pointer;">Cancelar</button>
-                    <button id="customerSaveBtn" class="btn btn-primary" style="padding:8px 20px; border-radius:6px; background: var(--primary-color); color:#fff; border:none; cursor:pointer;">
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label style="display:block; font-size:0.85rem; margin-bottom:6px; color: var(--text-medium);">Email</label>
+                    <input type="email" id="customerEmailInput" class="form-input" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-lightest);" placeholder="cliente@correo.com">
+                </div>
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label style="display:block; font-size:0.85rem; margin-bottom:6px; color: var(--text-medium);">Dirección</label>
+                    <input type="text" id="customerAddressInput" class="form-input" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-lightest);" placeholder="Dirección (opcional)">
+                </div>
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label style="display:block; font-size:0.85rem; margin-bottom:6px; color: var(--text-medium);">Límite de crédito (0 = sin límite)</label>
+                    <input type="number" id="customerLimitInput" class="form-input" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-lightest);" min="0" step="0.01" value="0">
+                </div>
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label style="display:block; font-size:0.85rem; margin-bottom:6px; color: var(--text-medium);">Notas</label>
+                    <input type="text" id="customerNotesInput" class="form-input" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-lightest);" placeholder="Notas (opcional)">
+                </div>
+                <div style="display:flex; gap:10px; justify-content:flex-end; margin-top: 8px;">
+                    <button id="customerCancelBtn" class="btn" style="padding:10px 20px; border-radius:8px; background: var(--bg-light); border:1px solid var(--border-color); cursor:pointer; color: var(--text-medium); transition: background var(--transition-fast);">Cancelar</button>
+                    <button id="customerSaveBtn" class="btn btn-primary" style="padding:10px 24px; border-radius:8px; background: var(--primary-color); color:#fff; border:none; cursor:pointer; box-shadow: var(--shadow-primary); transition: background var(--transition-fast), transform var(--transition-fast);">
                         <i class="fas fa-save"></i> Guardar
                     </button>
                 </div>
@@ -124,13 +125,13 @@
     </dialog>
 
     <!-- Modal: Detalle del cliente (historial + abono) -->
-    <dialog id="customerDetailModal" class="sale-detail-dialog" aria-label="Detalle del cliente">
-        <div class="modal-content" style="max-width: 640px; border: none; border-radius: 14px; padding: 1.6rem; background: var(--bg-card, #fff);">
-            <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem;">
-                <h2 id="customerDetailTitle" style="margin:0; font-size:1.25rem; color: var(--text-color, #1a1a2e);">Detalle del Cliente</h2>
-                <button id="customerDetailClose" class="modal-close" aria-label="Cerrar" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color: var(--primary-color);">×</button>
+    <dialog id="customerDetailModal" class="client-dialog" aria-label="Detalle del cliente">
+        <div class="modal-content" style="max-width: 660px; border: none; border-radius: 14px; padding: 2.2rem; background: var(--bg-card, #fff);">
+            <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.4rem;">
+                <h2 id="customerDetailTitle" style="margin:0; font-size:1.3rem; color: var(--text-color, #1a1a2e);"><i class="fas fa-id-card" style="color: var(--primary-color); margin-right: 8px;"></i>Detalle del Cliente</h2>
+                <button id="customerDetailClose" class="modal-close" aria-label="Cerrar" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color: var(--primary-color);">×</button>
             </div>
-            <div class="modal-body" style="max-height: 65vh; overflow-y: auto;">
+            <div class="modal-body" style="max-height: 68vh; overflow-y: auto;">
                 <div id="customerDetailBody"></div>
             </div>
         </div>
@@ -177,7 +178,7 @@
                 CUSTOMERS = data.data || [];
                 renderCustomers(CUSTOMERS);
             } catch (e) {
-                body.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:2rem; color:#e74c3c;">Error: ${esc(e.message)}</td></tr>`;
+                body.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:2rem; color: var(--danger-color);">Error: ${esc(e.message)}</td></tr>`;
             }
         }
 
@@ -195,12 +196,12 @@
                 <tr style="cursor:pointer;" onclick="openCustomerDetail(${c.customer_id})" title="Ver historial y abonar">
                     <td data-label="Cliente"><strong>${esc(c.full_name)}</strong></td>
                     <td data-label="Teléfono">${esc(c.phone || '—')}</td>
-                    <td data-label="Saldo" style="color: ${Number(c.balance) > 0 ? '#e67e22' : '#27ae60'}; font-weight:600;">${fmtMXN(c.balance)}</td>
+                    <td data-label="Saldo" style="color: ${Number(c.balance) > 0 ? 'var(--warning-color)' : 'var(--success-color)'}; font-weight:600;">${fmtMXN(c.balance)}</td>
                     <td data-label="Límite">${Number(c.credit_limit) > 0 ? fmtMXN(c.credit_limit) : 'Sin límite'}</td>
-                    <td data-label="Estado"><span style="color:${c.status === 'active' ? '#27ae60' : '#e74c3c'};">${c.status === 'active' ? 'Activo' : 'Inactivo'}</span></td>
+                    <td data-label="Estado"><span style="color:${c.status === 'active' ? 'var(--success-color)' : 'var(--danger-color)'};">${c.status === 'active' ? 'Activo' : 'Inactivo'}</span></td>
                     <td data-label="Acciones">
                         <button class="btn btn-sm" onclick="event.stopPropagation(); openCustomerModal(${c.customer_id})" title="Editar" style="margin-right:6px; padding:4px 10px; border-radius:6px; border:none; background:#f0f0f0; cursor:pointer;"><i class="fas fa-edit"></i></button>
-                        <button class="btn btn-sm" onclick="event.stopPropagation(); deleteCustomer(${c.customer_id})" title="Eliminar" style="padding:4px 10px; border-radius:6px; border:none; background:#fdeaea; color:#e74c3c; cursor:pointer;"><i class="fas fa-trash"></i></button>
+                        <button class="btn btn-sm" onclick="event.stopPropagation(); deleteCustomer(${c.customer_id})" title="Eliminar" style="padding:4px 10px; border-radius:6px; border:none; background:#fdeaea; color: var(--danger-color); cursor:pointer;"><i class="fas fa-trash"></i></button>
                     </td>
                 </tr>
             `).join('');
@@ -302,27 +303,27 @@
                         <td data-label="Venta">#${s.sale_id}</td>
                         <td data-label="Fecha">${new Date(s.sale_date).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
                         <td data-label="Total" style="text-align:right;">${fmtMXN(s.total)}</td>
-                        <td data-label="Pagado" style="text-align:right; color:#27ae60;">${fmtMXN(s.amount_paid)}</td>
+                        <td data-label="Pagado" style="text-align:right; color: var(--success-color);">${fmtMXN(s.amount_paid)}</td>
                         <td data-label="Estado">${s.status === 'completed' ? (Number(s.amount_paid) >= Number(s.total) ? 'Pagada' : 'Apartado') : s.status}</td>
                     </tr>`).join('') || '<tr><td colspan="5" style="text-align:center; color:#999;">Sin ventas</td></tr>';
 
                 let payRows = (payments || []).map(p => `
                     <tr>
                         <td data-label="Fecha">${new Date(p.created_at).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
-                        <td data-label="Monto" style="text-align:right; color:#27ae60;">+${fmtMXN(p.amount)}</td>
+                        <td data-label="Monto" style="text-align:right; color: var(--success-color);">+${fmtMXN(p.amount)}</td>
                         <td data-label="Método">${p.payment_method || 'cash'}</td>
                         <td data-label="Notas">${esc(p.notes || '—')}</td>
                     </tr>`).join('') || '<tr><td colspan="4" style="text-align:center; color:#999;">Sin abonos</td></tr>';
 
                 body.innerHTML = `
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1rem;">
-                        <div style="background:#fff7ee; border-radius:10px; padding:10px 14px;">
+                        <div style="background: var(--primary-lighter); border-radius:10px; padding:10px 14px;">
                             <div style="font-size:0.8rem; color:#666;">SALDO PENDIENTE</div>
-                            <div style="font-size:1.3rem; font-weight:800; color:#e67e22;">${fmtMXN(customer.balance)}</div>
+                            <div style="font-size:1.3rem; font-weight:800; color: var(--warning-color);">${fmtMXN(customer.balance)}</div>
                         </div>
-                        <div style="background:#eefaf3; border-radius:10px; padding:10px 14px;">
+                        <div style="background: var(--primary-lighter); border-radius:10px; padding:10px 14px;">
                             <div style="font-size:0.8rem; color:#666;">COMPRAS TOTALES</div>
-                            <div style="font-size:1.3rem; font-weight:800; color:#27ae60;">${customer.total_purchases || 0}</div>
+                            <div style="font-size:1.3rem; font-weight:800; color: var(--success-color);">${customer.total_purchases || 0}</div>
                         </div>
                     </div>
                     <div style="display:flex; gap:10px; margin-bottom: 1.2rem;">

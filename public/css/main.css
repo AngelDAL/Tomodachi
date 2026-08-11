@@ -1509,7 +1509,7 @@ table tr:hover {
     height: 64px;
     margin: 0 auto 1rem;
     border-radius: 50%;
-    background: linear-gradient(135deg, var(--primary-color, #E3057A), var(--secondary-color, #7B2FBE));
+    background: linear-gradient(135deg, var(--primary-color, #C62828), var(--secondary-color, #1A237E));
     color: #fff;
     display: flex;
     align-items: center;
@@ -1551,7 +1551,7 @@ table tr:hover {
 }
 .relogin-content input[type="text"]:focus,
 .relogin-content input[type="password"]:focus {
-    border-color: var(--primary-color, #E3057A);
+    border-color: var(--primary-color, #C62828);
 }
 .relogin-remember {
     display: flex;
@@ -1562,7 +1562,7 @@ table tr:hover {
     margin-top: 0.2rem;
 }
 .relogin-remember input {
-    accent-color: var(--primary-color, #E3057A);
+    accent-color: var(--primary-color, #C62828);
 }
 .relogin-btn {
     margin-top: 0.6rem;
@@ -1570,7 +1570,7 @@ table tr:hover {
     padding: 0.85rem;
     border: none;
     border-radius: 12px;
-    background: linear-gradient(135deg, var(--primary-color, #E3057A), var(--secondary-color, #7B2FBE));
+    background: linear-gradient(135deg, var(--primary-color, #C62828), var(--secondary-color, #1A237E));
     color: #fff;
     font-size: 1rem;
     font-weight: 700;
@@ -1694,12 +1694,12 @@ table tr:hover {
     100% { opacity: 1; transform: translateY(0); }
 }
 .sale-detail-dialog .modal-close {
-    color: var(--primary-color, #E3057A);
+    color: var(--primary-color, #C62828);
     font-size: 1.7rem;
     font-weight: 700;
 }
 .sale-detail-dialog .modal-close:hover {
-    color: var(--secondary-color, #7B2FBE);
+    color: var(--secondary-color, #1A237E);
     transform: scale(1.15);
 }
 
@@ -1778,4 +1778,49 @@ table tr:hover {
 }
 .sale-detail-dialog .modal-body table {
     color: var(--text-color, #1a1a2e);
+}
+
+/* ============================================================
+ * Dialog genérico (clientes, productos, etc.) — SIN estilo ticket
+ * El efecto de ticket (dientes/recibo) es EXCLUSIVO del modal de
+ * detalle de venta (.sale-detail-dialog). Estos modales usan la
+ * misma animación suave pero con esquinas redondeadas limpias.
+ * ============================================================ */
+.client-dialog {
+    border: none;
+    padding: 0;
+    background: transparent;
+    width: fit-content;
+    max-width: 92vw;
+    margin: auto;
+    overflow: visible;
+}
+.client-dialog .modal-content {
+    width: 100%;
+    max-width: none;
+    box-shadow: var(--shadow-lg);
+    animation: saleDialogIn 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.client-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(3px);
+    animation: saleBackdropIn 0.4s ease forwards;
+}
+.client-dialog .modal-close {
+    color: var(--primary-color);
+    transition: transform var(--transition-fast), color var(--transition-fast);
+}
+.client-dialog .modal-close:hover {
+    transform: scale(1.15);
+    color: var(--primary-dark);
+}
+.client-dialog .form-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px var(--primary-shadow);
+    background: var(--white);
+}
+.client-dialog .btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
 }

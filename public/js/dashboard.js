@@ -118,7 +118,7 @@ function renderTopProductsList(list) {
             <td style="padding: 0.75rem;" data-label="Imagen">${imgHtml}</td>
             <td style="padding: 0.75rem;" data-label="Producto">${item.product_name}</td>
             <td style="padding: 0.75rem; font-weight: bold;" data-label="Vendidos">${item.total_sold}</td>
-            <td style="padding: 0.75rem; color: #27ae60;" data-label="Ingresos">${formatCurrency(item.revenue)}</td>
+            <td style="padding: 0.75rem; color: var(--success-color);" data-label="Ingresos">${formatCurrency(item.revenue)}</td>
         `;
         tbody.appendChild(tr);
     });
@@ -140,7 +140,7 @@ function renderLowStockList(list) {
         tr.style.borderBottom = '1px solid #eee';
         tr.innerHTML = `
             <td style="padding: 0.75rem;" data-label="Producto">${item.product_name}</td>
-            <td style="padding: 0.75rem; color: #e74c3c; font-weight: bold;" data-label="Stock">${item.current_stock}</td>
+            <td style="padding: 0.75rem; color: var(--danger-color); font-weight: bold;" data-label="Stock">${item.current_stock}</td>
             <td style="padding: 0.75rem; color: #7f8c8d;" data-label="Mínimo">${item.min_stock}</td>
         `;
         tbody.appendChild(tr);
@@ -178,7 +178,7 @@ function renderRecentSalesList(list) {
         });
         
         if (item.products.length > 5) {
-            productsHtml += `<div title="${item.products.length - 5} más..." style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; background: #e0e0e0; border-radius: 4px; color: #666; font-size: 0.8rem;">+${item.products.length - 5}</div>`;
+            productsHtml += `<div title="${item.products.length - 5} más..." style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; background: #e0e0e0; border-radius: 4px; color: var(--text-light); font-size: 0.8rem;">+${item.products.length - 5}</div>`;
         }
         productsHtml += '</div>';
 
@@ -194,7 +194,7 @@ function renderRecentSalesList(list) {
                 </div>
             </td>
             <td style="padding: 0.75rem; font-weight: bold;" data-label="Total">${formatCurrency(item.total)}</td>
-            <td class="premium-locked" style="padding: 0.75rem; color: #27ae60; font-weight: bold;" data-label="Ganancia">${formatCurrency(item.profit)}</td>
+            <td class="premium-locked" style="padding: 0.75rem; color: var(--success-color); font-weight: bold;" data-label="Ganancia">${formatCurrency(item.profit)}</td>
         `;
         // Clic en la fila -> detalle completo de la venta
         tr.addEventListener('click', () => showSaleDetail(item.sale_id));
@@ -275,7 +275,7 @@ async function showSaleDetail(saleId) {
         body.innerHTML = html;
     } catch (error) {
         console.error('Error cargando detalle de venta:', error);
-        body.innerHTML = `<div style="text-align:center; padding: 2rem; color: #e74c3c;"><i class="fas fa-exclamation-triangle"></i><p>${escapeHtml(error.message)}</p></div>`;
+        body.innerHTML = `<div style="text-align:center; padding: 2rem; color: var(--danger-color);"><i class="fas fa-exclamation-triangle"></i><p>${escapeHtml(error.message)}</p></div>`;
     }
 }
 

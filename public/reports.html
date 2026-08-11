@@ -1561,30 +1561,30 @@
 
             resultsDiv.innerHTML = `
                 <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 1.2rem;">
-                    <div class="closez-card" style="background:#f0f7ff; border-radius:12px; padding:0.9rem 1rem;">
-                        <div style="font-size:0.8rem; color:#666;">VENTAS</div>
-                        <div style="font-size:1.3rem; font-weight:800; color:#1a1a2e;">${fmt(s.total_sales)}</div>
-                        <div style="font-size:0.75rem; color:#888;">${s.total_transactions || 0} transacciones</div>
+                    <div class="closez-card" style="background: var(--info-color); color:#fff; border-radius:12px; padding:0.9rem 1rem;">
+                        <div style="font-size:0.8rem; color: var(--text-light);">VENTAS</div>
+                        <div style="font-size:1.3rem; font-weight:800; color: var(--text-color);">${fmt(s.total_sales)}</div>
+                        <div style="font-size:0.75rem; color: var(--text-muted);">${s.total_transactions || 0} transacciones</div>
                     </div>
-                    <div class="closez-card" style="background:#eefaf3; border-radius:12px; padding:0.9rem 1rem;">
-                        <div style="font-size:0.8rem; color:#666;">GANANCIA</div>
-                        <div style="font-size:1.3rem; font-weight:800; color:#27ae60;">${fmt(s.total_profit)}</div>
-                        <div style="font-size:0.75rem; color:#888;">Ticket prom. ${fmt(s.avg_ticket)}</div>
+                    <div class="closez-card" style="background: var(--success-color); color:#fff; border-radius:12px; padding:0.9rem 1rem;">
+                        <div style="font-size:0.8rem; color: var(--text-light);">GANANCIA</div>
+                        <div style="font-size:1.3rem; font-weight:800; color: var(--success-color);">${fmt(s.total_profit)}</div>
+                        <div style="font-size:0.75rem; color: var(--text-muted);">Ticket prom. ${fmt(s.avg_ticket)}</div>
                     </div>
-                    <div class="closez-card" style="background:#fff7ee; border-radius:12px; padding:0.9rem 1rem;">
-                        <div style="font-size:0.8rem; color:#666;">DEVOLUCIONES</div>
-                        <div style="font-size:1.3rem; font-weight:800; color:#e67e22;">${fmt(d.refunds?.total)}</div>
-                        <div style="font-size:0.75rem; color:#888;">${d.refunds?.count || 0} devoluciones</div>
+                    <div class="closez-card" style="background: var(--warning-color); color:#fff; border-radius:12px; padding:0.9rem 1rem;">
+                        <div style="font-size:0.8rem; color: var(--text-light);">DEVOLUCIONES</div>
+                        <div style="font-size:1.3rem; font-weight:800; color: var(--warning-color);">${fmt(d.refunds?.total)}</div>
+                        <div style="font-size:0.75rem; color: var(--text-muted);">${d.refunds?.count || 0} devoluciones</div>
                     </div>
-                    <div class="closez-card" style="background:#fdf0f0; border-radius:12px; padding:0.9rem 1rem;">
-                        <div style="font-size:0.8rem; color:#666;">CANCELADAS</div>
-                        <div style="font-size:1.3rem; font-weight:800; color:#e74c3c;">${fmt(d.cancelled?.total)}</div>
-                        <div style="font-size:0.75rem; color:#888;">${d.cancelled?.count || 0} cancelaciones</div>
+                    <div class="closez-card" style="background: var(--danger-color); color:#fff; border-radius:12px; padding:0.9rem 1rem;">
+                        <div style="font-size:0.8rem; color: var(--text-light);">CANCELADAS</div>
+                        <div style="font-size:1.3rem; font-weight:800; color: var(--danger-color);">${fmt(d.cancelled?.total)}</div>
+                        <div style="font-size:0.75rem; color: var(--text-muted);">${d.cancelled?.count || 0} cancelaciones</div>
                     </div>
-                    <div class="closez-card" style="background:#f4f0ff; border-radius:12px; padding:0.9rem 1rem; grid-column: span 2;">
-                        <div style="font-size:0.8rem; color:#666;">EFECTIVO ESPERADO EN CAJA</div>
-                        <div style="font-size:1.5rem; font-weight:800; color:#7B2FBE;">${fmt(d.expected_cash)}</div>
-                        <div style="font-size:0.75rem; color:#888;">Inicial + ventas efectivo − retiros + entradas − devoluciones</div>
+                    <div class="closez-card" style="background: var(--primary-color); color:#fff; border-radius:12px; padding:0.9rem 1rem; grid-column: span 2;">
+                        <div style="font-size:0.8rem; color: var(--text-light);">EFECTIVO ESPERADO EN CAJA</div>
+                        <div style="font-size:1.5rem; font-weight:800; color: var(--primary-color);">${fmt(d.expected_cash)}</div>
+                        <div style="font-size:0.75rem; color: var(--text-muted);">Inicial + ventas efectivo − retiros + entradas − devoluciones</div>
                     </div>
                 </div>
 
@@ -1599,8 +1599,8 @@
                     <thead><tr><th>Concepto</th><th style="text-align:right;">Monto</th></tr></thead>
                     <tbody>
                         <tr><td data-label="Concepto">Ventas en efectivo</td><td data-label="Monto" style="text-align:right;">${fmt(cm.cash_sales)}</td></tr>
-                        <tr><td data-label="Concepto">Retiros</td><td data-label="Monto" style="text-align:right; color:#e74c3c;">− ${fmt(cm.withdrawals)}</td></tr>
-                        <tr><td data-label="Concepto">Entradas / gastos registrados</td><td data-label="Monto" style="text-align:right; color:#27ae60;">+ ${fmt(cm.entries)}</td></tr>
+                        <tr><td data-label="Concepto">Retiros</td><td data-label="Monto" style="text-align:right; color: var(--danger-color);">− ${fmt(cm.withdrawals)}</td></tr>
+                        <tr><td data-label="Concepto">Entradas / gastos registrados</td><td data-label="Monto" style="text-align:right; color: var(--success-color);">+ ${fmt(cm.entries)}</td></tr>
                     </tbody>
                 </table>
 

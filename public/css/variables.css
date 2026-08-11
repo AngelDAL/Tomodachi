@@ -1,24 +1,26 @@
 :root {
-    /* Brand Colors - Mexican Pink Theme */
-    --primary-color: #E3057A;
-    --primary-dark: #B0045F;
-    --primary-darker: #800345;
-    --primary-light: #FCE4F0;
-    --primary-lighter: #FEF2F8;
-    --primary-shadow: rgba(227, 5, 122, 0.22);
+    /* Brand Colors — Tema "Scarlet" (Remilia Scarlet, Mansión Escarlata)
+       Rojo escarlata/carmesí protagonista, acento azul noche (vestido),
+       vino para estados profundos. */
+    --primary-color: #C62828;
+    --primary-dark: #9E1B1B;
+    --primary-darker: #6E1212;
+    --primary-light: #FBE9E9;
+    --primary-lighter: #FDF4F4;
+    --primary-shadow: rgba(198, 40, 40, 0.22);
 
-    --secondary-color: #4a4a4a;
-    --secondary-dark: #333333;
-    --secondary-darker: #1a1a1a;
-    --secondary-light: #f5f5f5;
+    --secondary-color: #1A237E;
+    --secondary-dark: #12184F;
+    --secondary-darker: #0B0F33;
+    --secondary-light: #E8EAF6;
 
     /* Status Colors */
-    --success-color: #4CAF50;
-    --danger-color: #f44336;
-    --danger-dark: #d32f2f;
-    --warning-color: #ff9800;
-    --warning-dark: #ef6c00;
-    --info-color: #2196F3;
+    --success-color: #2E7D32;
+    --danger-color: #D32F2F;
+    --danger-dark: #B71C1C;
+    --warning-color: #F57C00;
+    --warning-dark: #E65100;
+    --info-color: #1976D2;
 
     /* Neutral Colors */
     --white: #ffffff;
@@ -38,25 +40,31 @@
     --bg-light: #f5f5f5;
     --bg-lighter: #f8f8f8;
     --bg-lightest: #fafafa;
-    --bg-hover: #f9f9f9;
 
-    /* Borders */
-    --border-color: #dddddd;
-    --border-light: #eeeeee;
-    --border-lighter: #eaeaea;
-    --border-input: #b0bec5;
-    --border-focus: #E3057A;
+    /* Borders & Shadows */
+    --border-color: #e0e0e0;
+    --border-radius: 8px;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.10);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.14);
+    --shadow-primary: 0 4px 14px rgba(198, 40, 40, 0.28);
 
     /* Layout */
     --sidebar-width: 250px;
-    --header-height: 60px;
-    --border-radius: 8px;
-    --border-radius-sm: 4px;
-    --border-radius-lg: 12px;
-    
-    /* Shadows */
-    --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
-    --shadow-md: 0 4px 8px rgba(0,0,0,0.1);
-    --shadow-lg: 0 8px 16px rgba(0,0,0,0.1);
-    --shadow-card: 0 2px 5px rgba(0,0,0,0.05);
+    --sidebar-collapsed-width: 72px;
+    --topbar-height: 60px;
+
+    /* Typography */
+    --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-size-xs: 0.75rem;
+    --font-size-sm: 0.875rem;
+    --font-size-md: 1rem;
+    --font-size-lg: 1.125rem;
+    --font-size-xl: 1.375rem;
+    --font-size-2xl: 1.75rem;
+
+    /* Transitions */
+    --transition-fast: 0.15s ease;
+    --transition-normal: 0.3s ease;
+    --transition-slow: 0.5s ease;
 }

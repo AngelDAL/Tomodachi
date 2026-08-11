@@ -50,16 +50,29 @@ try {
             ], 'Detalle de cliente');
         }
 
-        // Listar con búsqueda opcional
+        // Listar con búsqueda opcional y filtros
         $search = isset($_GET['search']) ? Validator::sanitizeString($_GET['search']) : '';
+        $statusFilter = isset($_GET['status']) ? Validator::sanitizeString($_GET['status']) : '';
+        $balanceFilter = isset($_GET['balance']) ? Validator::sanitizeString($_GET['balance']) : ''; // 'with_balance' | 'no_balance'
         $params = [$store_id];
         $sql = 'SELECT customer_id, full_name, phone, email, balance, credit_limit, status, created_at FROM customers WHERE store_id = ?';
         if ($search !== '') {
-            $sql .= ' AND (full_name LIKE ? OR phone LIKE ?)';
+            $sql .= ' AND (full_name LIKE ? OR phone LIKE ? OR email LIKE ?)';
+            $params[] = "%$search%";
             $params[] = "%$search%";
             $params[] = "%$search%";
         }
-        $sql .= ' ORDER BY full_name ASC LIMIT 200';
+        if ($statusFilter === 'active' || $statusFilter === 'inactive') {
+            $sql .= ' AND status = ?';
+            $params[] = $statusFilter;
+        }
+        if ($balanceFilter === 'with_balance') {
+            $sql .= ' AND balance > 0';
+        } elseif ($balanceFilter === 'no_balance') {
+            $sql .= ' AND balance <= 0';
+        }
+        // Más recientes primero
+        $sql .= ' ORDER BY created_at DESC, customer_id DESC LIMIT 300';
         $customers = $db->select($sql, $params);
         foreach ($customers as &$c) { $c['balance'] = (float)$c['balance']; }
         Response::success($customers, 'Clientes');

@@ -1985,3 +1985,59 @@ html[data-theme] textarea {
     /* Enlaces: subrayados visibles */
     a { color: #1976D2 !important; }
 }
+
+/* ============================================================
+ * Filtros de clientes (pestañas) — estilo unificado del sistema
+ * ============================================================ */
+.customer-filters {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+.customer-filter-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    color: var(--text-medium);
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+.customer-filter-btn:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background: var(--primary-lighter);
+}
+.customer-filter-btn.active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #fff;
+    box-shadow: var(--shadow-primary);
+}
+.customer-filter-btn i {
+    font-size: 0.9rem;
+}
+
+/* Tabla de clientes: scrolleable (lista larga) */
+#customersTableWrap {
+    max-height: calc(100vh - 280px);
+    overflow-y: auto;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+}
+#customersTableWrap table {
+    margin-bottom: 0;
+}
+#customersTableWrap thead th {
+    position: sticky;
+    top: 0;
+    background: var(--bg-light);
+    z-index: 1;
+}

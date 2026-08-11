@@ -340,19 +340,15 @@ function renderProductsGrid(products) {
     grid.innerHTML = products.map(p => {
         const isSelected = selectedTargets.some(t => t.id == p.product_id);
 
-        let imgSrc = getRelativeImagePath(p.image_path);
-        if (!imgSrc) {
-            // Fallback default
-            imgSrc = 'assets/images/products/default-product.svg';
-        }
-
-        // Manejar error de carga con onerror
-        const onErrorParams = "this.onerror=null;this.src='assets/images/products/default-product.svg';";
+        const imgSrc = getRelativeImagePath(p.image_path);
+        const onErrorParams = "this.onerror=null;this.parentElement.innerHTML='<div class=\'product-item-noimg\'><i class=\'fas fa-box\'></i></div>';";
 
         return `
             <div class="product-item-card ${isSelected ? "selected" : ""}" onclick="toggleProductSelection(${p.product_id})" title="${p.product_name}">
                 <div class="product-item-img-wrapper">
-                    <img src="${imgSrc}" alt="${p.product_name}" onerror="${onErrorParams}">
+                    ${imgSrc
+                        ? `<img src="${imgSrc}" alt="${p.product_name}" onerror="${onErrorParams}">`
+                        : '<div class="product-item-noimg"><i class="fas fa-box"></i></div>'}
                     ${isSelected ? '<div class="selected-indicator"><i class="fas fa-check"></i></div>' : ''}
                 </div>
                 <div class="product-item-content">
@@ -1148,13 +1144,14 @@ function renderDrawerProducts(products) {
     }
     grid.innerHTML = products.map(p => {
         const isSelected = selectedTargets.some(t => t.id == p.product_id);
-        let imgSrc = getRelativeImagePath(p.image_path);
-        if (!imgSrc) imgSrc = 'assets/images/products/default-product.svg';
-        const onErrorParams = "this.onerror=null;this.src='assets/images/products/default-product.svg';";
+        const imgSrc = getRelativeImagePath(p.image_path);
+        const onErrorParams = "this.onerror=null;this.parentElement.innerHTML='<div class=\\'product-item-noimg\\'><i class=\\'fas fa-box\\'></i></div>';";
         return `
             <div class="product-item-card ${isSelected ? 'selected' : ''}" onclick="toggleDrawerProduct(${p.product_id})" title="${p.product_name}">
                 <div class="product-item-img-wrapper">
-                    <img src="${imgSrc}" alt="${p.product_name}" onerror="${onErrorParams}">
+                    ${imgSrc
+                        ? `<img src="${imgSrc}" alt="${p.product_name}" onerror="${onErrorParams}">`
+                        : '<div class="product-item-noimg"><i class="fas fa-box"></i></div>'}
                     ${isSelected ? '<div class="selected-indicator"><i class="fas fa-check"></i></div>' : ''}
                 </div>
                 <div class="product-item-content">

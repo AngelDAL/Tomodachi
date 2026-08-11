@@ -364,13 +364,14 @@ body.modal-open { overflow: hidden; }
     border-radius: 8px;
     padding: 12px;
     margin-top: 16px;
+    color: #ffffff;
 }
-.profit-title { font-weight: 700; font-size: 0.85rem; margin-bottom: 8px; color: var(--info-color); }
-.profit-row { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 4px; }
+.profit-title { font-weight: 700; font-size: 0.85rem; margin-bottom: 8px; color: #ffffff; }
+.profit-row { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 4px; color: rgba(255,255,255,0.92); }
 .profit-value { font-weight: 600; }
-.profit-diff { font-weight: 700; padding-top: 4px; border-top: 1px dashed var(--info-color); margin-top: 4px; }
-.profit-diff.positive { color: var(--success-color); }
-.profit-diff.negative { color: var(--danger-color); }
+.profit-diff { font-weight: 700; padding-top: 4px; border-top: 1px dashed rgba(255,255,255,0.4); margin-top: 4px; color: #ffffff; }
+.profit-diff.positive { color: #A5D6A7; }
+.profit-diff.negative { color: #EF9A9A; }
 
 .modal-footer {
     padding: 16px 24px;
@@ -1249,4 +1250,28 @@ body.modal-open { overflow: hidden; }
 }
 #confirmModal .modal-content {
     max-width: 400px;
+}
+
+/* Placeholder de producto sin imagen: vector (FontAwesome) en vez de SVG default */
+.product-item-noimg {
+    width: 100%;
+    height: 100%;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-light);
+    color: var(--text-muted);
+    font-size: 1.5rem;
+    border-radius: 6px;
+}
+.product-item-img-wrapper {
+    position: relative;
+    overflow: hidden;
+}
+.product-item-img-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
 }

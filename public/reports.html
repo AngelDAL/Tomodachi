@@ -146,6 +146,8 @@
     <script src="js/app.js"></script>
     <script src="lib/xlsx/xlsx.full.min.js"></script>
     <script src="lib/html2pdf/html2pdf.bundle.min.js"></script>
+    <script src="lib/jspdf/jspdf.umd.min.js"></script>
+    <script src="lib/jspdf/jspdf.plugin.autotable.min.js"></script>
     <script>
         let currentUser = null;
         let currentReportData = null;
@@ -728,7 +730,7 @@
             const storeName = user.store_name || 'Mi Negocio';
             const userName = user.full_name || user.username || 'Usuario';
             const logoUrl = getRelativeImagePath(user.logo_url) || 'assets/images/default-logo.png';
-            
+
             // Get theme colors
             const theme = getThemeColors();
             const primaryColor = theme && theme.primary_color ? theme.primary_color : '#333333';
@@ -740,148 +742,218 @@
                 case 'inventory': reportTitle = 'Reporte de Valoración de Inventario'; break;
                 case 'top_products': reportTitle = 'Reporte de Productos Más Vendidos'; break;
                 case 'inventory_movements': reportTitle = 'Reporte de Movimientos de Inventario'; break;
+                case 'cash_registers': reportTitle = 'Reporte de Cajas Registradoras'; break;
+                case 'cash_movements': reportTitle = 'Reporte de Movimientos de Caja'; break;
                 default: reportTitle = 'Reporte del Sistema';
             }
 
+            // ============================================================
+            // PDF con tabla REAL (jsPDF + autoTable)
+            // A diferencia de html2canvas (que rasteriza a imagen y corta
+            // tablas entre páginas), autoTable genera una tabla vectorial
+            // con paginación automática: las filas nunca se cortan a la
+            // mitad y el contenido se reparte limpiamente entre hojas.
+            // ============================================================
+
+            // Configurar cabeceras y filas según el tipo de reporte
+            let tableHead = [];
+            let tableRows = [];
+            const money = (v) => '$' + (parseFloat(v) || 0).toFixed(2);
+
+            switch (currentReportType) {
+                case 'sales':
+                    tableHead = [['ID', 'Fecha', 'Usuario', 'Método', 'Total', 'Ganancia']];
+                    tableRows = currentReportData.map(r => [
+                        '#' + r.sale_id,
+                        new Date(r.sale_date).toLocaleString(),
+                        r.username || '-',
+                        formatPaymentMethod(r.payment_method),
+                        money(r.total),
+                        money(r.profit)
+                    ]);
+                    break;
+                case 'inventory':
+                    tableHead = [['Producto', 'Código', 'Stock', 'Costo', 'Precio', 'V. Costo', 'V. Venta']];
+                    tableRows = currentReportData.map(r => [
+                        r.product_name,
+                        r.barcode || '-',
+                        r.current_stock,
+                        money(r.cost),
+                        money(r.price),
+                        money(r.total_cost_value),
+                        money(r.total_price_value)
+                    ]);
+                    break;
+                case 'top_products':
+                    tableHead = [['Producto', 'Código', 'Unidades', 'Ingresos', 'Ganancia']];
+                    tableRows = currentReportData.map(r => [
+                        r.product_name,
+                        r.barcode || '-',
+                        r.total_sold,
+                        money(r.revenue),
+                        money(r.profit)
+                    ]);
+                    break;
+                case 'inventory_movements':
+                    tableHead = [['Fecha', 'Producto', 'Tipo', 'Cant.', 'Stock Ant.', 'Stock Nuevo', 'Usuario', 'Notas']];
+                    tableRows = currentReportData.map(r => [
+                        new Date(r.created_at).toLocaleString(),
+                        r.product_name,
+                        formatMovementType(r.movement_type),
+                        r.quantity,
+                        r.previous_stock,
+                        r.new_stock,
+                        r.username || '-',
+                        r.notes || '-'
+                    ]);
+                    break;
+                case 'cash_registers':
+                    tableHead = [['ID', 'Apertura', 'Cierre', 'Terminal', 'Usuario', 'Inicial', 'Final', 'Diferencia', 'Estado']];
+                    tableRows = currentReportData.map(r => {
+                        const diff = parseFloat(r.difference || 0);
+                        return [
+                            '#' + r.register_id,
+                            new Date(r.opening_date).toLocaleString(),
+                            r.closing_date ? new Date(r.closing_date).toLocaleString() : '-',
+                            r.terminal_name || 'General',
+                            r.username || '-',
+                            money(r.initial_amount),
+                            r.final_amount !== null ? money(r.final_amount) : '-',
+                            r.difference !== null ? money(diff) : '-',
+                            r.status === 'open' ? 'Abierta' : 'Cerrada'
+                        ];
+                    });
+                    break;
+                case 'cash_movements':
+                    tableHead = [['Fecha', 'Terminal', 'Usuario', 'Tipo', 'Monto', 'Descripción']];
+                    tableRows = currentReportData.map(r => {
+                        let typeLabel = r.movement_type;
+                        if (r.movement_type === 'entry') typeLabel = 'Entrada';
+                        else if (r.movement_type === 'withdrawal') typeLabel = 'Retiro';
+                        else if (r.movement_type === 'sale') typeLabel = 'Venta';
+                        return [
+                            new Date(r.created_at).toLocaleString(),
+                            r.terminal_name || 'General',
+                            r.username || '-',
+                            typeLabel,
+                            money(r.amount),
+                            r.description || '-'
+                        ];
+                    });
+                    break;
+                default:
+                    // Reporte genérico: volcar columnas del primer registro
+                    if (currentReportData.length > 0) {
+                        tableHead = [Object.keys(currentReportData[0])];
+                        tableRows = currentReportData.map(r => Object.values(r).map(v => v === null || v === undefined ? '-' : String(v)));
+                    }
+            }
+
+            if (tableHead.length === 0 || tableRows.length === 0) {
+                showNotification('No hay datos para exportar a PDF', 'warning');
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const margin = 14;
+
+            // Encabezado del documento
+            doc.setFillColor(245, 245, 245);
+            doc.rect(0, 0, pageWidth, 30, 'F');
+            doc.setTextColor(30, 30, 46);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(18);
+            doc.text(storeName, margin, 15);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(11);
+            doc.setTextColor(85, 85, 85);
+            doc.text(reportTitle, margin, 23);
+
+            // Info de generación
+            doc.setFontSize(9);
+            doc.setTextColor(51, 51, 51);
+            doc.text(`Generado por: ${userName}  |  ${dateStr}`, margin, 27);
+
+            // Línea de color del negocio
+            doc.setDrawColor(parseInt(primaryColor.substr(1, 2), 16), parseInt(primaryColor.substr(3, 2), 16), parseInt(primaryColor.substr(5, 2), 16));
+            doc.setLineWidth(1.2);
+            doc.line(margin, 31, pageWidth - margin, 31);
+
+            // Resumen (si hay)
             const summary = getReportSummary();
-            let summaryHtml = `<div style="margin-bottom: 20px; padding: 10px; background: #f5f5f5; border-radius: 5px; border-left: 5px solid ${primaryColor};"><h3 style="color: #1a1a2e;">Resumen</h3><ul style="list-style: none; padding: 0; color: #1a1a2e;">`;
-            for (const [key, value] of Object.entries(summary)) {
-                summaryHtml += `<li style="margin-bottom: 5px;"><strong>${key}:</strong> ${value}</li>`;
+            let yStart = 38;
+            const summaryKeys = Object.keys(summary);
+            if (summaryKeys.length > 0) {
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(30, 30, 46);
+                doc.text('Resumen', margin, yStart);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(51, 51, 51);
+                yStart += 5;
+                summaryKeys.forEach(k => {
+                    doc.setFontSize(9);
+                    doc.text(`- ${k}: ${summary[k]}`, margin + 2, yStart);
+                    yStart += 4.5;
+                });
+                yStart += 4;
             }
-            summaryHtml += '</ul></div>';
 
-            // Construir tabla limpia para PDF
-            let tableHtml = `<table style="width: 100%; border-collapse: collapse; font-size: 12px;"><thead><tr style="background-color: ${primaryColor}; color: ${headerTextColor}; font-weight: bold;">`;
-            
-            if (currentReportType === 'sales') {
-                tableHtml += '<th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+';">ID</th><th style="padding: 8px; '+`background-color: ${primaryColor}; color: ${headerTextColor};`+'; ">Fecha</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Usuario</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Método</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Total</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Ganancia</th></tr></thead><tbody>';
-                currentReportData.forEach((row, index) => {
-                    const bg = index % 2 === 0 ? '#fff' : '#f2f2f2';
-                    tableHtml += `<tr style="background-color: ${bg};">
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">#${row.sale_id}</td>
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">${new Date(row.sale_date).toLocaleString()}</td>
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">${row.username}</td>
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">${formatPaymentMethod(row.payment_method)}</td>
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">$${parseFloat(row.total).toFixed(2)}</td>
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">$${parseFloat(row.profit).toFixed(2)}</td>
-                    </tr>`;
-                });
-            } else if (currentReportType === 'inventory') {
-                tableHtml += '<th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Producto</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Código</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Stock</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Costo</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Precio</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">V. Costo</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">V. Venta</th></tr></thead><tbody>';
-                currentReportData.forEach((row, index) => {
-                    const bg = index % 2 === 0 ? '#fff' : '#f2f2f2';
-                    tableHtml += `<tr style="background-color: ${bg};">
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">${row.product_name}</td>
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">${row.barcode || '-'}</td>
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">${row.current_stock}</td>
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">$${parseFloat(row.cost).toFixed(2)}</td>
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">$${parseFloat(row.price).toFixed(2)}</td>
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">$${parseFloat(row.total_cost_value).toFixed(2)}</td>
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">$${parseFloat(row.total_price_value).toFixed(2)}</td>
-                    </tr>`;
-                });
-            } else if (currentReportType === 'top_products') {
-                tableHtml += '<th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Producto</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Código</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Unidades</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Ingresos</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Ganancia</th></tr></thead><tbody>';
-                currentReportData.forEach((row, index) => {
-                    const bg = index % 2 === 0 ? '#fff' : '#f2f2f2';
-                    tableHtml += `<tr style="background-color: ${bg};">
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">${row.product_name}</td>
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">${row.barcode || '-'}</td>
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">${row.total_sold}</td>
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">$${parseFloat(row.revenue).toFixed(2)}</td>
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">$${parseFloat(row.profit).toFixed(2)}</td>
-                    </tr>`;
-                });
-            } else if (currentReportType === 'inventory_movements') {
-                tableHtml += '<th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Fecha</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Producto</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Tipo</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Cant.</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Stock Ant.</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Stock Nuevo</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Usuario</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Notas</th></tr></thead><tbody>';
-                currentReportData.forEach((row, index) => {
-                    const bg = index % 2 === 0 ? '#fff' : '#f2f2f2';
-                    tableHtml += `<tr style="background-color: ${bg};">
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">${new Date(row.created_at).toLocaleString()}</td>
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">${row.product_name}</td>
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">${formatMovementType(row.movement_type)}</td>
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">${row.quantity}</td>
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">${row.previous_stock}</td>
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">${row.new_stock}</td>
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">${row.username}</td>
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">${row.notes || '-'}</td>
-                    </tr>`;
-                });
-            } else if (currentReportType === 'cash_registers') {
-                tableHtml += '<th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">ID</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Apertura</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Cierre</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Terminal</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Usuario</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Inicial</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Final</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Diferencia</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Estado</th></tr></thead><tbody>';
-                currentReportData.forEach((row, index) => {
-                    const bg = index % 2 === 0 ? '#fff' : '#f2f2f2';
-                    const diff = parseFloat(row.difference || 0);
-                    const diffColor = diff < 0 ? 'red' : (diff > 0 ? 'green' : 'inherit');
-                    
-                    tableHtml += `<tr style="background-color: ${bg};">
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">#${row.register_id}</td>
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">${new Date(row.opening_date).toLocaleString()}</td>
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">${row.closing_date ? new Date(row.closing_date).toLocaleString() : '-'}</td>
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">${row.terminal_name || 'General'}</td>
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">${row.username}</td>
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">$${parseFloat(row.initial_amount).toFixed(2)}</td>
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">${row.final_amount !== null ? '$' + parseFloat(row.final_amount).toFixed(2) : '-'}</td>
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: ${diffColor};">${row.difference !== null ? '$' + diff.toFixed(2) : '-'}</td>
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">${row.status === 'open' ? 'Abierta' : 'Cerrada'}</td>
-                    </tr>`;
-                });
-            } else if (currentReportType === 'cash_movements') {
-                tableHtml += '<th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Fecha</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Terminal</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Usuario</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Tipo</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Monto</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Descripción</th></tr></thead><tbody>';
-                currentReportData.forEach((row, index) => {
-                    const bg = index % 2 === 0 ? '#fff' : '#f2f2f2';
-                    let typeLabel = row.movement_type;
-                    let typeColor = 'inherit';
-                    if (row.movement_type === 'entry') { typeLabel = 'Entrada'; typeColor = 'green'; }
-                    else if (row.movement_type === 'withdrawal') { typeLabel = 'Retiro'; typeColor = 'red'; }
-                    else if (row.movement_type === 'sale') { typeLabel = 'Venta'; }
+            // Tabla real con autoTable (paginación automática, filas intactas)
+            const headerRGB = [
+                parseInt(primaryColor.substr(1, 2), 16),
+                parseInt(primaryColor.substr(3, 2), 16),
+                parseInt(primaryColor.substr(5, 2), 16)
+            ];
+            const headerTextRGB = getContrastColor(primaryColor) === '#000000' ? [0, 0, 0] : [255, 255, 255];
 
-                    tableHtml += `<tr style="background-color: ${bg};">
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">${new Date(row.created_at).toLocaleString()}</td>
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">${row.terminal_name || 'General'}</td>
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">${row.username}</td>
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: ${typeColor};">${typeLabel}</td>
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">$${parseFloat(row.amount).toFixed(2)}</td>
-                        <td style="padding: 8px; border: 1px solid #cccccc; color: #1a1a2e;">${row.description || '-'}</td>
-                    </tr>`;
-                });
-            }
-            tableHtml += '</tbody></table>';
+            doc.autoTable({
+                head: tableHead,
+                body: tableRows,
+                startY: yStart,
+                margin: { left: margin, right: margin, top: 40, bottom: 20 },
+                styles: {
+                    font: 'helvetica',
+                    fontSize: 8,
+                    cellPadding: 2,
+                    textColor: [26, 26, 46],
+                    lineColor: [204, 204, 204],
+                    lineWidth: 0.15,
+                    overflow: 'linebreak',
+                    valign: 'middle'
+                },
+                headStyles: {
+                    fillColor: headerRGB,
+                    textColor: headerTextRGB,
+                    fontStyle: 'bold',
+                    fontSize: 8.5
+                },
+                alternateRowStyles: {
+                    fillColor: [245, 245, 245]
+                },
+                didDrawPage: (data) => {
+                    // Pie de página: número de página
+                    const pageCount = doc.internal.getNumberOfPages();
+                    doc.setFontSize(8);
+                    doc.setTextColor(120, 120, 120);
+                    doc.text(`Página ${doc.internal.getCurrentPageInfo().pageNumber} de ${pageCount}`, pageWidth / 2, doc.internal.pageSize.getHeight() - 8, { align: 'center' });
+                    // Título corto en cabecera de páginas siguientes
+                    if (doc.internal.getCurrentPageInfo().pageNumber > 1) {
+                        doc.setFontSize(8);
+                        doc.setTextColor(85, 85, 85);
+                        doc.text(`${storeName} - ${reportTitle}`, margin, 12);
+                        doc.setDrawColor(headerRGB[0], headerRGB[1], headerRGB[2]);
+                        doc.setLineWidth(0.6);
+                        doc.line(margin, 14, pageWidth - margin, 14);
+                    }
+                }
+            });
 
-            // Contenedor temporal para el PDF
-            // IMPORTANTE: usar SOLO colores explícitos del tema claro.
-            // html2canvas resuelve var() con el tema ACTUAL — si el usuario está
-            // en tema oscuro, var(--text-color) sería claro y el PDF saldría con
-            // texto blanco sobre fondo blanco. Todo va fijo (tema claro).
-            const container = document.createElement('div');
-            container.innerHTML = `
-                <div style="padding: 20px; font-family: Arial, sans-serif; color: #1a1a2e; background: #ffffff;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid ${primaryColor}; padding-bottom: 10px;">
-                        <div>
-                            <h1 style="margin: 0; color: ${primaryColor};">${storeName}</h1>
-                            <h3 style="margin: 5px 0; color: #555555;">${reportTitle}</h3>
-                        </div>
-                        <img src="${logoUrl}" style="max-height: 60px; max-width: 150px;" onerror="this.style.display='none'">
-                    </div>
-                    <div style="margin-bottom: 20px; font-size: 12px; color: #333333;">
-                        <p style="margin: 2px 0;"><strong>Generado por:</strong> ${userName}</p>
-                        <p style="margin: 2px 0;"><strong>Fecha:</strong> ${dateStr}</p>
-                    </div>
-                    ${summaryHtml}
-                    ${tableHtml}
-                </div>
-            `;
-
-            const opt = {
-                margin: 10,
-                filename: `Reporte_${currentReportType}_${now.toISOString().split('T')[0]}.pdf`,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
-            
-            html2pdf().set(opt).from(container).save();
+            doc.save(`Reporte_${currentReportType}_${now.toISOString().split('T')[0]}.pdf`);
         }
+
 
                 // --- QR Label Generator Logic ---
         let allProducts = [];

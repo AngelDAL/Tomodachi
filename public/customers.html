@@ -201,7 +201,7 @@
                     <td data-label="Estado"><span style="color:${c.status === 'active' ? 'var(--success-color)' : 'var(--danger-color)'};">${c.status === 'active' ? 'Activo' : 'Inactivo'}</span></td>
                     <td data-label="Acciones">
                         <button class="btn btn-sm" onclick="event.stopPropagation(); openCustomerModal(${c.customer_id})" title="Editar" style="margin-right:6px; padding:4px 10px; border-radius:6px; border:none; background:var(--bg-light); cursor:pointer;"><i class="fas fa-edit"></i></button>
-                        <button class="btn btn-sm" onclick="event.stopPropagation(); deleteCustomer(${c.customer_id})" title="Eliminar" style="padding:4px 10px; border-radius:6px; border:none; background:#fdeaea; color: var(--danger-color); cursor:pointer;"><i class="fas fa-trash"></i></button>
+                        <button class="btn btn-sm" onclick="event.stopPropagation(); deleteCustomer(${c.customer_id})" title="Eliminar" style="padding:4px 10px; border-radius:6px; border:none; background:var(--danger-color); color:#fff; cursor:pointer;"><i class="fas fa-trash"></i></button>
                     </td>
                 </tr>
             `).join('');

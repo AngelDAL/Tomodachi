@@ -151,6 +151,17 @@
         let currentReportData = null;
         let currentReportType = '';
 
+        // Carga defensiva de la sesión: si DOMContentLoaded aún no terminó
+        // (o la sesión expiró), obtiene los datos del usuario antes de usarlos.
+        async function ensureCurrentUser() {
+            if (currentUser) return currentUser;
+            try {
+                const session = await checkSession();
+                if (session) currentUser = session;
+            } catch (e) { /* noop */ }
+            return currentUser;
+        }
+
         function toLocalISOString(date) {
             const offset = date.getTimezoneOffset() * 60000;
             return (new Date(date - offset)).toISOString().slice(0, 16);
@@ -591,13 +602,14 @@
             return summary;
         }
 
-        function exportExcel() {
+        async function exportExcel() {
             if (!currentReportData) return;
             
+            const user = await ensureCurrentUser() || {};
             const now = new Date();
             const dateStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
-            const storeName = currentUser.store_name || 'Tomodachi';
-            const userName = currentUser.full_name || currentUser.username;
+            const storeName = user.store_name || 'Tomodachi';
+            const userName = user.full_name || user.username || 'Usuario';
             
             let reportTitle = '';
             switch(currentReportType) {
@@ -707,14 +719,15 @@
             return (yiq >= 128) ? '#000000' : '#FFFFFF';
         }
 
-        function exportPDF() {
+        async function exportPDF() {
             if (!currentReportData) return;
 
+            const user = await ensureCurrentUser() || {};
             const now = new Date();
             const dateStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
-            const storeName = currentUser.store_name || 'Mi Negocio';
-            const userName = currentUser.full_name || currentUser.username;
-            const logoUrl = getRelativeImagePath(currentUser.logo_url) || 'assets/images/default-logo.png';
+            const storeName = user.store_name || 'Mi Negocio';
+            const userName = user.full_name || user.username || 'Usuario';
+            const logoUrl = getRelativeImagePath(user.logo_url) || 'assets/images/default-logo.png';
             
             // Get theme colors
             const theme = getThemeColors();

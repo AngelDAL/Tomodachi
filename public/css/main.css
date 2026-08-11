@@ -1662,37 +1662,36 @@ table tr:hover {
 
 /* ============================================================
  * Dialog nativo (detalle de venta, etc.)
- * Animación: máscara de opacidad que revela de arriba hacia
- * abajo + slide up suave del contenido.
+ * Animación: fade in + slide up del contenido; el fondo oscuro
+ * aparece gradualmente (fade). Centrado en todas las formas.
  * ============================================================ */
 .sale-detail-dialog {
     border: none;
     padding: 0;
     background: transparent;
-    max-width: none;
-    max-height: none;
-    width: auto;
+    width: fit-content;
+    max-width: 90vw;
     margin: auto;
     overflow: visible;
-    /* Fallback: el backdrop del dialog es oscuro por defecto */
 }
 .sale-detail-dialog .modal-content {
-    animation: saleDialogIn 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    width: 100%;
+    max-width: none;
+    animation: saleDialogIn 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .sale-detail-dialog::backdrop {
     background: rgba(0, 0, 0, 0.55);
     backdrop-filter: blur(3px);
-    /* Máscara que revela de arriba hacia abajo (clip-path animado) */
-    animation: saleBackdropIn 0.45s ease forwards;
+    /* Fondo que aparece gradualmente */
+    animation: saleBackdropIn 0.4s ease forwards;
 }
 @keyframes saleBackdropIn {
-    0%   { opacity: 0; clip-path: inset(0 0 100% 0); }
-    60%  { opacity: 1; clip-path: inset(0 0 30% 0); }
-    100% { opacity: 1; clip-path: inset(0 0 0% 0); }
+    0%   { opacity: 0; }
+    100% { opacity: 1; }
 }
 @keyframes saleDialogIn {
-    0%   { opacity: 0; transform: translateY(28px) scale(0.97); }
-    100% { opacity: 1; transform: translateY(0) scale(1); }
+    0%   { opacity: 0; transform: translateY(24px); }
+    100% { opacity: 1; transform: translateY(0); }
 }
 .sale-detail-dialog .modal-close {
     color: var(--primary-color, #E3057A);

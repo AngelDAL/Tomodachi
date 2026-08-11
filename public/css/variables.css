@@ -66,6 +66,10 @@
 
     /* Borders & Shadows */
     --border-color: #e0e0e0;
+    --border-light: #eeeeee;
+    --border-lighter: #f5f5f5;
+    --bg-hover: #f7f7f7;
+    --border-radius-sm: 6px;
     /* Overlay de difuminado para imágenes de producto (POS) */
     --overlay-fade: rgba(255, 255, 255, 0);
     --overlay-fade-mid: rgba(255, 255, 255, 0.35);
@@ -145,6 +149,10 @@
     --bg-input: #242424;
 
     --border-color: #3A3A3A;
+    --border-light: #333333;
+    --border-lighter: #2A2A2A;
+    --bg-hover: #262626;
+    --border-radius-sm: 6px;
     /* Overlay de difuminado para imágenes de producto (POS) — en oscuro,
        el difuminado es del color del fondo oscuro, no blanco */
     --overlay-fade: rgba(18, 18, 18, 0);

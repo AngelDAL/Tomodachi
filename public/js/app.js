@@ -413,7 +413,13 @@ const ThemeSystem = (function () {
     function readStored() {
         try {
             const saved = JSON.parse(localStorage.getItem('pos_theme_config') || '{}');
-            return saved.theme_mode || saved.dark_mode === true || saved.dark_mode === 'true' ? 'dark' : (saved.dark_mode === false || saved.dark_mode === 'false' ? 'light' : 'auto');
+            // theme_mode tiene prioridad: light | dark | auto
+            if (saved.theme_mode === 'light' || saved.theme_mode === 'dark' || saved.theme_mode === 'auto') {
+                return saved.theme_mode;
+            }
+            if (saved.dark_mode === true || saved.dark_mode === 'true') return 'dark';
+            if (saved.dark_mode === false || saved.dark_mode === 'false') return 'light';
+            return 'auto';
         } catch (e) { return 'auto'; }
     }
 

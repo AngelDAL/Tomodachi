@@ -74,3 +74,5 @@ ENTRYPOINT ["/var/www/html/docker/entrypoint.sh"]
 CMD ["apache2-foreground"]
 # rebuild-css 1786474963
 # rebuild-cleanup 1786475685
+# rebuild-inv 1786476339
+# rebuild-inv2 1786476443

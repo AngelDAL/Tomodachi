@@ -79,13 +79,13 @@ function showConfirmModal(title, message, onConfirm) {
         closeConfirmModal();
     });
 
-    modal.classList.add('show');
+    if (typeof modal.showModal === 'function') { modal.showModal(); }
     document.body.classList.add('modal-open');
 }
 
 function closeConfirmModal() {
     const modal = document.getElementById('confirmModal');
-    if (modal) modal.classList.remove('show');
+    if (modal && typeof modal.close === 'function') modal.close();
     document.body.classList.remove('modal-open');
     confirmCallback = null;
 }
@@ -210,7 +210,7 @@ function openPromoModal(promoId = null, isReadOnly = false) {
     }
 
     if (promoModal) {
-        promoModal.classList.add("show");
+        if (typeof promoModal.showModal === 'function') { promoModal.showModal(); }
         document.body.classList.add("modal-open");
         // Ensure products are loaded (sometimes loadedPromotions happens before loadProductsForGrid is ready)
         if (allProducts.length === 0) {
@@ -231,7 +231,7 @@ function openPromoModal(promoId = null, isReadOnly = false) {
 
 function closePromoModal() {
     if (promoModal) {
-        promoModal.classList.remove("show");
+        if (typeof promoModal.close === 'function') { promoModal.close(); }
     }
     document.body.classList.remove("modal-open");
     const form = document.getElementById("promoForm");

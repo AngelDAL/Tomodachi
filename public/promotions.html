@@ -48,7 +48,7 @@
     </div>
 
     <!-- Modal estilo split -->
-    <div id="promoModal" class="modal">
+    <dialog id="promoModal" class="client-dialog">
         <div class="modal-content">
             <div class="modal-header">
                 <h3 id="promoModalTitle">Nueva Promoción</h3>
@@ -176,10 +176,10 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" onclick="closePromoModal()">Cancelar</button>
-                <button type="submit" form="promoForm" class="btn-primary" style="padding: 10px 24px;">Guardar Promoción</button>
+                <button type="submit" form="promoForm" class="btn-primary" style="padding: 10px 24px; border-radius: 8px;">Guardar Promoción</button>
             </div>
         </div>
-    </div>
+    </dialog>
 
     <style>
         .selected-chip {
@@ -220,8 +220,8 @@
         }
     </style>
     <!-- Confirm Modal -->
-    <div id="confirmModal" class="modal">
-        <div class="modal-content" style="max-width: 400px; text-align: center;">
+    <dialog id="confirmModal" class="client-dialog">
+        <div class="modal-content" style="max-width: 400px; text-align: center; border-radius: 14px;">
             <div class="modal-header" style="justify-content: center; border-bottom: none; padding-bottom: 0;">
                 <h3 id="confirmTitle">Confirmar Acción</h3>
             </div>
@@ -233,7 +233,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </dialog>
 
     <!-- Drawer móvil para promociones (reemplaza modal en ≤768px) -->
     <div id="promoDrawer" class="drawer-overlay">

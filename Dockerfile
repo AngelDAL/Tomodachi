@@ -73,3 +73,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
 ENTRYPOINT ["/var/www/html/docker/entrypoint.sh"]
 CMD ["apache2-foreground"]
 # rebuild-css 1786474963
+# rebuild-cleanup 1786475685

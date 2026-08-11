@@ -494,7 +494,7 @@
                 </button>
             </div>
             <div class="modal-body">
-                <form id="addCategoryForm" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 20px;">
+                <form id="addCategoryForm" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 20px;">
                     <div class="form-group">
                         <label for="newCategoryName">Nombre de la Categoría</label>
                         <input type="text" id="newCategoryName" placeholder="Ej: Bebidas" required style="width: 100%;">
@@ -559,7 +559,7 @@
                     <div class="ai-column settings-column">
                         <h3>2. Configuración IA</h3>
                         
-                        <div class="ai-tabs" style="display: flex; gap: 5px; margin-bottom: 15px; background: #eee; padding: 4px; border-radius: 8px;">
+                        <div class="ai-tabs" style="display: flex; gap: 5px; margin-bottom: 15px; background: var(--bg-light); padding: 4px; border-radius: 8px;">
                             <button class="ai-tab active" onclick="switchAIMode('enhance')" style="flex: 1; border: none; background: white; padding: 8px; border-radius: 6px; cursor: pointer; font-weight: 600; color: var(--primary-color); box-shadow: 0 2px 4px rgba(0,0,0,0.1);">Mejorar</button>
                             <button class="ai-tab" onclick="switchAIMode('studio')" style="flex: 1; border: none; background: transparent; padding: 8px; border-radius: 6px; cursor: pointer; font-weight: 600; color: var(--text-light);">Estudio</button>
                         </div>
@@ -620,7 +620,7 @@
                                     <button class="btn-secondary" onclick="generateBackgroundPreview()" style="width:100%; margin-bottom:10px; display: flex; align-items: center; justify-content: center; gap: 8px;">
                                         <i class="fas fa-image"></i> Generar Solo Fondo
                                     </button>
-                                    <div id="bgPreviewArea" style="display:none; margin-bottom:10px; position:relative; border: 2px dashed #ddd; padding: 5px; border-radius: 8px;">
+                                    <div id="bgPreviewArea" style="display:none; margin-bottom:10px; position:relative; border: 2px dashed var(--border-color); padding: 5px; border-radius: 8px;">
                                         <img id="bgPreviewImg" src="" style="width:100%; border-radius:6px; display: block;">
                                         <div style="display: flex; gap: 5px; margin-top: 5px;">
                                             <button class="btn-sm btn-success" onclick="saveBackgroundToLibrary()" style="flex: 1;">
@@ -786,7 +786,7 @@
         flex: 1;
         height: 6px;
         -webkit-appearance: none;
-        background: #ddd;
+        background: var(--bg-light);
         border-radius: 3px;
         outline: none;
     }

@@ -37,7 +37,7 @@
             border-radius: 10px;
             padding: 20px;
             box-shadow: var(--card-shadow);
-            border-left: 5px solid #ccc;
+            border-left: 5px solid var(--border-color);
             transition: transform 0.2s;
         }
         .terminal-card:hover {
@@ -61,8 +61,8 @@
             font-size: 0.8em;
             font-weight: bold;
         }
-        .status-open { background: #d1e7dd; color: #0f5132; }
-        .status-closed { background: #f8d7da; color: #842029; }
+        .status-open { background: var(--success-color); color: #fff; }
+        .status-closed { background: var(--danger-color); color: #fff; }
         
         .terminal-info {
             margin-bottom: 15px;
@@ -213,7 +213,7 @@
                         <div class="info-row"><span>Ventas:</span> <span id="closeSales"></span></div>
                         <div class="info-row"><span>Entradas:</span> <span id="closeEntries"></span></div>
                         <div class="info-row"><span>Retiros:</span> <span id="closeWithdrawals"></span></div>
-                        <div class="info-row" style="border-top: 1px solid #ddd; margin-top: 5px; padding-top: 5px; font-weight: bold;">
+                        <div class="info-row" style="border-top: 1px solid var(--border-color); margin-top: 5px; padding-top: 5px; font-weight: bold;">
                             <span>Esperado en Caja:</span> <span id="closeExpected"></span>
                         </div>
                     </div>
@@ -223,7 +223,7 @@
                         <input type="number" id="countedAmount" name="counted_amount" step="0.01" min="0" required placeholder="0.00">
                     </div>
 
-                    <div class="form-group" id="denominationSection" style="background:#f8f9fa; padding: 12px; border-radius: 8px; margin-bottom: 10px;">
+                    <div class="form-group" id="denominationSection" style="background:var(--bg-light); padding: 12px; border-radius: 8px; margin-bottom: 10px;">
                         <label style="font-weight:600; margin-bottom:8px; display:block;">💵 Arqueo por denominaciones <small style="font-weight:normal; color:#888;">(opcional, autocalcula el contado)</small></label>
                         <div id="denominationGrid" style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px;">
                             <div class="denom-row" style="display:flex; align-items:center; gap:6px;">
@@ -283,7 +283,7 @@
                                 <input type="number" class="denom-count" data-denom="0.05" min="0" step="1" value="0" style="flex:1; padding:6px; border-radius:6px; border:1px solid var(--border-color);">
                             </div>
                         </div>
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; padding-top:8px; border-top:1px dashed #ddd;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; padding-top:8px; border-top:1px dashed var(--border-color);">
                             <span style="font-weight:600;">Total denominaciones:</span>
                             <span id="denominationTotal" style="font-weight:800; color:var(--primary-color); font-size:1.1rem;">$0.00</span>
                         </div>
@@ -314,7 +314,7 @@
             </div>
             <div class="drawer-body" style="display: flex; flex-direction: column; height: 100%;">
                 
-                <div style="background: var(--bg-light); padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: center; border: 1px solid #e9ecef;">
+                <div style="background: var(--bg-light); padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: center; border: 1px solid var(--border-color);">
                     <div style="font-size: 0.9em; color: var(--text-light); margin-bottom: 5px;">Monto Esperado Actual</div>
                     <div id="historyExpectedAmount" style="font-size: 1.8em; font-weight: bold; color: var(--text-color);">$0.00</div>
                 </div>

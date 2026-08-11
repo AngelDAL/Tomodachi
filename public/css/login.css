@@ -414,7 +414,7 @@ dialog.privacy-modal.close .modal-wrapper {
     font-size: 1rem;
     color: var(--text-color);
     border: none;
-    border-bottom: 2px solid #e2e8f0;
+    border-bottom: 2px solid var(--border-color);
     outline: none;
     background: transparent;
     transition: border-color 0.3s;
@@ -543,7 +543,7 @@ dialog.privacy-modal.close .modal-wrapper {
     align-items: center;
     gap: 0.5rem;
     font-size: 0.9rem;
-    border: 1px solid #feb2b2;
+    border: 1px solid var(--error-color);
 }
 
 .error-message.show {
@@ -654,7 +654,7 @@ dialog.privacy-modal.close .modal-wrapper {
 
     .privacy-link-mobile {
         background: transparent;
-        border: 1px solid #cbd5e0;
+        border: 1px solid var(--border-color);
         color: var(--text-light);
         padding: 0.6rem 1.2rem;
         border-radius: 50px;

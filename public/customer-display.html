@@ -102,7 +102,7 @@
             font-weight: 700;
             margin-bottom: 15px;
             padding-bottom: 10px;
-            border-bottom: 2px solid #eee;
+            border-bottom: 2px solid var(--border-color);
             display: flex;
             align-items: center;
             gap: 10px;
@@ -123,7 +123,7 @@
         }
 
         .products-list::-webkit-scrollbar-track {
-            background: #f1f1f1;
+            background: var(--bg-light);
         }
 
         .products-list::-webkit-scrollbar-thumb {
@@ -132,8 +132,8 @@
         }
 
         .product-item {
-            background: #fff;
-            border-bottom: 1px solid #eee;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
             padding: 15px 10px;
             display: grid;
             grid-template-columns: auto auto 1fr auto;
@@ -157,7 +157,7 @@
             height: 60px;
             border-radius: 8px;
             object-fit: cover;
-            background: #f8f9fa;
+            background: var(--bg-light);
             border: 1px solid var(--border-color);
         }
 
@@ -165,7 +165,7 @@
             width: 60px;
             height: 60px;
             border-radius: 8px;
-            background: #f8f9fa;
+            background: var(--bg-light);
             border: 1px solid var(--border-color);
             display: flex;
             align-items: center;
@@ -268,7 +268,7 @@
             justify-content: space-between;
             align-items: center;
             padding: 12px 0;
-            border-bottom: 1px solid #f0f0f0;
+            border-bottom: 1px solid var(--border-color);
             color: var(--text-medium);
         }
 
@@ -366,7 +366,7 @@
             border-radius: 8px;
             border: 2px solid var(--secondary-color);
             overflow: hidden;
-            background: #fff;
+            background: var(--bg-card);
         }
 
         .bundle-image-container img {
@@ -393,7 +393,7 @@
             border-radius: 4px;
             margin-right: 4px;
             vertical-align: middle;
-            background: #e0e0e0;
+            background: var(--bg-light);
             color: var(--text-light);
         }
         .cart-tab-badge.active {
@@ -418,11 +418,11 @@
         }
         .conn-status.connected {
             background: rgba(76,175,80,0.3);
-            color: #81c784;
+            color: var(--success-color);
         }
         .conn-status.disconnected {
             background: rgba(244,67,54,0.3);
-            color: #ef9a9a;
+            color: var(--danger-color);
         }
 
         /* QR toggle */
@@ -493,7 +493,7 @@
             margin-bottom: 16px;
         }
         .qr-url-box {
-            background: #f5f5f5;
+            background: var(--bg-light);
             border: 1px solid var(--border-color);
             border-radius: 8px;
             padding: 12px 14px;
@@ -1176,7 +1176,7 @@
                     ).join('');
 
                     return `
-                    <div class="product-item" style="background: #fdfbff; border-left: 4px solid var(--secondary-color);">
+                    <div class="product-item" style="background: var(--bg-card); border-left: 4px solid var(--secondary-color);">
                         ${imgHtml}
                         <div class="product-quantity" style="background: var(--secondary-color);">${item.count}</div>
                         <div class="product-info">

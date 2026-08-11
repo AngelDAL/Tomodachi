@@ -925,7 +925,7 @@
                     .qr-product-card.no-qr {
                         background: var(--bg-light);
                         opacity: 0.9;
-                        border: 1px dashed #ccc;
+                        border: 1px dashed var(--border-color);
                     }
                     .qr-product-card.no-qr:hover {
                         border-color: var(--text-light);
@@ -957,7 +957,7 @@
                         position: absolute;
                         top: 8px;
                         right: 8px;
-                        background: #eee;
+                        background: var(--bg-light);
                         color: var(--text-light);
                         font-size: 10px;
                         padding: 3px 6px;
@@ -1008,7 +1008,7 @@
                     </div>
 
                     <div class="qr-list-container" style="margin-bottom: 20px; margin-top: 30px;">
-                        <h3 style="margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                        <h3 style="margin-bottom: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
                             <i class="fas fa-print"></i> Lista de Impresión
                         </h3>
                         <table class="dashboard-table" id="qrListTable">
@@ -1081,8 +1081,8 @@
                 const imgPath = getRelativeImagePath(rawImg);
                 
                 const imgHtml = imgPath 
-                    ? `<img src="${imgPath}" class="qr-product-img" alt="${p.product_name}" onerror="this.outerHTML='<div class=\\'qr-product-img\\' style=\\'display:flex;align-items:center;justify-content:center;background:#f8f9fa;color:#ccc;font-size:2rem;\\'><i class=\\'fas fa-box\\'></i></div>'">`
-                    : `<div class="qr-product-img" style="display:flex;align-items:center;justify-content:center;background:#f8f9fa;color:#ccc;font-size:2rem;"><i class="fas fa-box"></i></div>`;
+                    ? `<img src="${imgPath}" class="qr-product-img" alt="${p.product_name}" onerror="this.outerHTML='<div class=\\'qr-product-img\\' style=\\'display:flex;align-items:center;justify-content:center;background:var(--bg-light);color:var(--text-muted);font-size:2rem;\\'><i class=\\'fas fa-box\\'></i></div>'">`
+                    : `<div class="qr-product-img" style="display:flex;align-items:center;justify-content:center;background:var(--bg-light);color:var(--text-muted);font-size:2rem;"><i class="fas fa-box"></i></div>`;
 
                 const stock = p.current_stock !== null ? p.current_stock : 0;
                 
@@ -1312,7 +1312,7 @@
                     label.style.justifyContent = 'center';
                     label.style.boxSizing = 'border-box';
                     label.style.padding = '2px';
-                    label.style.border = '1px dotted #ccc'; // Guía de corte
+                    label.style.border = '1px dotted var(--border-color)'; // Guía de corte
                     label.style.pageBreakInside = 'avoid';
                     label.style.overflow = 'hidden';
                     label.style.margin = '0'; // Sin margen externo para aprovechar hoja
@@ -1398,7 +1398,7 @@
                     @media print {
                         @page { margin: 0.5cm; }
                         .qr-label { 
-                            border: 1px dotted #ddd; 
+                            border: 1px dotted var(--border-color); 
                         }
                     }
                 `);

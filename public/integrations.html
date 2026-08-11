@@ -127,16 +127,16 @@
             color: var(--primary-dark);
         }
         .badge-active {
-            background: #e6f7e6;
+            background: var(--success-color);
             color: var(--success-color);
         }
         .badge-revoked {
-            background: #fdecea;
-            color: #c62828;
+            background: var(--danger-color);
+            color: var(--danger-color);
         }
         .badge-expired {
             background: var(--warning-color);
-            color: #e65100;
+            color: var(--warning-color);
         }
         .btn {
             display: inline-flex;
@@ -160,7 +160,7 @@
             color: var(--danger-color);
             border: 1px solid var(--danger-color);
         }
-        .btn-danger:hover { background: #fdecea; }
+        .btn-danger:hover { background: var(--danger-color); }
         .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
         .msg {
             margin-top: 1rem;
@@ -169,11 +169,11 @@
             display: none;
             font-size: 0.9rem;
         }
-        .msg.error { background: #fdecea; color: #c62828; display: block; }
-        .msg.success { background: #e6f7e6; color: var(--success-color); display: block; }
+        .msg.error { background: var(--danger-color); color: #fff; display: block; }
+        .msg.success { background: var(--success-color); color: var(--success-color); display: block; }
         .token-reveal {
-            background: #1e1e2e;
-            color: #7ce08a;
+            background: var(--dark-color);
+            color: var(--success-color);
             padding: 12px 16px;
             border-radius: 8px;
             font-family: monospace;

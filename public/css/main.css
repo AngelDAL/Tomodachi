@@ -945,19 +945,19 @@ body {
 
 /* Acentos de color sutiles (Borde izquierdo) */
 .notification-success {
-    border-left: 4px solid #2ecc71;
+    border-left: 4px solid var(--success-color);
 }
 
 .notification-error {
-    border-left: 4px solid #e74c3c;
+    border-left: 4px solid var(--danger-color);
 }
 
 .notification-info {
-    border-left: 4px solid #3498db;
+    border-left: 4px solid var(--info-color);
 }
 
 .notification-warning {
-    border-left: 4px solid #f1c40f;
+    border-left: 4px solid var(--warning-color);
 }
 
 /* Iconos FontAwesome */
@@ -1543,7 +1543,7 @@ table tr:hover {
 .relogin-content input[type="password"] {
     width: 100%;
     padding: 0.75rem 1rem;
-    border: 1.5px solid #e2e8f0;
+    border: 1.5px solid var(--border-color);
     border-radius: 12px;
     font-size: 0.95rem;
     outline: none;
@@ -1730,7 +1730,7 @@ table tr:hover {
     gap: 12px;
     align-items: center;
     padding: 10px 0;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--border-color);
 }
 .skeleton-table-row .skeleton { height: 16px; }
 

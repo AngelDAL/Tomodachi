@@ -2091,7 +2091,7 @@
     font-weight: bold;
 }
 
-.status-waiting { background: #e9ecef; color: var(--text-light); }
+.status-waiting { background: var(--border-color); color: var(--text-light); }
 .status-analyzing { background: var(--bg-card); color: #856404; }
 .status-success { background: var(--success-color); color: #fff; }
 .status-error { background: var(--danger-color); color: #fff; }
@@ -2615,7 +2615,7 @@
 .mini-qr-reader {
     width: 100%;
     min-height: 220px;
-    background: #111;
+    background: var(--dark-color);
     display: flex;
     align-items: center;
     justify-content: center;

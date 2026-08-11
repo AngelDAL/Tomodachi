@@ -1249,7 +1249,7 @@ function setupHistoryModal() {
 
                 return `
                 <div class="history-card" style="border-left: 4px solid var(--primary-color); padding: 12px; margin-bottom: 10px; background: var(--bg-card); border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                    <div class="history-card-header" style="display: flex; justify-content: space-between; margin-bottom: 6px; border-bottom: 1px dashed #eee; padding-bottom: 6px;">
+                    <div class="history-card-header" style="display: flex; justify-content: space-between; margin-bottom: 6px; border-bottom: 1px dashed var(--border-color); padding-bottom: 6px;">
                         <span class="h-id" style="font-weight: bold;">#${sale.sale_id}</span>
                         <span class="h-date" style="font-size: 0.85rem; color: var(--text-muted);">${date}</span>
                     </div>
@@ -2247,7 +2247,7 @@ function showScannedProductOverlay(product) {
       <div style="position: relative; z-index: 2; padding: 10px;">
         ${imgPath ? 
           `<img src="${imgPath}" alt="Producto" style="max-width:120px; max-height:120px; object-fit:contain; margin-bottom:10px; border-radius: 8px; background: rgba(255,255,255,0.9); padding: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);" onerror="this.style.display='none'">` : 
-          `<div style="width: 120px; height: 120px; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.9); border-radius: 8px; color: #ccc; font-size: 3rem;"><i class="fas fa-box"></i></div>`
+          `<div style="width: 120px; height: 120px; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.9); border-radius: 8px; color: var(--text-muted); font-size: 3rem;"><i class="fas fa-box"></i></div>`
         }
         <div class="scanned-info">
           <h3 style="margin:0 0 5px; font-size:1.1rem; color:var(--text-color); font-weight: 700; text-shadow: 0 1px 1px rgba(255,255,255,0.8);">${escapeHtml(product.product_name)}</h3>
@@ -2644,7 +2644,7 @@ function injectMoneyPanelStyles() {
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
         .money-btn:active { transform: scale(0.96); }
-        .money-btn:hover { background: var(--bg-lightest); border-color: #ccc; }
+        .money-btn:hover { background: var(--bg-lightest); border-color: var(--text-muted); }
         
         /* Billetes */
         .money-btn.bill {
@@ -2660,7 +2660,7 @@ function injectMoneyPanelStyles() {
             content: '';
             position: absolute;
             left: 3px; top: 3px; bottom: 3px; right: 3px;
-            border: 1px dashed #a5d6a7;
+            border: 1px dashed var(--success-color);
             border-radius: 2px;
             pointer-events: none;
         }
@@ -2692,7 +2692,7 @@ function injectMoneyPanelStyles() {
             position: absolute;
             bottom: -6px;
             right: -6px;
-            background: #d32f2f;
+            background: var(--danger-color);
             color: white;
             border-radius: 50%;
             min-width: 20px;
@@ -2712,7 +2712,7 @@ function injectMoneyPanelStyles() {
             bottom: -6px;
             left: -6px;
             background: rgba(0, 0, 0, 0.05);
-            color: #777;
+            color: var(--text-light);
             border: 1px solid rgba(0,0,0,0.1);
             border-radius: 50%;
             width: 22px;
@@ -2749,7 +2749,7 @@ function injectMoneyPanelStyles() {
             cursor: pointer;
             color: var(--text-medium);
         }
-        .btn-money-action:hover { background: #eee; }
+        .btn-money-action:hover { background: var(--bg-light); }
         .btn-money-action.clear { color: #d32f2f; border-color: #ffcdd2; background: #ffebee; }
         .btn-money-action.clear:hover { background: #ffcdd2; }
     `;

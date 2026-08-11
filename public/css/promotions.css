@@ -895,10 +895,10 @@ body.modal-open { overflow: hidden; }
     min-width: 4px;
 }
 
-.promo-timeline-progress.active { background: linear-gradient(90deg, #22c55e, #16a34a); }
-.promo-timeline-progress.upcoming { background: linear-gradient(90deg, #3b82f6, #2563eb); }
-.promo-timeline-progress.expired { background: linear-gradient(90deg, #9ca3af, #6b7280); }
-.promo-timeline-progress.inactive { background: linear-gradient(90deg, #f87171, #ef4444); }
+.promo-timeline-progress.active { background: linear-gradient(90deg, var(--success-color), var(--success-dark)); }
+.promo-timeline-progress.upcoming { background: linear-gradient(90deg, var(--info-color), var(--info-dark)); }
+.promo-timeline-progress.expired { background: linear-gradient(90deg, var(--text-muted), var(--text-light)); }
+.promo-timeline-progress.inactive { background: linear-gradient(90deg, var(--danger-color), var(--danger-dark)); }
 
 .promo-timeline-labels {
     display: flex;

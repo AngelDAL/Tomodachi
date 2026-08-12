@@ -44,11 +44,44 @@
                 'info_color': '--info-color'
             };
 
+            // Derivar variantes de marca (--primary-dark/light/shadow,
+            // --secondary-light) del primary/secondary configurados — sin esto
+            // un tema personalizado deja las variantes con el CSS base.
+            const hexToRgb = (hex) => {
+                const h = String(hex || '').replace('#', '');
+                if (h.length < 6) return null;
+                return { r: parseInt(h.substring(0, 2), 16), g: parseInt(h.substring(2, 4), 16), b: parseInt(h.substring(4, 6), 16) };
+            };
+            const mix = (hex, targetHex, ratio) => {
+                const c = hexToRgb(hex), t = hexToRgb(targetHex);
+                if (!c || !t) return null;
+                const ch = (v) => Math.round(v).toString(16).padStart(2, '0');
+                return '#' + ch(c.r + (t.r - c.r) * ratio) + ch(c.g + (t.g - c.g) * ratio) + ch(c.b + (t.b - c.b) * ratio);
+            };
+            const rgbaOf = (hex, alpha) => {
+                const c = hexToRgb(hex);
+                return c ? `rgba(${c.r}, ${c.g}, ${c.b}, ${alpha})` : null;
+            };
+
             const root = document.documentElement;
             for (const [key, value] of Object.entries(themeConfig)) {
                 if (varMap[key] && value) {
                     root.style.setProperty(varMap[key], value);
                 }
+            }
+            // Variantes derivadas del primary/secondary si vienen en la config
+            const p = themeConfig.primary_color, s = themeConfig.secondary_color;
+            const variants = {};
+            if (p) {
+                variants['--primary-dark'] = mix(p, '#000000', 0.22);
+                variants['--primary-darker'] = mix(p, '#000000', 0.42);
+                variants['--primary-light'] = mix(p, '#ffffff', 0.85);
+                variants['--primary-lighter'] = mix(p, '#ffffff', 0.93);
+                variants['--primary-shadow'] = rgbaOf(p, 0.22);
+            }
+            if (s) variants['--secondary-light'] = mix(s, '#ffffff', 0.85);
+            for (const [v, val] of Object.entries(variants)) {
+                if (val) root.style.setProperty(v, val);
             }
         }
     } catch (e) {

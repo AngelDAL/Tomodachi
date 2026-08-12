@@ -341,8 +341,12 @@ async function loadStoreSettings() {
                     // Primera vez o sin preferencia local → usar config de la BD
                     localStorage.setItem('pos_theme_config', JSON.stringify(stripSurfaces(store.theme_config)));
                 } else {
-                    // El usuario tiene preferencia local → fusionar (colores de BD, modo local)
-                    const merged = { ...stripSurfaces(store.theme_config), ...stripSurfaces(localTheme) };
+                    // El usuario tiene preferencia local → fusionar:
+                    // los COLORES vienen de la BD (el negocio define su paleta),
+                    // solo theme_mode/dark_mode se respetan del local.
+                    const merged = { ...stripSurfaces(localTheme), ...stripSurfaces(store.theme_config) };
+                    if (localTheme.theme_mode) merged.theme_mode = localTheme.theme_mode;
+                    else if (localTheme.dark_mode !== undefined) merged.dark_mode = localTheme.dark_mode;
                     localStorage.setItem('pos_theme_config', JSON.stringify(merged));
                 }
             }
@@ -379,10 +383,59 @@ function applyTheme(themeConfig) {
         'info_color': '--info-color'
     };
 
+    // Derivar variantes de marca automáticamente del primary/secondary:
+    // --primary-dark/darker (oscurecer), --primary-light/lighter (aclarar
+    // hacia blanco para fondos suaves), --primary-shadow (rgba),
+    // --secondary-light. Sin esto, un tema personalizado (ej. Marisa)
+    // dejaba las variantes con el color del CSS base (Scarlet) — el
+    // cursor de selección del POS salía con sombra roja y outline dorado.
+    const hexToRgb = (hex) => {
+        const h = String(hex || '').replace('#', '');
+        if (h.length < 6) return null;
+        return {
+            r: parseInt(h.substring(0, 2), 16),
+            g: parseInt(h.substring(2, 4), 16),
+            b: parseInt(h.substring(4, 6), 16)
+        };
+    };
+    const mix = (hex, targetHex, ratio) => {
+        const c = hexToRgb(hex);
+        const t = hexToRgb(targetHex);
+        if (!c || !t) return null;
+        const ch = (v) => Math.round(v).toString(16).padStart(2, '0');
+        return '#' + ch(c.r + (t.r - c.r) * ratio) + ch(c.g + (t.g - c.g) * ratio) + ch(c.b + (t.b - c.b) * ratio);
+    };
+    const rgbaOf = (hex, alpha) => {
+        const c = hexToRgb(hex);
+        if (!c) return null;
+        return `rgba(${c.r}, ${c.g}, ${c.b}, ${alpha})`;
+    };
+    function deriveBrandVariants(cfg) {
+        const out = {};
+        const p = cfg.primary_color;
+        const s = cfg.secondary_color;
+        if (p) {
+            out['--primary-dark'] = mix(p, '#000000', 0.22) || null;
+            out['--primary-darker'] = mix(p, '#000000', 0.42) || null;
+            out['--primary-light'] = mix(p, '#ffffff', 0.85) || null;
+            out['--primary-lighter'] = mix(p, '#ffffff', 0.93) || null;
+            out['--primary-shadow'] = rgbaOf(p, 0.22) || null;
+        }
+        if (s) {
+            out['--secondary-light'] = mix(s, '#ffffff', 0.85) || null;
+        }
+        return out;
+    }
+
     for (const [key, value] of Object.entries(themeConfig)) {
         if (varMap[key] && value) {
             document.documentElement.style.setProperty(varMap[key], value);
         }
+    }
+    // Aplicar variantes derivadas (solo si el color base vino en la config)
+    const variants = deriveBrandVariants(themeConfig);
+    for (const [v, val] of Object.entries(variants)) {
+        if (val) document.documentElement.style.setProperty(v, val);
     }
 }
 

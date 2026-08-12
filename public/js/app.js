@@ -363,17 +363,21 @@ async function loadStoreSettings() {
 
 function applyTheme(themeConfig) {
     if (!themeConfig) return;
-    
-    // Mapeo de claves JSON a variables CSS (si usamos nombres directos en el JSON, es más fácil)
-    // Asumimos que el JSON tiene claves como 'primary_color' o '--primary-color'
-    // En profile.js usamos input.name que es 'primary_color', 'secondary_color', etc.
-    // Pero en el HTML pusimos data-var="--primary-color".
-    // Vamos a iterar sobre las claves del objeto y mapear si es necesario, o usar un mapa fijo.
-    
-    // IMPORTANTE: solo se aplican colores de MARCA (que no cambian con el tema claro/oscuro).
-    // Las SUPERFICIES (bg-body, text-color, bg-card, border-color, dark-color) las controla
-    // el CSS de [data-theme] — si se aplicaran como inline, pisarían el tema activo y
-    // el cambio claro/oscuro no funcionaría (bug reportado).
+    // Guardar la config activa para que ThemeSystem pueda re-derivar las
+    // superficies oscuras al cambiar de modo claro/oscuro
+    window.__activeThemeConfig = themeConfig;
+
+    // Usar ThemeColorUtils (definido en theme-init.js, corre en el head)
+    // para aplicar marcas + variantes + superficies oscuras teñidas +
+    // contraste de texto calculado por luminancia. Si no está disponible
+    // (carga rara), fallback al varMap básico.
+    if (window.ThemeColorUtils) {
+        const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+        window.ThemeColorUtils.apply(themeConfig, dark);
+        return;
+    }
+
+    // Fallback (mismo comportamiento que antes)
     const varMap = {
         'primary_color': '--primary-color',
         'secondary_color': '--secondary-color',
@@ -383,59 +387,10 @@ function applyTheme(themeConfig) {
         'info_color': '--info-color'
     };
 
-    // Derivar variantes de marca automáticamente del primary/secondary:
-    // --primary-dark/darker (oscurecer), --primary-light/lighter (aclarar
-    // hacia blanco para fondos suaves), --primary-shadow (rgba),
-    // --secondary-light. Sin esto, un tema personalizado (ej. Marisa)
-    // dejaba las variantes con el color del CSS base (Scarlet) — el
-    // cursor de selección del POS salía con sombra roja y outline dorado.
-    const hexToRgb = (hex) => {
-        const h = String(hex || '').replace('#', '');
-        if (h.length < 6) return null;
-        return {
-            r: parseInt(h.substring(0, 2), 16),
-            g: parseInt(h.substring(2, 4), 16),
-            b: parseInt(h.substring(4, 6), 16)
-        };
-    };
-    const mix = (hex, targetHex, ratio) => {
-        const c = hexToRgb(hex);
-        const t = hexToRgb(targetHex);
-        if (!c || !t) return null;
-        const ch = (v) => Math.round(v).toString(16).padStart(2, '0');
-        return '#' + ch(c.r + (t.r - c.r) * ratio) + ch(c.g + (t.g - c.g) * ratio) + ch(c.b + (t.b - c.b) * ratio);
-    };
-    const rgbaOf = (hex, alpha) => {
-        const c = hexToRgb(hex);
-        if (!c) return null;
-        return `rgba(${c.r}, ${c.g}, ${c.b}, ${alpha})`;
-    };
-    function deriveBrandVariants(cfg) {
-        const out = {};
-        const p = cfg.primary_color;
-        const s = cfg.secondary_color;
-        if (p) {
-            out['--primary-dark'] = mix(p, '#000000', 0.22) || null;
-            out['--primary-darker'] = mix(p, '#000000', 0.42) || null;
-            out['--primary-light'] = mix(p, '#ffffff', 0.85) || null;
-            out['--primary-lighter'] = mix(p, '#ffffff', 0.93) || null;
-            out['--primary-shadow'] = rgbaOf(p, 0.22) || null;
-        }
-        if (s) {
-            out['--secondary-light'] = mix(s, '#ffffff', 0.85) || null;
-        }
-        return out;
-    }
-
     for (const [key, value] of Object.entries(themeConfig)) {
         if (varMap[key] && value) {
             document.documentElement.style.setProperty(varMap[key], value);
         }
-    }
-    // Aplicar variantes derivadas (solo si el color base vino en la config)
-    const variants = deriveBrandVariants(themeConfig);
-    for (const [v, val] of Object.entries(variants)) {
-        if (val) document.documentElement.style.setProperty(v, val);
     }
 }
 
@@ -500,6 +455,12 @@ const ThemeSystem = (function () {
     function apply() {
         const dark = mode === 'dark' || (mode === 'auto' && systemPrefersDark());
         document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+        // Re-aplicar marcas + superficies oscuras teñidas del negocio
+        // (si hay config activa) para que el modo oscuro se sienta como
+        // una inspiración del tema, no un negro genérico.
+        if (window.__activeThemeConfig && window.ThemeColorUtils) {
+            window.ThemeColorUtils.apply(window.__activeThemeConfig, dark);
+        }
         // Actualizar botones activos del sidebar
         document.querySelectorAll('.theme-quick-btn').forEach(btn => {
             const active = btn.getAttribute('data-theme-mode') === mode;

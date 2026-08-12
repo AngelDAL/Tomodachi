@@ -396,7 +396,7 @@
 
 .btn-checkout-primary {
     background: var(--primary-color);
-    color: white;
+    color: var(--text-on-primary, #fff);
     border: none;
     border-radius: 10px;
     padding: 16px;

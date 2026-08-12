@@ -28,6 +28,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (cssVar) {
                     document.documentElement.style.setProperty(cssVar, val);
                 }
+                // Si es un color de MARCA, re-derivar variantes + contraste
+                // (preview del tema oscuro teñido en tiempo real)
+                const brandKeys = ['primary_color', 'secondary_color', 'success_color',
+                                   'danger_color', 'warning_color', 'info_color'];
+                if (window.ThemeColorUtils && brandKeys.includes(input.name)) {
+                    const cfg = {};
+                    themeControls.querySelectorAll('input[type="color"]').forEach(inp => {
+                        if (brandKeys.includes(inp.name)) cfg[inp.name] = inp.value;
+                    });
+                    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+                    window.ThemeColorUtils.apply(cfg, dark);
+                }
             });
 
             // Sync text -> color & preview
@@ -37,6 +49,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                     input.value = val;
                     if (cssVar) {
                         document.documentElement.style.setProperty(cssVar, val);
+                    }
+                    // Re-derivar si es marca
+                    const brandKeys = ['primary_color', 'secondary_color', 'success_color',
+                                       'danger_color', 'warning_color', 'info_color'];
+                    if (window.ThemeColorUtils && brandKeys.includes(input.name)) {
+                        const cfg = {};
+                        themeControls.querySelectorAll('input[type="color"]').forEach(inp => {
+                            if (brandKeys.includes(inp.name)) cfg[inp.name] = inp.value;
+                        });
+                        const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+                        window.ThemeColorUtils.apply(cfg, dark);
                     }
                 }
             });

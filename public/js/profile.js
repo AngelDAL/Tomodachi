@@ -210,7 +210,6 @@ async function loadCompanySettings() {
                     const color = themeConfig[key];
                     input.value = color;
                     if (input.nextElementSibling) input.nextElementSibling.value = color;
-                    if (cssVar) document.documentElement.style.setProperty(cssVar, color);
                 } else {
                     const live = liveMap[cssVar];
                     if (live && /^#[0-9a-fA-F]{6}$/.test(live)) {
@@ -333,15 +332,51 @@ function getActiveThemeTab() {
     return tab ? tab.getAttribute('data-theme-tab') : 'light';
 }
 
-// Aplica el config del tema de la pestaña activa al preview real (documentElement)
+// Sincroniza la pestaña del editor (Claro/Oscuro) con el modo indicado
+function syncEditorTab(which) {
+    const tabs = document.querySelectorAll('.theme-tab-btn');
+    const light = document.getElementById('themeControls');
+    const dark = document.getElementById('themeControlsDark');
+    if (!tabs.length || !light || !dark) return;
+    tabs.forEach(t => {
+        const active = t.getAttribute('data-theme-tab') === which;
+        t.classList.toggle('active', active);
+        t.style.background = active ? 'var(--primary-color)' : 'transparent';
+        t.style.color = active ? '#fff' : 'inherit';
+    });
+    light.style.display = which === 'light' ? 'grid' : 'none';
+    dark.style.display = which === 'dark' ? 'grid' : 'none';
+}
+
+// Aplica el config del tema del MODO GLOBAL (ThemeSystem) al preview real.
+// SIEMPRE se deriva de los inputs del editor (claro Y oscuro por separado) —
+// nunca de window.__activeThemeConfig (BD), para que las ediciones sin
+// guardar se respeten al alternar modos y un tema nunca contamine al otro.
+// "Primero cargar el tema destino completo, luego modificar solo ese."
 function applyActiveThemePreview() {
     if (!window.ThemeColorUtils) return;
-    const which = getActiveThemeTab();
+    const mode = window.ThemeSystem ? window.ThemeSystem.getMode() : 'light';
+    const dark = mode === 'dark' || (mode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
     const cfg = collectThemeConfig(false);
     const cfgDark = collectThemeConfig(true);
-    document.documentElement.setAttribute('data-theme', which === 'dark' ? 'dark' : 'light');
-    window.ThemeColorUtils.apply(cfg, which === 'dark', cfgDark);
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    window.ThemeColorUtils.apply(cfg, dark, cfgDark);
 }
+
+// Hook para ThemeSystem: al cambiar el modo global (botones Claro/Oscuro/
+// Auto), aplicar el tema desde los INPUTS del editor y sincronizar la
+// pestaña — así el preview refleja lo que el usuario está editando y la
+// pestaña/botones de modo nunca quedan desincronizados.
+function applyEditorTheme(mode) {
+    if (!window.ThemeColorUtils) return;
+    const dark = mode === 'dark' || (mode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    const cfg = collectThemeConfig(false);
+    const cfgDark = collectThemeConfig(true);
+    window.ThemeColorUtils.apply(cfg, dark, cfgDark);
+    syncEditorTab(dark ? 'dark' : 'light');
+}
+window.__editorThemeApply = applyEditorTheme;
 
 // Conecta los color-pickers de un contenedor (claro u oscuro) al preview en vivo
 function attachThemeLivePreview(containerId) {
@@ -350,13 +385,11 @@ function attachThemeLivePreview(containerId) {
     const isDarkContainer = containerId === 'themeControlsDark';
     container.querySelectorAll('input[type="color"]').forEach(input => {
         const textInput = input.nextElementSibling;
-        const cssVar = input.getAttribute('data-var');
 
         input.addEventListener('input', (e) => {
             const val = e.target.value;
             if (isDarkContainer) darkThemeTouched = true;
             if (textInput) textInput.value = val;
-            if (cssVar) document.documentElement.style.setProperty(cssVar, val);
             applyActiveThemePreview();
         });
 
@@ -365,7 +398,6 @@ function attachThemeLivePreview(containerId) {
             if (/^#[0-9A-F]{6}$/i.test(val)) {
                 if (isDarkContainer) darkThemeTouched = true;
                 input.value = val;
-                if (cssVar) document.documentElement.style.setProperty(cssVar, val);
                 applyActiveThemePreview();
             }
         });
@@ -384,18 +416,15 @@ function initThemeTabs() {
     tabs.forEach(tab => {
         tab.addEventListener('click', () => {
             const which = tab.getAttribute('data-theme-tab');
-            tabs.forEach(t => {
-                const active = t === tab;
-                t.style.background = active ? 'var(--primary-color)' : 'transparent';
-                t.style.color = active ? '#fff' : 'inherit';
-                t.classList.toggle('active', active);
-            });
-            light.style.display = which === 'light' ? 'grid' : 'none';
-            dark.style.display = which === 'dark' ? 'grid' : 'none';
-            // Preview en vivo: aplicar el config del modo elegido. Cambiar
-            // data-theme para que el preview simule el modo real (claro u
-            // oscuro) — el usuario edita cada tema por separado.
-            applyActiveThemePreview();
+            syncEditorTab(which);
+            // Sincronizar el modo global con la pestaña: editar el tema
+            // Oscuro carga/visualiza el oscuro, y viceversa (el usuario
+            // modifica solo el tema que está visualizando).
+            if (window.ThemeSystem) {
+                window.ThemeSystem.setMode(which); // 'light' | 'dark'
+            } else {
+                applyActiveThemePreview();
+            }
         });
     });
 
@@ -507,8 +536,7 @@ document.getElementById('companyForm').addEventListener('submit', async (e) => {
             if (window.__activeThemeConfig) {
                 window.__activeThemeConfig = themeConfig;
                 window.__activeThemeConfigDark = persistDark;
-                const dark = document.documentElement.getAttribute('data-theme') === 'dark';
-                if (window.ThemeColorUtils) window.ThemeColorUtils.apply(themeConfig, dark, persistDark);
+                applyActiveThemePreview();
             }
             localStorage.setItem('pos_theme_config', JSON.stringify(themeConfig));
             if (persistDark) localStorage.setItem('pos_theme_config_dark', JSON.stringify(persistDark));

@@ -451,24 +451,34 @@ const ThemeSystem = (function () {
     function apply() {
         const dark = mode === 'dark' || (mode === 'auto' && systemPrefersDark());
         document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-        // Re-aplicar marcas + superficies del negocio (claro u oscuro
-        // personalizado; si no hay oscuro, sugerencia derivada) para que el
-        // modo oscuro se sienta como una inspiración del tema.
-        let cfg = window.__activeThemeConfig;
-        let cfgDark = window.__activeThemeConfigDark;
-        if (!cfg && window.ThemeColorUtils) {
-            // Fallback: si loadStoreSettings no pudo setear el config activo
-            // (tienda sin theme_config en BD o página sin carga de tienda),
-            // usar el tema cacheado en localStorage (el mismo que usa
-            // theme-init.js pre-paint). Evita que al cambiar de modo solo
-            // cambie data-theme sin re-aplicar superficies/marcas.
-            try {
-                cfg = JSON.parse(localStorage.getItem('pos_theme_config') || 'null');
-                cfgDark = JSON.parse(localStorage.getItem('pos_theme_config_dark') || 'null');
-            } catch (e) { cfg = null; cfgDark = null; }
-        }
-        if (cfg && window.ThemeColorUtils) {
-            window.ThemeColorUtils.apply(cfg, dark, cfgDark);
+        // En la página de Personalización (profile.html), el editor define un
+        // hook (window.__editorThemeApply) que aplica el tema desde los INPUTS
+        // (claro/oscuro por separado) y sincroniza la pestaña — así el modo
+        // global y el preview del editor nunca se contradicen y las ediciones
+        // sin guardar se respetan al alternar. Fuera de esa página se usa el
+        // config activo (BD o localStorage).
+        if (typeof window.__editorThemeApply === 'function') {
+            window.__editorThemeApply(mode);
+        } else {
+            // Re-aplicar marcas + superficies del negocio (claro u oscuro
+            // personalizado; si no hay oscuro, sugerencia derivada) para que el
+            // modo oscuro se sienta como una inspiración del tema.
+            let cfg = window.__activeThemeConfig;
+            let cfgDark = window.__activeThemeConfigDark;
+            if (!cfg && window.ThemeColorUtils) {
+                // Fallback: si loadStoreSettings no pudo setear el config activo
+                // (tienda sin theme_config en BD o página sin carga de tienda),
+                // usar el tema cacheado en localStorage (el mismo que usa
+                // theme-init.js pre-paint). Evita que al cambiar de modo solo
+                // cambie data-theme sin re-aplicar superficies/marcas.
+                try {
+                    cfg = JSON.parse(localStorage.getItem('pos_theme_config') || 'null');
+                    cfgDark = JSON.parse(localStorage.getItem('pos_theme_config_dark') || 'null');
+                } catch (e) { cfg = null; cfgDark = null; }
+            }
+            if (cfg && window.ThemeColorUtils) {
+                window.ThemeColorUtils.apply(cfg, dark, cfgDark);
+            }
         }
         // Actualizar botones activos del sidebar
         document.querySelectorAll('.theme-quick-btn').forEach(btn => {
@@ -476,6 +486,14 @@ const ThemeSystem = (function () {
             btn.style.background = active ? 'var(--primary-color)' : 'transparent';
             btn.style.color = active ? '#fff' : 'inherit';
             btn.style.borderColor = active ? 'var(--primary-color)' : 'rgba(255,255,255,0.2)';
+        });
+        // Actualizar botones de modo de la página de Personalización si existen
+        document.querySelectorAll('.theme-mode-btn').forEach(btn => {
+            const active = btn.getAttribute('data-mode') === mode;
+            btn.classList.toggle('active', active);
+            btn.style.background = active ? 'var(--primary-color)' : 'transparent';
+            btn.style.color = active ? '#fff' : 'var(--text-color)';
+            btn.style.borderColor = active ? 'var(--primary-color)' : 'var(--border-color)';
         });
         document.dispatchEvent(new CustomEvent('tomodachi:themechange', { detail: { mode, dark } }));
     }

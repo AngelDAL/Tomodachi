@@ -210,10 +210,13 @@
       kbdAddProduct(prod, q);
     }
 
-    // MODO BÚSQUEDA (filtro activo): al agregar con Enter se QUITA la
-    // selección para que el usuario siga buscando sin que las teclas
-    // directas (D/M/S/H/P/X) se disparen con la siguiente letra.
+    // MODO BÚSQUEDA (filtro activo): al agregar con Enter se BORRA el
+    // filtro de búsqueda para que el usuario pueda buscar otro producto
+    // nuevo (escribir la siguiente letra arranca un filtro limpio). Sin
+    // cursor activo para que las teclas directas (D/M/S/H/P/X) no se
+    // disparen con la siguiente letra.
     if (kbdFilter) {
+      clearKbdFilter();
       clearCursor();
       return;
     }
@@ -299,6 +302,33 @@
   // ============================================================
   function handlePosShortcut(e) {
     if (!isPosPage()) return false;
+
+    // CASO ESPECIAL — campo de monto (checkoutReceived): es el ÚNICO campo
+    // que reacciona a Enter (confirmar monto) y Ctrl+Enter (terminar venta).
+    // Se maneja ANTES del guard isEditableFocus para que funcione con el
+    // foco DENTRO del input. Otros Ctrl+ (copiar, pegar) se dejan pasar.
+    const activeEl = document.activeElement;
+    if (activeEl && activeEl.id === 'checkoutReceived') {
+      const ctrlOnly = e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey;
+      if (ctrlOnly && e.key === 'Enter') {
+        e.preventDefault();
+        const btn = document.getElementById('finalizeSaleBtn');
+        if (btn && !btn.disabled) btn.click();
+        return true;
+      }
+      if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key === 'Enter') {
+        e.preventDefault();
+        const btn = document.getElementById('finalizeSaleBtn');
+        if (btn && !btn.disabled) {
+          btn.focus(); // confirmar monto: pasar el control al botón COBRAR
+        } else {
+          if (typeof showNotification === 'function') showNotification('Monto insuficiente o carrito vacío', 'warning');
+        }
+        return true;
+      }
+      return false; // otros Ctrl+ dentro del campo: copiar/pegar normales
+    }
+
     // REGLA DEL USUARIO: si el foco está en un input, los atajos Ctrl+ se
     // DESACTIVAN hasta que se salga del campo (Esc hace blur). Esto evita
     // robar teclas mientras se escribe (Ctrl+C copiar, etc.).

@@ -319,35 +319,30 @@ async function loadStoreSettings() {
                 }
             }
 
-            // 2. Aplicar Tema (Variables CSS)
+            // 2. Aplicar Tema (Variables CSS) — AHORA guarda TODAS las
+            // variables (marcas + superficies) del tema claro Y el tema
+            // oscuro personalizado si el usuario lo definió.
             if (store.theme_config) {
-                applyTheme(store.theme_config);
-                // Guardar en caché para carga rápida, PERO solo si el usuario
-                // no tiene una preferencia local (theme_mode). Si la tiene,
-                // la config del sidebar tiene prioridad sobre la BD.
-                // Nota: las superficies (bg_card, border_color, dark_color, bg_body,
-                // text_color) se filtran del caché — las controla el CSS del tema,
-                // y si quedaran aplicadas inline romperían el cambio claro/oscuro.
-                const SURFACE_KEYS = ['dark_color', 'bg_body', 'text_color', 'bg_card', 'border_color', 'bg_light'];
-                const stripSurfaces = (obj) => {
-                    const out = {};
-                    for (const [k, v] of Object.entries(obj)) {
-                        if (!SURFACE_KEYS.includes(k)) out[k] = v;
-                    }
-                    return out;
-                };
+                applyTheme(store.theme_config, store.theme_config_dark);
+                // Caché para carga rápida: tema claro en pos_theme_config y
+                // tema oscuro (si existe) en pos_theme_config_dark. La
+                // preferencia local de MODO (theme_mode/dark_mode) se respeta;
+                // los colores y superficies vienen de la BD.
                 const localTheme = JSON.parse(localStorage.getItem('pos_theme_config') || '{}');
                 if (!localTheme.theme_mode && localTheme.dark_mode === undefined) {
                     // Primera vez o sin preferencia local → usar config de la BD
-                    localStorage.setItem('pos_theme_config', JSON.stringify(stripSurfaces(store.theme_config)));
+                    localStorage.setItem('pos_theme_config', JSON.stringify(store.theme_config));
                 } else {
-                    // El usuario tiene preferencia local → fusionar:
-                    // los COLORES vienen de la BD (el negocio define su paleta),
-                    // solo theme_mode/dark_mode se respetan del local.
-                    const merged = { ...stripSurfaces(localTheme), ...stripSurfaces(store.theme_config) };
+                    // El usuario tiene preferencia local de modo → fusionar:
+                    // los COLORES/Superficies vienen de la BD, el modo del local.
+                    const merged = { ...localTheme, ...store.theme_config };
                     if (localTheme.theme_mode) merged.theme_mode = localTheme.theme_mode;
                     else if (localTheme.dark_mode !== undefined) merged.dark_mode = localTheme.dark_mode;
                     localStorage.setItem('pos_theme_config', JSON.stringify(merged));
+                }
+                // Tema oscuro personalizado (si existe en BD)
+                if (store.theme_config_dark) {
+                    localStorage.setItem('pos_theme_config_dark', JSON.stringify(store.theme_config_dark));
                 }
             }
 
@@ -361,19 +356,20 @@ async function loadStoreSettings() {
     }
 }
 
-function applyTheme(themeConfig) {
+function applyTheme(themeConfig, themeConfigDark) {
     if (!themeConfig) return;
     // Guardar la config activa para que ThemeSystem pueda re-derivar las
     // superficies oscuras al cambiar de modo claro/oscuro
     window.__activeThemeConfig = themeConfig;
+    window.__activeThemeConfigDark = themeConfigDark || null;
 
     // Usar ThemeColorUtils (definido en theme-init.js, corre en el head)
-    // para aplicar marcas + variantes + superficies oscuras teñidas +
-    // contraste de texto calculado por luminancia. Si no está disponible
-    // (carga rara), fallback al varMap básico.
+    // para aplicar marcas + variantes + superficies (claro u oscuro
+    // personalizado; si no hay oscuro, sugerencia derivada) + contraste
+    // de texto calculado por luminancia.
     if (window.ThemeColorUtils) {
         const dark = document.documentElement.getAttribute('data-theme') === 'dark';
-        window.ThemeColorUtils.apply(themeConfig, dark);
+        window.ThemeColorUtils.apply(themeConfig, dark, themeConfigDark);
         return;
     }
 
@@ -455,11 +451,11 @@ const ThemeSystem = (function () {
     function apply() {
         const dark = mode === 'dark' || (mode === 'auto' && systemPrefersDark());
         document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-        // Re-aplicar marcas + superficies oscuras teñidas del negocio
-        // (si hay config activa) para que el modo oscuro se sienta como
-        // una inspiración del tema, no un negro genérico.
+        // Re-aplicar marcas + superficies del negocio (claro u oscuro
+        // personalizado; si no hay oscuro, sugerencia derivada) para que el
+        // modo oscuro se sienta como una inspiración del tema.
         if (window.__activeThemeConfig && window.ThemeColorUtils) {
-            window.ThemeColorUtils.apply(window.__activeThemeConfig, dark);
+            window.ThemeColorUtils.apply(window.__activeThemeConfig, dark, window.__activeThemeConfigDark);
         }
         // Actualizar botones activos del sidebar
         document.querySelectorAll('.theme-quick-btn').forEach(btn => {

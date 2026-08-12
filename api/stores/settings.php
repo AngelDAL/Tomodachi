@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $apiAuth->requireScope($actor, 'read');
     try {
         $store = $db->selectOne(
-            'SELECT store_id, store_name, address, phone, theme_config, settings, logo_url, status 
+            'SELECT store_id, store_name, address, phone, theme_config, theme_config_dark, settings, logo_url, status 
              FROM stores WHERE store_id = ?', 
             [$store_id]
         );
@@ -47,6 +47,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         // Decodificar JSON si existe
         if ($store['theme_config']) {
             $store['theme_config'] = json_decode($store['theme_config'], true);
+        }
+        if ($store['theme_config_dark']) {
+            $store['theme_config_dark'] = json_decode($store['theme_config_dark'], true);
         }
         if ($store['settings']) {
             $store['settings'] = json_decode($store['settings'], true);
@@ -67,6 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $address = isset($data['address']) ? Validator::sanitizeString($data['address']) : '';
         $phone = isset($data['phone']) ? Validator::sanitizeString($data['phone']) : '';
         $theme_config = isset($data['theme_config']) ? $data['theme_config'] : null;
+        $theme_config_dark = isset($data['theme_config_dark']) ? $data['theme_config_dark'] : null;
         $settings = isset($data['settings']) ? $data['settings'] : null;
 
         if (!Validator::required($store_name)) {
@@ -74,11 +78,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         }
 
         $theme_json = $theme_config ? json_encode($theme_config) : null;
+        $dark_json = $theme_config_dark ? json_encode($theme_config_dark) : null;
         $settings_json = $settings ? json_encode($settings) : null;
 
         $db->update(
-            'UPDATE stores SET store_name = ?, address = ?, phone = ?, theme_config = ?, settings = ?, updated_at = NOW() WHERE store_id = ?',
-            [$store_name, $address, $phone, $theme_json, $settings_json, $store_id]
+            'UPDATE stores SET store_name = ?, address = ?, phone = ?, theme_config = ?, theme_config_dark = ?, settings = ?, updated_at = NOW() WHERE store_id = ?',
+            [$store_name, $address, $phone, $theme_json, $dark_json, $settings_json, $store_id]
         );
 
         Response::success(null, 'Configuración actualizada');

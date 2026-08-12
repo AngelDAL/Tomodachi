@@ -111,33 +111,66 @@
         };
     }
 
-    // Aplica TODO al root: marcas + variantes + superficies (solo dark) +
-    // contraste de texto sobre colores de marca
-    function apply(cfg, darkMode) {
+    // Aplica TODO al root: marcas + variantes + superficies del config
+    // correspondiente al modo + contraste de texto.
+    //   cfg      = tema CLARO (marcas + superficies claras)
+    //   cfgDark  = tema OSCURO personalizado (opcional; si es null, el
+    //              modo oscuro se deriva como sugerencia del claro)
+    //   darkMode = modo activo
+    function apply(cfg, darkMode, cfgDark) {
         const root = document.documentElement;
         if (!cfg) return;
-        for (const [key, value] of Object.entries(cfg)) {
+        const active = darkMode && cfgDark ? cfgDark : cfg;
+        // Marca (si el config oscuro no define una marca, hereda del claro)
+        const merged = { ...cfg, ...active };
+        for (const [key, value] of Object.entries(merged)) {
             if (varMap[key] && value) root.style.setProperty(varMap[key], value);
         }
-        const variants = brandVariants(cfg);
+        const variants = brandVariants(merged);
         for (const [v, val] of Object.entries(variants)) {
             if (val) root.style.setProperty(v, val);
         }
         // Contraste de texto sobre colores de marca (siempre, claro u oscuro)
-        const p = cfg.primary_color, s = cfg.secondary_color;
+        const p = merged.primary_color, s = merged.secondary_color;
         if (p) {
             root.style.setProperty('--text-on-primary', contrastText(p));
             root.style.setProperty('--primary-contrast', contrastText(p));
         }
         if (s) root.style.setProperty('--secondary-contrast', contrastText(s));
-        // Superficies: SOLO en modo oscuro (en claro manda el CSS de [data-theme])
+        // Superficies: en modo oscuro aplica el config oscuro si existe, si no
+        // deriva la sugerencia; en claro aplica el config claro (que ya puede
+        // traer superficies del usuario) o limpia para que mande el CSS.
         if (darkMode) {
-            const surfaces = darkSurfaces(cfg);
-            for (const [v, val] of Object.entries(surfaces)) {
-                if (val) root.style.setProperty(v, val);
+            if (cfgDark) {
+                applySurfaces(cfgDark);
+            } else {
+                const surfaces = darkSurfaces(cfg);
+                for (const [v, val] of Object.entries(surfaces)) {
+                    if (val) root.style.setProperty(v, val);
+                }
             }
         } else {
-            clearDerived();
+            if (cfg && (cfg.bg_body || cfg.bg_card || cfg.dark_color || cfg.text_color || cfg.border_color)) {
+                applySurfaces(cfg);
+            } else {
+                clearDerived();
+            }
+        }
+    }
+
+    // Aplica solo variables de superficie desde un config (claro u oscuro)
+    function applySurfaces(cfg) {
+        const root = document.documentElement;
+        const surfaceMap = {
+            'dark_color': '--dark-color',
+            'bg_body': '--bg-body',
+            'bg_card': '--bg-card',
+            'bg_light': '--bg-light',
+            'text_color': '--text-color',
+            'border_color': '--border-color'
+        };
+        for (const [key, cssVar] of Object.entries(surfaceMap)) {
+            if (cfg[key]) root.style.setProperty(cssVar, cfg[key]);
         }
     }
 
@@ -148,7 +181,7 @@
         ].forEach(v => root.style.removeProperty(v));
     }
 
-    window.ThemeColorUtils = { hexToRgb, mix, rgbaOf, luminance, contrastText, brandVariants, darkSurfaces, apply, clearDerived };
+    window.ThemeColorUtils = { hexToRgb, mix, rgbaOf, luminance, contrastText, brandVariants, darkSurfaces, apply, applySurfaces, clearDerived };
 
     // ============================================================
     // Aplicación inicial (pre-paint)
@@ -156,8 +189,10 @@
     let appliedDark = false;
     try {
         const savedTheme = localStorage.getItem('pos_theme_config');
+        const savedDark = localStorage.getItem('pos_theme_config_dark');
         if (savedTheme) {
             const themeConfig = JSON.parse(savedTheme);
+            const themeConfigDark = savedDark ? JSON.parse(savedDark) : null;
 
             // 1) Tema oscuro/claro/auto
             const themeMode = themeConfig.theme_mode;
@@ -169,8 +204,9 @@
             appliedDark = darkMode;
             document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
 
-            // 2) Marca + variantes + superficies oscuras teñidas + contraste
-            window.ThemeColorUtils.apply(themeConfig, darkMode);
+            // 2) Marca + variantes + superficies (claro u oscuro personalizado
+            //    si existe; si no, sugerencia derivada) + contraste
+            window.ThemeColorUtils.apply(themeConfig, darkMode, themeConfigDark);
         }
     } catch (e) {
         console.error('Error applying theme from cache:', e);
@@ -183,17 +219,18 @@
 
     // Escuchar cambios de tema en vivo (cuando el usuario guarda en Perfil)
     window.addEventListener('storage', (e) => {
-        if (e.key === 'pos_theme_config') {
+        if (e.key === 'pos_theme_config' || e.key === 'pos_theme_config_dark') {
             try {
-                const cfg = JSON.parse(e.newValue);
-                const m = cfg.theme_mode;
+                const cfg = JSON.parse(localStorage.getItem('pos_theme_config') || 'null');
+                const cfgDark = JSON.parse(localStorage.getItem('pos_theme_config_dark') || 'null');
+                const m = cfg && cfg.theme_mode;
                 let dark;
                 if (m === 'light') dark = false;
                 else if (m === 'dark') dark = true;
                 else if (m === 'auto') dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                else dark = cfg.dark_mode === true || cfg.dark_mode === 'true';
+                else dark = !!(cfg && (cfg.dark_mode === true || cfg.dark_mode === 'true'));
                 document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-                window.ThemeColorUtils.apply(cfg, dark);
+                window.ThemeColorUtils.apply(cfg || {}, dark, cfgDark);
             } catch (err) { /* noop */ }
         }
     });

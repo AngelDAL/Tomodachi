@@ -213,83 +213,191 @@ async function loadCompanySettings() {
                 document.getElementById('requireOpenRegister').checked = !!store.settings.require_open_register;
             }
 
-            // Cargar configuración de tema
-            if (store.theme_config) {
-                // Modo de tema: respetar preferencia local del usuario (ThemeSystem)
-                // Si el usuario ya eligió un modo en el sidebar, ese tiene prioridad.
-                // Si no, usar la config de la BD.
-                const localMode = window.ThemeSystem ? window.ThemeSystem.getMode() : null;
-                const savedMode = localMode || store.theme_config.theme_mode
-                    || (store.theme_config.dark_mode === true || store.theme_config.dark_mode === 'true' ? 'dark'
-                        : store.theme_config.dark_mode === false || store.theme_config.dark_mode === 'false' ? 'light' : 'auto');
-                if (window.ThemeSystem) {
-                    window.ThemeSystem.setMode(savedMode);
+            // Cargar configuración de tema (claro + oscuro personalizado)
+            const themeConfig = store.theme_config || {};
+            const themeConfigDark = store.theme_config_dark || null;
+            const savedDark = !!themeConfigDark;
+
+            // Modo de tema: respetar preferencia local del usuario (ThemeSystem)
+            // Si el usuario ya eligió un modo en el sidebar, ese tiene prioridad.
+            // Si no, usar la config de la BD.
+            const localMode = window.ThemeSystem ? window.ThemeSystem.getMode() : null;
+            const savedMode = localMode || themeConfig.theme_mode
+                || (themeConfig.dark_mode === true || themeConfig.dark_mode === 'true' ? 'dark'
+                    : themeConfig.dark_mode === false || themeConfig.dark_mode === 'false' ? 'light' : 'auto');
+            if (window.ThemeSystem) {
+                window.ThemeSystem.setMode(savedMode);
+            }
+            updateThemeModeButtons(savedMode);
+            updateThemeModeLabel(savedMode === 'dark' ? 'Oscuro' : savedMode === 'light' ? 'Claro' : 'Automático');
+
+            // Cargar valores en los controles del tema CLARO
+            const themeControls = document.getElementById('themeControls');
+            const inputs = themeControls.querySelectorAll('input[type="color"]');
+            const liveVars = ['--primary-color', '--secondary-color', '--success-color', '--danger-color',
+                             '--warning-color', '--info-color', '--dark-color', '--bg-body', '--text-color',
+                             '--bg-card', '--border-color'];
+            const liveMap = {};
+            liveVars.forEach(v => {
+                try { liveMap[v] = getComputedStyle(document.documentElement).getPropertyValue(v).trim(); } catch (e) {}
+            });
+
+            inputs.forEach(input => {
+                const cssVar = input.getAttribute('data-var');
+                const key = input.name;
+                if (themeConfig[key]) {
+                    const color = themeConfig[key];
+                    input.value = color;
+                    if (input.nextElementSibling) input.nextElementSibling.value = color;
+                    if (cssVar) document.documentElement.style.setProperty(cssVar, color);
+                } else {
+                    const live = liveMap[cssVar];
+                    if (live && /^#[0-9a-fA-F]{6}$/.test(live)) {
+                        input.value = live;
+                        if (input.nextElementSibling) input.nextElementSibling.value = live;
+                    } else if (input.nextElementSibling) {
+                        input.nextElementSibling.value = input.value;
+                    }
                 }
-                updateThemeModeButtons(savedMode);
-                updateThemeModeLabel(savedMode === 'dark' ? 'Oscuro' : savedMode === 'light' ? 'Claro' : 'Automático');
+            });
 
-                const themeControls = document.getElementById('themeControls');
-                const inputs = themeControls.querySelectorAll('input[type="color"]');
-                // Valores por defecto desde el CSS en vivo (lo que está aplicado ahora)
-                // SOLO marcas: las superficies (bg-body, text-card, etc.) las controla
-                // el CSS de [data-theme], no la config (si se aplican inline rompen
-                // el cambio claro/oscuro).
-                const liveVars = ['--primary-color', '--secondary-color', '--success-color', '--danger-color',
-                                 '--warning-color', '--info-color'];
-                const liveMap = {};
-                liveVars.forEach(v => {
-                    try { liveMap[v] = getComputedStyle(document.documentElement).getPropertyValue(v).trim(); } catch (e) {}
+            // Cargar valores en los controles del tema OSCURO (si el usuario
+            // definió uno); si no, dejar los valores por defecto del CSS oscuro
+            // para que "Sugerir oscuro" los rellene desde el claro.
+            const darkControls = document.getElementById('themeControlsDark');
+            if (darkControls) {
+                const darkInputs = darkControls.querySelectorAll('input[type="color"]');
+                const darkLiveVars = ['--bg-body', '--bg-card', '--dark-color', '--text-color', '--border-color'];
+                const darkLiveMap = {};
+                darkLiveVars.forEach(v => {
+                    try { darkLiveMap[v] = getComputedStyle(document.documentElement).getPropertyValue(v).trim(); } catch (e) {}
                 });
-
-                inputs.forEach(input => {
+                darkInputs.forEach(input => {
                     const cssVar = input.getAttribute('data-var');
-                    // Quitamos '--' para buscar en el objeto JSON (ej: primary-color)
-                    const key = input.name;
-
-                    if (store.theme_config[key]) {
-                        const color = store.theme_config[key];
+                    const key = input.name.replace(/_dark$/, '');
+                    if (themeConfigDark && themeConfigDark[key]) {
+                        const color = themeConfigDark[key];
                         input.value = color;
-                        if (input.nextElementSibling) {
-                            input.nextElementSibling.value = color;
-                        }
-                        // Aplicar al cargar (preview inicial)
-                        if (cssVar) {
-                            document.documentElement.style.setProperty(cssVar, color);
-                        }
+                        if (input.nextElementSibling) input.nextElementSibling.value = color;
+                    } else if (savedDark) {
+                        // El usuario definió un oscuro pero sin esta clave → derivar
+                        const base = themeConfig.primary_color || '#1976D2';
+                        if (key === 'primary_color') { input.value = base; if (input.nextElementSibling) input.nextElementSibling.value = base; }
+                        else if (input.nextElementSibling) { input.nextElementSibling.value = input.value; }
                     } else {
-                        // Si no hay config guardada, usar el valor REALMENTE aplicado
-                        const live = liveMap[cssVar];
-                        if (live && /^#[0-9a-fA-F]{6}$/.test(live)) {
-                            input.value = live;
-                            if (input.nextElementSibling) input.nextElementSibling.value = live;
+                        // Sin oscuro definido: por defecto, sugerencia derivada del claro
+                        if (window.ThemeColorUtils) {
+                            const sug = window.ThemeColorUtils.darkSurfaces(themeConfig);
+                            const sugMap = { dark_color: '--dark-color', bg_body: '--bg-body', bg_card: '--bg-card', text_color: '--text-color', border_color: '--border-color' };
+                            const v = sugMap[key];
+                            if (v && sug[v]) {
+                                input.value = sug[v];
+                                if (input.nextElementSibling) input.nextElementSibling.value = sug[v];
+                            } else {
+                                const live = darkLiveMap[cssVar];
+                                if (live && /^#[0-9a-fA-F]{6}$/.test(live)) {
+                                    input.value = live;
+                                    if (input.nextElementSibling) input.nextElementSibling.value = live;
+                                }
+                            }
                         } else if (input.nextElementSibling) {
                             input.nextElementSibling.value = input.value;
                         }
                     }
                 });
             }
+
+            // Pestañas Claro/Oscuro
+            initThemeTabs();
         }
     } catch (error) {
         console.error('Error loading settings:', error);
     }
 }
 
+// Pestañas Claro/Oscuro de Personalización + botón "Sugerir oscuro"
+function initThemeTabs() {
+    const tabs = document.querySelectorAll('.theme-tab-btn');
+    const light = document.getElementById('themeControls');
+    const dark = document.getElementById('themeControlsDark');
+    if (!tabs.length || !light || !dark) return;
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const which = tab.getAttribute('data-theme-tab');
+            tabs.forEach(t => {
+                const active = t === tab;
+                t.style.background = active ? 'var(--primary-color)' : 'transparent';
+                t.style.color = active ? '#fff' : 'inherit';
+                t.classList.toggle('active', active);
+            });
+            light.style.display = which === 'light' ? 'grid' : 'none';
+            dark.style.display = which === 'dark' ? 'grid' : 'none';
+            // Preview en vivo: aplicar el config del modo elegido. Cambiar
+            // data-theme para que el preview simule el modo real (claro u
+            // oscuro) — el usuario edita cada tema por separado.
+            const cfg = collectThemeConfig();
+            const cfgDark = collectThemeConfig(true);
+            if (window.ThemeColorUtils) {
+                document.documentElement.setAttribute('data-theme', which === 'dark' ? 'dark' : 'light');
+                window.ThemeColorUtils.apply(cfg, which === 'dark', cfgDark);
+            }
+        });
+    });
+
+    const suggestBtn = document.getElementById('suggestDarkBtn');
+    if (suggestBtn) {
+        suggestBtn.addEventListener('click', () => {
+            const cfg = collectThemeConfig();
+            if (!window.ThemeColorUtils) return;
+            const sug = window.ThemeColorUtils.darkSurfaces(cfg);
+            const brandVars = ['primary_color', 'secondary_color', 'success_color', 'danger_color', 'warning_color', 'info_color'];
+            const sugMap = { dark_color: '--dark-color', bg_body: '--bg-body', bg_card: '--bg-card', text_color: '--text-color', border_color: '--border-color' };
+            const darkInputs = dark.querySelectorAll('input[type="color"]');
+            darkInputs.forEach(input => {
+                const key = input.name.replace(/_dark$/, '');
+                let val = null;
+                if (brandVars.includes(key)) {
+                    val = cfg[key] || null;
+                } else {
+                    const v = sugMap[key];
+                    if (v && sug[v]) val = sug[v];
+                }
+                if (val) {
+                    input.value = val;
+                    if (input.nextElementSibling) input.nextElementSibling.value = val;
+                }
+            });
+            const cfgDark = collectThemeConfig(true);
+            if (window.ThemeColorUtils) window.ThemeColorUtils.apply(cfg, true, cfgDark);
+            showNotification('Sugerencia de tema oscuro generada desde el claro', 'info');
+        });
+    }
+}
+
+// Recolecta el config del tema claro (dark=false) u oscuro (dark=true)
+function collectThemeConfig(dark) {
+    const id = dark ? 'themeControlsDark' : 'themeControls';
+    const container = document.getElementById(id);
+    if (!container) return {};
+    const cfg = {};
+    container.querySelectorAll('input[type="color"]').forEach(inp => {
+        const key = inp.name.replace(/_dark$/, '');
+        cfg[key] = inp.value;
+    });
+    return cfg;
+}
+
 document.getElementById('companyForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
 
-    // Recolectar configuración de tema
-    const themeConfig = {};
-    const themeControls = document.getElementById('themeControls');
-    const inputs = themeControls.querySelectorAll('input[type="color"]');
-    // Solo claves de marca se guardan; las superficies (bg_card, border_color,
-    // dark_color, bg_body, text_color) las controla el tema claro/oscuro y no
-    // deben persistirse (romperían el cambio de tema si se aplican inline).
-    const surfaceKeys = ['dark_color', 'bg_body', 'text_color', 'bg_card', 'border_color', 'bg_light'];
-    inputs.forEach(input => {
-        if (surfaceKeys.includes(input.name)) return;
-        themeConfig[input.name] = input.value;
-    });
+    // Recolectar configuración de tema — AHORA se guardan TODAS las
+    // variables (marcas + superficies) del tema claro y del tema oscuro.
+    // El modo oscuro puede definirse por separado por el usuario; si no lo
+    // define, el frontend deriva una sugerencia (theme_config_dark null).
+    const themeConfig = collectThemeConfig(false);
+    const themeConfigDark = collectThemeConfig(true);
 
     // Modo de tema (light/dark/auto)
     const activeModeBtn = document.querySelector('.theme-mode-btn.active');
@@ -299,6 +407,25 @@ document.getElementById('companyForm').addEventListener('submit', async (e) => {
         if (themeMode === 'dark') themeConfig.dark_mode = true;
         else if (themeMode === 'light') themeConfig.dark_mode = false;
         else delete themeConfig.dark_mode;
+    }
+
+    // Si el usuario no tocó el tema oscuro (sigue siendo la sugerencia por
+    // defecto generada al cargar), NO lo guardamos — el frontend la deriva
+    // en vivo desde el claro. Solo se persiste si realmente lo personalizó.
+    // (Detección: comparar contra la sugerencia derivada del claro.)
+    let persistDark = null;
+    if (themeConfigDark && Object.keys(themeConfigDark).length) {
+        persistDark = themeConfigDark;
+        if (window.ThemeColorUtils) {
+            const sug = window.ThemeColorUtils.darkSurfaces(themeConfig);
+            const isSuggestion = Object.keys(themeConfigDark).every(k => {
+                if (['primary_color', 'secondary_color', 'success_color', 'danger_color', 'warning_color', 'info_color'].includes(k)) return true;
+                const sugMap = { dark_color: '--dark-color', bg_body: '--bg-body', bg_card: '--bg-card', text_color: '--text-color', border_color: '--border-color' };
+                const v = sugMap[k];
+                return !v || !sug[v] || sug[v].toLowerCase() === themeConfigDark[k].toLowerCase();
+            });
+            if (isSuggestion) persistDark = null; // es la sugerencia pura → derivar en vivo
+        }
     }
 
     // Recolectar configuración de negocio
@@ -312,6 +439,7 @@ document.getElementById('companyForm').addEventListener('submit', async (e) => {
         phone: formData.get('phone'),
         address: formData.get('address'),
         theme_config: themeConfig,
+        theme_config_dark: persistDark,
         settings: settings
     };
 
@@ -324,7 +452,16 @@ document.getElementById('companyForm').addEventListener('submit', async (e) => {
         const result = await res.json();
         if (result.success) {
             showNotification('Configuración guardada', 'success');
-            // Recargar para asegurar persistencia o simplemente dejarlo así ya que el preview ya lo aplicó
+            // Aplicar en vivo el tema guardado (modo actual) y refrescar caché
+            if (window.__activeThemeConfig) {
+                window.__activeThemeConfig = themeConfig;
+                window.__activeThemeConfigDark = persistDark;
+                const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+                if (window.ThemeColorUtils) window.ThemeColorUtils.apply(themeConfig, dark, persistDark);
+            }
+            localStorage.setItem('pos_theme_config', JSON.stringify(themeConfig));
+            if (persistDark) localStorage.setItem('pos_theme_config_dark', JSON.stringify(persistDark));
+            else localStorage.removeItem('pos_theme_config_dark');
         } else {
             showNotification(result.message, 'error');
         }

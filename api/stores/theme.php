@@ -41,17 +41,19 @@ try {
             Response::error('El token no tiene permiso: read', 403);
         }
 
-        $store = $db->selectOne('SELECT store_id, store_name, logo_url, theme_config FROM stores WHERE store_id = ?', [$store_id]);
+        $store = $db->selectOne('SELECT store_id, store_name, logo_url, theme_config, theme_config_dark FROM stores WHERE store_id = ?', [$store_id]);
         if (!$store) { Response::notFound('Tienda no existe'); }
 
         $store['theme_config'] = $store['theme_config'] ? json_decode($store['theme_config'], true) : null;
+        $store['theme_config_dark'] = $store['theme_config_dark'] ? json_decode($store['theme_config_dark'], true) : null;
 
         Response::success([
-            'store_id'     => (int)$store['store_id'],
-            'store_name'   => $store['store_name'],
-            'logo_url'     => $store['logo_url'],
-            'theme_config' => $store['theme_config'],
-            'via'          => $actor['via'],
+            'store_id'          => (int)$store['store_id'],
+            'store_name'        => $store['store_name'],
+            'logo_url'          => $store['logo_url'],
+            'theme_config'      => $store['theme_config'],
+            'theme_config_dark' => $store['theme_config_dark'],
+            'via'               => $actor['via'],
         ], 'Tema de la tienda');
     } elseif ($method === 'POST') {
         // Escribir tema: requiere scope custom (la personalización es exclusiva
@@ -72,40 +74,63 @@ try {
             Response::validationError(['theme_config' => 'Debe ser un objeto JSON']);
         }
 
+        // Tema oscuro personalizado (opcional): si llega, se guarda tal cual;
+        // si no llega, se conserva el existente (null → el frontend deriva).
+        $theme_config_dark = isset($data['theme_config_dark']) ? $data['theme_config_dark'] : null;
+        if ($theme_config_dark !== null && !is_array($theme_config_dark)) {
+            Response::validationError(['theme_config_dark' => 'Debe ser un objeto JSON']);
+        }
+
         // Validar valores: colores hex, booleanos (dark_mode) o cadenas CSS
         // permitidas para variables de estilo (bg_card, border_color, etc.)
         $colorKeys = ['primary_color', 'secondary_color', 'success_color', 'danger_color',
                       'warning_color', 'info_color', 'dark_color', 'bg_body', 'text_color'];
-        foreach ($theme_config as $key => $value) {
-            if ($key === 'dark_mode') {
-                if (!is_bool($value) && $value !== 'true' && $value !== 'false' && $value !== '0' && $value !== '1') {
-                    Response::validationError(['theme_config.dark_mode' => 'Debe ser true/false']);
+        $sanitizeTheme = function ($cfg) use ($colorKeys) {
+            foreach ($cfg as $key => $value) {
+                if ($key === 'dark_mode') {
+                    if (!is_bool($value) && $value !== 'true' && $value !== 'false' && $value !== '0' && $value !== '1') {
+                        Response::validationError(['theme_config.dark_mode' => 'Debe ser true/false']);
+                    }
+                    continue;
                 }
-                continue;
-            }
-            // Variables de superficie permitidas como colores
-            $isColorKey = in_array($key, $colorKeys, true)
-                || in_array($key, ['bg_card', 'bg_light', 'border_color', 'primary_hover'], true);
-            if ($isColorKey) {
-                if (!is_string($value) || !preg_match('/^#[0-9a-fA-F]{3,8}$/', $value)) {
-                    Response::validationError(['theme_config.' . $key => 'Valor de color inválido (usa #RRGGBB)']);
+                if ($key === 'theme_mode') {
+                    if (!in_array($value, ['light', 'dark', 'auto'], true)) {
+                        Response::validationError(['theme_config.theme_mode' => 'Debe ser light/dark/auto']);
+                    }
+                    continue;
                 }
-            } else {
-                // Claves desconocidas: ignorar silenciosamente para no romper la API
-                unset($theme_config[$key]);
+                // Variables de superficie permitidas como colores
+                $isColorKey = in_array($key, $colorKeys, true)
+                    || in_array($key, ['bg_card', 'bg_light', 'border_color', 'primary_hover'], true);
+                if ($isColorKey) {
+                    if (!is_string($value) || !preg_match('/^#[0-9a-fA-F]{3,8}$/', $value)) {
+                        Response::validationError(['theme_config.' . $key => 'Valor de color inválido (usa #RRGGBB)']);
+                    }
+                } else {
+                    // Claves desconocidas: ignorar silenciosamente para no romper la API
+                    unset($cfg[$key]);
+                }
             }
+            return $cfg;
+        };
+
+        $theme_config = $sanitizeTheme($theme_config);
+        if ($theme_config_dark !== null) {
+            $theme_config_dark = $sanitizeTheme($theme_config_dark);
         }
 
         $theme_json = json_encode($theme_config);
+        $dark_json = $theme_config_dark !== null ? json_encode($theme_config_dark) : null;
         $db->update(
-            'UPDATE stores SET theme_config = ?, updated_at = NOW() WHERE store_id = ?',
-            [$theme_json, $store_id]
+            'UPDATE stores SET theme_config = ?, theme_config_dark = ?, updated_at = NOW() WHERE store_id = ?',
+            [$theme_json, $dark_json, $store_id]
         );
 
         Response::success([
-            'store_id'     => $store_id,
-            'theme_config' => $theme_config,
-            'via'          => $actor['via'],
+            'store_id'          => $store_id,
+            'theme_config'      => $theme_config,
+            'theme_config_dark' => $theme_config_dark,
+            'via'               => $actor['via'],
         ], 'Tema actualizado');
     } else {
         Response::error('Método no permitido', 405);

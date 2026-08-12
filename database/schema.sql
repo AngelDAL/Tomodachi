@@ -12,6 +12,7 @@ CREATE TABLE stores (
     address VARCHAR(255),
     phone VARCHAR(20),
     theme_config TEXT NULL,
+    theme_config_dark TEXT NULL,
     settings TEXT NULL,
     logo_url VARCHAR(255) NULL,
     subscription_plan ENUM('free', 'premium') DEFAULT 'free',

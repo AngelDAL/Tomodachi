@@ -392,9 +392,15 @@
                                 <span style="font-size: 0.85rem; color: var(--text-muted);" id="themeModeLabel">Automático</span>
                             </div>
                             
-                            <div class="theme-customizer-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
-                                <!-- Controles de Color -->
-                                <div class="form-grid" id="themeControls" style="grid-template-columns: 1fr;">
+                                                        <!-- Pestanas Claro / Oscuro -->
+                            <div style="display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; align-items: center;">
+                                <button type="button" class="theme-tab-btn active" data-theme-tab="light" style="flex:1; max-width: 170px; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--primary-color); color: #fff; cursor: pointer; font-size: 0.85rem; font-weight: 600;"><i class="fas fa-sun"></i> Tema Claro</button>
+                                <button type="button" class="theme-tab-btn" data-theme-tab="dark" style="flex:1; max-width: 170px; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border-color); background: transparent; color: inherit; cursor: pointer; font-size: 0.85rem; font-weight: 600;"><i class="fas fa-moon"></i> Tema Oscuro</button>
+                                <button type="button" id="suggestDarkBtn" title="Copiar los colores del tema claro y derivar una sugerencia de modo oscuro" style="padding: 8px 14px; border-radius: 8px; border: 1px dashed var(--primary-color); background: transparent; color: var(--primary-color); cursor: pointer; font-size: 0.82rem;"><i class="fas fa-wand-magic-sparkles"></i> Sugerir oscuro</button>
+                            </div>
+                            <p style="font-size: 0.85rem; color: var(--text-muted); margin: -0.4rem 0 1rem;">Define los colores del modo claro y el modo oscuro por separado. El oscuro se sugiere automáticamente desde el claro, pero puedes ajustarlo a tu gusto.</p>
+
+<div class="form-grid" id="themeControls" style="grid-template-columns: 1fr;">
                                     <h5 style="margin-bottom: 1rem; color: var(--text-medium);">Paleta de Colores</h5>
                                     
                                     <!-- Brand Colors -->
@@ -481,7 +487,98 @@
                                     </div>
                                 </div>
 
-                                <!-- Panel de Vista Previa -->
+                                
+
+<div class="form-grid" id="themeControlsDark" style="grid-template-columns: 1fr; display: none;">
+                                    <h5 style="margin-bottom: 1rem; color: var(--text-medium);">Paleta de Colores (Oscuro)</h5>
+                                    
+                                    <!-- Brand Colors -->
+                                    <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                                        <label style="margin: 0;">Color Primario</label>
+                                        <div class="color-picker-group">
+                                            <input type="color" name="primary_color_dark" data-var="--primary-color" value="#4c77af" style="cursor: pointer;">
+                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid var(--border-color); border-radius: 4px; padding: 2px;">
+                                        </div>
+                                    </div>
+                                    <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                                        <label style="margin: 0;">Color Secundario</label>
+                                        <div class="color-picker-group">
+                                            <input type="color" name="secondary_color_dark" data-var="--secondary-color" value="#2196F3" style="cursor: pointer;">
+                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid var(--border-color); border-radius: 4px; padding: 2px;">
+                                        </div>
+                                    </div>
+
+                                    <h5 style="margin: 1rem 0 0.5rem; color: var(--text-medium);">Estados</h5>
+                                    <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                                        <label style="margin: 0;">Éxito</label>
+                                        <div class="color-picker-group">
+                                            <input type="color" name="success_color_dark" data-var="--success-color" value="#4CAF50" style="cursor: pointer;">
+                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid var(--border-color); border-radius: 4px; padding: 2px;">
+                                        </div>
+                                    </div>
+                                    <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                                        <label style="margin: 0;">Peligro / Error</label>
+                                        <div class="color-picker-group">
+                                            <input type="color" name="danger_color_dark" data-var="--danger-color" value="#f44336" style="cursor: pointer;">
+                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid var(--border-color); border-radius: 4px; padding: 2px;">
+                                        </div>
+                                    </div>
+                                    <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                                        <label style="margin: 0;">Advertencia</label>
+                                        <div class="color-picker-group">
+                                            <input type="color" name="warning_color_dark" data-var="--warning-color" value="#ff9800" style="cursor: pointer;">
+                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid var(--border-color); border-radius: 4px; padding: 2px;">
+                                        </div>
+                                    </div>
+                                    <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                                        <label style="margin: 0;">Información</label>
+                                        <div class="color-picker-group">
+                                            <input type="color" name="info_color_dark" data-var="--info-color" value="#2196F3" style="cursor: pointer;">
+                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid var(--border-color); border-radius: 4px; padding: 2px;">
+                                        </div>
+                                    </div>
+
+                                    <h5 style="margin: 1rem 0 0.5rem; color: var(--text-medium);">Interfaz</h5>
+                                    <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                                        <label style="margin: 0;">Barra Lateral (Oscuro)</label>
+                                        <div class="color-picker-group">
+                                            <input type="color" name="dark_color_dark" data-var="--dark-color" value="#333333" style="cursor: pointer;">
+                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid var(--border-color); border-radius: 4px; padding: 2px;">
+                                        </div>
+                                    </div>
+                                    <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                                        <label style="margin: 0;">Fondo Principal</label>
+                                        <div class="color-picker-group">
+                                            <input type="color" name="bg_body_dark" data-var="--bg-body" value="#f4f7f6" style="cursor: pointer;">
+                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid var(--border-color); border-radius: 4px; padding: 2px;">
+                                        </div>
+                                    </div>
+                                    <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                                        <label style="margin: 0;">Texto Principal</label>
+                                        <div class="color-picker-group">
+                                            <input type="color" name="text_color_dark" data-var="--text-color" value="#333333" style="cursor: pointer;">
+                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid var(--border-color); border-radius: 4px; padding: 2px;">
+                                        </div>
+                                    </div>
+                                    <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                                        <label style="margin: 0;">Fondo Tarjetas</label>
+                                        <div class="color-picker-group">
+                                            <input type="color" name="bg_card_dark" data-var="--bg-card" value="#ffffff" style="cursor: pointer;">
+                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid var(--border-color); border-radius: 4px; padding: 2px;">
+                                        </div>
+                                    </div>
+                                    <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                                        <label style="margin: 0;">Bordes</label>
+                                        <div class="color-picker-group">
+                                            <input type="color" name="border_color_dark" data-var="--border-color" value="#e0e0e0" style="cursor: pointer;">
+                                            <input type="text" readonly style="width: 80px; font-size: 0.8rem; text-align: center; border: 1px solid var(--border-color); border-radius: 4px; padding: 2px;">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                
+
+<!-- Panel de Vista Previa -->
                                 <div class="preview-panel">
                                     <h5 style="margin-bottom: 1rem; color: var(--text-medium);">Vista Previa de Componentes</h5>
                                     <div style="background: var(--bg-body); padding: 1.5rem; border: 1px solid var(--border-color); border-radius: 8px; box-shadow: inset 0 0 10px rgba(0,0,0,0.05);">
@@ -499,8 +596,8 @@
                                         <div style="margin-bottom: 1.5rem;">
                                             <h6 style="color: var(--text-color); margin-bottom: 0.5rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;">Botones</h6>
                                             <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                                                <button type="button" class="btn" style="background: var(--primary-color); color: white; border: none; padding: 8px 16px; border-radius: 4px;">Primario</button>
-                                                <button type="button" class="btn" style="background: var(--secondary-color); color: white; border: none; padding: 8px 16px; border-radius: 4px;">Secundario</button>
+                                                <button type="button" class="btn" style="background: var(--primary-color); color: var(--text-on-primary, #fff); border: none; padding: 8px 16px; border-radius: 4px;">Primario</button>
+                                                <button type="button" class="btn" style="background: var(--secondary-color); color: var(--secondary-contrast, #fff); border: none; padding: 8px 16px; border-radius: 4px;">Secundario</button>
                                                 <button type="button" class="btn" style="background: var(--bg-card); color: var(--text-color); border: 1px solid var(--border-color); padding: 8px 16px; border-radius: 4px;">Neutro</button>
                                             </div>
                                         </div>
@@ -526,7 +623,7 @@
                                                 <p style="color: var(--text-light); font-size: 0.9rem; margin-bottom: 10px;">Descripción breve del producto.</p>
                                                 <div style="display: flex; justify-content: space-between; align-items: center;">
                                                     <span style="font-weight: bold; color: var(--primary-color);">$150.00</span>
-                                                    <button style="background: var(--success-color); color: white; border: none; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center;"><i class="fas fa-plus"></i></button>
+                                                    <button style="background: var(--success-color); color: #fff; border: none; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center;"><i class="fas fa-plus"></i></button>
                                                 </div>
                                             </div>
                                         </div>

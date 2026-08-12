@@ -166,6 +166,13 @@ async function loadCompanySettings() {
             // Si la BD ya tiene un oscuro personalizado, se preserva al
             // guardar (el usuario lo personalizó en otra sesión).
             if (savedDark) darkThemeTouched = true;
+            // Mantener el config activo para que ThemeSystem.apply() pueda
+            // re-aplicar marcas + superficies al cambiar de modo claro/oscuro
+            // (en tiendas SIN theme_config en BD, loadStoreSettings no llama
+            // applyTheme y __activeThemeConfig quedaría undefined → al pulsar
+            // el botón de modo solo cambiaba data-theme sin re-aplicar nada).
+            window.__activeThemeConfig = themeConfig;
+            window.__activeThemeConfigDark = themeConfigDark;
 
             // Modo de tema: respetar preferencia local del usuario (ThemeSystem)
             // Si el usuario ya eligió un modo en el sidebar, ese tiene prioridad.

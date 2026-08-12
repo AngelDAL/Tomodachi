@@ -454,8 +454,21 @@ const ThemeSystem = (function () {
         // Re-aplicar marcas + superficies del negocio (claro u oscuro
         // personalizado; si no hay oscuro, sugerencia derivada) para que el
         // modo oscuro se sienta como una inspiración del tema.
-        if (window.__activeThemeConfig && window.ThemeColorUtils) {
-            window.ThemeColorUtils.apply(window.__activeThemeConfig, dark, window.__activeThemeConfigDark);
+        let cfg = window.__activeThemeConfig;
+        let cfgDark = window.__activeThemeConfigDark;
+        if (!cfg && window.ThemeColorUtils) {
+            // Fallback: si loadStoreSettings no pudo setear el config activo
+            // (tienda sin theme_config en BD o página sin carga de tienda),
+            // usar el tema cacheado en localStorage (el mismo que usa
+            // theme-init.js pre-paint). Evita que al cambiar de modo solo
+            // cambie data-theme sin re-aplicar superficies/marcas.
+            try {
+                cfg = JSON.parse(localStorage.getItem('pos_theme_config') || 'null');
+                cfgDark = JSON.parse(localStorage.getItem('pos_theme_config_dark') || 'null');
+            } catch (e) { cfg = null; cfgDark = null; }
+        }
+        if (cfg && window.ThemeColorUtils) {
+            window.ThemeColorUtils.apply(cfg, dark, cfgDark);
         }
         // Actualizar botones activos del sidebar
         document.querySelectorAll('.theme-quick-btn').forEach(btn => {

@@ -136,7 +136,7 @@
     return cols;
   }
 
-  function selectIndex(i) {
+  function selectIndex(i, opts = {}) {
     const items = visibleItems();
     const len = items.length;
     if (len === 0) {
@@ -147,7 +147,7 @@
     cursorIndex = ni;
     items.forEach((el, idx) => el.classList.toggle('kbd-selected', idx === ni));
     const el = items[ni];
-    if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    if (el && !opts.noScroll) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     renderQtyBadge();
     showGalleryHint();
   }
@@ -326,13 +326,14 @@
       if (si) { si.focus(); si.select(); }
       return true;
     }
-    // Ctrl+I: enfocar zona de productos (galería)
+    // Ctrl+I: enfocar zona de productos (galería) — SOLO selecciona el
+    // primer item con el cursor, SIN hacer scroll (el scroll movía la
+    // interfaz y no se podía regresar — corrección del usuario).
     if (ctrl && (e.key === 'i' || e.key === 'I')) {
       e.preventDefault();
       const g = document.getElementById('productGallery');
       if (g) {
-        g.scrollIntoView({ block: 'start', behavior: 'smooth' });
-        selectIndex(cursorIndex >= 0 ? cursorIndex : 0);
+        selectIndex(cursorIndex >= 0 ? cursorIndex : 0, { noScroll: true });
       }
       return true;
     }
@@ -1147,6 +1148,7 @@
     }
     // Recalcular posiciones cada vez (el layout puede cambiar)
     ctrlOverlay.innerHTML = '';
+    const tags = [];
     ctrlZones().forEach(zone => {
       const el = document.getElementById(zone.id);
       if (!el) return;
@@ -1158,12 +1160,62 @@
       z.style.top = r.top + 'px';
       z.style.width = r.width + 'px';
       z.style.height = r.height + 'px';
+      ctrlOverlay.appendChild(z);
+
+      // Tooltip COMPACTO: solo la letra en grande + texto pequeño.
+      // Se posiciona ENCIMA de la zona; si no hay espacio, debajo.
       const tag = document.createElement('div');
       tag.className = 'kbd-ctrl-tag';
-      tag.innerHTML = `<kbd>Ctrl</kbd>+<kbd>${zone.key}</kbd> <small>${zone.desc}</small>`;
-      z.appendChild(tag);
-      ctrlOverlay.appendChild(z);
+      tag.innerHTML = `<b>${zone.key}</b><small>${zone.desc}</small>`;
+      const tagW = 130;
+      const tagH = 30;
+      let tagLeft = Math.min(Math.max(r.left, 4), window.innerWidth - tagW - 4);
+      let tagTop = r.top - tagH - 6;
+      const placeBelow = r.top - tagH - 6 < 4;
+      if (placeBelow) tagTop = r.bottom + 6;
+      tag.style.left = tagLeft + 'px';
+      tag.style.top = tagTop + 'px';
+      tag.style.width = tagW + 'px';
+      ctrlOverlay.appendChild(tag);
+      tags.push({ tag, top: tagTop, bottom: tagTop + tagH, id: zone.id });
     });
+
+    // ANTI-COLISIÓN 2D: solo se considera colisión si dos tooltips se
+    // solapan en AMBOS ejes (X e Y). Si se pisan, el de más abajo se
+    // empuja hacia abajo. Límite de seguridad para evitar loops.
+    tags.forEach(t => {
+      const r = t.tag.getBoundingClientRect();
+      t.top = r.top;
+      t.bottom = r.bottom;
+      t.left = r.left;
+      t.right = r.right;
+      t.h = r.height;
+    });
+    const overlap = (a, b) =>
+      Math.min(a.right, b.right) - Math.max(a.left, b.left) > 4 &&
+      Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 4;
+    let guard = 0;
+    while (guard < 40) {
+      guard++;
+      let moved = false;
+      tags.sort((a, b) => a.top - b.top);
+      for (let i = 0; i < tags.length && !moved; i++) {
+        for (let j = i + 1; j < tags.length; j++) {
+          if (!overlap(tags[i], tags[j])) continue;
+          // Empujar el de más abajo justo debajo del de arriba
+          const upper = tags[i].top <= tags[j].top ? tags[i] : tags[j];
+          const lower = upper === tags[i] ? tags[j] : tags[i];
+          const newTop = upper.bottom + 4;
+          lower.tag.style.top = newTop + 'px';
+          lower.top = newTop;
+          lower.bottom = newTop + lower.h;
+          moved = true;
+          break;
+        }
+      }
+      if (!moved) break;
+    }
+
     ctrlOverlay.classList.add('show');
   }
 

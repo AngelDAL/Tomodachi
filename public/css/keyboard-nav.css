@@ -135,24 +135,41 @@
 
 .kbd-ctrl-tag {
     position: absolute;
-    top: -12px;
-    left: 8px;
-    transform: translateY(-100%);
-    background: var(--primary-color);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--dark-color, #1a1a2e);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     color: #fff;
+    font-size: 0.7rem;
+    padding: 4px 8px;
+    border-radius: 8px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+    white-space: nowrap;
+    pointer-events: none;
+    line-height: 1.2;
+}
+
+.kbd-ctrl-tag b {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 18px;
+    padding: 0 5px;
+    background: var(--primary-color);
+    border-radius: 5px;
     font-family: ui-monospace, 'Cascadia Code', Menlo, Consolas, monospace;
     font-size: 0.72rem;
     font-weight: 700;
-    padding: 3px 9px;
-    border-radius: 6px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    white-space: nowrap;
-    pointer-events: none;
+    color: #fff;
 }
 
 .kbd-ctrl-tag small {
-    font-weight: 400;
-    opacity: 0.85;
+    font-size: 0.68rem;
+    opacity: 0.9;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* --- Botón de ayuda dentro del engranaje / tooltip del perfil --- */
@@ -163,7 +180,7 @@
 /* Hint flotante "navega con ↑↓←→ · Enter agrega" sobre la galería */
 .kbd-gallery-hint {
     position: sticky;
-    bottom: 14px;
+    bottom: 10px;
     left: 0;
     right: 0;
     width: fit-content;
@@ -171,19 +188,17 @@
     z-index: 4;
     display: inline-flex;
     align-items: center;
-    gap: 10px;
-    background: rgba(10, 12, 24, 0.55);   /* tenue sobre el contenido */
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    color: #fff;
-    font-size: 0.75rem;
-    padding: 9px 18px;
+    gap: 8px;
+    background: transparent;        /* totalmente sutil: sin fondo */
+    border: none;                    /* sin borde */
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 0.72rem;
+    padding: 4px 10px;
     border-radius: 999px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8), 0 0 8px rgba(0, 0, 0, 0.4);
     pointer-events: none;
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(4px);
     transition: opacity 0.2s, transform 0.2s;
 }
 
@@ -194,23 +209,22 @@
 
 .kbd-gallery-hint .kbd-hint-sep {
     width: 1px;
-    height: 16px;
-    background: rgba(255, 255, 255, 0.25);
-    margin: 0 2px;
+    height: 14px;
+    background: rgba(255, 255, 255, 0.35);
+    margin: 0 1px;
 }
 
 .kbd-gallery-hint span.kbd-hint-label {
-    opacity: 0.75;
+    opacity: 0.8;
 }
 
 .kbd-gallery-hint kbd {
-    background: rgba(255, 255, 255, 0.16);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-bottom-width: 2px;
-    border-radius: 5px;
-    padding: 2px 7px;
+    background: rgba(0, 0, 0, 0.35);  /* solo un tinte para leer la tecla */
+    border: none;
+    border-radius: 4px;
+    padding: 1px 6px;
     font-family: ui-monospace, 'Cascadia Code', Menlo, Consolas, monospace;
-    font-size: 0.7rem;
+    font-size: 0.68rem;
     font-weight: 700;
     color: #fff;
 }

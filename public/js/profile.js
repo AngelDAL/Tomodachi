@@ -13,63 +13,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadUsers();
     }
 
-    // Color picker sync & Real-time preview
-    const themeControls = document.getElementById('themeControls');
-    if (themeControls) {
-        const inputs = themeControls.querySelectorAll('input[type="color"]');
-        inputs.forEach(input => {
-            const textInput = input.nextElementSibling;
-            const cssVar = input.getAttribute('data-var');
-
-            // Sync color -> text & preview
-            input.addEventListener('input', (e) => {
-                const val = e.target.value;
-                textInput.value = val;
-                if (cssVar) {
-                    document.documentElement.style.setProperty(cssVar, val);
-                }
-                // Si es un color de MARCA, re-derivar variantes + contraste
-                // (preview del tema oscuro teñido en tiempo real)
-                const brandKeys = ['primary_color', 'secondary_color', 'success_color',
-                                   'danger_color', 'warning_color', 'info_color'];
-                if (window.ThemeColorUtils && brandKeys.includes(input.name)) {
-                    const cfg = {};
-                    themeControls.querySelectorAll('input[type="color"]').forEach(inp => {
-                        if (brandKeys.includes(inp.name)) cfg[inp.name] = inp.value;
-                    });
-                    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
-                    window.ThemeColorUtils.apply(cfg, dark);
-                }
-            });
-
-            // Sync text -> color & preview
-            textInput.addEventListener('input', (e) => {
-                const val = e.target.value;
-                if (/^#[0-9A-F]{6}$/i.test(val)) {
-                    input.value = val;
-                    if (cssVar) {
-                        document.documentElement.style.setProperty(cssVar, val);
-                    }
-                    // Re-derivar si es marca
-                    const brandKeys = ['primary_color', 'secondary_color', 'success_color',
-                                       'danger_color', 'warning_color', 'info_color'];
-                    if (window.ThemeColorUtils && brandKeys.includes(input.name)) {
-                        const cfg = {};
-                        themeControls.querySelectorAll('input[type="color"]').forEach(inp => {
-                            if (brandKeys.includes(inp.name)) cfg[inp.name] = inp.value;
-                        });
-                        const dark = document.documentElement.getAttribute('data-theme') === 'dark';
-                        window.ThemeColorUtils.apply(cfg, dark);
-                    }
-                }
-            });
-
-            // Inicializar valor de texto si está vacío
-            if (!textInput.value) {
-                textInput.value = input.value;
-            }
-        });
-    }
+    // Color picker sync & Real-time preview (CLARO y OSCURO)
+    attachThemeLivePreview('themeControls');
+    attachThemeLivePreview('themeControlsDark');
 
     // Logo upload
     const logoInput = document.getElementById('companyLogoInput');
@@ -217,6 +163,9 @@ async function loadCompanySettings() {
             const themeConfig = store.theme_config || {};
             const themeConfigDark = store.theme_config_dark || null;
             const savedDark = !!themeConfigDark;
+            // Si la BD ya tiene un oscuro personalizado, se preserva al
+            // guardar (el usuario lo personalizó en otra sesión).
+            if (savedDark) darkThemeTouched = true;
 
             // Modo de tema: respetar preferencia local del usuario (ThemeSystem)
             // Si el usuario ya eligió un modo en el sidebar, ese tiene prioridad.
@@ -309,10 +258,78 @@ async function loadCompanySettings() {
 
             // Pestañas Claro/Oscuro
             initThemeTabs();
+
+            // Sincronizar la pestaña del editor con el modo real guardado:
+            // si el modo es oscuro, activar la pestaña Oscuro para que el
+            // preview muestre el oscuro desde el inicio (y no contamine el
+            // claro al volver). Si es claro/auto, dejar la pestaña Claro y
+            // aplicar el preview del tema claro limpiando residuos.
+            if (savedMode === 'dark') {
+                const darkTabBtn = document.querySelector('.theme-tab-btn[data-theme-tab="dark"]');
+                if (darkTabBtn) darkTabBtn.click();
+                else applyActiveThemePreview();
+            } else {
+                applyActiveThemePreview();
+            }
         }
     } catch (error) {
         console.error('Error loading settings:', error);
     }
+}
+
+// ==========================================
+// Preview en vivo del editor de temas (claro Y oscuro)
+// ==========================================
+
+// El usuario tocó/personalizó el tema oscuro (flag global). Se usa al
+// guardar para NO persistir la sugerencia derivada automáticamente.
+let darkThemeTouched = false;
+
+// Pestaña activa del editor: 'light' | 'dark' (la que el usuario está editando)
+function getActiveThemeTab() {
+    const tab = document.querySelector('.theme-tab-btn.active');
+    return tab ? tab.getAttribute('data-theme-tab') : 'light';
+}
+
+// Aplica el config del tema de la pestaña activa al preview real (documentElement)
+function applyActiveThemePreview() {
+    if (!window.ThemeColorUtils) return;
+    const which = getActiveThemeTab();
+    const cfg = collectThemeConfig(false);
+    const cfgDark = collectThemeConfig(true);
+    document.documentElement.setAttribute('data-theme', which === 'dark' ? 'dark' : 'light');
+    window.ThemeColorUtils.apply(cfg, which === 'dark', cfgDark);
+}
+
+// Conecta los color-pickers de un contenedor (claro u oscuro) al preview en vivo
+function attachThemeLivePreview(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const isDarkContainer = containerId === 'themeControlsDark';
+    container.querySelectorAll('input[type="color"]').forEach(input => {
+        const textInput = input.nextElementSibling;
+        const cssVar = input.getAttribute('data-var');
+
+        input.addEventListener('input', (e) => {
+            const val = e.target.value;
+            if (isDarkContainer) darkThemeTouched = true;
+            if (textInput) textInput.value = val;
+            if (cssVar) document.documentElement.style.setProperty(cssVar, val);
+            applyActiveThemePreview();
+        });
+
+        textInput.addEventListener('input', (e) => {
+            const val = e.target.value;
+            if (/^#[0-9A-F]{6}$/i.test(val)) {
+                if (isDarkContainer) darkThemeTouched = true;
+                input.value = val;
+                if (cssVar) document.documentElement.style.setProperty(cssVar, val);
+                applyActiveThemePreview();
+            }
+        });
+
+        if (!textInput.value) textInput.value = input.value;
+    });
 }
 
 // Pestañas Claro/Oscuro de Personalización + botón "Sugerir oscuro"
@@ -336,12 +353,7 @@ function initThemeTabs() {
             // Preview en vivo: aplicar el config del modo elegido. Cambiar
             // data-theme para que el preview simule el modo real (claro u
             // oscuro) — el usuario edita cada tema por separado.
-            const cfg = collectThemeConfig();
-            const cfgDark = collectThemeConfig(true);
-            if (window.ThemeColorUtils) {
-                document.documentElement.setAttribute('data-theme', which === 'dark' ? 'dark' : 'light');
-                window.ThemeColorUtils.apply(cfg, which === 'dark', cfgDark);
-            }
+            applyActiveThemePreview();
         });
     });
 
@@ -369,7 +381,14 @@ function initThemeTabs() {
                 }
             });
             const cfgDark = collectThemeConfig(true);
-            if (window.ThemeColorUtils) window.ThemeColorUtils.apply(cfg, true, cfgDark);
+            // Marcar que el usuario personalizó el oscuro (usa la sugerencia
+            // como base editable) — se persistirá al guardar.
+            darkThemeTouched = true;
+            // Cambiar a la pestaña Oscuro para que el preview muestre la
+            // sugerencia en modo oscuro (sin contaminar el tema claro).
+            const darkTabBtn = document.querySelector('.theme-tab-btn[data-theme-tab="dark"]');
+            if (darkTabBtn) darkTabBtn.click();
+            else applyActiveThemePreview();
             showNotification('Sugerencia de tema oscuro generada desde el claro', 'info');
         });
     }
@@ -409,23 +428,13 @@ document.getElementById('companyForm').addEventListener('submit', async (e) => {
         else delete themeConfig.dark_mode;
     }
 
-    // Si el usuario no tocó el tema oscuro (sigue siendo la sugerencia por
-    // defecto generada al cargar), NO lo guardamos — el frontend la deriva
-    // en vivo desde el claro. Solo se persiste si realmente lo personalizó.
-    // (Detección: comparar contra la sugerencia derivada del claro.)
+    // Si el usuario NO personalizó el tema oscuro (no tocó sus inputs ni
+    // usó "Sugerir oscuro"), NO lo guardamos — el frontend deriva la
+    // sugerencia en vivo desde el claro. Solo se persiste si realmente lo
+    // personalizó (o ya había uno guardado de antes).
     let persistDark = null;
-    if (themeConfigDark && Object.keys(themeConfigDark).length) {
+    if (darkThemeTouched && themeConfigDark && Object.keys(themeConfigDark).length) {
         persistDark = themeConfigDark;
-        if (window.ThemeColorUtils) {
-            const sug = window.ThemeColorUtils.darkSurfaces(themeConfig);
-            const isSuggestion = Object.keys(themeConfigDark).every(k => {
-                if (['primary_color', 'secondary_color', 'success_color', 'danger_color', 'warning_color', 'info_color'].includes(k)) return true;
-                const sugMap = { dark_color: '--dark-color', bg_body: '--bg-body', bg_card: '--bg-card', text_color: '--text-color', border_color: '--border-color' };
-                const v = sugMap[k];
-                return !v || !sug[v] || sug[v].toLowerCase() === themeConfigDark[k].toLowerCase();
-            });
-            if (isSuggestion) persistDark = null; // es la sugerencia pura → derivar en vivo
-        }
     }
 
     // Recolectar configuración de negocio

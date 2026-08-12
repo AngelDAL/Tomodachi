@@ -82,6 +82,31 @@
             align-items: center;
             gap: 1rem;
         }
+        /* Editor de tema: controles a la izquierda (scroll interno),
+           preview SIEMPRE visible a la derecha (sticky) */
+        .theme-editor-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 400px;
+            gap: 1.5rem;
+            align-items: start;
+        }
+        .theme-editor-left {
+            max-height: 74vh;
+            overflow-y: auto;
+            padding-right: 10px;
+            padding-bottom: 4px;
+            scrollbar-width: thin;
+        }
+        .theme-editor-left::-webkit-scrollbar { width: 6px; }
+        .theme-editor-left::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+        .theme-editor-right {
+            position: sticky;
+            top: 0.5rem;
+        }
+        @media (max-width: 1100px) {
+            .theme-editor-layout { grid-template-columns: 1fr; }
+            .theme-editor-right { position: static; }
+        }
         .color-preview {
             width: 40px;
             height: 40px;
@@ -391,7 +416,9 @@
                                 </div>
                                 <span style="font-size: 0.85rem; color: var(--text-muted);" id="themeModeLabel">Automático</span>
                             </div>
-                            
+
+                            <div class="theme-editor-layout">
+                            <div class="theme-editor-left">
                                                         <!-- Pestanas Claro / Oscuro -->
                             <div style="display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; align-items: center;">
                                 <button type="button" class="theme-tab-btn active" data-theme-tab="light" style="flex:1; max-width: 170px; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--primary-color); color: #fff; cursor: pointer; font-size: 0.85rem; font-weight: 600;"><i class="fas fa-sun"></i> Tema Claro</button>
@@ -575,9 +602,9 @@
                                         </div>
                                     </div>
                                 </div>
+                            </div><!-- /theme-editor-left -->
 
-                                
-
+                            <div class="theme-editor-right">
 <!-- Panel de Vista Previa -->
                                 <div class="preview-panel">
                                     <h5 style="margin-bottom: 1rem; color: var(--text-medium);">Vista Previa de Componentes</h5>
@@ -630,6 +657,8 @@
 
                                     </div>
                                 </div>
+                            </div><!-- /theme-editor-right -->
+                            </div><!-- /theme-editor-layout -->
                             </div>
                             </div>
 

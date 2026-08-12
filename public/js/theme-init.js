@@ -150,10 +150,13 @@
                 }
             }
         } else {
+            // Modo claro: limpiar SIEMPRE las superficies inline (incluidas
+            // las derivadas/teñidas del modo oscuro) para que no contaminen
+            // el tema claro, y luego aplicar las superficies claras si el
+            // config claro las define.
+            clearDerived();
             if (cfg && (cfg.bg_body || cfg.bg_card || cfg.dark_color || cfg.text_color || cfg.border_color)) {
                 applySurfaces(cfg);
-            } else {
-                clearDerived();
             }
         }
     }

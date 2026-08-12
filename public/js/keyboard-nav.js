@@ -351,6 +351,14 @@
       if (btn) btn.click();
       return true;
     }
+    // Ctrl+M: enfocar monto recibido / cambio (contraparte Ctrl+ de la
+    // tecla directa M — el overlay de Ctrl la muestra como zona M y sin
+    // este caso la combinación se ignoraba)
+    if (ctrl && (e.key === 'm' || e.key === 'M')) {
+      e.preventDefault();
+      focusInput('checkoutReceived');
+      return true;
+    }
     // Ctrl+G: enfocar el carrito (modo carrito: navegar items, +/-,
     // cantidad directa, Delete quitar, Esc salir)
     if (ctrl && (e.key === 'g' || e.key === 'G')) {

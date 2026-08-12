@@ -61,8 +61,8 @@
             font-size: 0.8em;
             font-weight: bold;
         }
-        .status-open { background: var(--success-color); color: #fff; }
-        .status-closed { background: var(--danger-color); color: #fff; }
+        .status-open { background: var(--bg-card); color: var(--success-color); border: 1px solid var(--success-color); }
+        .status-closed { background: var(--bg-card); color: var(--danger-color); border: 1px solid var(--danger-color); }
         
         .terminal-info {
             margin-bottom: 15px;
@@ -106,15 +106,12 @@
             gap: 15px;
         }
         .summary-icon {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: var(--info-color);
+            font-size: 2.8rem;
             color: var(--primary-color);
+            opacity: 0.8;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5em;
         }
     </style>
 </head>

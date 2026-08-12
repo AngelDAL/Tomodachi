@@ -30,13 +30,13 @@ html.sidebar-loading .main-content {
     }
 
     /* Specific styles for new structure */
-    .nav-icon {
+    .nav-item .nav-icon {
         font-size: 1.2rem; /* Icon size */
-        min-width: 24px;
+        min-width: 28px;
         display: inline-flex;
         justify-content: center;
         align-items: center;
-        margin-right: 10px; /* Space between icon and text */
+        margin-right: 18px; /* Space between icon and text */
     }
 
     .nav-text {

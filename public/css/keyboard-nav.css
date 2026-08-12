@@ -1,0 +1,249 @@
+/* ============================================================
+   keyboard-nav.css — Atajos de teclado estilo videojuego
+   Cursor de galería, badges de tecla, panel de ayuda, focus visible
+   ============================================================ */
+
+/* --- Focus visible: SOLO al navegar con teclado (no al hacer click) --- */
+:focus-visible {
+    outline: 3px solid var(--primary-color);
+    outline-offset: 2px;
+    border-radius: 6px;
+}
+
+/* --- Cursor de teclado sobre la galería de productos --- */
+.gallery-item.kbd-selected {
+    outline: 3px solid var(--primary-color);
+    outline-offset: 3px;
+    box-shadow: 0 0 0 4px var(--primary-shadow), 0 10px 24px rgba(0, 0, 0, 0.18);
+    transform: translateY(-3px);
+    z-index: 2;
+    border-color: var(--primary-color);
+}
+
+.gallery-item.kbd-selected .img-wrap {
+    transform: scale(1.02);
+}
+
+/* Badge de cantidad tecleada sobre el item seleccionado (ej. "×3") */
+.kbd-qty-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 5;
+    background: var(--primary-color);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.85rem;
+    padding: 3px 10px;
+    border-radius: 999px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+    pointer-events: none;
+    animation: kbdQtyPop 0.15s ease-out;
+}
+
+@keyframes kbdQtyPop {
+    from { transform: scale(0.6); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+/* Hint flotante "navega con ↑↓←→ · Enter agrega" sobre la galería */
+.kbd-gallery-hint {
+    position: sticky;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: fit-content;
+    z-index: 4;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--dark-color, #1a1a2e);
+    color: #fff;
+    font-size: 0.75rem;
+    padding: 8px 16px;
+    border-radius: 999px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    margin: 8px auto 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.kbd-gallery-hint.show {
+    opacity: 1;
+}
+
+.kbd-gallery-hint kbd {
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: ui-monospace, 'Cascadia Code', Menlo, Consolas, monospace;
+    font-size: 0.7rem;
+    color: #fff;
+}
+
+/* --- Badge de tecla dentro de botones (ej. COBRAR [F4]) --- */
+.key-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 26px;
+    height: 18px;
+    margin-left: 8px;
+    padding: 0 5px;
+    font-family: ui-monospace, 'Cascadia Code', Menlo, Consolas, monospace;
+    font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 1;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-bottom-width: 2px;
+    color: inherit;
+    vertical-align: middle;
+    pointer-events: none;
+    user-select: none;
+}
+
+/* En botones de fondo claro (secundarios) el badge se oscurece */
+.btn-secondary .key-badge,
+.dropdown-item .key-badge {
+    background: var(--bg-light);
+    border-color: var(--border-color);
+    color: var(--text-muted);
+}
+
+/* --- Panel de ayuda de atajos (F1) --- */
+.kbd-help-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 200000;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0.25s;
+}
+
+.kbd-help-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.kbd-help-panel {
+    background: var(--bg-card);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    width: min(680px, 95vw);
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+    animation: kbdHelpIn 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes kbdHelpIn {
+    from { transform: translateY(16px) scale(0.98); opacity: 0; }
+    to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.kbd-help-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 22px 14px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.kbd-help-header h2 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.kbd-help-header h2 i {
+    color: var(--primary-color);
+}
+
+.kbd-help-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 8px;
+    transition: color 0.15s, transform 0.15s;
+}
+
+.kbd-help-close:hover {
+    color: var(--danger-color);
+    transform: scale(1.15);
+}
+
+.kbd-help-body {
+    padding: 16px 22px 22px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.kbd-help-group h3 {
+    margin: 0 0 10px;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--primary-color);
+    border-bottom: 1px dashed var(--border-color);
+    padding-bottom: 6px;
+}
+
+.kbd-help-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 0;
+    font-size: 0.88rem;
+}
+
+.kbd-help-row kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 30px;
+    height: 22px;
+    padding: 0 7px;
+    background: var(--bg-light);
+    border: 1px solid var(--border-color);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    font-family: ui-monospace, 'Cascadia Code', Menlo, Consolas, monospace;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-color);
+    white-space: nowrap;
+}
+
+.kbd-help-row span {
+    color: var(--text-medium);
+}
+
+.kbd-help-footer {
+    padding: 0 22px 18px;
+    text-align: center;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    border-top: 1px solid var(--border-color);
+    padding-top: 12px;
+}
+
+/* --- Tema oscuro: el hint de galería ya usa --dark-color (siempre oscuro) --- */

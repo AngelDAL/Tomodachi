@@ -22,6 +22,13 @@ async function initSidebar() {
         document.head.appendChild(bridgeScript);
     }
 
+    // Cargar navegación por teclado (atajos Alt+1..7 y modo POS) en todas las vistas
+    if (!document.querySelector('script[src="js/keyboard-nav.js"]')) {
+        const kbScript = document.createElement('script');
+        kbScript.src = 'js/keyboard-nav.js';
+        document.head.appendChild(kbScript);
+    }
+
     const sidebarNav = document.querySelector('.sidebar-nav');
     if (!sidebarNav) return;
 

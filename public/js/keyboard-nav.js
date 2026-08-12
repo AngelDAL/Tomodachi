@@ -86,7 +86,6 @@
   let paletteIndex = 0;
   let paletteItems = [];
   let vaciarArmed = false;   // doble-pulso vaciar
-  let fabEl = null;
 
   function isModalOpen() {
     const modals = document.querySelectorAll('.modal-overlay:not(.hidden), dialog[open]');
@@ -210,6 +209,15 @@
     } else {
       kbdAddProduct(prod, q);
     }
+
+    // MODO BÚSQUEDA (filtro activo): al agregar con Enter se QUITA la
+    // selección para que el usuario siga buscando sin que las teclas
+    // directas (D/M/S/H/P/X) se disparen con la siguiente letra.
+    if (kbdFilter) {
+      clearCursor();
+      return;
+    }
+    // Fuera de búsqueda: mantener la selección visual
     selectIndex(cursorIndex >= 0 ? cursorIndex : 0);
   }
 
@@ -288,6 +296,10 @@
   // ============================================================
   function handlePosShortcut(e) {
     if (!isPosPage()) return false;
+    // REGLA DEL USUARIO: si el foco está en un input, los atajos Ctrl+ se
+    // DESACTIVAN hasta que se salga del campo (Esc hace blur). Esto evita
+    // robar teclas mientras se escribe (Ctrl+C copiar, etc.).
+    if (isEditableFocus()) return false;
     const ctrl = e.ctrlKey && !e.metaKey && !e.altKey;
     const ctrlShift = e.ctrlKey && e.shiftKey && !e.metaKey && !e.altKey;
 
@@ -302,6 +314,37 @@
     if (ctrlShift && (e.key === 'x' || e.key === 'X')) {
       e.preventDefault();
       vaciarCarritoConConfirmacion();
+      return true;
+    }
+    // Ctrl+F: enfocar búsqueda de producto
+    if (ctrl && (e.key === 'f' || e.key === 'F')) {
+      e.preventDefault();
+      const si = document.getElementById('searchInput');
+      if (si) { si.focus(); si.select(); }
+      return true;
+    }
+    // Ctrl+I: enfocar zona de productos (galería)
+    if (ctrl && (e.key === 'i' || e.key === 'I')) {
+      e.preventDefault();
+      const g = document.getElementById('productGallery');
+      if (g) {
+        g.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        selectIndex(cursorIndex >= 0 ? cursorIndex : 0);
+      }
+      return true;
+    }
+    // Ctrl+B: abrir escáner de código de barras
+    if (ctrl && (e.key === 'b' || e.key === 'B')) {
+      e.preventDefault();
+      const btn = document.getElementById('toggleScannerBtn');
+      if (btn) btn.click();
+      return true;
+    }
+    // Ctrl+C: desplegar menú de configuraciones (engranaje)
+    if (ctrl && (e.key === 'c' || e.key === 'C')) {
+      e.preventDefault();
+      const btn = document.getElementById('configMenuBtn');
+      if (btn) btn.click();
       return true;
     }
     // F8: historial (seguro en navegadores)
@@ -324,6 +367,21 @@
   // Teclas directas de acción (solo con cursor activo) + filtro de letras
   let kbdFilter = ''; // filtro incremental de galería
 
+  // Búsqueda DIFUSA: los caracteres del término aparecen en orden en el
+  // texto (p.ej. "ccl" → "Coca Cola"). Útil para errores de tipeo rápido.
+  function fuzzyMatch(term, text) {
+    if (!term) return true;
+    if (!text) return false;
+    const t = term.toLowerCase();
+    const s = text.toLowerCase();
+    if (s.includes(t)) return true;      // substring exacto primero
+    let ti = 0;
+    for (let i = 0; i < s.length && ti < t.length; i++) {
+      if (s[i] === t[ti]) ti++;
+    }
+    return ti === t.length;              // todos los chars en orden
+  }
+
   function posLetterActions(e) {
     if (!isPosPage() || isEditableFocus() || isModalOpen()) return false;
     if (e.ctrlKey || e.altKey || e.metaKey) return false;
@@ -334,6 +392,19 @@
       if (kbdFilter) {
         e.preventDefault();
         kbdFilter = kbdFilter.slice(0, -1);
+        applyKbdFilter();
+        return true;
+      }
+      return false;
+    }
+
+    // MODO BÚSQUEDA (filtro activo): las letras SOLO alimentan el filtro.
+    // Las teclas directas (D/M/S/H/P/X) quedan DESACTIVADAS para que no
+    // interrumpan (bug real: "p" abría el panel kiosko al buscar "papas").
+    if (kbdFilter) {
+      if (/^[a-záéíóúñü0-9 ]$/i.test(key) && key.length === 1) {
+        e.preventDefault();
+        kbdFilter += key;
         applyKbdFilter();
         return true;
       }
@@ -399,7 +470,13 @@
     if (!badge) {
       badge = document.createElement('div');
       badge.className = 'kbd-filter-badge';
-      badge.innerHTML = '<span></span><button class="kbd-filter-clear" title="Limpiar filtro (Esc)">\u00d7</button>';
+      badge.innerHTML =
+        '<span></span>' +
+        '<span class="kbd-filter-cmds">' +
+          '<kbd>\u232b</kbd> borrar' +
+          ' &middot; <kbd>Esc</kbd> salir' +
+        '</span>' +
+        '<button class="kbd-filter-clear" title="Limpiar filtro (Esc)">\u00d7</button>';
       const { gallery, results } = posElements();
       const cont = gallery || results;
       if (cont && cont.parentNode) cont.parentNode.appendChild(badge);
@@ -410,13 +487,18 @@
     }
     badge.querySelector('span').textContent = 'Filtrando: ' + kbdFilter;
 
-    // Filtrar productos por nombre (usa la lista global de sales.js)
+    // Filtrar productos: nombre difuso + código de barras + sku (si existe)
     if (typeof allProducts === 'undefined') return;
-    const filtered = allProducts.filter(p =>
-      (p.product_name || '').toLowerCase().includes(term)
-    );
+    const filtered = allProducts.filter(p => {
+      const name = (p.product_name || '');
+      const barcode = (p.barcode || '');
+      const sku = (p.sku || '');
+      return fuzzyMatch(term, name) || fuzzyMatch(term, barcode) || fuzzyMatch(term, sku);
+    });
     if (typeof renderGallery === 'function') renderGallery(filtered);
-    if (cursorIndex < 0) selectIndex(0);
+    // MODO BÚSQUEDA: NO activar cursor (las teclas directas deben quedar
+    // dormidas mientras se busca)
+    if (cursorIndex >= 0) clearCursor();
   }
 
   function clearKbdFilter() {
@@ -473,15 +555,21 @@
           { keys: ['\u2190', '\u2191', '\u2193', '\u2192'], desc: 'Mover selección entre productos' },
           { keys: ['Enter'], desc: 'Agregar producto seleccionado' },
           { keys: ['0'], desc: '…<kbd>9</kbd> <span>Teclear cantidad (ej. 3 + Enter)</span>' },
-          { keys: ['A-Z'], desc: 'Escribir filtra productos (sin cursor); con cursor activo:' },
-          { keys: ['D'], desc: 'Descuento' },
-          { keys: ['M'], desc: 'Monto recibido' },
-          { keys: ['S'], desc: 'Suspender venta' },
-          { keys: ['H'], desc: 'Historial de ventas' },
-          { keys: ['P'], desc: 'Pantalla cliente' },
-          { keys: ['X'], desc: 'Vaciar carrito (doble pulso)' },
+          { keys: ['A-Z'], desc: 'Escribir filtra productos (difuso, también por código de barras)' },
+          { keys: ['Ctrl'], desc: 'Mantener presionado muestra las zonas enfocables' },
+          { keys: ['Ctrl', 'F'], desc: 'Buscar producto' },
+          { keys: ['Ctrl', 'I'], desc: 'Enfocar zona de productos' },
+          { keys: ['Ctrl', 'M'], desc: 'Monto recibido / cambio' },
+          { keys: ['Ctrl', 'B'], desc: 'Abrir escáner de código de barras' },
+          { keys: ['Ctrl', 'C'], desc: 'Menú de configuración (engranaje)' },
           { keys: ['Ctrl', 'Enter'], desc: 'Cobrar venta' },
-          { keys: ['F2'], desc: 'Buscar producto (o tecla /)' },
+          { keys: ['Ctrl', 'Shift', 'X'], desc: 'Vaciar carrito (doble pulso)' },
+          { keys: ['D'], desc: 'Descuento (con cursor activo)' },
+          { keys: ['S'], desc: 'Suspender venta (con cursor activo)' },
+          { keys: ['H'], desc: 'Historial (con cursor activo)' },
+          { keys: ['P'], desc: 'Pantalla cliente (con cursor activo)' },
+          { keys: ['X'], desc: 'Vaciar carrito (con cursor activo)' },
+          { keys: ['F2'], desc: 'Buscar (alternativa)' },
           { keys: ['F8'], desc: 'Historial (alternativa)' },
           { keys: ['F9'], desc: 'Pantalla cliente (alternativa)' }
         ]
@@ -710,19 +798,110 @@
   }
 
   // ============================================================
-  // 9. Botón flotante de ayuda (FAB) — todas las páginas
+  // 9. Ayuda de atajos en el ENGRANAJE (config) + tooltip del perfil.
+  //    (Se eliminó el botón flotante FAB: estorbaba la visualización —
+  //    corrección explícita del usuario: "lo vamos a dejar en la sección
+  //    del engranaje, como ayuda de atajos")
   // ============================================================
-  function ensureFab() {
-    if (fabEl || document.querySelector('.kbd-fab')) return;
-    // No mostrar en login/landing (no hay menú)
-    if (!document.querySelector('.sidebar-nav')) return;
-    fabEl = document.createElement('button');
-    fabEl.className = 'kbd-fab';
-    fabEl.title = 'Atajos de teclado (Ctrl+/)';
-    fabEl.setAttribute('aria-label', 'Atajos de teclado');
-    fabEl.innerHTML = '<i class="fas fa-keyboard"></i>';
-    fabEl.addEventListener('click', toggleHelp);
-    document.body.appendChild(fabEl);
+  let helpMenuItemInjected = false;
+
+  function ensureHelpMenuItem() {
+    if (helpMenuItemInjected) return;
+    helpMenuItemInjected = true;
+
+    // 9.1 En el menú del engranaje del POS (configDropdown)
+    const configDropdown = document.getElementById('configDropdown');
+    if (configDropdown) {
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'dropdown-item kbd-help-menu-item';
+      item.id = 'kbdHelpMenuItem';
+      item.innerHTML = '<i class="fas fa-keyboard"></i> <span>Ayuda de atajos</span>';
+      item.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        // Cerrar el dropdown antes de abrir la ayuda
+        if (configDropdown.classList.contains('hidden') === false) {
+          configDropdown.classList.add('hidden');
+        }
+        toggleHelp();
+      });
+      // Insertar antes del divider (justo después del header Herramientas)
+      const divider = configDropdown.querySelector('.dropdown-divider');
+      if (divider) configDropdown.insertBefore(item, divider);
+      else configDropdown.appendChild(item);
+    }
+
+    // 9.2 En el tooltip del perfil (todas las páginas con sidebar)
+    const profileMenu = document.getElementById('profileTooltipMenu');
+    if (profileMenu) {
+      const a = document.createElement('a');
+      a.href = '#';
+      a.className = 'tooltip-item kbd-help-menu-item';
+      a.id = 'kbdHelpTooltipItem';
+      a.innerHTML = '<i class="fas fa-keyboard"></i> Ayuda de atajos';
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        const menu = document.getElementById('profileTooltipMenu');
+        if (menu) menu.classList.remove('show');
+        toggleHelp();
+      });
+      const logoutItem = profileMenu.querySelector('#logoutTooltipBtn');
+      if (logoutItem) profileMenu.insertBefore(a, logoutItem);
+      else profileMenu.appendChild(a);
+    }
+  }
+
+  // ============================================================
+  // 9b. Overlay de zonas al mantener CTRL (estilo videojuego):
+  //     muestra qué área enfoca cada combinación Ctrl+letra.
+  // ============================================================
+  let ctrlOverlay = null;
+
+  // Zonas del POS que Ctrl puede enfocar: [id, tecla, descripción]
+  function ctrlZones() {
+    if (!isPosPage()) return [];
+    return [
+      { id: 'searchInput', key: 'F', desc: 'Buscar' },
+      { id: 'productGallery', key: 'I', desc: 'Productos' },
+      { id: 'checkoutReceived', key: 'M', desc: 'Monto / cambio' },
+      { id: 'finalizeSaleBtn', key: 'Enter', desc: 'Cobrar' },
+      { id: 'toggleScannerBtn', key: 'B', desc: 'Código de barras' },
+      { id: 'configMenuBtn', key: 'C', desc: 'Configuración' }
+    ];
+  }
+
+  function showCtrlOverlay() {
+    if (!isPosPage()) return;
+    if (!ctrlOverlay) {
+      ctrlOverlay = document.createElement('div');
+      ctrlOverlay.className = 'kbd-ctrl-overlay';
+      document.body.appendChild(ctrlOverlay);
+    }
+    // Recalcular posiciones cada vez (el layout puede cambiar)
+    ctrlOverlay.innerHTML = '';
+    ctrlZones().forEach(zone => {
+      const el = document.getElementById(zone.id);
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) return;
+      const z = document.createElement('div');
+      z.className = 'kbd-ctrl-zone';
+      z.style.left = r.left + 'px';
+      z.style.top = r.top + 'px';
+      z.style.width = r.width + 'px';
+      z.style.height = r.height + 'px';
+      const tag = document.createElement('div');
+      tag.className = 'kbd-ctrl-tag';
+      tag.innerHTML = `<kbd>Ctrl</kbd>+<kbd>${zone.key}</kbd> <small>${zone.desc}</small>`;
+      z.appendChild(tag);
+      ctrlOverlay.appendChild(z);
+    });
+    ctrlOverlay.classList.add('show');
+  }
+
+  function hideCtrlOverlay() {
+    if (ctrlOverlay) ctrlOverlay.classList.remove('show');
   }
 
   // ============================================================
@@ -754,6 +933,17 @@
       e.preventDefault();
       toggleHelp();
       return;
+    }
+
+    // Overlay de zonas al mantener CTRL (solo fuera de inputs):
+    // mostrar al presionar Ctrl solo, ocultar al ejecutar o soltar.
+    if (e.key === 'Control' && !isEditableFocus()) {
+      showCtrlOverlay();
+      return;
+    }
+    // Si se ejecuta una combinación Ctrl+letra, el overlay desaparece
+    if (e.ctrlKey && /^[a-zA-Z]$/.test(e.key)) {
+      hideCtrlOverlay();
     }
 
     // Tecla "/" → paleta rápida (en todas las páginas); en el POS "/"
@@ -852,6 +1042,11 @@
     }
   });
 
+  // Al soltar CTRL se oculta el overlay de zonas
+  document.addEventListener('keyup', (e) => {
+    if (e.key === 'Control') hideCtrlOverlay();
+  });
+
   // Clic en un producto → activa selección ahí
   document.addEventListener('click', (e) => {
     const item = e.target.closest('.gallery-item');
@@ -879,10 +1074,16 @@
   function init() {
     loadCss();
     injectKeyBadges();
-    ensureFab();
+    ensureHelpMenuItem();
     // El body debe poder recibir foco para que las teclas directas
     // funcionen después de hacer clic en zonas vacías (estilo videojuego)
     document.body.setAttribute('tabindex', '-1');
+    // Si el sidebar se inyecta después (DOMContentLoaded), reintentar la
+    // inyección de la ayuda cuando el menú ya exista
+    setTimeout(() => {
+      helpMenuItemInjected = false;
+      ensureHelpMenuItem();
+    }, 600);
   }
 
   if (document.readyState === 'loading') {

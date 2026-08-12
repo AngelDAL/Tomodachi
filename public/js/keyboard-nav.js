@@ -589,15 +589,15 @@
     const btn = document.querySelector(`#cartBody .step-btn[data-action="${delta > 0 ? 'plus' : 'minus'}"][data-id="${id}"]`);
     if (btn && typeof handleStepBtnClick === 'function') {
       handleStepBtnClick(btn);
-      // handleStepBtnClick re-renderiza; re-aplicar cursor sobre el MISMO id
+      // handleStepBtnClick re-renderiza (y si la cantidad llega a 0 el
+      // item se ELIMINA del carrito). Re-aplicar cursor sin salir del
+      // modo: la posición actual la ocupa el SIGUIENTE producto; si era
+      // el último, ir al anterior; solo salir si el carrito quedó vacío.
       setTimeout(() => {
         const items = cartItems();
-        const ni = items.findIndex(el => {
-          const b = el.querySelector('.step-btn');
-          return b && parseInt(b.getAttribute('data-id'), 10) === id;
-        });
-        if (ni >= 0) { cartIndex = ni; renderCartCursor(); }
-        else exitCartMode();
+        if (!items.length) { exitCartMode(); return; }
+        if (cartIndex >= items.length) cartIndex = items.length - 1;
+        renderCartCursor();
       }, 30);
     }
   }
@@ -673,6 +673,9 @@
     // + / -: ajustar cantidad
     if (e.key === '+' || e.key === '=') { e.preventDefault(); changeCartQty(1); return true; }
     if (e.key === '-' || e.key === '_') { e.preventDefault(); changeCartQty(-1); return true; }
+    // Flechas izquierda/derecha: restar/sumar cantidad (estilo videojuego)
+    if (e.key === 'ArrowLeft') { e.preventDefault(); changeCartQty(-1); return true; }
+    if (e.key === 'ArrowRight') { e.preventDefault(); changeCartQty(1); return true; }
     // Delete / Backspace: quitar item
     if (e.key === 'Delete' || e.key === 'Backspace') {
       e.preventDefault();

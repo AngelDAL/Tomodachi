@@ -274,10 +274,13 @@
     hintEl = document.createElement('div');
     hintEl.className = 'kbd-gallery-hint';
     hintEl.innerHTML =
-      '<span>Navega</span><kbd>\u2190</kbd><kbd>\u2191</kbd><kbd>\u2193</kbd><kbd>\u2192</kbd>' +
-      '<span>Agrega</span><kbd>Enter</kbd>' +
-      '<span>Cantidad</span><kbd>0-9</kbd>' +
-      '<span>Ayuda</span><kbd>Ctrl+/</kbd>';
+      '<span class="kbd-hint-label">Navegar</span><kbd>\u2190</kbd><kbd>\u2191</kbd><kbd>\u2193</kbd><kbd>\u2192</kbd>' +
+      '<span class="kbd-hint-sep"></span>' +
+      '<span class="kbd-hint-label">Agregar</span><kbd>Enter</kbd>' +
+      '<span class="kbd-hint-sep"></span>' +
+      '<span class="kbd-hint-label">Cantidad</span><kbd>Escribe</kbd>' +
+      '<span class="kbd-hint-sep"></span>' +
+      '<span class="kbd-hint-label">Cancelar</span><kbd>Esc</kbd>';
     const { gallery, results } = posElements();
     const cont = gallery || results;
     if (cont && cont.parentNode) cont.parentNode.appendChild(hintEl);
@@ -345,6 +348,13 @@
       e.preventDefault();
       const btn = document.getElementById('configMenuBtn');
       if (btn) btn.click();
+      return true;
+    }
+    // Ctrl+G: enfocar el carrito (modo carrito: navegar items, +/-,
+    // cantidad directa, Delete quitar, Esc salir)
+    if (ctrl && (e.key === 'g' || e.key === 'G')) {
+      e.preventDefault();
+      enterCartMode();
       return true;
     }
     // F8: historial (seguro en navegadores)
@@ -506,6 +516,175 @@
     applyKbdFilter();
   }
 
+  // ============================================================
+  // 4b. MODO CARRITO (Ctrl+G): navegar items del carrito con ↑↓,
+  //     +/- ajustar cantidad, números = cantidad directa, Delete
+  //     quitar, Enter editar item, Esc salir del carrito.
+  // ============================================================
+  let cartMode = false;
+  let cartIndex = -1;
+  let cartQtyBuf = '';
+
+  function cartItems() {
+    return Array.from(document.querySelectorAll('#cartBody .cart-item-card'));
+  }
+
+  function enterCartMode() {
+    const items = cartItems();
+    if (!items.length) {
+      if (typeof showNotification === 'function') showNotification('El carrito está vacío', 'info');
+      return;
+    }
+    cartMode = true;
+    cartIndex = 0;
+    // Salir del modo búsqueda de galería si estaba activo
+    if (kbdFilter) clearKbdFilter();
+    clearCursor();
+    const col = document.getElementById('cartColumn');
+    if (col) col.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    renderCartCursor();
+  }
+
+  function exitCartMode() {
+    cartMode = false;
+    cartIndex = -1;
+    cartQtyBuf = '';
+    cartItems().forEach(el => el.classList.remove('kbd-selected'));
+    const qb = document.querySelector('.kbd-qty-badge');
+    if (qb) qb.remove();
+  }
+
+  function renderCartCursor() {
+    cartItems().forEach((el, i) => el.classList.toggle('kbd-selected', i === cartIndex));
+    // Badge de cantidad tecleada
+    const oldBadge = document.querySelector('.kbd-qty-badge');
+    if (oldBadge) oldBadge.remove();
+    if (cartQtyBuf && cartItems()[cartIndex]) {
+      const badge = document.createElement('span');
+      badge.className = 'kbd-qty-badge';
+      badge.textContent = '\u00d7' + cartQtyBuf;
+      cartItems()[cartIndex].appendChild(badge);
+    }
+  }
+
+  function cartSelectedId() {
+    const el = cartItems()[cartIndex];
+    if (!el) return null;
+    const btn = el.querySelector('.step-btn');
+    return btn ? parseInt(btn.getAttribute('data-id'), 10) : null;
+  }
+
+  function changeCartQty(delta) {
+    const id = cartSelectedId();
+    if (id === null) return;
+    const btn = document.querySelector(`#cartBody .step-btn[data-action="${delta > 0 ? 'plus' : 'minus'}"][data-id="${id}"]`);
+    if (btn && typeof handleStepBtnClick === 'function') {
+      handleStepBtnClick(btn);
+      // handleStepBtnClick re-renderiza; re-aplicar cursor sobre el MISMO id
+      setTimeout(() => {
+        const items = cartItems();
+        const ni = items.findIndex(el => {
+          const b = el.querySelector('.step-btn');
+          return b && parseInt(b.getAttribute('data-id'), 10) === id;
+        });
+        if (ni >= 0) { cartIndex = ni; renderCartCursor(); }
+        else exitCartMode();
+      }, 30);
+    }
+  }
+
+  function removeCartItem() {
+    const id = cartSelectedId();
+    if (id === null) return;
+    if (typeof CART === 'undefined') return;
+    CART = CART.filter(i => i.product_id !== id);
+    if (typeof renderCart === 'function') renderCart();
+    if (typeof playSound === 'function') playSound('Sound3.mp3');
+    setTimeout(() => {
+      const items = cartItems();
+      if (!items.length) { exitCartMode(); return; }
+      if (cartIndex >= items.length) cartIndex = items.length - 1;
+      renderCartCursor();
+    }, 30);
+  }
+
+  function setCartQty() {
+    const id = cartSelectedId();
+    const q = parseInt(cartQtyBuf, 10);
+    cartQtyBuf = '';
+    if (id === null || isNaN(q) || q < 1) { renderCartCursor(); return; }
+    if (typeof CART === 'undefined') return;
+    const item = CART.find(i => i.product_id === id);
+    if (!item) return;
+    const maxStock = (item.stock_quantity !== undefined && item.stock_quantity !== null && item.stock_quantity !== '')
+      ? parseFloat(item.stock_quantity) : null;
+    if (maxStock !== null && q > maxStock) {
+      if (typeof showNotification === 'function') showNotification(`Stock máximo alcanzado (${maxStock})`, 'warning');
+      return;
+    }
+    item.quantity = q;
+    if (typeof recalcItemPrice === 'function') recalcItemPrice(item);
+    if (typeof renderCart === 'function') renderCart();
+    if (typeof playSound === 'function') playSound('Sound2.mp3');
+    setTimeout(() => {
+      const items = cartItems();
+      const ni = items.findIndex(el => {
+        const b = el.querySelector('.step-btn');
+        return b && parseInt(b.getAttribute('data-id'), 10) === id;
+      });
+      if (ni >= 0) { cartIndex = ni; renderCartCursor(); }
+    }, 30);
+  }
+
+  function handleCartKeys(e) {
+    if (!cartMode) return false;
+
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      exitCartMode();
+      return true;
+    }
+    // Números: acumular cantidad directa
+    if (/^[0-9]$/.test(e.key)) {
+      e.preventDefault();
+      if (cartQtyBuf.length < 3) cartQtyBuf += e.key;
+      renderCartCursor();
+      return true;
+    }
+    // Enter: aplicar cantidad tecleada, o abrir opciones del item
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (cartQtyBuf) setCartQty();
+      else {
+        const id = cartSelectedId();
+        if (id !== null && typeof openItemOptions === 'function') openItemOptions(id);
+      }
+      return true;
+    }
+    // + / -: ajustar cantidad
+    if (e.key === '+' || e.key === '=') { e.preventDefault(); changeCartQty(1); return true; }
+    if (e.key === '-' || e.key === '_') { e.preventDefault(); changeCartQty(-1); return true; }
+    // Delete / Backspace: quitar item
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      e.preventDefault();
+      removeCartItem();
+      return true;
+    }
+    // Flechas: navegar items del carrito
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const items = cartItems();
+      if (!items.length) { exitCartMode(); return true; }
+      cartIndex = e.key === 'ArrowDown'
+        ? (cartIndex + 1 < items.length ? cartIndex + 1 : 0)
+        : (cartIndex - 1 >= 0 ? cartIndex - 1 : items.length - 1);
+      renderCartCursor();
+      return true;
+    }
+    // Cualquier otra tecla: no interferir con el modo carrito
+    return true;
+  }
+
   // Vaciar carrito con doble pulso: primero arma, segundo vacía
   function vaciarCarritoConConfirmacion() {
     if (typeof CART === 'undefined' || !CART.length) {
@@ -559,6 +738,7 @@
           { keys: ['Ctrl'], desc: 'Mantener presionado muestra las zonas enfocables' },
           { keys: ['Ctrl', 'F'], desc: 'Buscar producto' },
           { keys: ['Ctrl', 'I'], desc: 'Enfocar zona de productos' },
+          { keys: ['Ctrl', 'G'], desc: 'Enfocar carrito (↑↓ items, +/− cantidad, Esc salir)' },
           { keys: ['Ctrl', 'M'], desc: 'Monto recibido / cambio' },
           { keys: ['Ctrl', 'B'], desc: 'Abrir escáner de código de barras' },
           { keys: ['Ctrl', 'C'], desc: 'Menú de configuración (engranaje)' },
@@ -572,6 +752,14 @@
           { keys: ['F2'], desc: 'Buscar (alternativa)' },
           { keys: ['F8'], desc: 'Historial (alternativa)' },
           { keys: ['F9'], desc: 'Pantalla cliente (alternativa)' }
+        ]
+      });
+      groups.push({
+        title: 'Menús abiertos',
+        rows: [
+          { keys: ['\u2191', '\u2193'], desc: 'Navegar dentro del menú abierto' },
+          { keys: ['Enter'], desc: 'Activar opción enfocada' },
+          { keys: ['Esc'], desc: 'Cerrar el menú y volver a la galería' }
         ]
       });
     }
@@ -635,6 +823,7 @@
         { icon: 'fa-search', text: 'Buscar producto', shortcut: 'F2 /', run: () => { const i = document.getElementById('searchInput'); if (i) i.focus(); } },
         { icon: 'fa-check-double', text: 'Cobrar venta', shortcut: 'Ctrl+Enter', run: () => { const b = document.getElementById('finalizeSaleBtn'); if (b && !b.disabled) b.click(); } },
         { icon: 'fa-money-bill-wave', text: 'Monto recibido', shortcut: 'M', run: () => focusInput('checkoutReceived') },
+        { icon: 'fa-shopping-cart', text: 'Enfocar carrito', shortcut: 'Ctrl+G', run: enterCartMode },
         { icon: 'fa-percent', text: 'Descuento', shortcut: 'D', run: () => focusInput('discountInput') },
         { icon: 'fa-pause-circle', text: 'Suspender venta', shortcut: 'S', run: () => { if (typeof parkCurrentSale === 'function') parkCurrentSale(); } },
         { icon: 'fa-history', text: 'Historial de ventas', shortcut: 'H', run: () => { const b = document.getElementById('toggleHistoryBtn'); if (b) b.click(); } },
@@ -780,6 +969,83 @@
   }
 
   // ============================================================
+  // 7b. MODO MENÚ ABIERTO: cuando un dropdown/menú está visible, las
+  //     flechas navegan DENTRO de él y Esc lo cierra (en vez de mover
+  //     la galería de atrás). Aplica a configDropdown, context menu,
+  //     tooltip del perfil, etc.
+  // ============================================================
+  function openMenuEl() {
+    // Menú del engranaje del POS
+    const config = document.getElementById('configDropdown');
+    if (config && !config.classList.contains('hidden') && config.offsetParent !== null) return config;
+    // Menú contextual de productos
+    const ctx = document.getElementById('productContextMenu');
+    if (ctx && !ctx.classList.contains('hidden') && ctx.offsetParent !== null) return ctx;
+    // Tooltip del perfil
+    const tip = document.getElementById('profileTooltipMenu');
+    if (tip && tip.classList.contains('show') && tip.offsetParent !== null) return tip;
+    return null;
+  }
+
+  function menuItems(menu) {
+    return Array.from(menu.querySelectorAll('.dropdown-item, .tooltip-item, .ctx-item, a, button:not(.kbd-help-close), [role="menuitem"]'))
+      .filter(el => el.offsetParent !== null || el.tagName === 'A');
+  }
+
+  function closeOpenMenu(menu) {
+    if (menu.id === 'configDropdown') menu.classList.add('hidden');
+    else if (menu.id === 'productContextMenu') menu.classList.add('hidden');
+    else if (menu.id === 'profileTooltipMenu') menu.classList.remove('show');
+  }
+
+  function handleOpenMenuKeys(e) {
+    const menu = openMenuEl();
+    if (!menu) return false;
+
+    // Si el foco está dentro de un input/select del menú, dejar que
+    // el navegador lo maneje (p.ej. viewOrderSelect)
+    const ae = document.activeElement;
+    const aeInMenu = ae && menu.contains(ae);
+    if (aeInMenu && (ae.tagName === 'INPUT' || ae.tagName === 'SELECT' || ae.tagName === 'TEXTAREA')) {
+      return false;
+    }
+
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      closeOpenMenu(menu);
+      return true;
+    }
+
+    const items = menuItems(menu);
+    if (!items.length) return true; // menú abierto sin items navegables: bloquear
+
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Tab') {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      let idx = items.indexOf(ae);
+      if (e.key === 'Tab' && e.shiftKey) idx = idx <= 0 ? items.length - 1 : idx - 1;
+      else if (e.key === 'Tab') idx = (idx + 1) % items.length;
+      else idx = e.key === 'ArrowDown' ? (idx + 1 < items.length ? idx + 1 : 0) : (idx - 1 >= 0 ? idx - 1 : items.length - 1);
+      items[idx].focus();
+      return true;
+    }
+
+    if (e.key === 'Enter' && aeInMenu) {
+      // Dejar que el navegador active el item enfocado
+      return false;
+    }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      items[0].focus();
+      return true;
+    }
+
+    // Cualquier otra tecla con menú abierto: bloquear (no mover galería)
+    return true;
+  }
+
+  // ============================================================
   // 8. Badges de tecla en botones clave del POS
   // ============================================================
   function injectKeyBadges() {
@@ -864,6 +1130,7 @@
     return [
       { id: 'searchInput', key: 'F', desc: 'Buscar' },
       { id: 'productGallery', key: 'I', desc: 'Productos' },
+      { id: 'cartColumn', key: 'G', desc: 'Carrito' },
       { id: 'checkoutReceived', key: 'M', desc: 'Monto / cambio' },
       { id: 'finalizeSaleBtn', key: 'Enter', desc: 'Cobrar' },
       { id: 'toggleScannerBtn', key: 'B', desc: 'Código de barras' },
@@ -962,15 +1229,21 @@
     // 10.1 Navegación entre secciones
     if (handlePageShortcut(e)) return;
 
-    // 10.2 Atajos de acción del POS (Ctrl+Enter, Ctrl+Shift+X, F8, F9)
+    // 10.2 MENÚ ABIERTO: las flechas navegan dentro del menú, Esc lo cierra
+    if (handleOpenMenuKeys(e)) return;
+
+    // 10.3 Atajos de acción del POS (Ctrl+Enter, Ctrl+Shift+X, F8, F9)
     if (handlePosShortcut(e)) return;
 
-    // 10.3 Páginas sin POS: cursor de menú lateral
+    // 10.4 Páginas sin POS: cursor de menú lateral
     if (handleSidebarKeys(e)) return;
 
     if (!isPosPage()) return;
 
-    // 10.4 Cursor de galería del POS
+    // 10.5 Modo carrito (Ctrl+G): navegar items, +/- cantidades, Esc salir
+    if (handleCartKeys(e)) return;
+
+    // 10.6 Cursor de galería del POS
     if (isModalOpen()) return;
 
     const editable = isEditableFocus();

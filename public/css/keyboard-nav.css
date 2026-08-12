@@ -163,39 +163,65 @@
 /* Hint flotante "navega con ↑↓←→ · Enter agrega" sobre la galería */
 .kbd-gallery-hint {
     position: sticky;
-    bottom: 12px;
-    left: 50%;
-    transform: translateX(-50%);
+    bottom: 14px;
+    left: 0;
+    right: 0;
     width: fit-content;
+    margin: 10px auto 0;
     z-index: 4;
     display: inline-flex;
     align-items: center;
     gap: 10px;
-    background: var(--dark-color, #1a1a2e);
+    background: rgba(10, 12, 24, 0.55);   /* tenue sobre el contenido */
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.14);
     color: #fff;
     font-size: 0.75rem;
-    padding: 8px 16px;
+    padding: 9px 18px;
     border-radius: 999px;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-    margin: 8px auto 0;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
     pointer-events: none;
     opacity: 0;
-    transition: opacity 0.2s;
+    transform: translateY(6px);
+    transition: opacity 0.2s, transform 0.2s;
 }
 
 .kbd-gallery-hint.show {
     opacity: 1;
+    transform: translateY(0);
+}
+
+.kbd-gallery-hint .kbd-hint-sep {
+    width: 1px;
+    height: 16px;
+    background: rgba(255, 255, 255, 0.25);
+    margin: 0 2px;
+}
+
+.kbd-gallery-hint span.kbd-hint-label {
+    opacity: 0.75;
 }
 
 .kbd-gallery-hint kbd {
-    background: rgba(255, 255, 255, 0.18);
-    border: 1px solid rgba(255, 255, 255, 0.35);
+    background: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.3);
     border-bottom-width: 2px;
-    border-radius: 4px;
-    padding: 1px 6px;
+    border-radius: 5px;
+    padding: 2px 7px;
     font-family: ui-monospace, 'Cascadia Code', Menlo, Consolas, monospace;
     font-size: 0.7rem;
+    font-weight: 700;
     color: #fff;
+}
+
+/* --- Cursor de teclado sobre los items del CARRITO (modo carrito) --- */
+.cart-item-card.kbd-selected {
+    outline: 3px solid var(--primary-color);
+    outline-offset: 2px;
+    border-radius: 12px;
+    box-shadow: 0 0 0 4px var(--primary-shadow), 0 8px 20px rgba(0, 0, 0, 0.15);
+    background: var(--primary-lighter);
 }
 
 /* --- Badge de tecla dentro de botones (ej. COBRAR [F4]) --- */

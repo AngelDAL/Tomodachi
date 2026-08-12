@@ -857,49 +857,170 @@
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
             const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
             const margin = 14;
+            const contentWidth = pageWidth - (margin * 2);
 
-            // Encabezado del documento
-            doc.setFillColor(245, 245, 245);
-            doc.rect(0, 0, pageWidth, 30, 'F');
-            doc.setTextColor(30, 30, 46);
+            // Parsear el color primario del negocio a RGB
+            const hexToRgb = (hex) => {
+                const h = hex.replace('#', '');
+                return [parseInt(h.substr(0, 2), 16), parseInt(h.substr(2, 2), 16), parseInt(h.substr(4, 2), 16)];
+            };
+            const primaryRGB = hexToRgb(primaryColor);
+            // Versión oscura del primario (para la banda superior degradada)
+            const darken = (rgb, f) => rgb.map(v => Math.max(0, Math.round(v * f)));
+            const primaryDarkRGB = darken(primaryRGB, 0.78);
+
+            // Cargar el logo (si existe) a dataURL para poder insertarlo
+            let logoDataUrl = null;
+            try {
+                if (logoUrl && logoUrl !== 'assets/images/default-logo.png') {
+                    const imgResp = await fetch(logoUrl);
+                    if (imgResp.ok) {
+                        const blob = await imgResp.blob();
+                        logoDataUrl = await new Promise((resolve) => {
+                            const reader = new FileReader();
+                            reader.onload = () => resolve(reader.result);
+                            reader.onerror = () => resolve(null);
+                            reader.readAsDataURL(blob);
+                        });
+                    }
+                }
+            } catch (e) { logoDataUrl = null; }
+
+            // Periodo del reporte (si aplica)
+            let periodStr = '';
+            try {
+                const sd = document.getElementById('startDate');
+                const ed = document.getElementById('endDate');
+                if (sd && sd.value) {
+                    const s = new Date(sd.value);
+                    const e = ed && ed.value ? new Date(ed.value) : new Date();
+                    periodStr = s.toLocaleDateString() + ' - ' + (ed && ed.value ? e.toLocaleDateString() : 'Hoy');
+                }
+            } catch (e) { periodStr = ''; }
+
+            const dateStrFull = now.toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            const timeStr = now.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+
+            // ============================================================
+            // ENCABEZADO: banda de color primario con logo y nombre
+            // ============================================================
+            const headerH = 46;
+            // Banda principal (color primario)
+            doc.setFillColor(primaryRGB[0], primaryRGB[1], primaryRGB[2]);
+            doc.rect(0, 0, pageWidth, headerH, 'F');
+            // Franja inferior más oscura (detalle de diseño)
+            doc.setFillColor(primaryDarkRGB[0], primaryDarkRGB[1], primaryDarkRGB[2]);
+            doc.rect(0, headerH - 2.5, pageWidth, 2.5, 'F');
+
+            // Texto del encabezado: contraste sobre el primario
+            const headerTextRGB = getContrastColor(primaryColor) === '#000000' ? [30, 30, 46] : [255, 255, 255];
+
+            // Logo a la izquierda (dentro de una tarjeta blanca para que se vea)
+            let logoX = margin, logoY = 8, logoW = 24, logoH = 24;
+            if (logoDataUrl) {
+                // Fondo blanco redondeado detrás del logo
+                doc.setFillColor(255, 255, 255);
+                doc.roundedRect(logoX - 2, logoY - 2, logoW + 4, logoH + 4, 2, 2, 'F');
+                try {
+                    doc.addImage(logoDataUrl, 'PNG', logoX, logoY, logoW, logoH, undefined, 'FAST');
+                } catch (e) {
+                    try { doc.addImage(logoDataUrl, 'JPEG', logoX, logoY, logoW, logoH, undefined, 'FAST'); }
+                    catch (e2) { /* sin logo */ }
+                }
+            } else {
+                // Sin logo: icono de tienda (círculo con inicial)
+                doc.setFillColor(255, 255, 255);
+                doc.circle(logoX + logoW / 2, logoY + logoH / 2, logoW / 2 + 1, 'F');
+                doc.setTextColor(primaryRGB[0], primaryRGB[1], primaryRGB[2]);
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(22);
+                doc.text((storeName || 'T').charAt(0).toUpperCase(), logoX + logoW / 2, logoY + logoH / 2 + 7, { align: 'center' });
+            }
+
+            // Nombre del negocio a la derecha del logo
+            const textX = logoX + logoW + 8;
+            doc.setTextColor(headerTextRGB[0], headerTextRGB[1], headerTextRGB[2]);
             doc.setFont('helvetica', 'bold');
-            doc.setFontSize(18);
-            doc.text(storeName, margin, 15);
+            doc.setFontSize(19);
+            doc.text(storeName, textX, 20);
+
+            // Título del reporte (debajo del nombre)
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(11);
-            doc.setTextColor(85, 85, 85);
-            doc.text(reportTitle, margin, 23);
+            doc.setTextColor(headerTextRGB[0], headerTextRGB[1], headerTextRGB[2]);
+            doc.text(reportTitle, textX, 28);
 
-            // Info de generación
-            doc.setFontSize(9);
-            doc.setTextColor(51, 51, 51);
-            doc.text(`Generado por: ${userName}  |  ${dateStr}`, margin, 27);
+            // Línea blanca decorativa
+            doc.setDrawColor(255, 255, 255);
+            doc.setLineWidth(0.3);
+            doc.setLineDashPattern([1, 1], 0);
+            doc.line(textX, 32, pageWidth - margin, 32);
+            doc.setLineDashPattern([], 0);
 
-            // Línea de color del negocio
-            doc.setDrawColor(parseInt(primaryColor.substr(1, 2), 16), parseInt(primaryColor.substr(3, 2), 16), parseInt(primaryColor.substr(5, 2), 16));
-            doc.setLineWidth(1.2);
-            doc.line(margin, 31, pageWidth - margin, 31);
+            // ============================================================
+            // TARJETA DE INFORMACIÓN (fecha, generado por, periodo)
+            // ============================================================
+            let y = headerH + 8;
+            const infoCardH = 22;
+            doc.setFillColor(245, 245, 245);
+            doc.roundedRect(margin, y, contentWidth, infoCardH, 2, 2, 'F');
+            doc.setDrawColor(primaryRGB[0], primaryRGB[1], primaryRGB[2]);
+            doc.setLineWidth(0.6);
+            doc.line(margin, y, margin, y + infoCardH);
 
-            // Resumen (si hay)
+            doc.setFontSize(8.5);
+            doc.setTextColor(120, 120, 120);
+            doc.setFont('helvetica', 'bold');
+            doc.text('FECHA DE CREACIÓN', margin + 4, y + 6);
+            doc.text('GENERADO POR', margin + 4 + contentWidth * 0.32, y + 6);
+            doc.text('PERIODO', margin + 4 + contentWidth * 0.62, y + 6);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(40, 40, 40);
+            doc.setFontSize(9.5);
+            doc.text(`${dateStrFull}`, margin + 4, y + 12);
+            doc.text(`${timeStr} hrs`, margin + 4, y + 17);
+            doc.text(userName, margin + 4 + contentWidth * 0.32, y + 12);
+            doc.text(user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : '', margin + 4 + contentWidth * 0.32, y + 17);
+            doc.text(periodStr || 'Todos los datos', margin + 4 + contentWidth * 0.62, y + 12);
+
+            // Separadores verticales de la tarjeta
+            doc.setDrawColor(210, 210, 210);
+            doc.setLineWidth(0.2);
+            doc.line(margin + contentWidth * 0.31, y + 2, margin + contentWidth * 0.31, y + infoCardH - 2);
+            doc.line(margin + contentWidth * 0.61, y + 2, margin + contentWidth * 0.61, y + infoCardH - 2);
+
+            // ============================================================
+            // RESUMEN (si hay)
+            // ============================================================
             const summary = getReportSummary();
-            let yStart = 38;
+            let yStart = y + infoCardH + 8;
             const summaryKeys = Object.keys(summary);
             if (summaryKeys.length > 0) {
-                doc.setFontSize(10);
+                // Tarjeta de resumen con borde superior de color
+                const sumH = 10 + (summaryKeys.length * 5);
+                doc.setFillColor(250, 250, 250);
+                doc.roundedRect(margin, yStart - 2, contentWidth, sumH, 2, 2, 'F');
+                doc.setDrawColor(primaryRGB[0], primaryRGB[1], primaryRGB[2]);
+                doc.setLineWidth(0.8);
+                doc.line(margin, yStart - 2, margin, yStart - 2 + sumH);
+
                 doc.setFont('helvetica', 'bold');
+                doc.setFontSize(10);
                 doc.setTextColor(30, 30, 46);
-                doc.text('Resumen', margin, yStart);
+                doc.text('Resumen', margin + 4, yStart + 4);
                 doc.setFont('helvetica', 'normal');
                 doc.setTextColor(51, 51, 51);
-                yStart += 5;
+                let sy = yStart + 10;
                 summaryKeys.forEach(k => {
                     doc.setFontSize(9);
-                    doc.text(`- ${k}: ${summary[k]}`, margin + 2, yStart);
-                    yStart += 4.5;
+                    doc.text(`- ${k}: ${summary[k]}`, margin + 4, sy);
+                    sy += 5;
                 });
-                yStart += 4;
+                yStart = yStart + sumH + 8;
             }
+
 
             // Tabla real con autoTable (paginación automática, filas intactas)
             const headerRGB = [
@@ -907,7 +1028,7 @@
                 parseInt(primaryColor.substr(3, 2), 16),
                 parseInt(primaryColor.substr(5, 2), 16)
             ];
-            const headerTextRGB = getContrastColor(primaryColor) === '#000000' ? [0, 0, 0] : [255, 255, 255];
+            const headerTextRGBTable = getContrastColor(primaryColor) === '#000000' ? [0, 0, 0] : [255, 255, 255];
 
             doc.autoTable({
                 head: tableHead,
@@ -926,7 +1047,7 @@
                 },
                 headStyles: {
                     fillColor: headerRGB,
-                    textColor: headerTextRGB,
+                    textColor: headerTextRGBTable,
                     fontStyle: 'bold',
                     fontSize: 8.5
                 },

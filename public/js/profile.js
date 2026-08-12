@@ -186,9 +186,14 @@ async function loadCompanySettings() {
             const liveVars = ['--primary-color', '--secondary-color', '--success-color', '--danger-color',
                              '--warning-color', '--info-color', '--dark-color', '--bg-body', '--text-color',
                              '--bg-card', '--border-color'];
+            // Leer los valores "vivos" del modo CLARO puro (no del estado
+            // actual del documento, que puede estar en modo oscuro — si no,
+            // los inputs claros se rellenarían con superficies del dark y al
+            // volver a la pestaña Claro el sistema "se quedaría con el tema
+            // oscuro cargado").
             const liveMap = {};
             liveVars.forEach(v => {
-                try { liveMap[v] = getComputedStyle(document.documentElement).getPropertyValue(v).trim(); } catch (e) {}
+                liveMap[v] = readThemeVarInMode(v, 'light');
             });
 
             inputs.forEach(input => {
@@ -219,7 +224,7 @@ async function loadCompanySettings() {
                 const darkLiveVars = ['--bg-body', '--bg-card', '--dark-color', '--text-color', '--border-color'];
                 const darkLiveMap = {};
                 darkLiveVars.forEach(v => {
-                    try { darkLiveMap[v] = getComputedStyle(document.documentElement).getPropertyValue(v).trim(); } catch (e) {}
+                    darkLiveMap[v] = readThemeVarInMode(v, 'dark');
                 });
                 darkInputs.forEach(input => {
                     const cssVar = input.getAttribute('data-var');
@@ -242,6 +247,10 @@ async function loadCompanySettings() {
                             if (v && sug[v]) {
                                 input.value = sug[v];
                                 if (input.nextElementSibling) input.nextElementSibling.value = sug[v];
+                            } else if (themeConfig[key]) {
+                                // Marcas: la sugerencia oscura hereda las del claro
+                                input.value = themeConfig[key];
+                                if (input.nextElementSibling) input.nextElementSibling.value = themeConfig[key];
                             } else {
                                 const live = darkLiveMap[cssVar];
                                 if (live && /^#[0-9a-fA-F]{6}$/.test(live)) {
@@ -284,6 +293,32 @@ async function loadCompanySettings() {
 // El usuario tocó/personalizó el tema oscuro (flag global). Se usa al
 // guardar para NO persistir la sugerencia derivada automáticamente.
 let darkThemeTouched = false;
+
+// Lee el valor CSS que tendría una variable en el MODO indicado ('light' o
+// 'dark'), aunque el documento esté en el otro modo con superficies inline
+// aplicadas (ThemeColorUtils). Limpia temporalmente las superficies inline
+// del modo activo, fuerza data-theme, lee y restaura — así los inputs del
+// claro nunca se rellenan con valores del oscuro (y viceversa).
+function readThemeVarInMode(cssVar, mode) {
+    const root = document.documentElement;
+    const prevTheme = root.getAttribute('data-theme');
+    const surfaceVars = ['--bg-body', '--bg-card', '--bg-light', '--bg-lightest', '--dark-color',
+                         '--border-color', '--text-color', '--text-medium', '--text-light', '--text-muted'];
+    const saved = {};
+    surfaceVars.forEach(v => {
+        const val = root.style.getPropertyValue(v);
+        if (val) saved[v] = val;
+        root.style.removeProperty(v);
+    });
+    root.setAttribute('data-theme', mode);
+    let val = '';
+    try { val = getComputedStyle(root).getPropertyValue(cssVar).trim(); } catch (e) {}
+    root.setAttribute('data-theme', prevTheme || 'light');
+    surfaceVars.forEach(v => {
+        if (saved[v]) root.style.setProperty(v, saved[v]);
+    });
+    return val;
+}
 
 // Pestaña activa del editor: 'light' | 'dark' (la que el usuario está editando)
 function getActiveThemeTab() {

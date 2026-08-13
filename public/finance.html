@@ -324,30 +324,50 @@
                 </div>
 
                 <!-- Formulario inline de movimiento (sin abrir otro drawer) -->
-                <div id="inlineMovementForm" style="display:none; background: var(--bg-light); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid var(--border-color);">
-                    <div style="font-weight:600; margin-bottom:10px; color: var(--primary-color);">
+                <div id="inlineMovementForm" class="move-form" style="display:none;">
+                    <div class="move-form-header">
                         <i class="fas fa-exchange-alt"></i> Nuevo Movimiento
                     </div>
-                    <div class="form-group">
-                        <label>Tipo</label>
-                        <select id="inlineMoveType" style="width:100%; padding:9px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-input); color: var(--text-color);">
-                            <option value="entry">Entrada de Dinero</option>
-                            <option value="withdrawal">Retiro de Dinero</option>
-                        </select>
+
+                    <!-- Switch Entrada / Salida -->
+                    <div class="move-form-row">
+                        <label class="move-label"><i class="fas fa-arrows-alt-v"></i> Tipo de movimiento</label>
+                        <div class="move-type-switch" id="moveTypeSwitch">
+                            <button type="button" class="move-type-btn entry active" data-type="entry">
+                                <i class="fas fa-arrow-down"></i> Entrada
+                            </button>
+                            <button type="button" class="move-type-btn withdrawal" data-type="withdrawal">
+                                <i class="fas fa-arrow-up"></i> Retiro
+                            </button>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Monto</label>
-                        <input type="number" id="inlineMoveAmount" step="0.01" min="0.01" required style="width:100%; padding:9px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-input); color: var(--text-color);">
+
+                    <!-- Monto -->
+                    <div class="move-form-row">
+                        <label class="move-label"><i class="fas fa-coins"></i> Monto</label>
+                        <div class="move-amount-wrap">
+                            <span class="move-amount-symbol" id="inlineMoveSymbol">$</span>
+                            <input type="number" id="inlineMoveAmount" step="0.01" min="0.01" placeholder="0.00" required>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Descripción / Motivo</label>
-                        <input type="text" id="inlineMoveDesc" required placeholder="Ej: Pago a proveedor, Cambio inicial..." style="width:100%; padding:9px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-input); color: var(--text-color);">
+
+                    <!-- Descripción -->
+                    <div class="move-form-row">
+                        <label class="move-label"><i class="fas fa-pen"></i> Descripción / Motivo</label>
+                        <div class="move-desc-wrap">
+                            <i class="fas fa-sticky-note"></i>
+                            <input type="text" id="inlineMoveDesc" required placeholder="Ej: Pago a proveedor, Cambio inicial...">
+                        </div>
                     </div>
-                    <div style="display:flex; gap:8px; margin-top: 12px;">
-                        <button class="btn-primary" style="flex:1;" onclick="submitInlineMovement()" type="button">
-                            <i class="fas fa-check"></i> Registrar
+
+                    <!-- Acciones -->
+                    <div class="move-form-actions">
+                        <button class="btn-secondary move-cancel" onclick="toggleMovementForm(false)" type="button">
+                            <i class="fas fa-times"></i> Cancelar
                         </button>
-                        <button class="btn-secondary" style="flex:1;" onclick="toggleMovementForm(false)" type="button">Cancelar</button>
+                        <button class="btn-primary move-submit" onclick="submitInlineMovement()" type="button">
+                            <i class="fas fa-check"></i> Registrar Movimiento
+                        </button>
                     </div>
                 </div>
                 <div id="movementsList" style="flex: 1; overflow-y: auto;">

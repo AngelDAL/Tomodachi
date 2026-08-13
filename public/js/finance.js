@@ -265,14 +265,36 @@ function toggleMovementForm(forceShow) {
     if (show) {
         document.getElementById('inlineMoveAmount').value = '';
         document.getElementById('inlineMoveDesc').value = '';
+        // Símbolo de moneda según formato regional
+        const symEl = document.getElementById('inlineMoveSymbol');
+        if (symEl) symEl.textContent = window.FormatUtils ? (window.FormatUtils.getConfig().currency_symbol || '$') : '$';
         document.getElementById('inlineMoveAmount').focus();
     }
+}
+
+// Switch Entrada / Retiro
+document.addEventListener('DOMContentLoaded', () => {
+    const switchEl = document.getElementById('moveTypeSwitch');
+    if (switchEl) {
+        switchEl.addEventListener('click', (e) => {
+            const btn = e.target.closest('.move-type-btn');
+            if (!btn) return;
+            switchEl.querySelectorAll('.move-type-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        });
+    }
+});
+
+// Devuelve el tipo seleccionado en el switch
+function getInlineMoveType() {
+    const active = document.querySelector('#moveTypeSwitch .move-type-btn.active');
+    return active ? active.getAttribute('data-type') : 'entry';
 }
 
 // Registra el movimiento desde el formulario inline (sin abrir otro drawer)
 async function submitInlineMovement() {
     const registerId = currentHistoryRegisterId;
-    const type = document.getElementById('inlineMoveType').value;
+    const type = getInlineMoveType();
     const amount = document.getElementById('inlineMoveAmount').value;
     const description = document.getElementById('inlineMoveDesc').value.trim();
 

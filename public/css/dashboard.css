@@ -539,3 +539,190 @@ body.plan-free a.premium-locked.btn::after {
     left: 50%;
     transform: translate(-50%, -50%);
 }
+
+/* ============================================================
+ * Formulario inline de movimientos (finanzas) — move-form
+ * ============================================================ */
+.move-form {
+    background: var(--bg-light);
+    padding: 16px;
+    border-radius: 12px;
+    margin-bottom: 15px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.move-form-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--primary-color);
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed var(--border-color);
+}
+
+.move-form-row {
+    margin-bottom: 14px;
+}
+
+.move-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-light);
+    margin-bottom: 7px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.move-label i {
+    color: var(--primary-color);
+    font-size: 0.85rem;
+}
+
+/* Switch tipo: Entrada / Retiro */
+.move-type-switch {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 4px;
+}
+
+.move-type-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 10px 8px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    background: transparent;
+    color: var(--text-light);
+    transition: all 0.2s ease;
+}
+
+.move-type-btn i { font-size: 0.95rem; }
+
+.move-type-btn.entry.active {
+    background: var(--success-color);
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(46, 125, 50, 0.35);
+}
+
+.move-type-btn.withdrawal.active {
+    background: var(--danger-color);
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(211, 47, 47, 0.35);
+}
+
+/* Monto grande con símbolo */
+.move-amount-wrap {
+    display: flex;
+    align-items: center;
+    background: var(--bg-card);
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: border-color 0.2s ease;
+}
+
+.move-amount-wrap:focus-within {
+    border-color: var(--primary-color);
+}
+
+.move-amount-symbol {
+    padding: 0 14px;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    background: var(--bg-light);
+    border-right: 1px solid var(--border-color);
+    line-height: 48px;
+    user-select: none;
+}
+
+.move-amount-wrap input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    padding: 12px 14px;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-color);
+    min-width: 0;
+}
+
+.move-amount-wrap input::placeholder { color: var(--text-muted); font-weight: 400; font-size: 1rem; }
+
+/* Descripción con icono */
+.move-desc-wrap {
+    display: flex;
+    align-items: center;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: border-color 0.2s ease;
+}
+
+.move-desc-wrap:focus-within { border-color: var(--primary-color); }
+
+.move-desc-wrap > i {
+    padding: 0 13px;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+}
+
+.move-desc-wrap input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    padding: 11px 12px 11px 0;
+    font-size: 0.95rem;
+    color: var(--text-color);
+    min-width: 0;
+}
+
+.move-desc-wrap input::placeholder { color: var(--text-muted); }
+
+/* Acciones: cancelar izquierda, registrar derecha */
+.move-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--border-color);
+}
+
+.move-cancel {
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.move-submit {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 170px;
+    justify-content: center;
+}

@@ -93,10 +93,10 @@
                                         <div id="posCustomerResults" class="pos-customer-results">
                                             <div class="pos-customer-empty">Escribe para buscar clientes...</div>
                                         </div>
-                                        <a href="customers.html" class="pos-customer-create" id="posCustomerCreate">
+                                        <button type="button" class="pos-customer-create" id="posCustomerCreate" onclick="openPosQuickCustomerModal()">
                                             <i class="fas fa-user-plus"></i> Crear cliente nuevo
-                                            <span class="pos-customer-create-kbd">Ctrl+Shift+U</span>
-                                        </a>
+                                            <span class="pos-customer-create-kbd">Ctrl+U</span>
+                                        </button>
                                     </div>
                                     <!-- Chip del cliente vinculado -->
                                     <div id="posLinkedCustomer" class="pos-linked-customer hidden">
@@ -469,6 +469,37 @@
             </div>
             <div class="drawer-body" id="posCustomerDrawerBody" style="display:flex; flex-direction:column; height:100%; overflow-y:auto;">
                 <!-- Contenido inyectado por JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Crear cliente rápido desde el POS (sin salir del carrito) -->
+    <div id="posQuickCustomerModal" class="drawer-overlay">
+        <div class="drawer-content pos-quick-customer" style="max-width:420px; width:100%;">
+            <div class="drawer-header">
+                <h2><i class="fas fa-user-plus"></i> Nuevo cliente</h2>
+                <button class="drawer-close" onclick="closePosQuickCustomerModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="drawer-body" style="padding: 0 1.2rem 1.2rem;">
+                <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:14px;">Solo necesitamos lo esencial para registrar al cliente. Puedes completar su perfil después.</p>
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.85rem; margin-bottom:6px; color:var(--text-medium); font-weight:600;">
+                        <i class="fas fa-user" style="color:var(--primary-color);"></i> Nombre *
+                    </label>
+                    <input type="text" id="posQuickCustomerName" class="form-input" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-lightest);" placeholder="Nombre del cliente">
+                </div>
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.85rem; margin-bottom:6px; color:var(--text-medium); font-weight:600;">
+                        <i class="fas fa-phone" style="color:var(--primary-color);"></i> Teléfono
+                    </label>
+                    <input type="text" id="posQuickCustomerPhone" class="form-input" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-lightest);" placeholder="555-1234">
+                </div>
+                <div style="display:flex; gap:10px; justify-content:flex-end;">
+                    <button class="btn" onclick="closePosQuickCustomerModal()" style="padding:10px 20px; border-radius:8px; background:var(--bg-light); border:1px solid var(--border-color); cursor:pointer; color:var(--text-medium);">Cancelar</button>
+                    <button id="posQuickCustomerSave" class="btn btn-primary" style="padding:10px 24px; border-radius:8px; background:var(--primary-color); color:#fff; border:none; cursor:pointer;">
+                        <i class="fas fa-check"></i> Registrar cliente
+                    </button>
+                </div>
             </div>
         </div>
     </div>

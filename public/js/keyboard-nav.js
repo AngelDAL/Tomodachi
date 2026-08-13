@@ -332,13 +332,46 @@
     // REGLA DEL USUARIO: si el foco está en un input, los atajos Ctrl+ se
     // DESACTIVAN hasta que se salga del campo (Esc hace blur). Esto evita
     // robar teclas mientras se escribe (Ctrl+C copiar, etc.).
+    // Ctrl+U: vincular/buscar cliente — se maneja ANTES del check de
+    // isEditableFocus para que funcione incluso con foco en un input
+    // (si el navegador capturara Ctrl+U mostraría 'ver código fuente').
+    if (e.ctrlKey && !e.metaKey && !e.altKey && (e.key === 'u' || e.key === 'U')) {
+      e.preventDefault();
+      const btn = document.getElementById('posCustomerBtn');
+      if (btn && !btn.classList.contains('hidden')) {
+        btn.click();
+        const searchInput = document.getElementById('posCustomerSearch');
+        if (searchInput) setTimeout(() => searchInput.focus(), 80);
+      }
+      return true;
+    }
+
     if (isEditableFocus()) return false;
     const ctrl = e.ctrlKey && !e.metaKey && !e.altKey;
     const ctrlShift = e.ctrlKey && e.shiftKey && !e.metaKey && !e.altKey;
 
-    // Ctrl+Enter: cobrar (alias de F4 legacy en sales.js)
+    // Ctrl+Enter: cobrar (alias de F4 legacy en sales.js).
+    // Mejora de eficiencia: si el método requiere monto (cash/mixed) y no
+    // hay monto recibido válido, se enfoca el campo de cantidad recibida
+    // en vez de finalizar — así el cálculo y el cambio siempre son correctos.
     if (ctrl && e.key === 'Enter') {
       e.preventDefault();
+      const payMethod = document.getElementById('paymentMethod');
+      const method = payMethod ? payMethod.value : 'cash';
+      const receivedInput = document.getElementById('checkoutReceived');
+      const needsAmount = method === 'cash' || method === 'mixed';
+      const totalEl = document.getElementById('panelTotal');
+      const total = totalEl ? parseFloat(String(totalEl.textContent).replace(/[^0-9.-]/g, '')) || 0 : 0;
+      const received = receivedInput ? parseFloat(receivedInput.value) || 0 : 0;
+      if (needsAmount && (!receivedInput || received < total)) {
+        if (receivedInput) {
+          receivedInput.focus();
+          receivedInput.select();
+          receivedInput.classList.add('kbd-required-flash');
+          setTimeout(() => receivedInput.classList.remove('kbd-required-flash'), 1200);
+        }
+        return true;
+      }
       const btn = document.getElementById('finalizeSaleBtn');
       if (btn && !btn.disabled) btn.click();
       return true;
@@ -394,18 +427,6 @@
     if (ctrl && (e.key === 'g' || e.key === 'G')) {
       e.preventDefault();
       enterCartMode();
-      return true;
-    }
-    // Ctrl+Shift+U: vincular/buscar cliente en el POS (abre el buscador)
-    // (Ctrl+U está reservado por el navegador — ver código fuente)
-    if (ctrlShift && (e.key === 'u' || e.key === 'U')) {
-      e.preventDefault();
-      const btn = document.getElementById('posCustomerBtn');
-      if (btn && !btn.classList.contains('hidden')) {
-        btn.click();
-        const searchInput = document.getElementById('posCustomerSearch');
-        if (searchInput) setTimeout(() => searchInput.focus(), 80);
-      }
       return true;
     }
     // F8: historial (seguro en navegadores)
@@ -882,7 +903,7 @@
         { icon: 'fa-pause-circle', text: 'Suspender venta', shortcut: 'S', run: () => { if (typeof parkCurrentSale === 'function') parkCurrentSale(); } },
         { icon: 'fa-history', text: 'Historial de ventas', shortcut: 'H', run: () => { const b = document.getElementById('toggleHistoryBtn'); if (b) b.click(); } },
         { icon: 'fa-tv', text: 'Pantalla cliente', shortcut: 'P', run: () => { const b = document.getElementById('toggleCustomerDisplayBtn'); if (b) b.click(); } },
-        { icon: 'fa-user', text: 'Vincular cliente', shortcut: 'Ctrl+Shift+U', run: () => { const b = document.getElementById('posCustomerBtn'); if (b && !b.classList.contains('hidden')) b.click(); } },
+        { icon: 'fa-user', text: 'Vincular cliente', shortcut: 'Ctrl+U', run: () => { const b = document.getElementById('posCustomerBtn'); if (b && !b.classList.contains('hidden')) b.click(); } },
         { icon: 'fa-trash-alt', text: 'Vaciar carrito', shortcut: 'X', run: vaciarCarritoConConfirmacion }
       );
     }
@@ -1190,7 +1211,7 @@
       { id: 'finalizeSaleBtn', key: 'Enter', desc: 'Cobrar' },
       { id: 'toggleScannerBtn', key: 'B', desc: 'Código de barras' },
       { id: 'configMenuBtn', key: 'C', desc: 'Configuración' },
-      { id: 'posCustomerBtn', key: 'Shift+U', desc: 'Cliente' }
+      { id: 'posCustomerBtn', key: 'U', desc: 'Cliente' }
     ];
   }
 

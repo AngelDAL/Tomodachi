@@ -3776,6 +3776,55 @@ async function loadCustomersIntoSelect() {
 
 
 // ==========================================
+// Crear cliente rápido desde el POS (sin salir del carrito)
+// ==========================================
+function openPosQuickCustomerModal() {
+  const modal = document.getElementById('posQuickCustomerModal');
+  if (!modal) return;
+  modal.classList.add('show');
+  document.getElementById('posQuickCustomerName').value = '';
+  document.getElementById('posQuickCustomerPhone').value = '';
+  setTimeout(() => document.getElementById('posQuickCustomerName').focus(), 80);
+}
+
+function closePosQuickCustomerModal() {
+  const modal = document.getElementById('posQuickCustomerModal');
+  if (modal) modal.classList.remove('show');
+}
+
+async function savePosQuickCustomer() {
+  const nameInput = document.getElementById('posQuickCustomerName');
+  const phoneInput = document.getElementById('posQuickCustomerPhone');
+  const name = (nameInput.value || '').trim();
+  const phone = (phoneInput.value || '').trim();
+  if (!name) {
+    nameInput.focus();
+    nameInput.style.borderColor = 'var(--danger-color)';
+    setTimeout(() => { nameInput.style.borderColor = ''; }, 1500);
+    showNotification('El nombre es obligatorio', 'error');
+    return;
+  }
+  try {
+    const res = await fetch('../api/customers/customers.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ full_name: name, phone: phone || '' })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+    const newId = data.customer_id || data.data?.customer_id || 0;
+    if (!newId) throw new Error('No se pudo obtener el id del cliente');
+    closePosQuickCustomerModal();
+    togglePosCustomerDropdown(false);
+    // Vincular al cliente recién creado
+    linkPosCustomer(newId, name, phone, '', 0, 0, 0);
+    showNotification('Cliente "' + name + '" registrado', 'success');
+  } catch (e) {
+    showNotification('Error al crear cliente: ' + e.message, 'error');
+  }
+}
+
+// ==========================================
 // Cliente vinculado en el POS (apartado/adelanto/fiado)
 // ==========================================
 let linkedCustomer = null; // { customer_id, full_name, phone, balance, credit_limit, total_purchases, email }
@@ -4094,11 +4143,11 @@ function bindPosCustomerEvents() {
       if (posCustomerActiveIndex >= 0 && posCustomerActiveIndex < results.length) {
         results[posCustomerActiveIndex].click();
       } else if (posCustomerActiveIndex === results.length && createBtn) {
-        window.location.href = createBtn.getAttribute('href');
+        createBtn.click();
       } else if (results.length) {
         results[0].click();
       } else if (createBtn) {
-        window.location.href = createBtn.getAttribute('href');
+        createBtn.click();
       }
       return;
     }
@@ -4113,6 +4162,16 @@ function bindPosCustomerEvents() {
   });
   if (unlinkBtn) unlinkBtn.addEventListener('click', (e) => { e.stopPropagation(); unlinkPosCustomer(); });
   if (panelBtn) panelBtn.addEventListener('click', (e) => { e.stopPropagation(); openPosCustomerDrawer(); });
+
+  // Modal crear cliente rápido
+  const saveBtn = document.getElementById('posQuickCustomerSave');
+  const nameInput = document.getElementById('posQuickCustomerName');
+  const phoneInput = document.getElementById('posQuickCustomerPhone');
+  const quickModal = document.getElementById('posQuickCustomerModal');
+  if (saveBtn) saveBtn.addEventListener('click', () => savePosQuickCustomer());
+  if (nameInput) nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); savePosQuickCustomer(); } });
+  if (phoneInput) phoneInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); savePosQuickCustomer(); } });
+  if (quickModal) quickModal.addEventListener('click', (e) => { if (e.target === quickModal) closePosQuickCustomerModal(); });
 }
 
 // Índice del objetivo activo en el buscador de clientes (navegación ↑↓)

@@ -3035,3 +3035,15 @@
     color: var(--text-muted);
     letter-spacing: 0.5px;
 }
+
+/* Flash: campo obligatorio al presionar Ctrl+Enter sin monto */
+.kbd-required-flash {
+    border-color: var(--danger-color) !important;
+    box-shadow: 0 0 0 3px rgba(211, 47, 47, 0.18) !important;
+    animation: kbdFlash 1.2s ease;
+}
+
+@keyframes kbdFlash {
+    0%, 100% { transform: scale(1); }
+    30% { transform: scale(1.03); }
+}

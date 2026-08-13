@@ -1255,6 +1255,7 @@
 
         // Formatear moneda
         function formatCurrency(amount) {
+            if (window.FormatUtils) return window.FormatUtils.currency(amount);
             return new Intl.NumberFormat('es-MX', {
                 style: 'currency',
                 currency: 'MXN'
@@ -1263,6 +1264,7 @@
 
         // Formatear cantidad
         function formatQuantity(qty) {
+            if (window.FormatUtils) return window.FormatUtils.qty(qty);
             const num = parseFloat(qty);
             return Number.isInteger(num) ? num : num.toFixed(3);
         }

@@ -72,6 +72,18 @@
         return number(amount);
     }
 
+    // Cantidad INTELIGENTE para stock/cantidades: si es entero, no muestra
+    // decimales (3 → "3", nunca "3.000"); si tiene fracción, muestra los
+    // decimales necesarios sin ceros finales (3.5 → "3.5", 3.250 → "3.25").
+    // No usa config.decimals (las cantidades no se redondean como moneda).
+    function qty(amount) {
+        const n = Number(amount);
+        if (isNaN(n)) return String(amount ?? '');
+        if (Number.isInteger(n)) return String(n);
+        // Hasta 4 decimales, quitar ceros finales
+        return n.toFixed(4).replace(/\.?0+$/, '');
+    }
+
     // ============================================================
     // Moneda
     // ============================================================
@@ -191,6 +203,7 @@
         getConfig: getConfig,
         number: number,
         quantity: quantity,
+        qty: qty,
         currency: currency,
         currencySpace: currencySpace,
         date: date,

@@ -138,8 +138,8 @@ function renderLowStockList(list) {
         tr.style.borderBottom = '1px solid var(--border-color)';
         tr.innerHTML = `
             <td style="padding: 0.75rem;" data-label="Producto">${item.product_name}</td>
-            <td style="padding: 0.75rem; color: var(--danger-color); font-weight: bold;" data-label="Stock">${item.current_stock}</td>
-            <td style="padding: 0.75rem; color: var(--text-light);" data-label="Mínimo">${item.min_stock}</td>
+            <td style="padding: 0.75rem; color: var(--danger-color); font-weight: bold;" data-label="Stock">${window.FormatUtils ? window.FormatUtils.qty(item.current_stock) : item.current_stock}</td>
+            <td style="padding: 0.75rem; color: var(--text-light);" data-label="Mínimo">${window.FormatUtils ? window.FormatUtils.qty(item.min_stock) : item.min_stock}</td>
         `;
         tbody.appendChild(tr);
     });

@@ -845,7 +845,7 @@ function renderProducts(items) {
                      <div class="product-list-details">
                         <div class="product-list-price">${formattedPrice}</div>
                         <div class="product-list-stock ${stockClass}">
-                            <i class="fas fa-cubes"></i> ${product.current_stock !== null ? product.current_stock : 0}
+                            <i class="fas fa-cubes"></i> ${window.FormatUtils ? window.FormatUtils.qty(product.current_stock) : (product.current_stock !== null ? product.current_stock : 0)}
                         </div>
                     </div>
                 </div>
@@ -864,7 +864,7 @@ function renderProducts(items) {
                     <div class="product-meta">
                         <div class="meta-price">${formattedPrice}</div>
                         <div class="meta-stock ${stockClass}">
-                            <i class="fas fa-cubes"></i> ${product.current_stock !== null ? product.current_stock : 0}
+                            <i class="fas fa-cubes"></i> ${window.FormatUtils ? window.FormatUtils.qty(product.current_stock) : (product.current_stock !== null ? product.current_stock : 0)}
                         </div>
                     </div>
                 </div>
@@ -953,10 +953,10 @@ function updateProfitDisplay(price, cost) {
 
     const profitEl = document.getElementById('detailProfitDisplay');
 
-    document.getElementById('detailPriceDisplay').textContent = '$' + price.toFixed(2);
-    document.getElementById('detailCostDisplay').textContent = '$' + cost.toFixed(2);
+    document.getElementById('detailPriceDisplay').textContent = window.FormatUtils ? window.FormatUtils.currency(price) : '$' + price.toFixed(2);
+    document.getElementById('detailCostDisplay').textContent = window.FormatUtils ? window.FormatUtils.currency(cost) : '$' + cost.toFixed(2);
 
-    profitEl.textContent = '$' + profit.toFixed(2);
+    profitEl.textContent = window.FormatUtils ? window.FormatUtils.currency(profit) : '$' + profit.toFixed(2);
     profitEl.className = profit >= 0 ? 'profit-positive' : 'profit-negative';
 
     document.getElementById('detailMarginDisplay').textContent = margin.toFixed(1) + '%';

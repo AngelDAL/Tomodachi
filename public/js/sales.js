@@ -573,7 +573,7 @@ async function searchProducts(term) {
           product_name: el.querySelector('.g-name').textContent,
           unit_price: parseFloat(el.getAttribute('data-price')),
           image_path: el.getAttribute('data-image'),
-          stock_quantity: parseInt(el.getAttribute('data-stock')),
+          stock_quantity: parseFloat(el.getAttribute('data-stock')),
           is_bulk: parseInt(el.getAttribute('data-is_bulk')) || 0,
           bulk_unit: el.getAttribute('data-bulk_unit') || 'kg',
           category_id: el.getAttribute('data-category') || undefined
@@ -619,7 +619,7 @@ function _addToCartInternal(prod) {
   // Validación de Stock
   const currentQty = existing ? existing.quantity : 0;
   // Si prod.stock_quantity es undefined o null, asumimos infinito o no controlado
-  const maxStock = (prod.stock_quantity !== undefined && prod.stock_quantity !== null && prod.stock_quantity !== '') ? parseInt(prod.stock_quantity) : null;
+  const maxStock = (prod.stock_quantity !== undefined && prod.stock_quantity !== null && prod.stock_quantity !== '') ? parseFloat(prod.stock_quantity) : null;
 
   if (maxStock !== null && (currentQty + 1) > maxStock) {
     showNotification(`Stock insuficiente. Disponible: ${maxStock}`, 'error');
@@ -838,7 +838,7 @@ function renderCart() {
           <div class="cart-item-right">
               <div class="cart-item-stepper">
                   <button class="step-btn minus" data-id="${item.product_id}" data-action="minus"><i class="fas fa-minus"></i></button>
-                  <span class="qty-display" data-id="${item.product_id}">${parseFloat(item.quantity) + unitLabel}</span>
+                  <span class="qty-display" data-id="${item.product_id}">${(window.FormatUtils ? window.FormatUtils.qty(item.quantity) : parseFloat(item.quantity)) + unitLabel}</span>
                   <button class="step-btn plus" data-id="${item.product_id}" data-action="plus"><i class="fas fa-plus"></i></button>
               </div>
           </div>
@@ -1839,7 +1839,7 @@ function renderGallery(list, animate = false) {
     }
 
     const stockBadge = (p.stock_quantity !== undefined && p.stock_quantity !== null && p.stock_quantity !== '') 
-          ? `<div class="stock-badge ${p.stock_quantity < 5 ? 'low' : ''}">${p.stock_quantity}</div>` 
+          ? `<div class="stock-badge ${p.stock_quantity < 5 ? 'low' : ''}">${window.FormatUtils ? window.FormatUtils.qty(p.stock_quantity) : p.stock_quantity}</div>` 
           : '';
 
     return `

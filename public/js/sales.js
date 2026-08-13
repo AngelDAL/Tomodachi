@@ -4066,30 +4066,40 @@ function bindPosCustomerEvents() {
   });
   if (search) search.addEventListener('keydown', (e) => {
     const results = document.querySelectorAll('#posCustomerResults .pos-customer-result');
-    // Flecha abajo: navegar al siguiente resultado
+    const createBtn = document.getElementById('posCustomerCreate');
+    // Total de elementos navegables: resultados + botón "Crear cliente nuevo"
+    const total = results.length + (createBtn ? 1 : 0);
+
+    // Flecha abajo: avanzar al siguiente objetivo (resultado -> ... -> crear -> resultado...)
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      if (results.length) {
-        posCustomerActiveIndex = (posCustomerActiveIndex + 1) % results.length;
-        highlightPosCustomerResult(results);
+      if (total) {
+        posCustomerActiveIndex = (posCustomerActiveIndex + 1) % total;
+        highlightPosCustomerTargets(results, createBtn);
       }
       return;
     }
-    // Flecha arriba: navegar al anterior
+    // Flecha arriba: retroceder al objetivo anterior
     if (e.key === 'ArrowUp') {
       e.preventDefault();
-      if (results.length) {
-        posCustomerActiveIndex = (posCustomerActiveIndex - 1 + results.length) % results.length;
-        highlightPosCustomerResult(results);
+      if (total) {
+        posCustomerActiveIndex = (posCustomerActiveIndex - 1 + total) % total;
+        highlightPosCustomerTargets(results, createBtn);
       }
       return;
     }
-    // Enter: seleccionar el resultado activo (o el primero si no hay activo)
+    // Enter: seleccionar el objetivo activo (resultado o crear cliente)
     if (e.key === 'Enter') {
       e.preventDefault();
-      const active = document.querySelector('#posCustomerResults .pos-customer-result.active');
-      if (active) { active.click(); }
-      else if (results.length) { results[0].click(); }
+      if (posCustomerActiveIndex >= 0 && posCustomerActiveIndex < results.length) {
+        results[posCustomerActiveIndex].click();
+      } else if (posCustomerActiveIndex === results.length && createBtn) {
+        window.location.href = createBtn.getAttribute('href');
+      } else if (results.length) {
+        results[0].click();
+      } else if (createBtn) {
+        window.location.href = createBtn.getAttribute('href');
+      }
       return;
     }
     // Escape: cerrar el dropdown, quitar focus y volver al flujo del POS
@@ -4105,11 +4115,12 @@ function bindPosCustomerEvents() {
   if (panelBtn) panelBtn.addEventListener('click', (e) => { e.stopPropagation(); openPosCustomerDrawer(); });
 }
 
-// Índice del resultado activo en el buscador de clientes (navegación ↑↓)
+// Índice del objetivo activo en el buscador de clientes (navegación ↑↓)
 let posCustomerActiveIndex = -1;
 
-function highlightPosCustomerResult(results) {
+function highlightPosCustomerTargets(results, createBtn) {
   results.forEach((r, i) => r.classList.toggle('active', i === posCustomerActiveIndex));
-  const active = results[posCustomerActiveIndex];
-  if (active) active.scrollIntoView({ block: 'nearest' });
+  if (createBtn) createBtn.classList.toggle('active', posCustomerActiveIndex === results.length);
+  const target = posCustomerActiveIndex < results.length ? results[posCustomerActiveIndex] : createBtn;
+  if (target) target.scrollIntoView({ block: 'nearest' });
 }

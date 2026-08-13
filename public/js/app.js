@@ -216,9 +216,11 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /**
- * Formatear moneda
+ * Formatear moneda — delega en FormatUtils (formato regional por tienda).
+ * Fallback: es-MX / MXN si FormatUtils no está inicializado.
  */
 function formatCurrency(amount) {
+    if (window.FormatUtils) return window.FormatUtils.currency(amount);
     return new Intl.NumberFormat('es-MX', {
         style: 'currency',
         currency: 'MXN'
@@ -226,9 +228,10 @@ function formatCurrency(amount) {
 }
 
 /**
- * Formatear fecha
+ * Formatear fecha — delega en FormatUtils (formato regional por tienda).
  */
 function formatDate(date) {
+    if (window.FormatUtils) return window.FormatUtils.date(date);
     return new Intl.DateTimeFormat('es-MX', {
         year: 'numeric',
         month: 'long',
@@ -379,6 +382,14 @@ async function loadStoreSettings() {
             // 3. Guardar nombre de la tienda para uso global (ej. tickets)
             if (store.store_name) {
                 localStorage.setItem('tomodachi_store_name', store.store_name);
+            }
+
+            // 4. Inicializar formato regional (números, moneda, fechas).
+            //    Si la tienda no tiene config, usa los defaults (es-MX/MXN).
+            if (window.FormatUtils && store.settings && store.settings.format) {
+                window.FormatUtils.init(store.settings.format);
+            } else if (window.FormatUtils) {
+                window.FormatUtils.init(null);
             }
         }
     } catch (error) {

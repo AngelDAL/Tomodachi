@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="css/dashboard.css?v=4">
     <link rel="stylesheet" href="css/inventory.css?v=4">
     <script src="js/theme-init.js"></script>
+    <script src="js/format-utils.js"></script>
 </head>
 <body>
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
@@ -334,7 +335,7 @@
                 let salesRows = (sales || []).map(s => `
                     <tr>
                         <td data-label="Venta">#${s.sale_id}</td>
-                        <td data-label="Fecha">${new Date(s.sale_date).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
+                        <td data-label="Fecha">${window.FormatUtils ? window.FormatUtils.date(s.sale_date) : new Date(s.sale_date).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
                         <td data-label="Total" style="text-align:right;">${fmtMXN(s.total)}</td>
                         <td data-label="Pagado" style="text-align:right; color: var(--success-color);">${fmtMXN(s.amount_paid)}</td>
                         <td data-label="Estado">${s.status === 'completed' ? (Number(s.amount_paid) >= Number(s.total) ? 'Pagada' : 'Apartado') : s.status}</td>
@@ -342,7 +343,7 @@
 
                 let payRows = (payments || []).map(p => `
                     <tr>
-                        <td data-label="Fecha">${new Date(p.created_at).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
+                        <td data-label="Fecha">${window.FormatUtils ? window.FormatUtils.date(p.created_at) : new Date(p.created_at).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
                         <td data-label="Monto" style="text-align:right; color: var(--success-color);">+${fmtMXN(p.amount)}</td>
                         <td data-label="Método">${p.payment_method || 'cash'}</td>
                         <td data-label="Notas">${esc(p.notes || '—')}</td>

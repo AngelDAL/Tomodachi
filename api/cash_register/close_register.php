@@ -7,6 +7,7 @@ require_once '../../config/database.php';
 require_once '../../config/constants.php';
 require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
+require_once '../../includes/FormatHelper.class.php';
 
 require_once '../../includes/Validator.class.php';
 require_once '../../includes/Auth.class.php';
@@ -143,7 +144,7 @@ try {
                 $adminUser['email'], 
                 $adminUser['full_name'] ?: 'Administrador', 
                 $storeName, 
-                date('d/m/Y H:i'), 
+                \FormatHelper::date(date('Y-m-d H:i:s'), \FormatHelper::getFormat($db, $store_id)), 
                 $stats
             );
         }

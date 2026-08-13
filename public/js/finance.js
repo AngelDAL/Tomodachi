@@ -47,7 +47,7 @@ async function loadTerminals() {
                         </div>
                         <div class="info-row">
                             <span>Apertura:</span>
-                            <span>${new Date(term.opening_date).toLocaleString()}</span>
+                            <span>${window.FormatUtils ? window.FormatUtils.date(term.opening_date) : new Date(term.opening_date).toLocaleString()}</span>
                         </div>
                         <div class="amount-display">${formatCurrency(balance)}</div>
                     </div>
@@ -474,6 +474,7 @@ document.getElementById('countedAmount').addEventListener('input', function(e) {
 });
 
 function formatCurrency(amount) {
+    if (window.FormatUtils) return window.FormatUtils.currency(amount);
     return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
 }
 

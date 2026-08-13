@@ -832,7 +832,7 @@ function renderProducts(items) {
             : '<span class="no-image"><i class="fas fa-image"></i></span>';
 
         const stockClass = (product.current_stock <= product.min_stock) ? 'stock-low' : 'stock-ok';
-        const formattedPrice = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(product.price);
+        const formattedPrice = window.FormatUtils ? window.FormatUtils.currency(product.price) : new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(product.price);
 
         if (currentViewMode === 'list') {
              return `

@@ -44,10 +44,10 @@ function buildThermalTicketHTML(data, prefs) {
     const maxChars = is58 ? 32 : 42;
 
     const storeName = data.store_name || localStorage.getItem('tomodachi_store_name') || 'Tomodachi';
-    const dateStr = data.date || new Date().toLocaleString('es-MX', {
+    const dateStr = data.date || (window.FormatUtils ? window.FormatUtils.date(new Date()) : new Date().toLocaleString('es-MX', {
         day: '2-digit', month: '2-digit', year: 'numeric',
         hour: '2-digit', minute: '2-digit'
-    });
+    }));
 
     // Línea separadora
     const sep = '-'.repeat(maxChars);
@@ -58,7 +58,7 @@ function buildThermalTicketHTML(data, prefs) {
         const qty = formatQty(it.quantity);
         const lineTotal = it.total != null ? it.total : (it.unit_price * it.quantity);
         const left = `${qty} ${name}`.slice(0, maxChars - 9);
-        const right = `$${Number(lineTotal).toFixed(2)}`.padStart(9);
+        const right = (window.FormatUtils ? window.FormatUtils.currency(lineTotal) : `$${Number(lineTotal).toFixed(2)}`).padStart(9);
         return `<div class="t-row">${escTicket(left)}<span class="t-right">${right}</span></div>`;
     }).join('');
 
@@ -72,7 +72,7 @@ function buildThermalTicketHTML(data, prefs) {
     if (data.subtotal != null) totalsHtml += totalRow('Subtotal', subtotal, maxChars);
     if (discount > 0) totalsHtml += totalRow('Descuento', -discount, maxChars);
     if (tax > 0) totalsHtml += totalRow('Impuesto', tax, maxChars);
-    totalsHtml += `<div class="t-row t-total">${'TOTAL'.padEnd(maxChars - 9)}<span class="t-right">$${Number(total).toFixed(2)}</span></div>`;
+    totalsHtml += `<div class="t-row t-total">${'TOTAL'.padEnd(maxChars - 9)}<span class="t-right">${window.FormatUtils ? window.FormatUtils.currency(total) : `$${Number(total).toFixed(2)}`}</span></div>`;
 
     if (data.cash_received != null) {
         totalsHtml += totalRow('Recibido', data.cash_received, maxChars);
@@ -138,7 +138,7 @@ function buildThermalTicketHTML(data, prefs) {
 function totalRow(label, amount, maxChars) {
     const l = label.slice(0, maxChars - 10);
     const sign = amount < 0 ? '-' : '';
-    const r = `${sign}$${Math.abs(Number(amount)).toFixed(2)}`.padStart(9);
+    const r = (sign + (window.FormatUtils ? window.FormatUtils.currency(Math.abs(Number(amount))) : `$${Math.abs(Number(amount)).toFixed(2)}`)).padStart(9);
     return `<div class="t-row">${escTicket(l)}<span class="t-right">${r}</span></div>`;
 }
 

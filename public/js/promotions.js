@@ -348,7 +348,7 @@ function renderProductsGrid(products) {
                 </div>
                 <div class="product-item-content">
                     <div class="product-item-name">${p.product_name}</div>
-                    <div class="product-item-price">$${parseFloat(p.price).toFixed(2)}</div>
+                    <div class="product-item-price">${window.FormatUtils ? window.FormatUtils.currency(p.price) : `$${parseFloat(p.price).toFixed(2)}`}</div>
                 </div>
             </div>
         `;
@@ -524,11 +524,11 @@ function calculateProfit() {
     const newProfit = newTotalRevenue - currentTotalCost;
     const diff = newProfit - currentProfit;
 
-    document.getElementById("currentProfit").innerText = `$${currentProfit.toFixed(2)}`;
-    document.getElementById("newProfit").innerText = `$${newProfit.toFixed(2)}`;
+    document.getElementById("currentProfit").innerText = window.FormatUtils ? window.FormatUtils.currency(currentProfit) : `$${currentProfit.toFixed(2)}`;
+    document.getElementById("newProfit").innerText = window.FormatUtils ? window.FormatUtils.currency(newProfit) : `$${newProfit.toFixed(2)}`;
 
     const diffEl = document.getElementById("profitDiff");
-    diffEl.innerText = `${diff >= 0 ? "+" : ""}$${diff.toFixed(2)}`;
+    diffEl.innerText = (diff >= 0 ? "+" : "") + (window.FormatUtils ? window.FormatUtils.currency(Math.abs(diff)) : `$${diff.toFixed(2)}`);
 
     const diffRow = document.getElementById("profitDiffRow");
     diffRow.className = `profit-row profit-diff ${diff >= 0 ? "positive" : "negative"}`;
@@ -665,10 +665,12 @@ const PROMO_PER_PAGE = 9;
 let currentPage = 1;
 
 function formatCurrency(amount) {
+    if (window.FormatUtils) return window.FormatUtils.currency(amount);
     return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount || 0);
 }
 
 function formatNumber(num) {
+    if (window.FormatUtils) return window.FormatUtils.number(num);
     return new Intl.NumberFormat('es-MX').format(num || 0);
 }
 
@@ -775,7 +777,7 @@ function renderPromotions(promotions) {
         }
 
         const discountValue = p.type === "bundle"
-            ? "$" + parseFloat(p.discount_value).toFixed(2)
+            ? (window.FormatUtils ? window.FormatUtils.currency(p.discount_value) : "$" + parseFloat(p.discount_value).toFixed(2))
             : parseFloat(p.discount_value) + (p.discount_type === "percentage" ? "%" : "$");
 
         return `
@@ -801,9 +803,9 @@ function renderPromotions(promotions) {
                         <div class="promo-timeline-progress ${status.class}" style="width: ${progress.percent}%"></div>
                     </div>
                     <div class="promo-timeline-labels">
-                        <span><i class="fas fa-play"></i> ${new Date(p.start_date).toLocaleDateString()}</span>
+                        <span><i class="fas fa-play"></i> ${window.FormatUtils ? window.FormatUtils.dateOnly(p.start_date) : new Date(p.start_date).toLocaleDateString()}</span>
                         <span class="promo-timeline-center">${progress.label}</span>
-                        <span>${new Date(p.end_date).toLocaleDateString()} <i class="fas fa-flag-checkered"></i></span>
+                        <span>${window.FormatUtils ? window.FormatUtils.dateOnly(p.end_date) : new Date(p.end_date).toLocaleDateString()} <i class="fas fa-flag-checkered"></i></span>
                     </div>
                     ${dateBadgeText ? `<div class="promo-date-badge ${status.class}">${dateBadgeText}</div>` : ''}
                 </div>
@@ -1103,10 +1105,10 @@ function calculateDrawerProfit() {
     const newProfit = newTotalRevenue - currentTotalCost;
     const diff = newProfit - currentProfit;
 
-    document.getElementById("drawerCurrentProfit").innerText = "$" + currentProfit.toFixed(2);
-    document.getElementById("drawerNewProfit").innerText = "$" + newProfit.toFixed(2);
+    document.getElementById("drawerCurrentProfit").innerText = window.FormatUtils ? window.FormatUtils.currency(currentProfit) : "$" + currentProfit.toFixed(2);
+    document.getElementById("drawerNewProfit").innerText = window.FormatUtils ? window.FormatUtils.currency(newProfit) : "$" + newProfit.toFixed(2);
     const diffEl = document.getElementById("drawerProfitDiff");
-    diffEl.innerText = (diff >= 0 ? "+" : "") + "$" + diff.toFixed(2);
+    diffEl.innerText = (diff >= 0 ? "+" : "") + (window.FormatUtils ? window.FormatUtils.currency(Math.abs(diff)) : "$" + diff.toFixed(2));
     const diffRow = document.getElementById("drawerProfitDiffRow");
     diffRow.className = "profit-row profit-diff " + (diff >= 0 ? "positive" : "negative");
 }
@@ -1142,7 +1144,7 @@ function renderDrawerProducts(products) {
                 </div>
                 <div class="product-item-content">
                     <div class="product-item-name">${p.product_name}</div>
-                    <div class="product-item-price">$${parseFloat(p.price).toFixed(2)}</div>
+                    <div class="product-item-price">${window.FormatUtils ? window.FormatUtils.currency(p.price) : `$${parseFloat(p.price).toFixed(2)}`}</div>
                 </div>
             </div>
         `;

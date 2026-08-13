@@ -15,6 +15,7 @@
     <link rel="stylesheet" href="css/mobile-nav.css?v=4">
     <link rel="stylesheet" href="css/dashboard.css?v=4">
     <script src="js/theme-init.js"></script>
+    <script src="js/format-utils.js"></script>
     <script src="lib/qrcodejs/qrcode.min.js"></script>
 </head>
 
@@ -325,11 +326,11 @@
                     html += `
                         <tr style="cursor: pointer;" title="Clic para ver detalle de la venta #${row.sale_id}" onclick="showSaleDetail(${row.sale_id})">
                             <td data-label="ID Venta">#${row.sale_id}</td>
-                            <td data-label="Fecha">${new Date(row.sale_date).toLocaleString()}</td>
+                            <td data-label="Fecha">${(window.FormatUtils ? window.FormatUtils.date(row.sale_date) : new Date(row.sale_date).toLocaleString())}</td>
                             <td data-label="Usuario">${row.username}</td>
                             <td data-label="Método Pago">${formatPaymentMethod(row.payment_method)}</td>
-                            <td data-label="Total">$${parseFloat(row.total).toFixed(2)}</td>
-                            <td data-label="Ganancia" style="color: ${row.profit >= 0 ? 'green' : 'red'}">$${parseFloat(row.profit).toFixed(2)}</td>
+                            <td data-label="Total">${window.FormatUtils ? window.FormatUtils.currency(parseFloat(row.total)) : `$${parseFloat(row.total).toFixed(2)}`}</td>
+                            <td data-label="Ganancia" style="color: ${row.profit >= 0 ? 'green' : 'red'}">${window.FormatUtils ? window.FormatUtils.currency(parseFloat(row.profit)) : `$${parseFloat(row.profit).toFixed(2)}`}</td>
                         </tr>
                     `;
                 });
@@ -338,8 +339,8 @@
                 html += `
                     <tr style="background-color: var(--bg-light); font-weight: bold;">
                         <td colspan="4" style="text-align: right;">TOTALES:</td>
-                        <td>$${totalSales.toFixed(2)}</td>
-                        <td>$${totalProfit.toFixed(2)}</td>
+                        <td>${window.FormatUtils ? window.FormatUtils.currency(totalSales) : `$${totalSales.toFixed(2)}`}</td>
+                        <td>${window.FormatUtils ? window.FormatUtils.currency(totalProfit) : `$${totalProfit.toFixed(2)}`}</td>
                     </tr>
                 `;
 
@@ -365,10 +366,10 @@
                             <td data-label="Producto">${row.product_name}</td>
                             <td data-label="Código">${row.barcode || '-'}</td>
                             <td data-label="Stock">${row.current_stock}</td>
-                            <td data-label="Costo">$${parseFloat(row.cost).toFixed(2)}</td>
-                            <td data-label="Precio">$${parseFloat(row.price).toFixed(2)}</td>
-                            <td data-label="Valor Costo">$${parseFloat(row.total_cost_value).toFixed(2)}</td>
-                            <td data-label="Valor Venta">$${parseFloat(row.total_price_value).toFixed(2)}</td>
+                            <td data-label="Costo">${window.FormatUtils ? window.FormatUtils.currency(parseFloat(row.cost)) : `$${parseFloat(row.cost).toFixed(2)}`}</td>
+                            <td data-label="Precio">${window.FormatUtils ? window.FormatUtils.currency(parseFloat(row.price)) : `$${parseFloat(row.price).toFixed(2)}`}</td>
+                            <td data-label="Valor Costo">${window.FormatUtils ? window.FormatUtils.currency(parseFloat(row.total_cost_value)) : `$${parseFloat(row.total_cost_value).toFixed(2)}`}</td>
+                            <td data-label="Valor Venta">${window.FormatUtils ? window.FormatUtils.currency(parseFloat(row.total_price_value)) : `$${parseFloat(row.total_price_value).toFixed(2)}`}</td>
                         </tr>
                     `;
                 });
@@ -376,8 +377,8 @@
                 html += `
                     <tr style="background-color: var(--bg-light); font-weight: bold;">
                         <td colspan="5" style="text-align: right;">TOTALES:</td>
-                        <td>$${totalCostVal.toFixed(2)}</td>
-                        <td>$${totalPriceVal.toFixed(2)}</td>
+                        <td>${window.FormatUtils ? window.FormatUtils.currency(totalCostVal) : `$${totalCostVal.toFixed(2)}`}</td>
+                        <td>${window.FormatUtils ? window.FormatUtils.currency(totalPriceVal) : `$${totalPriceVal.toFixed(2)}`}</td>
                     </tr>
                 `;
 
@@ -396,8 +397,8 @@
                             <td data-label="Producto">${row.product_name}</td>
                             <td data-label="Código">${row.barcode || '-'}</td>
                             <td data-label="Unidades">${row.total_sold}</td>
-                            <td data-label="Ingresos">$${parseFloat(row.revenue).toFixed(2)}</td>
-                            <td data-label="Ganancia">$${parseFloat(row.profit).toFixed(2)}</td>
+                            <td data-label="Ingresos">${window.FormatUtils ? window.FormatUtils.currency(parseFloat(row.revenue)) : `$${parseFloat(row.revenue).toFixed(2)}`}</td>
+                            <td data-label="Ganancia">${window.FormatUtils ? window.FormatUtils.currency(parseFloat(row.profit)) : `$${parseFloat(row.profit).toFixed(2)}`}</td>
                         </tr>
                     `;
                 });
@@ -421,11 +422,11 @@
                     html += `
                         <tr>
                             <td data-label="ID">#${row.register_id}</td>
-                            <td data-label="Apertura">${new Date(row.opening_date).toLocaleString()}</td>
-                            <td data-label="Cierre">${row.closing_date ? new Date(row.closing_date).toLocaleString() : '-'}</td>
+                            <td data-label="Apertura">${(window.FormatUtils ? window.FormatUtils.date(row.opening_date) : new Date(row.opening_date).toLocaleString())}</td>
+                            <td data-label="Cierre">${row.closing_date ? (window.FormatUtils ? window.FormatUtils.date(row.closing_date) : new Date(row.closing_date).toLocaleString()) : '-'}</td>
                             <td data-label="Terminal">${row.terminal_name || 'General'}</td>
                             <td data-label="Usuario">${row.username}</td>
-                            <td data-label="Inicial">$${parseFloat(row.initial_amount).toFixed(2)}</td>
+                            <td data-label="Inicial">${window.FormatUtils ? window.FormatUtils.currency(parseFloat(row.initial_amount)) : `$${parseFloat(row.initial_amount).toFixed(2)}`}</td>
                             <td data-label="Final">${row.final_amount !== null ? '$' + parseFloat(row.final_amount).toFixed(2) : '-'}</td>
                             <td data-label="Diferencia" style="color: ${diffColor}">${row.difference !== null ? '$' + diff.toFixed(2) : '-'}</td>
                             <td data-label="Estado"><span class="badge ${row.status === 'open' ? 'badge-success' : 'badge-secondary'}">${row.status === 'open' ? 'Abierta' : 'Cerrada'}</span></td>
@@ -451,11 +452,11 @@
 
                     html += `
                         <tr>
-                            <td data-label="Fecha">${new Date(row.created_at).toLocaleString()}</td>
+                            <td data-label="Fecha">${(window.FormatUtils ? window.FormatUtils.date(row.created_at) : new Date(row.created_at).toLocaleString())}</td>
                             <td data-label="Terminal">${row.terminal_name || 'General'}</td>
                             <td data-label="Usuario">${row.username}</td>
                             <td data-label="Tipo" class="${typeClass}">${typeLabel}</td>
-                            <td data-label="Monto">$${parseFloat(row.amount).toFixed(2)}</td>
+                            <td data-label="Monto">${window.FormatUtils ? window.FormatUtils.currency(parseFloat(row.amount)) : `$${parseFloat(row.amount).toFixed(2)}`}</td>
                             <td data-label="Descripción">${row.description || '-'}</td>
                         </tr>
                     `;
@@ -475,7 +476,7 @@
                 data.forEach(row => {
                     html += `
                         <tr>
-                            <td data-label="Fecha">${new Date(row.created_at).toLocaleString()}</td>
+                            <td data-label="Fecha">${(window.FormatUtils ? window.FormatUtils.date(row.created_at) : new Date(row.created_at).toLocaleString())}</td>
                             <td data-label="Producto">${row.product_name}</td>
                             <td data-label="Tipo">${formatMovementType(row.movement_type)}</td>
                             <td data-label="Cant.">${row.quantity}</td>
@@ -609,7 +610,7 @@
             
             const user = await ensureCurrentUser() || {};
             const now = new Date();
-            const dateStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
+            const dateStr = (window.FormatUtils ? window.FormatUtils.date(now) : now.toLocaleDateString() + ' ' + now.toLocaleTimeString());
             const storeName = user.store_name || 'Tomodachi';
             const userName = user.full_name || user.username || 'Usuario';
             
@@ -643,7 +644,7 @@
                 currentReportData.forEach(row => {
                     ws_data.push([
                         '#' + row.sale_id,
-                        new Date(row.sale_date).toLocaleString(),
+                        (window.FormatUtils ? window.FormatUtils.date(row.sale_date) : new Date(row.sale_date).toLocaleString()),
                         row.username,
                         formatPaymentMethod(row.payment_method),
                         parseFloat(row.total).toFixed(2),
@@ -678,7 +679,7 @@
                 ws_data.push(['Fecha', 'Producto', 'Tipo', 'Cant.', 'Stock Ant.', 'Stock Nuevo', 'Usuario', 'Notas']);
                 currentReportData.forEach(row => {
                     ws_data.push([
-                        new Date(row.created_at).toLocaleString(),
+                        (window.FormatUtils ? window.FormatUtils.date(row.created_at) : new Date(row.created_at).toLocaleString()),
                         row.product_name,
                         formatMovementType(row.movement_type),
                         row.quantity,
@@ -726,7 +727,7 @@
 
             const user = await ensureCurrentUser() || {};
             const now = new Date();
-            const dateStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
+            const dateStr = (window.FormatUtils ? window.FormatUtils.date(now) : now.toLocaleDateString() + ' ' + now.toLocaleTimeString());
             const storeName = user.store_name || 'Mi Negocio';
             const userName = user.full_name || user.username || 'Usuario';
             const logoUrl = getRelativeImagePath(user.logo_url) || 'assets/images/default-logo.png';
@@ -765,7 +766,7 @@
                     tableHead = [['ID', 'Fecha', 'Usuario', 'Método', 'Total', 'Ganancia']];
                     tableRows = currentReportData.map(r => [
                         '#' + r.sale_id,
-                        new Date(r.sale_date).toLocaleString(),
+                        (window.FormatUtils ? window.FormatUtils.date(r.sale_date) : new Date(r.sale_date).toLocaleString()),
                         r.username || '-',
                         formatPaymentMethod(r.payment_method),
                         money(r.total),
@@ -797,7 +798,7 @@
                 case 'inventory_movements':
                     tableHead = [['Fecha', 'Producto', 'Tipo', 'Cant.', 'Stock Ant.', 'Stock Nuevo', 'Usuario', 'Notas']];
                     tableRows = currentReportData.map(r => [
-                        new Date(r.created_at).toLocaleString(),
+                        (window.FormatUtils ? window.FormatUtils.date(r.created_at) : new Date(r.created_at).toLocaleString()),
                         r.product_name,
                         formatMovementType(r.movement_type),
                         r.quantity,
@@ -813,8 +814,8 @@
                         const diff = parseFloat(r.difference || 0);
                         return [
                             '#' + r.register_id,
-                            new Date(r.opening_date).toLocaleString(),
-                            r.closing_date ? new Date(r.closing_date).toLocaleString() : '-',
+                            (window.FormatUtils ? window.FormatUtils.date(r.opening_date) : new Date(r.opening_date).toLocaleString()),
+                            r.closing_date ? (window.FormatUtils ? window.FormatUtils.date(r.closing_date) : new Date(r.closing_date).toLocaleString()) : '-',
                             r.terminal_name || 'General',
                             r.username || '-',
                             money(r.initial_amount),
@@ -832,7 +833,7 @@
                         else if (r.movement_type === 'withdrawal') typeLabel = 'Retiro';
                         else if (r.movement_type === 'sale') typeLabel = 'Venta';
                         return [
-                            new Date(r.created_at).toLocaleString(),
+                            (window.FormatUtils ? window.FormatUtils.date(r.created_at) : new Date(r.created_at).toLocaleString()),
                             r.terminal_name || 'General',
                             r.username || '-',
                             typeLabel,
@@ -896,11 +897,11 @@
                 if (sd && sd.value) {
                     const s = new Date(sd.value);
                     const e = ed && ed.value ? new Date(ed.value) : new Date();
-                    periodStr = s.toLocaleDateString() + ' - ' + (ed && ed.value ? e.toLocaleDateString() : 'Hoy');
+                    periodStr = (window.FormatUtils ? window.FormatUtils.dateOnly(s) : s.toLocaleDateString()) + ' - ' + (ed && ed.value ? (window.FormatUtils ? window.FormatUtils.dateOnly(e) : e.toLocaleDateString()) : 'Hoy');
                 }
             } catch (e) { periodStr = ''; }
 
-            const dateStrFull = now.toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            const dateStrFull = (window.FormatUtils ? window.FormatUtils.dateLong(now) : now.toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
             const timeStr = now.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
 
             // ============================================================
@@ -1666,7 +1667,7 @@
                 }
                 const d = data.data;
 
-                const fecha = new Date(d.sale_date + ' UTC').toLocaleString('es-MX', {
+                const fecha = window.FormatUtils ? window.FormatUtils.date(new Date(d.sale_date + ' UTC')) : new Date(d.sale_date + ' UTC').toLocaleString('es-MX', {
                     day: '2-digit', month: '2-digit', year: 'numeric',
                     hour: '2-digit', minute: '2-digit'
                 });

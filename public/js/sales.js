@@ -1242,7 +1242,7 @@ function setupHistoryModal() {
   
             body.innerHTML = data.data.map(sale => {
                 const total = parseFloat(sale.total).toFixed(2);
-                const date = new Date(sale.sale_date).toLocaleString();
+                const date = window.FormatUtils ? window.FormatUtils.date(sale.sale_date) : new Date(sale.sale_date).toLocaleString();
                 const payMethod = sale.payment_method === 'cash' ? 'Efectivo' : 
                                  sale.payment_method === 'card' ? 'Tarjeta' : 
                                  sale.payment_method === 'transfer' ? 'Transferencia' : 'Mixto';
@@ -1260,7 +1260,7 @@ function setupHistoryModal() {
                         </div>
                     </div>
                     <div class="history-card-footer" style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;">
-                        <div class="h-total-price" style="font-size: 1.1rem; font-weight: bold; color: var(--text-color);">$${total}</div>
+                        <div class="h-total-price" style="font-size: 1.1rem; font-weight: bold; color: var(--text-color);">${window.FormatUtils ? window.FormatUtils.currency(sale.total) : `$${total}`}</div>
                         <button class="btn-reprint" onclick="viewSaleDetails(${sale.sale_id})" style="background: var(--bg-light); border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;"><i class="fas fa-eye"></i> Ver</button>
                     </div>
                 </div>
@@ -1612,7 +1612,7 @@ async function finalizeSale() {
         discount: parseFloat((discountInput && discountInput.value) || 0),
         tax: parseFloat((taxInput && taxInput.value) || 0),
         total: resData.total != null ? resData.total : CART.reduce((s, i) => s + i.subtotal, 0),
-        date: new Date().toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+        date: window.FormatUtils ? window.FormatUtils.date(new Date()) : new Date().toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
         sale_id: resData.sale_id || '---',
         cashier: resData.cashier_name || 'Cajero',
         payment_method: paymentMethodSelect ? paymentMethodSelect.value : 'cash',
@@ -2336,7 +2336,7 @@ function printTicket(data) {
   const itemsHtml = data.items.map(item => `
     <tr>
       <td style="padding: 5px 0;">${item.quantity} x ${item.product_name}</td>
-      <td style="text-align: right;">$${(item.unit_price * item.quantity).toFixed(2)}</td>
+      <td style="text-align: right;">${window.FormatUtils ? window.FormatUtils.currency(item.unit_price * item.quantity) : `$${(item.unit_price * item.quantity).toFixed(2)}`}</td>
     </tr>
   `).join('');
 
@@ -2364,7 +2364,7 @@ function printTicket(data) {
         ${itemsHtml}
       </table>
       <div class="total">
-        TOTAL: $${data.total.toFixed(2)}
+        TOTAL: ${window.FormatUtils ? window.FormatUtils.currency(data.total) : `$${data.total.toFixed(2)}`}
       </div>
       <div class="footer">
         <p>¡Gracias por su compra!</p>
@@ -2399,7 +2399,7 @@ function parkCurrentSale() {
 
   const saleData = {
     id: Date.now(),
-    timestamp: new Date().toLocaleString(),
+    timestamp: window.FormatUtils ? window.FormatUtils.date(new Date()) : new Date().toLocaleString(),
     items: [...CART],
     total: CART.reduce((s, i) => s + i.subtotal, 0)
   };
@@ -3730,7 +3730,7 @@ async function loadCustomersIntoSelect() {
     const prev = custSel.value;
     custSel.innerHTML = '<option value="">— Seleccionar cliente —</option>' +
       (data.data || []).map(c =>
-        `<option value="${c.customer_id}" ${Number(c.balance) > 0 ? 'data-balance="' + c.balance + '"' : ''}>${c.full_name}${Number(c.balance) > 0 ? ' (adeuda ' + new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(c.balance) + ')' : ''}</option>`
+        `<option value="${c.customer_id}" ${Number(c.balance) > 0 ? 'data-balance="' + c.balance + '"' : ''}>${c.full_name}${Number(c.balance) > 0 ? ' (adeuda ' + (window.FormatUtils ? window.FormatUtils.currency(c.balance) : new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(c.balance)) + ')' : ''}</option>`
       ).join('');
     if (prev) custSel.value = prev;
   } catch (e) {

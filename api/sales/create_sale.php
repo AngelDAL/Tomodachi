@@ -17,6 +17,7 @@ require_once '../../config/database.php';
 require_once '../../config/constants.php';
 require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
+require_once '../../includes/FormatHelper.class.php';
 require_once '../../includes/Validator.class.php';
 require_once '../../includes/Auth.class.php';
 require_once '../../includes/ApiAuth.class.php';
@@ -157,7 +158,8 @@ try {
             // Validar límite de crédito (0 = sin límite)
             $newBalance = (float)$customer['balance'] + ($total - $amount_paid);
             if ((float)$customer['credit_limit'] > 0 && $newBalance > (float)$customer['credit_limit']) {
-                Response::error("El saldo del cliente excede su límite de crédito ($" . number_format($customer['credit_limit'], 2) . ")", 409);
+                $fmt = \FormatHelper::getFormat($db, $store_id);
+                Response::error("El saldo del cliente excede su límite de crédito (" . \FormatHelper::currency($customer['credit_limit'], $fmt) . ")", 409);
             }
         }
     }

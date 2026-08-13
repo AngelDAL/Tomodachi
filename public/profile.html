@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="css/mobile-nav.css?v=4">
     <link rel="stylesheet" href="css/dashboard.css?v=4">
     <script src="js/theme-init.js"></script>
+    <script src="js/format-utils.js"></script>
     <script src="lib/xlsx/xlsx.full.min.js"></script>
     <style>
         .profile-container {
@@ -358,6 +359,90 @@
                                         Recibe avisos (ventas, stock bajo) aun con la app cerrada. Requiere
                                         configuración de llaves VAPID en el servidor (ver docs/PUSH.md).
                                     </p>
+                                </div>
+                            </div>
+
+                            <h4 class="sub-section-title" style="margin-top: 2.2rem; margin-bottom: 1rem;"><i class="fas fa-globe"></i> Formato Regional</h4>
+                            <p class="sub-section-desc">Cómo se muestran los números, la moneda y las fechas en todo el sistema (pantallas, tickets y reportes). Solo afecta la presentación; los datos se guardan igual para todas las regiones.</p>
+                            <div class="form-grid">
+                                <div class="form-group" style="grid-column: 1 / -1;">
+                                    <label>Preset rápido</label>
+                                    <select id="formatPreset" style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-input); color: var(--text-color);">
+                                        <option value="">— Personalizado —</option>
+                                        <option value="MX">🇲🇽 México (MXN)</option>
+                                        <option value="CO">🇨🇴 Colombia (COP)</option>
+                                        <option value="US">🇺🇸 Estados Unidos (USD)</option>
+                                        <option value="ES">🇪🇸 España (EUR)</option>
+                                        <option value="AR">🇦🇷 Argentina (ARS)</option>
+                                        <option value="JP">🇯🇵 Japón (JPY)</option>
+                                        <option value="BR">🇧🇷 Brasil (BRL)</option>
+                                    </select>
+                                    <p style="font-size: 0.85rem; color: var(--text-light); margin-top: 5px;">Selecciona un país para rellenar los campos de abajo. Luego puedes ajustarlos manualmente.</p>
+                                </div>
+                                <div class="form-group">
+                                    <label>Código de moneda</label>
+                                    <input type="text" id="formatCurrencyCode" placeholder="MXN" maxlength="3" style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-input); color: var(--text-color);">
+                                </div>
+                                <div class="form-group">
+                                    <label>Símbolo de moneda</label>
+                                    <input type="text" id="formatCurrencySymbol" placeholder="$" maxlength="8" style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-input); color: var(--text-color);">
+                                </div>
+                                <div class="form-group">
+                                    <label>Posición del símbolo</label>
+                                    <select id="formatSymbolPosition" style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-input); color: var(--text-color);">
+                                        <option value="before">Antes ($1,234)</option>
+                                        <option value="after">Después (1,234$)</option>
+                                        <option value="none">Ninguno (solo número)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Separador de miles</label>
+                                    <select id="formatThousandsSep" style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-input); color: var(--text-color);">
+                                        <option value=",">Coma (1,234)</option>
+                                        <option value=".">Punto (1.234)</option>
+                                        <option value="space">Espacio (1 234)</option>
+                                        <option value="none">Ninguno (1234)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Separador de decimales</label>
+                                    <select id="formatDecimalSep" style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-input); color: var(--text-color);">
+                                        <option value=".">Punto (1.50)</option>
+                                        <option value=",">Coma (1,50)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Decimales</label>
+                                    <select id="formatDecimals" style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-input); color: var(--text-color);">
+                                        <option value="0">0 (1,234)</option>
+                                        <option value="1">1 (1,234.5)</option>
+                                        <option value="2">2 (1,234.56)</option>
+                                        <option value="3">3 (1,234.567)</option>
+                                        <option value="4">4 (1,234.5678)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Formato de fecha</label>
+                                    <select id="formatDateFormat" style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-input); color: var(--text-color);">
+                                        <option value="DD/MM/YYYY">DD/MM/YYYY (13/08/2026)</option>
+                                        <option value="MM/DD/YYYY">MM/DD/YYYY (08/13/2026)</option>
+                                        <option value="YYYY-MM-DD">YYYY-MM-DD (2026-08-13)</option>
+                                        <option value="DD-MM-YYYY">DD-MM-YYYY (13-08-2026)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Formato de hora</label>
+                                    <select id="formatTimeFormat" style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-input); color: var(--text-color);">
+                                        <option value="24h">24 horas (14:30)</option>
+                                        <option value="12h">12 horas (2:30 PM)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" style="grid-column: 1 / -1;">
+                                    <label>Vista previa</label>
+                                    <div id="formatPreview" style="background: var(--bg-light); border: 1px dashed var(--border-color); border-radius: 8px; padding: 12px 16px; font-size: 0.95rem; color: var(--text-color);">
+                                        Cargando...
+                                    </div>
+                                    <p style="font-size: 0.85rem; color: var(--text-light); margin-top: 5px;">Así se verán los montos y las fechas en tus pantallas, tickets y reportes.</p>
                                 </div>
                             </div>
 

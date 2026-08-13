@@ -157,6 +157,8 @@ async function loadCompanySettings() {
             if (store.settings) {
                 document.getElementById('allowNegativeStock').checked = !!store.settings.allow_negative_stock;
                 document.getElementById('requireOpenRegister').checked = !!store.settings.require_open_register;
+                // Cargar formato regional
+                loadFormatConfig(store.settings.format || null);
             }
 
             // Cargar configuración de tema (claro + oscuro personalizado)
@@ -478,6 +480,111 @@ function collectThemeConfig(dark) {
     return cfg;
 }
 
+// ============================================================
+// Formato Regional (números, moneda, fechas)
+// ============================================================
+
+const FORMAT_PRESETS = {
+    MX: { currency_code: 'MXN', currency_symbol: '$', symbol_position: 'before', thousands_sep: ',', decimal_sep: '.', decimals: 2, date_format: 'DD/MM/YYYY', time_format: '24h', locale: 'es-MX' },
+    CO: { currency_code: 'COP', currency_symbol: '$', symbol_position: 'before', thousands_sep: '.', decimal_sep: ',', decimals: 0, date_format: 'DD/MM/YYYY', time_format: '24h', locale: 'es-CO' },
+    US: { currency_code: 'USD', currency_symbol: '$', symbol_position: 'before', thousands_sep: ',', decimal_sep: '.', decimals: 2, date_format: 'MM/DD/YYYY', time_format: '12h', locale: 'en-US' },
+    ES: { currency_code: 'EUR', currency_symbol: '€', symbol_position: 'before', thousands_sep: '.', decimal_sep: ',', decimals: 2, date_format: 'DD/MM/YYYY', time_format: '24h', locale: 'es-ES' },
+    AR: { currency_code: 'ARS', currency_symbol: '$', symbol_position: 'before', thousands_sep: '.', decimal_sep: ',', decimals: 2, date_format: 'DD/MM/YYYY', time_format: '24h', locale: 'es-AR' },
+    JP: { currency_code: 'JPY', currency_symbol: '¥', symbol_position: 'before', thousands_sep: ',', decimal_sep: '.', decimals: 0, date_format: 'YYYY-MM-DD', time_format: '24h', locale: 'ja-JP' },
+    BR: { currency_code: 'BRL', currency_symbol: 'R$', symbol_position: 'before', thousands_sep: '.', decimal_sep: ',', decimals: 2, date_format: 'DD/MM/YYYY', time_format: '24h', locale: 'pt-BR' }
+};
+
+function readFormatForm() {
+    return {
+        currency_code: (document.getElementById('formatCurrencyCode').value || 'MXN').toUpperCase(),
+        currency_symbol: document.getElementById('formatCurrencySymbol').value || '$',
+        symbol_position: document.getElementById('formatSymbolPosition').value,
+        thousands_sep: document.getElementById('formatThousandsSep').value,
+        decimal_sep: document.getElementById('formatDecimalSep').value,
+        decimals: (() => { const v = parseInt(document.getElementById('formatDecimals').value, 10); return isNaN(v) ? 2 : v; })(),
+        date_format: document.getElementById('formatDateFormat').value,
+        time_format: document.getElementById('formatTimeFormat').value,
+        locale: FORMAT_PRESETS[document.getElementById('formatPreset').value] ? FORMAT_PRESETS[document.getElementById('formatPreset').value].locale : 'es-MX'
+    };
+}
+
+function applyFormatForm(cfg) {
+    if (!cfg) cfg = {};
+    document.getElementById('formatCurrencyCode').value = cfg.currency_code || 'MXN';
+    document.getElementById('formatCurrencySymbol').value = cfg.currency_symbol || '$';
+    document.getElementById('formatSymbolPosition').value = cfg.symbol_position || 'before';
+    document.getElementById('formatThousandsSep').value = cfg.thousands_sep || ',';
+    document.getElementById('formatDecimalSep').value = cfg.decimal_sep || '.';
+    document.getElementById('formatDecimals').value = String(cfg.decimals === undefined ? 2 : cfg.decimals);
+    document.getElementById('formatDateFormat').value = cfg.date_format || 'DD/MM/YYYY';
+    document.getElementById('formatTimeFormat').value = cfg.time_format || '24h';
+    // Detectar preset que coincida (si aplica)
+    let preset = '';
+    for (const [key, p] of Object.entries(FORMAT_PRESETS)) {
+        if (JSON.stringify(p) === JSON.stringify({
+            currency_code: cfg.currency_code || 'MXN',
+            currency_symbol: cfg.currency_symbol || '$',
+            symbol_position: cfg.symbol_position || 'before',
+            thousands_sep: cfg.thousands_sep || ',',
+            decimal_sep: cfg.decimal_sep || '.',
+            decimals: cfg.decimals === undefined ? 2 : cfg.decimals,
+            date_format: cfg.date_format || 'DD/MM/YYYY',
+            time_format: cfg.time_format || '24h',
+            locale: cfg.locale || 'es-MX'
+        })) { preset = key; break; }
+    }
+    document.getElementById('formatPreset').value = preset;
+    updateFormatPreview();
+}
+
+function updateFormatPreview() {
+    const preview = document.getElementById('formatPreview');
+    if (!preview) return;
+    const cfg = readFormatForm();
+    if (window.FormatUtils) {
+        window.FormatUtils.init(cfg);
+        const sampleDate = new Date(2026, 7, 13, 14, 30);
+        preview.innerHTML = `
+            <div style="display:flex; flex-wrap:wrap; gap:1rem; align-items:center;">
+                <span><strong>Moneda:</strong> ${window.FormatUtils.currency(1234567.89)}</span>
+                <span><strong>Número:</strong> ${window.FormatUtils.number(1234567.89)}</span>
+                <span><strong>Fecha:</strong> ${window.FormatUtils.date(sampleDate)}</span>
+            </div>`;
+    } else {
+        preview.textContent = 'Formato: ' + cfg.currency_symbol + ' 1,234.56 · ' + cfg.date_format;
+    }
+}
+
+function loadFormatConfig(cfg) {
+    applyFormatForm(cfg);
+}
+
+// Preset al cambiar el select
+const formatPresetSel = document.getElementById('formatPreset');
+if (formatPresetSel) {
+    formatPresetSel.addEventListener('change', () => {
+        const preset = FORMAT_PRESETS[formatPresetSel.value];
+        if (preset) {
+            document.getElementById('formatCurrencyCode').value = preset.currency_code;
+            document.getElementById('formatCurrencySymbol').value = preset.currency_symbol;
+            document.getElementById('formatSymbolPosition').value = preset.symbol_position;
+            document.getElementById('formatThousandsSep').value = preset.thousands_sep;
+            document.getElementById('formatDecimalSep').value = preset.decimal_sep;
+            document.getElementById('formatDecimals').value = String(preset.decimals);
+            document.getElementById('formatDateFormat').value = preset.date_format;
+            document.getElementById('formatTimeFormat').value = preset.time_format;
+        }
+        updateFormatPreview();
+    });
+    // Preview en vivo al cambiar cualquier campo
+    ['formatCurrencyCode', 'formatCurrencySymbol', 'formatSymbolPosition',
+     'formatThousandsSep', 'formatDecimalSep', 'formatDecimals',
+     'formatDateFormat', 'formatTimeFormat'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('change', updateFormatPreview);
+    });
+}
+
 document.getElementById('companyForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
@@ -511,7 +618,8 @@ document.getElementById('companyForm').addEventListener('submit', async (e) => {
     // Recolectar configuración de negocio
     const settings = {
         allow_negative_stock: document.getElementById('allowNegativeStock').checked,
-        require_open_register: document.getElementById('requireOpenRegister').checked
+        require_open_register: document.getElementById('requireOpenRegister').checked,
+        format: readFormatForm()
     };
 
     const data = {

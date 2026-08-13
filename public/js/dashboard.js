@@ -59,7 +59,7 @@ async function loadChartData() {
         startDate.setDate(startDate.getDate() - 6);
         
         const formatDate = (d) => d.toISOString().split('T')[0];
-        const formatDisplay = (d) => d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
+        const formatDisplay = (d) => { const loc = (window.FormatUtils && window.FormatUtils.getConfig().locale) || 'es-MX'; return d.toLocaleDateString(loc, { day: 'numeric', month: 'short' }); };
         
         const rangeLabel = document.getElementById('chartRangeLabel');
         if (rangeLabel) {
@@ -85,10 +85,8 @@ async function loadChartData() {
 }
 
 function formatCurrency(amount) {
-    return new Intl.NumberFormat('es-MX', {
-        style: 'currency',
-        currency: 'MXN'
-    }).format(amount);
+    if (window.FormatUtils) return window.FormatUtils.currency(amount);
+    return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
 }
 
 function renderTopProductsList(list) {
@@ -160,7 +158,7 @@ function renderRecentSalesList(list) {
     
     list.forEach(item => {
         const dateObj = new Date(item.sale_date);
-        const dateStr = dateObj.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit' });
+        const dateStr = window.FormatUtils ? window.FormatUtils.dateOnly(dateObj) : dateObj.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit' });
         const timeStr = dateObj.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
         const fullDate = `${dateStr} ${timeStr}`;
         
@@ -231,7 +229,7 @@ async function showSaleDetail(saleId) {
         const d = data.data;
 
         // Encabezado de la venta
-        const fecha = new Date(d.sale_date + ' UTC').toLocaleString('es-MX', {
+        const fecha = window.FormatUtils ? window.FormatUtils.date(new Date(d.sale_date + ' UTC')) : new Date(d.sale_date + ' UTC').toLocaleString('es-MX', {
             day: '2-digit', month: '2-digit', year: 'numeric',
             hour: '2-digit', minute: '2-digit'
         });
@@ -387,7 +385,7 @@ function renderSalesChart(chartData) {
                     grid: { borderDash: [2, 4], color: gridColor },
                     ticks: {
                         callback: function (value) {
-                            return new Intl.NumberFormat('es-MX', {
+                            return window.FormatUtils ? window.FormatUtils.currency(value) : new Intl.NumberFormat('es-MX', {
                                 style: 'currency',
                                 currency: 'MXN',
                                 maximumSignificantDigits: 3

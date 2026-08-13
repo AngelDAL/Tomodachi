@@ -108,6 +108,35 @@ admin).
 3. **¡Importante!** Cambie la contraseña del administrador inmediatamente
    después del primer inicio de sesión.
 
+## 🌎 Formato regional (números, moneda y fechas por empresa)
+
+Cada empresa puede configurar cómo se muestran los números, la moneda y las
+fechas en **todo el sistema** (pantallas, tickets, reportes y PDF). Solo
+afecta la presentación; los datos se guardan igual para todas las regiones.
+
+**Configuración:** Perfil → Configuración de Empresa → **Formato Regional**.
+
+**Presets rápidos:** México, Colombia, Estados Unidos, España, Argentina,
+Japón y Brasil — un clic rellena todo y permite ajuste manual fino:
+
+| País | Código | Ejemplo moneda | Fecha |
+|---|---|---|---|
+| México | MXN | `$1,234.56` | `13/08/2026 14:30` |
+| Colombia | COP | `$1.235` (0 decimales) | `13/08/2026 14:30` |
+| EE. UU. | USD | `$1,234.50` | `08/13/2026 2:30 PM` |
+| España | EUR | `€1.234,50` | `13/08/2026 14:30` |
+| Japón | JPY | `¥1,235` (0 decimales) | `2026-08-13 14:30` |
+
+Campos configurables: código de moneda, símbolo editable (`¥`, `€`,
+`COP $`...), posición del símbolo, separador de miles, separador de
+decimales, decimales (0-4), formato de fecha y hora — con vista previa en
+vivo.
+
+Las cantidades (stock, vendidos, etc.) se muestran inteligentemente: los
+enteros sin decimales (`3`, nunca `3.000`) y las fracciones sin ceros
+finales (`3.25`). El formato visual **jamás** altera lo que se envía al
+servidor: las consultas SQL y los inputs de fecha siempre usan ISO.
+
 ## 🛠️ Instalación manual (Apache/Nginx + PHP + MySQL)
 
 Requisitos: PHP 8.0+, MySQL 8.0 / MariaDB 10.5+, extensiones PDO, pdo_mysql,

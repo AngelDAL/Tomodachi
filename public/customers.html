@@ -172,6 +172,8 @@
         let currentBalanceFilter = '';
 
         function fmtMXN(n) {
+            // Delegar en FormatUtils (formato regional de la empresa).
+            if (window.FormatUtils) return window.FormatUtils.currency(n);
             return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(Number(n) || 0);
         }
 

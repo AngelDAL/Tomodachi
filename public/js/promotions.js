@@ -778,7 +778,9 @@ function renderPromotions(promotions) {
 
         const discountValue = p.type === "bundle"
             ? (window.FormatUtils ? window.FormatUtils.currency(p.discount_value) : "$" + parseFloat(p.discount_value).toFixed(2))
-            : parseFloat(p.discount_value) + (p.discount_type === "percentage" ? "%" : "$");
+            : (p.discount_type === "percentage"
+                ? parseFloat(p.discount_value) + "%"
+                : (window.FormatUtils ? window.FormatUtils.currency(p.discount_value) : "$" + parseFloat(p.discount_value).toFixed(2)));
 
         return `
             <div class="promo-card-v2 ${status.class} ${isDone ? 'promo-done' : ''}">

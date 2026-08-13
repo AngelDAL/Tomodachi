@@ -91,6 +91,13 @@ function initPOS() {
   // Obtener store_id del atributo de datos en el body
   CURRENT_STORE_ID = document.body.getAttribute('data-store-id') || 1;
 
+  // Actualizar símbolo de moneda del input de pago según formato regional
+  const curSym = document.querySelector('.currency-symbol');
+  if (curSym && window.FormatUtils) {
+    const sym = window.FormatUtils.getConfig().currency_symbol || '$';
+    curSym.textContent = sym + ' ';
+  }
+
   // Ahora vinculamos eventos
   bindEvents();
   setupToggles(); // Inicializar toggles (footer y header)
@@ -809,7 +816,7 @@ function renderCart() {
           priceHtml = `<span class="cart-orig-price">${formatCurrency(origTotal)}</span> <span class="cart-disc-price">${formatCurrency(item.subtotal)}</span>`;
           if (item.discount_type && item.discount_type !== 'none') {
               const discountLabel = item.discount_type === 'percent' ? `${item.discount_value}%` :
-                                    item.discount_type === 'fixed' ? `-$${item.discount_value}` :
+                                    item.discount_type === 'fixed' ? `-${window.FormatUtils ? window.FormatUtils.currency(item.discount_value) : `$${item.discount_value}`}` :
                                     item.discount_type === 'nxn' ? `${item.nxn_buy}x${item.nxn_pay}` : '';
               priceHtml += ` <span class="cart-disc-badge">${discountLabel}</span>`;
           }
@@ -2862,7 +2869,7 @@ function createMoneyPanel() {
             <div class="money-grid">
                 ${bills.map(val => `
                     <div class="money-btn bill" onclick="addMoney(${val})" data-val="${val}">
-                        $${val}
+                        ${(window.FormatUtils ? window.FormatUtils.getConfig().currency_symbol || '$' : '$')}${val}
                     </div>
                 `).join('')}
             </div>
@@ -2872,7 +2879,7 @@ function createMoneyPanel() {
             <div class="money-grid" style="grid-template-columns: repeat(4, 1fr);">
                 ${coins.map(val => `
                     <div class="money-btn coin ${val < 5 ? 'silver' : ''}" onclick="addMoney(${val})" data-val="${val}">
-                        $${val}
+                        ${(window.FormatUtils ? window.FormatUtils.getConfig().currency_symbol || '$' : '$')}${val}
                     </div>
                 `).join('')}
             </div>

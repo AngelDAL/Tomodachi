@@ -427,8 +427,8 @@
                             <td data-label="Terminal">${row.terminal_name || 'General'}</td>
                             <td data-label="Usuario">${row.username}</td>
                             <td data-label="Inicial">${window.FormatUtils ? window.FormatUtils.currency(parseFloat(row.initial_amount)) : `$${parseFloat(row.initial_amount).toFixed(2)}`}</td>
-                            <td data-label="Final">${row.final_amount !== null ? '$' + parseFloat(row.final_amount).toFixed(2) : '-'}</td>
-                            <td data-label="Diferencia" style="color: ${diffColor}">${row.difference !== null ? '$' + diff.toFixed(2) : '-'}</td>
+                            <td data-label="Final">${row.final_amount !== null ? (window.FormatUtils ? window.FormatUtils.currency(row.final_amount) : '$' + parseFloat(row.final_amount).toFixed(2)) : '-'}</td>
+                            <td data-label="Diferencia" style="color: ${diffColor}">${row.difference !== null ? (window.FormatUtils ? window.FormatUtils.currency(diff) : '$' + diff.toFixed(2)) : '-'}</td>
                             <td data-label="Estado"><span class="badge ${row.status === 'open' ? 'badge-success' : 'badge-secondary'}">${row.status === 'open' ? 'Abierta' : 'Cerrada'}</span></td>
                         </tr>
                     `;
@@ -524,8 +524,8 @@
                     totalProfit += parseFloat(row.profit);
                 });
                 summary = {
-                    'Total Ventas': '$' + totalSales.toFixed(2),
-                    'Total Ganancia': '$' + totalProfit.toFixed(2),
+                    'Total Ventas': (window.FormatUtils ? window.FormatUtils.currency(totalSales) : '$' + totalSales.toFixed(2)),
+                    'Total Ganancia': (window.FormatUtils ? window.FormatUtils.currency(totalProfit) : '$' + totalProfit.toFixed(2)),
                     'Cantidad de Transacciones': currentReportData.length
                 };
             } else if (currentReportType === 'inventory') {
@@ -541,8 +541,8 @@
                 summary = {
                     'Total Productos (Items)': totalItems,
                     'Total Unidades en Stock': totalStock,
-                    'Valor Total Costo': '$' + totalCostVal.toFixed(2),
-                    'Valor Total Venta': '$' + totalPriceVal.toFixed(2)
+                    'Valor Total Costo': (window.FormatUtils ? window.FormatUtils.currency(totalCostVal) : '$' + totalCostVal.toFixed(2)),
+                    'Valor Total Venta': (window.FormatUtils ? window.FormatUtils.currency(totalPriceVal) : '$' + totalPriceVal.toFixed(2))
                 };
             } else if (currentReportType === 'cash_registers') {
                 let totalDiff = 0;
@@ -556,7 +556,7 @@
                 summary = {
                     'Total Registros': currentReportData.length,
                     'Cajas Cerradas': closedCount,
-                    'Diferencia Acumulada': '$' + totalDiff.toFixed(2)
+                    'Diferencia Acumulada': (window.FormatUtils ? window.FormatUtils.currency(totalDiff) : '$' + totalDiff.toFixed(2))
                 };
             } else if (currentReportType === 'cash_movements') {
                 let totalIn = 0;
@@ -570,9 +570,9 @@
                 });
                 summary = {
                     'Total Movimientos': currentReportData.length,
-                    'Total Entradas (Inc. Ventas)': '$' + totalIn.toFixed(2),
-                    'Total Retiros': '$' + totalOut.toFixed(2),
-                    'Flujo Neto': '$' + (totalIn - totalOut).toFixed(2)
+                    'Total Entradas (Inc. Ventas)': (window.FormatUtils ? window.FormatUtils.currency(totalIn) : '$' + totalIn.toFixed(2)),
+                    'Total Retiros': (window.FormatUtils ? window.FormatUtils.currency(totalOut) : '$' + totalOut.toFixed(2)),
+                    'Flujo Neto': (window.FormatUtils ? window.FormatUtils.currency(totalIn - totalOut) : '$' + (totalIn - totalOut).toFixed(2))
                 };
             } else if (currentReportType === 'top_products') {
                 let totalRevenue = 0;
@@ -582,8 +582,8 @@
                     totalProfit += parseFloat(row.profit);
                 });
                 summary = {
-                    'Total Ingresos (Top)': '$' + totalRevenue.toFixed(2),
-                    'Total Ganancia (Top)': '$' + totalProfit.toFixed(2)
+                    'Total Ingresos (Top)': (window.FormatUtils ? window.FormatUtils.currency(totalRevenue) : '$' + totalRevenue.toFixed(2)),
+                    'Total Ganancia (Top)': (window.FormatUtils ? window.FormatUtils.currency(totalProfit) : '$' + totalProfit.toFixed(2))
                 };
             } else if (currentReportType === 'inventory_movements') {
                 let totalMoves = currentReportData.length;
@@ -759,7 +759,7 @@
             // Configurar cabeceras y filas según el tipo de reporte
             let tableHead = [];
             let tableRows = [];
-            const money = (v) => '$' + (parseFloat(v) || 0).toFixed(2);
+            const money = (v) => window.FormatUtils ? window.FormatUtils.currency(v) : '$' + (parseFloat(v) || 0).toFixed(2);
 
             switch (currentReportType) {
                 case 'sales':
@@ -902,7 +902,7 @@
             } catch (e) { periodStr = ''; }
 
             const dateStrFull = (window.FormatUtils ? window.FormatUtils.dateLong(now) : now.toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
-            const timeStr = now.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+            const timeStr = window.FormatUtils ? window.FormatUtils.timeOnly(now) : now.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
 
             // ============================================================
             // ENCABEZADO: banda de color primario con logo y nombre
@@ -1756,7 +1756,7 @@
                 return;
             }
             const s = d.summary || {};
-            const fmt = n => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(Number(n) || 0);
+            const fmt = n => window.FormatUtils ? window.FormatUtils.currency(n) : new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(Number(n) || 0);
 
             let methodRows = '';
             (d.by_payment_method || []).forEach(m => {

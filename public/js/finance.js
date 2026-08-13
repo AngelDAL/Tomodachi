@@ -198,7 +198,7 @@ function renderMovementsList(movements, initialAmount, openingDate) {
                     <div style="font-weight:600; font-size:0.95em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${typeLabel}</div>
                     <div style="font-size:0.85em; color:var(--text-light); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${m.description || '-'}</div>
                     <div style="font-size:0.75em; color:var(--text-muted);">
-                        <i class="fas fa-user"></i> ${m.user_name} &bull; ${new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                        <i class="fas fa-user"></i> ${m.user_name} &bull; ${window.FormatUtils ? window.FormatUtils.timeOnly(m.created_at) : new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                     </div>
                 </div>
                 <div style="text-align:right;">

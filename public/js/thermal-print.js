@@ -149,6 +149,7 @@ function escTicket(s) {
 }
 
 function formatQty(q) {
+    if (window.FormatUtils) return window.FormatUtils.qty(q);
     const n = Number(q);
     if (Number.isNaN(n)) return String(q ?? '');
     return Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, '');

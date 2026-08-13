@@ -71,6 +71,10 @@ function initInventory() {
     loadCategories();
     loadProducts();
 
+    // Actualizar símbolo de moneda de los inputs según formato regional
+    const sym = window.FormatUtils ? (window.FormatUtils.getConfig().currency_symbol || '$') : '$';
+    document.querySelectorAll('.input-prefix .prefix').forEach(el => { el.textContent = sym; });
+
     // Inicializar picker de iconos para creación de categoría
         setupIconPicker({
             hiddenInput: document.getElementById('newCategoryIcon'),

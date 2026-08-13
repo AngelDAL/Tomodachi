@@ -159,7 +159,7 @@ function renderRecentSalesList(list) {
     list.forEach(item => {
         const dateObj = new Date(item.sale_date);
         const dateStr = window.FormatUtils ? window.FormatUtils.dateOnly(dateObj) : dateObj.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit' });
-        const timeStr = dateObj.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+        const timeStr = window.FormatUtils ? window.FormatUtils.timeOnly(dateObj) : dateObj.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
         const fullDate = `${dateStr} ${timeStr}`;
         
         // Products icons

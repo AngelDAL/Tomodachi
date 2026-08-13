@@ -254,6 +254,63 @@ function openMovementsModal(registerId) {
     document.getElementById('movementsModal').classList.add('show');
 }
 
+// Alterna el formulario inline de movimiento dentro del drawer de historial
+function toggleMovementForm(forceShow) {
+    const form = document.getElementById('inlineMovementForm');
+    if (!form) return;
+    const show = forceShow !== undefined ? !!forceShow : form.style.display === 'none';
+    form.style.display = show ? 'block' : 'none';
+    const label = document.getElementById('toggleMoveFormLabel');
+    if (label) label.textContent = show ? 'Ocultar formulario' : 'Registrar Entrada/Salida';
+    if (show) {
+        document.getElementById('inlineMoveAmount').value = '';
+        document.getElementById('inlineMoveDesc').value = '';
+        document.getElementById('inlineMoveAmount').focus();
+    }
+}
+
+// Registra el movimiento desde el formulario inline (sin abrir otro drawer)
+async function submitInlineMovement() {
+    const registerId = currentHistoryRegisterId;
+    const type = document.getElementById('inlineMoveType').value;
+    const amount = document.getElementById('inlineMoveAmount').value;
+    const description = document.getElementById('inlineMoveDesc').value.trim();
+
+    if (!registerId) { notify('Sin caja seleccionada', 'error'); return; }
+    if (!amount || parseFloat(amount) <= 0) { notify('Ingresa un monto válido', 'error'); return; }
+    if (!description) { notify('Ingresa una descripción', 'error'); return; }
+
+    const btn = event && event.target ? event.target : null;
+    if (btn) { btn.disabled = true; }
+
+    try {
+        const res = await fetch('../api/cash_register/cash_movements.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                register_id: registerId,
+                movement_type: type,
+                amount: amount,
+                description: description
+            })
+        });
+        const result = await res.json();
+        if (result.success) {
+            notify('Movimiento registrado', 'success');
+            // Mantener el drawer abierto y recargar la lista (flujo continuo)
+            toggleMovementForm(false);
+            openHistoryDrawer(currentHistoryRegisterId);
+        } else {
+            notify(result.error || 'Error al registrar movimiento', 'error');
+            if (btn) btn.disabled = false;
+        }
+    } catch (err) {
+        console.error(err);
+        notify('Error de conexión', 'error');
+        if (btn) btn.disabled = false;
+    }
+}
+
 function openAddTerminalModal() {
     document.getElementById('newTerminalName').value = '';
     document.getElementById('addTerminalModal').classList.add('show');
@@ -379,7 +436,7 @@ document.getElementById('movementsForm').addEventListener('submit', async (e) =>
     const formData = new FormData(e.target);
     const data = {
         register_id: formData.get('register_id'),
-        type: formData.get('type'),
+        movement_type: formData.get('type'),
         amount: formData.get('amount'),
         description: formData.get('description')
     };

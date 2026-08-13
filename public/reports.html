@@ -88,6 +88,10 @@
                                 <i id="selectedReportIcon" class="fas fa-chart-bar"></i>
                                 <span id="selectedReportTitle">Reporte Seleccionado</span>
                             </div>
+                            <div id="reportCompanyBadge" class="report-company-badge" style="display:none;">
+                                <img id="reportCompanyLogo" src="" alt="Logo" style="width:34px; height:34px; object-fit:contain; border-radius:6px; background:#fff; padding:2px; border:1px solid var(--border-color);">
+                                <span id="reportCompanyName" style="font-size:0.9rem; font-weight:600; color: var(--text-color);"></span>
+                            </div>
                         </div>
 
                         <div class="report-filters">
@@ -165,6 +169,30 @@
             return currentUser;
         }
 
+        // Muestra el logo y nombre de la empresa en el encabezado del reporte
+        async function updateReportCompanyBadge() {
+            const badge = document.getElementById('reportCompanyBadge');
+            if (!badge) return;
+            try {
+                const user = await ensureCurrentUser() || {};
+                const logoImg = document.getElementById('reportCompanyLogo');
+                const nameEl = document.getElementById('reportCompanyName');
+                if (nameEl) nameEl.textContent = user.store_name || 'Mi Negocio';
+                const logoUrl = getRelativeImagePath(user.logo_url) || 'assets/images/default-logo.png';
+                if (logoImg && logoUrl && logoUrl !== 'assets/images/default-logo.png') {
+                    logoImg.src = logoUrl;
+                    logoImg.style.display = 'inline-block';
+                    badge.style.display = 'flex';
+                } else {
+                    // Sin logo: mostrar solo el nombre
+                    logoImg.style.display = 'none';
+                    badge.style.display = 'flex';
+                }
+            } catch (e) {
+                badge.style.display = 'none';
+            }
+        }
+
         function toLocalISOString(date) {
             const offset = date.getTimezoneOffset() * 60000;
             return (new Date(date - offset)).toISOString().slice(0, 16);
@@ -206,6 +234,9 @@
             // Fix icon class if it already has 'fas' or not
             const icon = document.getElementById('selectedReportIcon');
             icon.className = iconClass.includes('fa-') ? (iconClass.includes('fas') ? iconClass : 'fas ' + iconClass) : 'fas ' + iconClass;
+
+            // Mostrar logo y nombre de la empresa en el encabezado del reporte
+            updateReportCompanyBadge();
             
             // Hide grid, show selection container
             document.getElementById('reportCardsGrid').style.display = 'none';
@@ -479,9 +510,9 @@
                             <td data-label="Fecha">${(window.FormatUtils ? window.FormatUtils.date(row.created_at) : new Date(row.created_at).toLocaleString())}</td>
                             <td data-label="Producto">${row.product_name}</td>
                             <td data-label="Tipo">${formatMovementType(row.movement_type)}</td>
-                            <td data-label="Cant.">${row.quantity}</td>
-                            <td data-label="Stock Ant.">${row.previous_stock}</td>
-                            <td data-label="Stock Nuevo">${row.new_stock}</td>
+                            <td data-label="Cant.">${window.FormatUtils ? window.FormatUtils.qty(row.quantity) : row.quantity}</td>
+                            <td data-label="Stock Ant.">${window.FormatUtils ? window.FormatUtils.qty(row.previous_stock) : row.previous_stock}</td>
+                            <td data-label="Stock Nuevo">${window.FormatUtils ? window.FormatUtils.qty(row.new_stock) : row.new_stock}</td>
                             <td data-label="Usuario">${row.username}</td>
                             <td data-label="Notas">${row.notes || '-'}</td>
                         </tr>

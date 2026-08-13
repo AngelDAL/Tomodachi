@@ -115,7 +115,7 @@ function renderTopProductsList(list) {
         tr.innerHTML = `
             <td style="padding: 0.75rem;" data-label="Imagen">${imgHtml}</td>
             <td style="padding: 0.75rem;" data-label="Producto">${item.product_name}</td>
-            <td style="padding: 0.75rem; font-weight: bold;" data-label="Vendidos">${item.total_sold}</td>
+            <td style="padding: 0.75rem; font-weight: bold;" data-label="Vendidos">${window.FormatUtils ? window.FormatUtils.qty(item.total_sold) : item.total_sold}</td>
             <td style="padding: 0.75rem; color: var(--success-color);" data-label="Ingresos">${formatCurrency(item.revenue)}</td>
         `;
         tbody.appendChild(tr);

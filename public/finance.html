@@ -318,9 +318,37 @@
                 </div>
 
                 <div style="margin-bottom: 15px;">
-                    <button class="btn-primary" style="width: 100%;" onclick="openMovementsModal(currentHistoryRegisterId)">
-                        <i class="fas fa-plus-circle"></i> Registrar Entrada/Salida
+                    <button class="btn-primary" style="width: 100%;" onclick="toggleMovementForm()" type="button">
+                        <i class="fas fa-plus-circle"></i> <span id="toggleMoveFormLabel">Registrar Entrada/Salida</span>
                     </button>
+                </div>
+
+                <!-- Formulario inline de movimiento (sin abrir otro drawer) -->
+                <div id="inlineMovementForm" style="display:none; background: var(--bg-light); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid var(--border-color);">
+                    <div style="font-weight:600; margin-bottom:10px; color: var(--primary-color);">
+                        <i class="fas fa-exchange-alt"></i> Nuevo Movimiento
+                    </div>
+                    <div class="form-group">
+                        <label>Tipo</label>
+                        <select id="inlineMoveType" style="width:100%; padding:9px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-input); color: var(--text-color);">
+                            <option value="entry">Entrada de Dinero</option>
+                            <option value="withdrawal">Retiro de Dinero</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Monto</label>
+                        <input type="number" id="inlineMoveAmount" step="0.01" min="0.01" required style="width:100%; padding:9px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-input); color: var(--text-color);">
+                    </div>
+                    <div class="form-group">
+                        <label>Descripción / Motivo</label>
+                        <input type="text" id="inlineMoveDesc" required placeholder="Ej: Pago a proveedor, Cambio inicial..." style="width:100%; padding:9px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-input); color: var(--text-color);">
+                    </div>
+                    <div style="display:flex; gap:8px; margin-top: 12px;">
+                        <button class="btn-primary" style="flex:1;" onclick="submitInlineMovement()" type="button">
+                            <i class="fas fa-check"></i> Registrar
+                        </button>
+                        <button class="btn-secondary" style="flex:1;" onclick="toggleMovementForm(false)" type="button">Cancelar</button>
+                    </div>
                 </div>
                 <div id="movementsList" style="flex: 1; overflow-y: auto;">
                     <!-- Lista inyectada por JS -->

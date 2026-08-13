@@ -1445,10 +1445,14 @@
     // funcionen después de hacer clic en zonas vacías (estilo videojuego)
     document.body.setAttribute('tabindex', '-1');
     // Si el sidebar se inyecta después (DOMContentLoaded), reintentar la
-    // inyección de la ayuda cuando el menú ya exista
+    // inyección de la ayuda cuando el menú ya exista.
+    // IMPORTANTE: solo si el item aún no está en el DOM (evita duplicar
+    // "Ayuda de atajos" cuando la primera inyección ya funcionó).
     setTimeout(() => {
-      helpMenuItemInjected = false;
-      ensureHelpMenuItem();
+      if (!document.getElementById('kbdHelpMenuItem') && !document.getElementById('kbdHelpTooltipItem')) {
+        helpMenuItemInjected = false;
+        ensureHelpMenuItem();
+      }
     }, 600);
   }
 

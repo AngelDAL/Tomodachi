@@ -68,19 +68,29 @@
     };
 
     // Variantes de marca derivadas del primary/secondary configurados
-    function brandVariants(cfg) {
+    function brandVariants(cfg, darkMode) {
         const out = {};
         const p = cfg.primary_color, s = cfg.secondary_color;
         if (p) {
             out['--primary-dark'] = mix(p, '#000000', 0.22);
             out['--primary-darker'] = mix(p, '#000000', 0.42);
-            out['--primary-light'] = mix(p, '#ffffff', 0.85);
-            out['--primary-lighter'] = mix(p, '#ffffff', 0.93);
+            // Las variantes "claras" se usan como FONDO de tarjetas/badges
+            // (profit-item.highlight, drawer-tab.active, summary-chip, etc.).
+            // En modo claro se derivan hacia blanco (fondo suave); en modo
+            // oscuro hay que derivarlas hacia el OSCURO, o esas tarjetas
+            // quedan con fondo casi blanco sobre el tema dark.
+            if (darkMode) {
+                out['--primary-light'] = mix(p, '#0d0d0f', 0.82);
+                out['--primary-lighter'] = mix(p, '#0d0d0f', 0.90);
+            } else {
+                out['--primary-light'] = mix(p, '#ffffff', 0.85);
+                out['--primary-lighter'] = mix(p, '#ffffff', 0.93);
+            }
             out['--primary-shadow'] = rgbaOf(p, 0.22);
             out['--primary-hover'] = mix(p, '#000000', 0.15);
             out['--primary-active'] = mix(p, '#000000', 0.35);
         }
-        if (s) out['--secondary-light'] = mix(s, '#ffffff', 0.85);
+        if (s) out['--secondary-light'] = darkMode ? mix(s, '#0d0d0f', 0.85) : mix(s, '#ffffff', 0.85);
         return out;
     }
 
@@ -126,7 +136,7 @@
         for (const [key, value] of Object.entries(merged)) {
             if (varMap[key] && value) root.style.setProperty(varMap[key], value);
         }
-        const variants = brandVariants(merged);
+        const variants = brandVariants(merged, darkMode);
         for (const [v, val] of Object.entries(variants)) {
             if (val) root.style.setProperty(v, val);
         }

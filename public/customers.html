@@ -176,12 +176,12 @@
 
     <!-- Modal: Detalle del cliente (historial + abono) -->
     <dialog id="customerDetailModal" class="client-dialog" aria-label="Detalle del cliente">
-        <div class="modal-content" style="max-width: 660px; border: none; border-radius: 14px; padding: 2.2rem; background: var(--bg-card, #fff);">
+        <div class="modal-content" style="max-width: 900px; border: none; border-radius: 14px; padding: 2.2rem; background: var(--bg-card, #fff);">
             <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.4rem;">
                 <h2 id="customerDetailTitle" style="margin:0; font-size:1.3rem; color: var(--text-color, #1a1a2e);"><i class="fas fa-id-card" style="color: var(--primary-color); margin-right: 8px;"></i>Detalle del Cliente</h2>
                 <button id="customerDetailClose" class="modal-close" aria-label="Cerrar" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color: var(--primary-color);">×</button>
             </div>
-            <div class="modal-body" style="max-height: 68vh; overflow-y: auto;">
+            <div class="modal-body" style="max-height: 74vh; overflow-y: auto;">
                 <div id="customerDetailBody"></div>
             </div>
         </div>
@@ -474,6 +474,11 @@
                 document.getElementById('customerDetailTitle').textContent = customer.full_name;
                 const body = document.getElementById('customerDetailBody');
 
+                const hasBalance = Number(customer.balance) > 0;
+                const limit = Number(customer.credit_limit) > 0 ? fmtMXN(customer.credit_limit) : 'Sin límite';
+                const salesCount = (sales || []).length;
+                const payCount = (payments || []).length;
+
                 let salesRows = (sales || []).map(s => `
                     <tr>
                         <td data-label="Venta">#${s.sale_id}</td>
@@ -491,58 +496,108 @@
                         <td data-label="Notas">${esc(p.notes || '—')}</td>
                     </tr>`).join('') || '<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Sin abonos</td></tr>';
 
+                // Símbolo de moneda regional para el input de abono
+                const curSym = window.FormatUtils ? (window.FormatUtils.getConfig().currency_symbol || '$') : '$';
+
                 body.innerHTML = `
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1rem;">
-                        <div style="background: var(--primary-lighter); border-radius:10px; padding:10px 14px;">
-                            <div style="font-size:0.8rem; color:var(--text-light);">SALDO PENDIENTE</div>
-                            <div style="font-size:1.3rem; font-weight:800; color: var(--warning-color);">${fmtMXN(customer.balance)}</div>
-                        </div>
-                        <div style="background: var(--primary-lighter); border-radius:10px; padding:10px 14px;">
-                            <div style="font-size:0.8rem; color:var(--text-light);">COMPRAS TOTALES</div>
-                            <div style="font-size:1.3rem; font-weight:800; color: var(--success-color);">${customer.total_purchases || 0}</div>
-                        </div>
-                    </div>
-                    <div class="customer-pay-box">
-                        <div style="font-weight:600; margin-bottom:8px; display:flex; align-items:center; gap:6px; color: var(--primary-color);">
-                            <i class="fas fa-hand-holding-dollar"></i> Registrar abono
-                        </div>
-                        <div style="display:flex; gap:8px; margin-bottom:10px;">
-                            ${[0.25, 0.5, 1].map(f => {
-                                const amount = Math.round(Number(customer.balance) * f * 100) / 100;
-                                if (amount <= 0) return '';
-                                return `<button type="button" class="quick-pay-btn" onclick="setQuickPayment(${amount})">${f === 1 ? 'Total' : (f * 100) + '%'}</button>`;
-                            }).join('')}
-                        </div>
-                        <div style="display:flex; gap:8px;">
-                            <div class="pay-amount-wrap" style="flex:1; display:flex; align-items:center; background: var(--bg-lightest); border:1px solid var(--border-color); border-radius:8px; overflow:hidden;">
-                                <span class="pay-amount-symbol" style="padding:0 10px; font-weight:700; color: var(--primary-color); background: var(--bg-light); border-right:1px solid var(--border-color); line-height:42px;">${window.FormatUtils ? (window.FormatUtils.getConfig().currency_symbol || '$') : '$'}</span>
-                                <input type="number" id="paymentAmountInput" min="0.01" step="0.01" placeholder="0.00" style="flex:1; border:none; outline:none; padding:10px 12px; background:transparent; font-size:1.05rem; font-weight:600; color: var(--text-color);">
+                <div class="customer-detail-layout">
+                    <!-- COLUMNA IZQUIERDA: resumen + registro de abono -->
+                    <div class="customer-detail-left">
+                        <div class="cd-profile">
+                            <div class="customer-avatar cd-avatar" style="background: var(--primary-light); color: var(--primary-color);">
+                                ${customerInitials(customer.full_name)}
                             </div>
-                            <select id="paymentMethodInput" style="padding:9px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-input); color: var(--text-color);">
-                                <option value="cash">Efectivo</option>
-                                <option value="card">Tarjeta</option>
-                                <option value="transfer">Transferencia</option>
-                            </select>
+                            <div class="cd-profile-info">
+                                <strong>${esc(customer.full_name)}</strong>
+                                <span class="cd-contact">
+                                    ${customer.phone ? `<span><i class="fas fa-phone"></i> ${esc(customer.phone)}</span>` : ''}
+                                    ${customer.email ? `<span><i class="fas fa-envelope"></i> ${esc(customer.email)}</span>` : ''}
+                                </span>
+                            </div>
                         </div>
-                        <button onclick="submitPayment(${customer.customer_id})" class="btn btn-primary" style="width:100%; margin-top:10px; padding:11px 16px; border-radius:8px; background:var(--primary-color); color:#fff; border:none; cursor:pointer; font-weight:700;">
-                            <i class="fas fa-check"></i> Registrar abono
-                        </button>
+
+                        <div class="cd-summary">
+                            <div class="cd-summary-item ${hasBalance ? 'warning' : ''}">
+                                <span class="cd-summary-label"><i class="fas fa-hand-holding-dollar"></i> Saldo pendiente</span>
+                                <span class="cd-summary-value">${fmtMXN(customer.balance)}</span>
+                            </div>
+                            <div class="cd-summary-item">
+                                <span class="cd-summary-label"><i class="fas fa-shopping-bag"></i> Compras totales</span>
+                                <span class="cd-summary-value">${customer.total_purchases || 0}</span>
+                            </div>
+                            <div class="cd-summary-item">
+                                <span class="cd-summary-label"><i class="fas fa-credit-card"></i> Límite de crédito</span>
+                                <span class="cd-summary-value">${limit}</span>
+                            </div>
+                        </div>
+
+                        <div class="customer-pay-box">
+                            <div class="cd-pay-title">
+                                <i class="fas fa-hand-holding-dollar"></i> Registrar abono
+                            </div>
+                            ${hasBalance ? `
+                            <div class="cd-quick-pays">
+                                ${[0.25, 0.5, 1].map(f => {
+                                    const amount = Math.round(Number(customer.balance) * f * 100) / 100;
+                                    if (amount <= 0) return '';
+                                    return `<button type="button" class="quick-pay-btn" onclick="setQuickPayment(${amount})">${f === 1 ? 'Total' : (f * 100) + '%'}</button>`;
+                                }).join('')}
+                            </div>` : `<p class="cd-no-balance"><i class="fas fa-check-circle"></i> Cliente sin saldo pendiente</p>`}
+                            <div class="cd-pay-fields">
+                                <div class="pay-amount-wrap" style="flex:1; display:flex; align-items:center; background: var(--bg-lightest); border:1px solid var(--border-color); border-radius:8px; overflow:hidden;">
+                                    <span class="pay-amount-symbol" style="padding:0 10px; font-weight:700; color: var(--primary-color); background: var(--bg-light); border-right:1px solid var(--border-color); line-height:42px;">${curSym}</span>
+                                    <input type="number" id="paymentAmountInput" min="0.01" step="0.01" placeholder="0.00" style="flex:1; border:none; outline:none; padding:10px 12px; background:transparent; font-size:1.05rem; font-weight:600; color: var(--text-color);">
+                                </div>
+                                <select id="paymentMethodInput" style="padding:9px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-input); color: var(--text-color);">
+                                    <option value="cash">Efectivo</option>
+                                    <option value="card">Tarjeta</option>
+                                    <option value="transfer">Transferencia</option>
+                                </select>
+                            </div>
+                            <button onclick="submitPayment(${customer.customer_id})" class="btn btn-primary" style="width:100%; margin-top:10px; padding:11px 16px; border-radius:8px; background:var(--primary-color); color:#fff; border:none; cursor:pointer; font-weight:700;">
+                                <i class="fas fa-check"></i> Registrar abono
+                            </button>
+                        </div>
                     </div>
-                    <h3 style="font-size:1rem; margin: 14px 0 8px;"><i class="fas fa-receipt"></i> Historial de ventas</h3>
-                    <table class="dashboard-table" style="width:100%; font-size:0.85rem; margin-bottom: 1.2rem;">
-                        <thead><tr><th>Venta</th><th>Fecha</th><th style="text-align:right;">Total</th><th style="text-align:right;">Pagado</th><th>Estado</th></tr></thead>
-                        <tbody>${salesRows}</tbody>
-                    </table>
-                    <h3 style="font-size:1rem; margin: 0 0 8px;"><i class="fas fa-coins"></i> Abonos</h3>
-                    <table class="dashboard-table" style="width:100%; font-size:0.85rem;">
-                        <thead><tr><th>Fecha</th><th style="text-align:right;">Monto</th><th>Método</th><th>Notas</th></tr></thead>
-                        <tbody>${payRows}</tbody>
-                    </table>
+
+                    <!-- COLUMNA DERECHA: pestañas Ventas / Abonos -->
+                    <div class="customer-detail-right">
+                        <div class="cd-tabs">
+                            <button type="button" class="cd-tab active" data-tab="sales" onclick="switchDetailTab('sales')">
+                                <i class="fas fa-receipt"></i> Ventas <span class="cd-tab-count">${salesCount}</span>
+                            </button>
+                            <button type="button" class="cd-tab" data-tab="payments" onclick="switchDetailTab('payments')">
+                                <i class="fas fa-coins"></i> Abonos <span class="cd-tab-count">${payCount}</span>
+                            </button>
+                        </div>
+                        <div class="cd-tab-content" id="cdTabSales">
+                            <table class="dashboard-table cd-table" style="width:100%; font-size:0.85rem;">
+                                <thead><tr><th>Venta</th><th>Fecha</th><th style="text-align:right;">Total</th><th style="text-align:right;">Pagado</th><th>Estado</th></tr></thead>
+                                <tbody>${salesRows}</tbody>
+                            </table>
+                        </div>
+                        <div class="cd-tab-content" id="cdTabPayments" style="display:none;">
+                            <table class="dashboard-table cd-table" style="width:100%; font-size:0.85rem;">
+                                <thead><tr><th>Fecha</th><th style="text-align:right;">Monto</th><th>Método</th><th>Notas</th></tr></thead>
+                                <tbody>${payRows}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
                 `;
                 document.getElementById('customerDetailModal').showModal();
             } catch (e) {
                 alert('Error: ' + e.message);
             }
+        }
+
+        // Cambia la pestaña activa (Ventas / Abonos) en el detalle
+        function switchDetailTab(tab) {
+            document.querySelectorAll('.cd-tab').forEach(t => t.classList.toggle('active', t.getAttribute('data-tab') === tab));
+            const sales = document.getElementById('cdTabSales');
+            const payments = document.getElementById('cdTabPayments');
+            if (sales) sales.style.display = tab === 'sales' ? '' : 'none';
+            if (payments) payments.style.display = tab === 'payments' ? '' : 'none';
         }
 
         // Rellena el monto del abono con un % del saldo pendiente

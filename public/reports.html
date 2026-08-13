@@ -1628,10 +1628,13 @@
          * Modal de detalle de venta (reportes)
          * ============================================================ */
         function formatCurrency(n) {
+            // Delegar en FormatUtils (formato regional de la empresa).
+            if (window.FormatUtils) return window.FormatUtils.currency(n);
             return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(Number(n) || 0);
         }
 
         function formatQuantity(qty) {
+            if (window.FormatUtils) return window.FormatUtils.qty(qty);
             const n = Number(qty);
             if (Number.isNaN(n)) return String(qty ?? '');
             return Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, '');

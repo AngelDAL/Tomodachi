@@ -3007,3 +3007,13 @@
     .pos-customer-dropdown { width: 280px; }
     .pos-cd-summary { grid-template-columns: 1fr; }
 }
+
+/* Resultado activo en el buscador de clientes (navegación ↑↓) */
+.pos-customer-result.active {
+    background: var(--primary-lighter);
+    border-left: 3px solid var(--primary-color);
+}
+
+.pos-customer-result.active .pos-customer-result-info strong {
+    color: var(--primary-color);
+}

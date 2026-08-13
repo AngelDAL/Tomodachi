@@ -3806,6 +3806,7 @@ async function searchPosCustomers(query) {
   const results = document.getElementById('posCustomerResults');
   if (!results) return;
   const q = (query || '').trim();
+  posCustomerActiveIndex = -1;
   if (q.length < 1) {
     results.innerHTML = '<div class="pos-customer-empty">Escribe para buscar clientes...</div>';
     return;
@@ -3856,6 +3857,9 @@ function linkPosCustomer(id, name, phone, email, balance, creditLimit, totalPurc
     custSel.value = String(id);
   }
   showNotification('Cliente vinculado: ' + name, 'success');
+  // Al seleccionar, abrir el panel del cliente para mostrar opciones:
+  // últimas compras, cupones/promos activas y saldo (control desde el inicio).
+  setTimeout(() => openPosCustomerDrawer(), 300);
 }
 
 function unlinkPosCustomer() {
@@ -4058,11 +4062,54 @@ function bindPosCustomerEvents() {
   });
   if (search) search.addEventListener('input', () => {
     clearTimeout(posCustomerSearchTimer);
-    posCustomerSearchTimer = setTimeout(() => searchPosCustomers(search.value), 300);
+    posCustomerSearchTimer = setTimeout(() => searchPosCustomers(search.value), 250);
   });
   if (search) search.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); searchPosCustomers(search.value); }
+    const results = document.querySelectorAll('#posCustomerResults .pos-customer-result');
+    // Flecha abajo: navegar al siguiente resultado
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (results.length) {
+        posCustomerActiveIndex = (posCustomerActiveIndex + 1) % results.length;
+        highlightPosCustomerResult(results);
+      }
+      return;
+    }
+    // Flecha arriba: navegar al anterior
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (results.length) {
+        posCustomerActiveIndex = (posCustomerActiveIndex - 1 + results.length) % results.length;
+        highlightPosCustomerResult(results);
+      }
+      return;
+    }
+    // Enter: seleccionar el resultado activo (o el primero si no hay activo)
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const active = document.querySelector('#posCustomerResults .pos-customer-result.active');
+      if (active) { active.click(); }
+      else if (results.length) { results[0].click(); }
+      return;
+    }
+    // Escape: cerrar el dropdown, quitar focus y volver al flujo del POS
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      togglePosCustomerDropdown(false);
+      search.blur();
+      const si = document.getElementById('searchInput');
+      if (si) si.focus();
+    }
   });
   if (unlinkBtn) unlinkBtn.addEventListener('click', (e) => { e.stopPropagation(); unlinkPosCustomer(); });
   if (panelBtn) panelBtn.addEventListener('click', (e) => { e.stopPropagation(); openPosCustomerDrawer(); });
+}
+
+// Índice del resultado activo en el buscador de clientes (navegación ↑↓)
+let posCustomerActiveIndex = -1;
+
+function highlightPosCustomerResult(results) {
+  results.forEach((r, i) => r.classList.toggle('active', i === posCustomerActiveIndex));
+  const active = results[posCustomerActiveIndex];
+  if (active) active.scrollIntoView({ block: 'nearest' });
 }

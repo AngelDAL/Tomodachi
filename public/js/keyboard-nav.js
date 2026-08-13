@@ -396,6 +396,17 @@
       enterCartMode();
       return true;
     }
+    // Ctrl+U: vincular/buscar cliente en el POS (abre el buscador)
+    if (ctrl && (e.key === 'u' || e.key === 'U')) {
+      e.preventDefault();
+      const btn = document.getElementById('posCustomerBtn');
+      if (btn && !btn.classList.contains('hidden')) {
+        btn.click();
+        const searchInput = document.getElementById('posCustomerSearch');
+        if (searchInput) setTimeout(() => searchInput.focus(), 80);
+      }
+      return true;
+    }
     // F8: historial (seguro en navegadores)
     if (!ctrl && !e.altKey && !e.metaKey && e.key === 'F8') {
       e.preventDefault();
@@ -870,6 +881,7 @@
         { icon: 'fa-pause-circle', text: 'Suspender venta', shortcut: 'S', run: () => { if (typeof parkCurrentSale === 'function') parkCurrentSale(); } },
         { icon: 'fa-history', text: 'Historial de ventas', shortcut: 'H', run: () => { const b = document.getElementById('toggleHistoryBtn'); if (b) b.click(); } },
         { icon: 'fa-tv', text: 'Pantalla cliente', shortcut: 'P', run: () => { const b = document.getElementById('toggleCustomerDisplayBtn'); if (b) b.click(); } },
+        { icon: 'fa-user', text: 'Vincular cliente', shortcut: 'Ctrl+U', run: () => { const b = document.getElementById('posCustomerBtn'); if (b && !b.classList.contains('hidden')) b.click(); } },
         { icon: 'fa-trash-alt', text: 'Vaciar carrito', shortcut: 'X', run: vaciarCarritoConConfirmacion }
       );
     }

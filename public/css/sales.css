@@ -2771,12 +2771,16 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
+    width: 100%;
     padding: 11px;
+    border: none;
     border-top: 1px solid var(--border-color);
+    background: var(--bg-card);
     color: var(--primary-color);
     font-size: 0.85rem;
     font-weight: 600;
     text-decoration: none;
+    cursor: pointer;
 }
 
 .pos-customer-create:hover { background: var(--bg-light); }

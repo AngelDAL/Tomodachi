@@ -95,20 +95,17 @@
                                         </div>
                                         <button type="button" class="pos-customer-create" id="posCustomerCreate" onclick="openPosQuickCustomerModal()">
                                             <i class="fas fa-user-plus"></i> Crear cliente nuevo
-                                            <span class="pos-customer-create-kbd">Ctrl+N</span>
+                                            <span class="pos-customer-create-kbd">Ctrl+Shift+U</span>
                                         </button>
                                     </div>
-                                    <!-- Chip del cliente vinculado -->
-                                    <div id="posLinkedCustomer" class="pos-linked-customer hidden">
+                                    <!-- Chip del cliente vinculado: todo el chip es cliqueable para ver detalles -->
+                                    <div id="posLinkedCustomer" class="pos-linked-customer hidden" onclick="openPosCustomerDrawer()" title="Ver detalles del cliente" style="cursor:pointer;">
                                         <span class="pos-linked-avatar" id="posLinkedAvatar">?</span>
                                         <span class="pos-linked-info">
                                             <strong id="posLinkedName">Cliente</strong>
                                             <small id="posLinkedBalance"></small>
                                         </span>
-                                        <button type="button" id="posLinkedPanelBtn" class="pos-linked-panel-btn" title="Opciones del cliente">
-                                            <i class="fas fa-chevron-down"></i>
-                                        </button>
-                                        <button type="button" id="posLinkedUnlinkBtn" class="pos-linked-unlink-btn" title="Desvincular">
+                                        <button type="button" id="posLinkedUnlinkBtn" class="pos-linked-unlink-btn" title="Cancelar selección de este cliente" onclick="event.stopPropagation(); unlinkPosCustomer();">
                                             <i class="fas fa-times"></i>
                                         </button>
                                     </div>

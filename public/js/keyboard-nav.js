@@ -342,7 +342,8 @@
     // Ctrl+U: vincular/buscar cliente — se maneja ANTES del check de
     // isEditableFocus para que funcione incluso con foco en un input
     // (si el navegador capturara Ctrl+U mostraría 'ver código fuente').
-    if (e.ctrlKey && !e.metaKey && !e.altKey && (e.key === 'u' || e.key === 'U')) {
+    // Nota: excluye Shift para no chocar con Ctrl+Shift+U (nuevo cliente).
+    if (e.ctrlKey && !e.shiftKey && !e.metaKey && !e.altKey && (e.key === 'u' || e.key === 'U')) {
       e.preventDefault();
       const btn = document.getElementById('posCustomerBtn');
       if (btn && !btn.classList.contains('hidden')) {
@@ -353,9 +354,11 @@
       return true;
     }
 
-    // Ctrl+N: crear cliente nuevo desde el POS (modal rápido, sin salir
-    // del carrito). También ANTES del check isEditableFocus.
-    if (e.ctrlKey && !e.metaKey && !e.altKey && (e.key === 'n' || e.key === 'N')) {
+    // Ctrl+Shift+U: crear cliente nuevo desde el POS (modal rápido, sin
+    // salir del carrito). También ANTES del check isEditableFocus.
+    // (Ctrl+N está ocupado por el navegador — nueva ventana; Ctrl+U por
+    // 'ver código fuente' — por eso la combinación Shift.)
+    if (e.ctrlKey && e.shiftKey && !e.metaKey && !e.altKey && (e.key === 'u' || e.key === 'U')) {
       e.preventDefault();
       if (typeof openPosQuickCustomerModal === 'function') {
         openPosQuickCustomerModal();
@@ -932,7 +935,7 @@
         { icon: 'fa-history', text: 'Historial de ventas', shortcut: 'H', run: () => { const b = document.getElementById('toggleHistoryBtn'); if (b) b.click(); } },
         { icon: 'fa-tv', text: 'Pantalla cliente', shortcut: 'P', run: () => { const b = document.getElementById('toggleCustomerDisplayBtn'); if (b) b.click(); } },
         { icon: 'fa-user', text: 'Vincular cliente', shortcut: 'Ctrl+U', run: () => { const b = document.getElementById('posCustomerBtn'); if (b && !b.classList.contains('hidden')) b.click(); } },
-        { icon: 'fa-user-plus', text: 'Nuevo cliente (POS)', shortcut: 'Ctrl+N', run: () => { if (typeof openPosQuickCustomerModal === 'function') openPosQuickCustomerModal(); } },
+        { icon: 'fa-user-plus', text: 'Nuevo cliente (POS)', shortcut: 'Ctrl+Shift+U', run: () => { if (typeof openPosQuickCustomerModal === 'function') openPosQuickCustomerModal(); } },
         { icon: 'fa-trash-alt', text: 'Vaciar carrito', shortcut: 'X', run: vaciarCarritoConConfirmacion }
       );
     }

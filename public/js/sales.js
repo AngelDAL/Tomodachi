@@ -471,6 +471,16 @@ function bindEvents() {
     const posQuickModal = document.getElementById('posQuickCustomerModal');
     if (posQuickModal && posQuickModal.classList.contains('show')) return;
 
+    // Escape: si el panel del cliente vinculado está abierto, cerrarlo
+    // (el chip del cliente sigue vinculado; solo se cierra la vista).
+    if (e.key === 'Escape') {
+      const posDrawer = document.getElementById('posCustomerDrawer');
+      if (posDrawer && posDrawer.classList.contains('show')) {
+        closePosCustomerDrawer();
+        return;
+      }
+    }
+
     if (e.key === 'F2') { // F2: Enfocar búsqueda
       e.preventDefault();
       if (searchInput) searchInput.focus();
@@ -3953,9 +3963,8 @@ function linkPosCustomer(id, name, phone, email, balance, creditLimit, totalPurc
     custSel.value = String(id);
   }
   showNotification('Cliente vinculado: ' + name, 'success');
-  // Al seleccionar, abrir el panel del cliente para mostrar opciones:
-  // últimas compras, cupones/promos activas y saldo (control desde el inicio).
-  setTimeout(() => openPosCustomerDrawer(), 300);
+  // El panel del cliente NO se abre automáticamente: se muestra solo
+  // cuando el usuario hace clic en el chip del cliente (decisión de Angel).
 }
 
 function unlinkPosCustomer() {
@@ -4063,7 +4072,7 @@ function buildPosCustomerPanelHTML() {
 
     <div class="pos-cd-actions">
       <button class="btn btn-danger" onclick="unlinkPosCustomer(); closePosCustomerDrawer();" style="padding:9px 14px; border-radius:8px; border:none; cursor:pointer;">
-        <i class="fas fa-unlink"></i> Desvincular cliente
+        <i class="fas fa-times"></i> Cancelar selección de este cliente
       </button>
     </div>
   `;
@@ -4154,7 +4163,6 @@ function bindPosCustomerEvents() {
   const dd = document.getElementById('posCustomerDropdown');
   const search = document.getElementById('posCustomerSearch');
   const unlinkBtn = document.getElementById('posLinkedUnlinkBtn');
-  const panelBtn = document.getElementById('posLinkedPanelBtn');
 
   if (btn) btn.addEventListener('click', (e) => { e.stopPropagation(); togglePosCustomerDropdown(); });
   document.addEventListener('click', (e) => {
@@ -4213,7 +4221,6 @@ function bindPosCustomerEvents() {
     }
   });
   if (unlinkBtn) unlinkBtn.addEventListener('click', (e) => { e.stopPropagation(); unlinkPosCustomer(); });
-  if (panelBtn) panelBtn.addEventListener('click', (e) => { e.stopPropagation(); openPosCustomerDrawer(); });
 
   // Modal crear cliente rápido
   const saveBtn = document.getElementById('posQuickCustomerSave');

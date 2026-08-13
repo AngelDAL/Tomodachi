@@ -31,6 +31,29 @@ function getRelativeImagePath(path) {
 }
 
 /**
+ * Esperar a que un elemento exista en el DOM (polling ligero).
+ * sidebar-loader.js inyecta el sidebar de forma asíncrona, así que
+ * elementos como #navStoreLogo pueden aparecer después de que otras
+ * promesas (fetch de settings) ya resolvieron. Sin esta espera se
+ * produce una race condition: el logo del navbar nunca se aplica
+ * en algunas páginas (reportes, finanzas, etc.).
+ */
+function waitForElement(selector, timeoutMs = 5000, intervalMs = 100) {
+    return new Promise((resolve) => {
+        const el = document.querySelector(selector);
+        if (el) return resolve(el);
+        const start = Date.now();
+        const timer = setInterval(() => {
+            const found = document.querySelector(selector);
+            if (found || Date.now() - start > timeoutMs) {
+                clearInterval(timer);
+                resolve(found || null);
+            }
+        }, intervalMs);
+    });
+}
+
+/**
  * Verificar sesión activa
  */
 async function checkSession() {
@@ -301,7 +324,14 @@ async function loadStoreSettings() {
             const store = data.data;
 
             // 1. Aplicar Logo
-            const logoImg = document.getElementById('navStoreLogo');
+            // El sidebar lo inyecta sidebar-loader.js de forma ASYNC (primero
+            // espera verify_session.php y luego hace innerHTML), así que
+            // #navStoreLogo puede no existir todavía cuando settings.php
+            // responde. Si lo buscamos una sola vez y no está, el logo nunca
+            // se aplica y el navbar queda con el estado por defecto (o con
+            // una versión vieja del service worker). Esperamos a que exista
+            // (máx. 5s) antes de aplicarlo.
+            const logoImg = await waitForElement('#navStoreLogo', 5000);
             if (logoImg) {
                 if (store.logo_url) {
                     logoImg.src = store.logo_url;

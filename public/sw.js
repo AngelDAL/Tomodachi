@@ -15,7 +15,7 @@
  * Registro: public/js/offline.js (guard para HTTPS).
  * ============================================================ */
 
-const CACHE_NAME = 'tomodachi-cache-v1';
+const CACHE_NAME = 'tomodachi-cache-v2';
 const STATIC_ASSETS = [
   '/public/css/fonts.css',
   '/public/css/main.css',

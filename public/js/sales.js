@@ -105,6 +105,9 @@ function initPOS() {
   // Delegación de eventos para el carrito (Fix doble click y performance)
   setupCartEventsDelegation();
 
+  // Cliente vinculado en el POS (apartado/fiado)
+  bindPosCustomerEvents();
+
   // Inyectar interfaz de pestañas si no existe
   injectCartTabsUI();
   // Configuración del modal de historial
@@ -222,6 +225,20 @@ function initPOS() {
       const isCredit = paymentMethodSelect.value === 'credit';
       custSelectorGroup.style.display = isCredit ? 'block' : 'none';
       if (isCredit) loadCustomersIntoSelect();
+      // Si hay cliente vinculado, auto-seleccionarlo en el select
+      if (isCredit && linkedCustomer) {
+        const custSel = document.getElementById('customerSelect');
+        if (custSel) {
+          if (!Array.from(custSel.options).some(o => o.value === String(linkedCustomer.customer_id))) {
+            const opt = document.createElement('option');
+            opt.value = linkedCustomer.customer_id;
+            opt.textContent = linkedCustomer.full_name;
+            opt.setAttribute('data-balance', linkedCustomer.balance || 0);
+            custSel.appendChild(opt);
+          }
+          custSel.value = String(linkedCustomer.customer_id);
+        }
+      }
     };
     paymentMethodSelect.addEventListener('change', updateCustomerSelector);
   }
@@ -1645,6 +1662,9 @@ async function finalizeSale() {
 
       // Resetear contadores de dinero visuales
       if (typeof resetMoneyCounts === 'function') resetMoneyCounts(true);
+
+      // Limpiar cliente vinculado (decisión: se limpia al finalizar la venta)
+      if (typeof unlinkPosCustomer === 'function') unlinkPosCustomer();
 
       // Mantener panel abierto; solo se cierra manualmente
     } else {
@@ -3754,3 +3774,295 @@ async function loadCustomersIntoSelect() {
   }
 }
 
+
+// ==========================================
+// Cliente vinculado en el POS (apartado/adelanto/fiado)
+// ==========================================
+let linkedCustomer = null; // { customer_id, full_name, phone, balance, credit_limit, total_purchases, email }
+let posCustomerSearchTimer = null;
+
+// Alias de escapeHtml para el módulo de cliente vinculado
+function esc(s) { return escapeHtml(s); }
+
+function customerInitials(name) {
+  return String(name || '?').split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
+}
+
+// Abre/cierra el dropdown de búsqueda de cliente
+function togglePosCustomerDropdown(force) {
+  const dd = document.getElementById('posCustomerDropdown');
+  if (!dd) return;
+  const show = force !== undefined ? !!force : dd.classList.contains('hidden');
+  dd.classList.toggle('hidden', !show);
+  if (show) {
+    document.getElementById('posCustomerSearch').value = '';
+    document.getElementById('posCustomerResults').innerHTML = '<div class="pos-customer-empty">Escribe para buscar clientes...</div>';
+    setTimeout(() => document.getElementById('posCustomerSearch').focus(), 50);
+  }
+}
+
+// Busca clientes (debounce) y muestra resultados
+async function searchPosCustomers(query) {
+  const results = document.getElementById('posCustomerResults');
+  if (!results) return;
+  const q = (query || '').trim();
+  if (q.length < 1) {
+    results.innerHTML = '<div class="pos-customer-empty">Escribe para buscar clientes...</div>';
+    return;
+  }
+  try {
+    const res = await fetch('../api/customers/customers.php?search=' + encodeURIComponent(q));
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+    const list = data.data || [];
+    if (!list.length) {
+      results.innerHTML = '<div class="pos-customer-empty"><i class="fas fa-user-slash"></i> Sin resultados para "' + esc(q) + '"</div>';
+      return;
+    }
+    results.innerHTML = list.map(c => `
+      <div class="pos-customer-result" onclick="linkPosCustomer(${c.customer_id}, '${esc(c.full_name).replace(/'/g, "\\'")}', '${esc(c.phone || '')}', '${esc(c.email || '')}', ${c.balance || 0}, ${c.credit_limit || 0}, ${c.total_purchases || 0})">
+        <span class="pos-customer-result-avatar" style="background: var(--primary-light); color: var(--primary-color);">${customerInitials(c.full_name)}</span>
+        <span class="pos-customer-result-info">
+          <strong>${esc(c.full_name)}</strong>
+          <small>${c.phone ? esc(c.phone) : ''}${Number(c.balance) > 0 ? ' · Saldo: ' + (window.FormatUtils ? window.FormatUtils.currency(c.balance) : '$' + c.balance) : ''}</small>
+        </span>
+      </div>
+    `).join('');
+  } catch (e) {
+    results.innerHTML = '<div class="pos-customer-empty">Error al buscar</div>';
+  }
+}
+
+// Vincula el cliente seleccionado
+function linkPosCustomer(id, name, phone, email, balance, creditLimit, totalPurchases) {
+  linkedCustomer = {
+    customer_id: id, full_name: name, phone: phone || '', email: email || '',
+    balance: Number(balance) || 0, credit_limit: Number(creditLimit) || 0,
+    total_purchases: Number(totalPurchases) || 0
+  };
+  togglePosCustomerDropdown(false);
+  renderLinkedCustomer();
+  // Auto-rellenar el select del checkout si existe
+  const custSel = document.getElementById('customerSelect');
+  if (custSel) {
+    // Asegurar que la opción exista (puede no estar en la lista si se buscó por teléfono)
+    if (!Array.from(custSel.options).some(o => o.value === String(id))) {
+      const opt = document.createElement('option');
+      opt.value = id;
+      opt.textContent = name;
+      opt.setAttribute('data-balance', balance || 0);
+      custSel.appendChild(opt);
+    }
+    custSel.value = String(id);
+  }
+  showNotification('Cliente vinculado: ' + name, 'success');
+}
+
+function unlinkPosCustomer() {
+  linkedCustomer = null;
+  renderLinkedCustomer();
+  const custSel = document.getElementById('customerSelect');
+  if (custSel) custSel.value = '';
+  // Si el método era apartado y se desvincula, volver a efectivo
+  const paySel = document.getElementById('paymentMethod');
+  if (paySel && paySel.value === 'credit') paySel.value = 'cash';
+  showNotification('Cliente desvinculado', 'info');
+}
+
+function renderLinkedCustomer() {
+  const wrap = document.getElementById('posLinkedCustomer');
+  const btn = document.getElementById('posCustomerBtn');
+  if (!wrap) return;
+  if (!linkedCustomer) {
+    wrap.classList.add('hidden');
+    if (btn) btn.classList.remove('hidden');
+    return;
+  }
+  wrap.classList.remove('hidden');
+  if (btn) btn.classList.add('hidden');
+  document.getElementById('posLinkedAvatar').textContent = customerInitials(linkedCustomer.full_name);
+  document.getElementById('posLinkedName').textContent = linkedCustomer.full_name;
+  const bal = document.getElementById('posLinkedBalance');
+  if (bal) {
+    bal.textContent = Number(linkedCustomer.balance) > 0
+      ? 'Saldo: ' + (window.FormatUtils ? window.FormatUtils.currency(linkedCustomer.balance) : '$' + linkedCustomer.balance)
+      : 'Sin saldo';
+    bal.style.color = Number(linkedCustomer.balance) > 0 ? 'var(--warning-color)' : 'var(--success-color)';
+  }
+}
+
+// ==========================================
+// Panel del cliente vinculado (drawer)
+// ==========================================
+let posActivePromos = [];
+
+function openPosCustomerDrawer() {
+  if (!linkedCustomer) return;
+  const drawer = document.getElementById('posCustomerDrawer');
+  const body = document.getElementById('posCustomerDrawerBody');
+  if (!drawer || !body) return;
+  document.getElementById('cdDrawerTitle').textContent = linkedCustomer.full_name;
+  drawer.classList.add('show');
+  loadPosCustomerPanel();
+}
+
+function closePosCustomerDrawer() {
+  const drawer = document.getElementById('posCustomerDrawer');
+  if (drawer) drawer.classList.remove('show');
+}
+
+function buildPosCustomerPanelHTML() {
+  const c = linkedCustomer;
+  if (!c) return '';
+  const hasBalance = Number(c.balance) > 0;
+  const limit = Number(c.credit_limit) > 0
+    ? (window.FormatUtils ? window.FormatUtils.currency(c.credit_limit) : '$' + c.credit_limit)
+    : 'Sin límite';
+
+  return `
+    <div class="pos-cd-profile">
+      <span class="pos-cd-avatar" style="background: var(--primary-light); color: var(--primary-color);">${customerInitials(c.full_name)}</span>
+      <div class="pos-cd-profile-info">
+        <strong>${esc(c.full_name)}</strong>
+        <small>${c.phone ? esc(c.phone) : ''}${c.phone && c.email ? ' · ' : ''}${c.email ? esc(c.email) : ''}</small>
+      </div>
+      <a href="customers.html" class="btn btn-sm" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--bg-card); color: var(--text-medium); text-decoration:none; font-size:0.8rem;">
+        <i class="fas fa-external-link-alt"></i> Perfil
+      </a>
+    </div>
+
+    <div class="pos-cd-summary">
+      <div class="pos-cd-summary-item ${hasBalance ? 'warning' : ''}">
+        <span>Saldo pendiente</span>
+        <strong>${window.FormatUtils ? window.FormatUtils.currency(c.balance) : '$' + c.balance}</strong>
+      </div>
+      <div class="pos-cd-summary-item">
+        <span>Límite de crédito</span>
+        <strong>${limit}</strong>
+      </div>
+      <div class="pos-cd-summary-item">
+        <span>Compras totales</span>
+        <strong>${c.total_purchases || 0}</strong>
+      </div>
+    </div>
+
+    <div class="pos-cd-section">
+      <div class="pos-cd-section-title"><i class="fas fa-tags"></i> Promociones activas</div>
+      <div id="posCdPromos">Cargando...</div>
+    </div>
+
+    <div class="pos-cd-section">
+      <div class="pos-cd-section-title"><i class="fas fa-history"></i> Últimas compras</div>
+      <div id="posCdPurchases">Cargando...</div>
+    </div>
+
+    <div class="pos-cd-actions">
+      <button class="btn btn-danger" onclick="unlinkPosCustomer(); closePosCustomerDrawer();" style="padding:9px 14px; border-radius:8px; border:none; cursor:pointer;">
+        <i class="fas fa-unlink"></i> Desvincular cliente
+      </button>
+    </div>
+  `;
+}
+
+async function loadPosCustomerPanel() {
+  const body = document.getElementById('posCustomerDrawerBody');
+  if (!body || !linkedCustomer) return;
+  body.innerHTML = buildPosCustomerPanelHTML();
+  // Cargar promos y últimas compras en paralelo
+  loadPosPromos();
+  loadPosPurchases();
+}
+
+// Promociones activas (solo informativas; marca las que aplican al carrito)
+async function loadPosPromos() {
+  const el = document.getElementById('posCdPromos');
+  if (!el) return;
+  try {
+    const res = await fetch('../api/promotions/read.php');
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+    const now = new Date();
+    const active = (data.data || []).filter(p => {
+      const start = new Date((p.start_date || '').replace(' ', 'T'));
+      const end = new Date((p.end_date || '').replace(' ', 'T'));
+      return start <= now && now <= end;
+    });
+    posActivePromos = active;
+
+    if (!active.length) {
+      el.innerHTML = '<div class="pos-cd-empty">No hay promociones activas</div>';
+      return;
+    }
+
+    // Productos del carrito actual para marcar aplicabilidad
+    const cartIds = new Set(CART.map(i => String(i.product_id)));
+
+    el.innerHTML = active.map(p => {
+      const targets = (p.targets || []).filter(t => t.product_id);
+      const appliesToCart = targets.some(t => cartIds.has(String(t.product_id)));
+      return `
+        <div class="pos-promo-item ${appliesToCart ? 'applies' : ''}">
+          <div class="pos-promo-name">
+            <i class="fas ${appliesToCart ? 'fa-check-circle' : 'fa-tag'}"></i>
+            ${esc(p.name)}
+            ${appliesToCart ? '<span class="pos-promo-badge">En tu carrito</span>' : ''}
+          </div>
+          <div class="pos-promo-detail">${esc(p.type || '')}${p.discount_value ? ' · ' + esc(p.discount_value) + (p.discount_type === 'percentage' ? '%' : '') : ''}</div>
+        </div>`;
+    }).join('');
+  } catch (e) {
+    el.innerHTML = '<div class="pos-cd-empty">Error al cargar promociones</div>';
+  }
+}
+
+// Últimas compras del cliente
+async function loadPosPurchases() {
+  const el = document.getElementById('posCdPurchases');
+  if (!el || !linkedCustomer) return;
+  try {
+    const res = await fetch('../api/customers/customers.php?id=' + linkedCustomer.customer_id);
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+    const sales = (data.data.sales || []).slice(0, 10);
+    if (!sales.length) {
+      el.innerHTML = '<div class="pos-cd-empty">Sin compras registradas</div>';
+      return;
+    }
+    el.innerHTML = sales.map(s => `
+      <div class="pos-purchase-item">
+        <span class="pos-purchase-id">#${s.sale_id}</span>
+        <span class="pos-purchase-date">${window.FormatUtils ? window.FormatUtils.dateOnly(s.sale_date) : (s.sale_date || '').slice(0, 10)}</span>
+        <span class="pos-purchase-total">${window.FormatUtils ? window.FormatUtils.currency(s.total) : '$' + s.total}</span>
+        <span class="pos-purchase-status ${Number(s.amount_paid) >= Number(s.total) ? 'ok' : 'pending'}">${Number(s.amount_paid) >= Number(s.total) ? 'Pagada' : 'Apartado'}</span>
+      </div>
+    `).join('');
+  } catch (e) {
+    el.innerHTML = '<div class="pos-cd-empty">Error al cargar compras</div>';
+  }
+}
+
+// ==========================================
+// Eventos del cliente vinculado
+// ==========================================
+function bindPosCustomerEvents() {
+  const btn = document.getElementById('posCustomerBtn');
+  const dd = document.getElementById('posCustomerDropdown');
+  const search = document.getElementById('posCustomerSearch');
+  const unlinkBtn = document.getElementById('posLinkedUnlinkBtn');
+  const panelBtn = document.getElementById('posLinkedPanelBtn');
+
+  if (btn) btn.addEventListener('click', (e) => { e.stopPropagation(); togglePosCustomerDropdown(); });
+  document.addEventListener('click', (e) => {
+    const wrap = document.getElementById('posCustomerWrap');
+    if (dd && wrap && !wrap.contains(e.target)) togglePosCustomerDropdown(false);
+  });
+  if (search) search.addEventListener('input', () => {
+    clearTimeout(posCustomerSearchTimer);
+    posCustomerSearchTimer = setTimeout(() => searchPosCustomers(search.value), 300);
+  });
+  if (search) search.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); searchPosCustomers(search.value); }
+  });
+  if (unlinkBtn) unlinkBtn.addEventListener('click', (e) => { e.stopPropagation(); unlinkPosCustomer(); });
+  if (panelBtn) panelBtn.addEventListener('click', (e) => { e.stopPropagation(); openPosCustomerDrawer(); });
+}

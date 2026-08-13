@@ -79,6 +79,39 @@
                                 <button id="toggleScannerBtn" type="button" class="scanner-btn-circle" title="Activar escáner">
                                     <i class="fas fa-barcode"></i>
                                 </button>
+
+                                <!-- Cliente vinculado -->
+                                <div class="pos-customer-wrap" id="posCustomerWrap">
+                                    <button id="posCustomerBtn" type="button" class="pos-customer-btn" title="Vincular cliente">
+                                        <i class="fas fa-user"></i>
+                                    </button>
+                                    <div id="posCustomerDropdown" class="pos-customer-dropdown hidden">
+                                        <div class="pos-customer-search">
+                                            <i class="fas fa-search"></i>
+                                            <input type="text" id="posCustomerSearch" placeholder="Buscar cliente por nombre o teléfono..." autocomplete="off">
+                                        </div>
+                                        <div id="posCustomerResults" class="pos-customer-results">
+                                            <div class="pos-customer-empty">Escribe para buscar clientes...</div>
+                                        </div>
+                                        <a href="customers.html" class="pos-customer-create">
+                                            <i class="fas fa-user-plus"></i> Crear cliente nuevo
+                                        </a>
+                                    </div>
+                                    <!-- Chip del cliente vinculado -->
+                                    <div id="posLinkedCustomer" class="pos-linked-customer hidden">
+                                        <span class="pos-linked-avatar" id="posLinkedAvatar">?</span>
+                                        <span class="pos-linked-info">
+                                            <strong id="posLinkedName">Cliente</strong>
+                                            <small id="posLinkedBalance"></small>
+                                        </span>
+                                        <button type="button" id="posLinkedPanelBtn" class="pos-linked-panel-btn" title="Opciones del cliente">
+                                            <i class="fas fa-chevron-down"></i>
+                                        </button>
+                                        <button type="button" id="posLinkedUnlinkBtn" class="pos-linked-unlink-btn" title="Desvincular">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                </div>
                                 
                                 <!-- Nuevo Botón de Configuración Circular -->
                                 <div class="config-menu-wrapper">
@@ -425,6 +458,19 @@
         });
         // Sidebar Logout handled by sidebar-loader.js
     </script>
+
+    <!-- Drawer: Panel del cliente vinculado -->
+    <div id="posCustomerDrawer" class="drawer-overlay">
+        <div class="drawer-content pos-customer-drawer">
+            <div class="drawer-header">
+                <h2><i class="fas fa-id-card"></i> <span id="cdDrawerTitle">Cliente</span></h2>
+                <button class="drawer-close" onclick="closePosCustomerDrawer()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="drawer-body" id="posCustomerDrawerBody" style="display:flex; flex-direction:column; height:100%; overflow-y:auto;">
+                <!-- Contenido inyectado por JS -->
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>

@@ -466,6 +466,11 @@ function bindEvents() {
 
   // Global Hotkeys
   document.addEventListener('keydown', (e) => {
+    // Modal de crear cliente abierto: sus teclas (Enter/Esc) las maneja
+    // el propio modal; no interferir con F2/F4/F7 ni Escape global.
+    const posQuickModal = document.getElementById('posQuickCustomerModal');
+    if (posQuickModal && posQuickModal.classList.contains('show')) return;
+
     if (e.key === 'F2') { // F2: Enfocar búsqueda
       e.preventDefault();
       if (searchInput) searchInput.focus();
@@ -3776,25 +3781,45 @@ async function loadCustomersIntoSelect() {
 
 
 // ==========================================
-// Crear cliente rápido desde el POS (sin salir del carrito)
+// Crear/Editar cliente rápido desde el POS (sin salir del carrito)
 // ==========================================
-function openPosQuickCustomerModal() {
+let posQuickEditId = null; // null = crear; número = editar cliente vinculado
+
+function openPosQuickCustomerModal(editMode) {
   const modal = document.getElementById('posQuickCustomerModal');
   if (!modal) return;
+  const title = modal.querySelector('.drawer-header h2');
+  const saveBtn = document.getElementById('posQuickCustomerSave');
+  const nameInput = document.getElementById('posQuickCustomerName');
+  const phoneInput = document.getElementById('posQuickCustomerPhone');
+
+  if (editMode && linkedCustomer) {
+    posQuickEditId = linkedCustomer.customer_id;
+    if (title) title.innerHTML = '<i class="fas fa-edit"></i> Editar cliente';
+    nameInput.value = linkedCustomer.full_name || '';
+    phoneInput.value = linkedCustomer.phone || '';
+    if (saveBtn) saveBtn.innerHTML = '<i class="fas fa-save"></i> Guardar cambios';
+  } else {
+    posQuickEditId = null;
+    if (title) title.innerHTML = '<i class="fas fa-user-plus"></i> Nuevo cliente';
+    nameInput.value = '';
+    phoneInput.value = '';
+    if (saveBtn) saveBtn.innerHTML = '<i class="fas fa-check"></i> Registrar cliente';
+  }
   modal.classList.add('show');
-  document.getElementById('posQuickCustomerName').value = '';
-  document.getElementById('posQuickCustomerPhone').value = '';
-  setTimeout(() => document.getElementById('posQuickCustomerName').focus(), 80);
+  setTimeout(() => nameInput.focus(), 80);
 }
 
 function closePosQuickCustomerModal() {
   const modal = document.getElementById('posQuickCustomerModal');
   if (modal) modal.classList.remove('show');
+  posQuickEditId = null;
 }
 
 async function savePosQuickCustomer() {
   const nameInput = document.getElementById('posQuickCustomerName');
   const phoneInput = document.getElementById('posQuickCustomerPhone');
+  const saveBtn = document.getElementById('posQuickCustomerSave');
   const name = (nameInput.value || '').trim();
   const phone = (phoneInput.value || '').trim();
   if (!name) {
@@ -3804,23 +3829,45 @@ async function savePosQuickCustomer() {
     showNotification('El nombre es obligatorio', 'error');
     return;
   }
+  // Spinner: deshabilitar botón mientras se registra
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + (posQuickEditId ? 'Guardando...' : 'Registrando...');
+  }
   try {
+    const isEdit = !!posQuickEditId;
     const res = await fetch('../api/customers/customers.php', {
-      method: 'POST',
+      method: isEdit ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ full_name: name, phone: phone || '' })
+      body: JSON.stringify(isEdit
+        ? { customer_id: posQuickEditId, full_name: name, phone: phone || '' }
+        : { full_name: name, phone: phone || '' })
     });
     const data = await res.json();
     if (!data.success) throw new Error(data.message);
-    const newId = data.customer_id || data.data?.customer_id || 0;
+    const newId = data.customer_id || data.data?.customer_id || posQuickEditId || 0;
     if (!newId) throw new Error('No se pudo obtener el id del cliente');
     closePosQuickCustomerModal();
     togglePosCustomerDropdown(false);
-    // Vincular al cliente recién creado
-    linkPosCustomer(newId, name, phone, '', 0, 0, 0);
-    showNotification('Cliente "' + name + '" registrado', 'success');
+    if (isEdit) {
+      // Refrescar datos del cliente vinculado (nombre/teléfono actualizados)
+      if (linkedCustomer) {
+        linkedCustomer.full_name = name;
+        linkedCustomer.phone = phone || '';
+      }
+      renderLinkedCustomer();
+      showNotification('Cliente "' + name + '" actualizado', 'success');
+    } else {
+      // Vincular al cliente recién creado
+      linkPosCustomer(newId, name, phone, '', 0, 0, 0);
+      showNotification('Cliente "' + name + '" registrado', 'success');
+    }
   } catch (e) {
-    showNotification('Error al crear cliente: ' + e.message, 'error');
+    showNotification('Error: ' + e.message, 'error');
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = '<i class="fas fa-check"></i> ' + (posQuickEditId ? 'Guardar cambios' : 'Registrar cliente');
+    }
   }
 }
 
@@ -3979,9 +4026,14 @@ function buildPosCustomerPanelHTML() {
         <strong>${esc(c.full_name)}</strong>
         <small>${c.phone ? esc(c.phone) : ''}${c.phone && c.email ? ' · ' : ''}${c.email ? esc(c.email) : ''}</small>
       </div>
-      <a href="customers.html" class="btn btn-sm" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--bg-card); color: var(--text-medium); text-decoration:none; font-size:0.8rem;">
-        <i class="fas fa-external-link-alt"></i> Perfil
-      </a>
+      <div class="pos-cd-profile-actions">
+        <a href="customers.html" class="btn btn-sm" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--bg-card); color: var(--text-medium); text-decoration:none; font-size:0.8rem;">
+          <i class="fas fa-external-link-alt"></i> Perfil
+        </a>
+        <button type="button" class="btn btn-sm" onclick="openPosQuickCustomerModal(true)" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--bg-card); color: var(--text-medium); cursor:pointer; font-size:0.8rem;">
+          <i class="fas fa-edit"></i> Editar
+        </button>
+      </div>
     </div>
 
     <div class="pos-cd-summary">
@@ -4172,6 +4224,17 @@ function bindPosCustomerEvents() {
   if (nameInput) nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); savePosQuickCustomer(); } });
   if (phoneInput) phoneInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); savePosQuickCustomer(); } });
   if (quickModal) quickModal.addEventListener('click', (e) => { if (e.target === quickModal) closePosQuickCustomerModal(); });
+  // Enter desde cualquier parte del modal (respaldo si el foco no está en los inputs)
+  if (quickModal) quickModal.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target !== saveBtn) {
+      e.preventDefault();
+      savePosQuickCustomer();
+    }
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closePosQuickCustomerModal();
+    }
+  });
 }
 
 // Índice del objetivo activo en el buscador de clientes (navegación ↑↓)

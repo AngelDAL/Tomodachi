@@ -88,11 +88,18 @@
   let vaciarArmed = false;   // doble-pulso vaciar
 
   function isModalOpen() {
+    // Modales estándar
     const modals = document.querySelectorAll('.modal-overlay:not(.hidden), dialog[open]');
     for (const m of modals) {
       if (m.id === 'productContextMenu') continue;
       return true;
     }
+    // Drawer del cliente vinculado y modal de crear cliente rápido del POS:
+    // suprimir atajos de teclado mientras están abiertos (como un input).
+    const posQuick = document.getElementById('posQuickCustomerModal');
+    if (posQuick && posQuick.classList.contains('show')) return true;
+    const posDrawer = document.getElementById('posCustomerDrawer');
+    if (posDrawer && posDrawer.classList.contains('show')) return true;
     return false;
   }
 
@@ -344,6 +351,27 @@
         if (searchInput) setTimeout(() => searchInput.focus(), 80);
       }
       return true;
+    }
+
+    // Ctrl+N: crear cliente nuevo desde el POS (modal rápido, sin salir
+    // del carrito). También ANTES del check isEditableFocus.
+    if (e.ctrlKey && !e.metaKey && !e.altKey && (e.key === 'n' || e.key === 'N')) {
+      e.preventDefault();
+      if (typeof openPosQuickCustomerModal === 'function') {
+        openPosQuickCustomerModal();
+      }
+      return true;
+    }
+
+    // VISTA MODAL: mientras el modal de crear cliente o el panel del
+    // cliente vinculado estén abiertos, suprimir TODOS los demás atajos
+    // (flechas, Ctrl+, teclas directas) — el modal maneja sus propias
+    // teclas (Enter/Esc) y nada debe mover el menú de atrás.
+    const posQuickModal = document.getElementById('posQuickCustomerModal');
+    const posCustomerPanel = document.getElementById('posCustomerDrawer');
+    if ((posQuickModal && posQuickModal.classList.contains('show')) ||
+        (posCustomerPanel && posCustomerPanel.classList.contains('show'))) {
+      return false;
     }
 
     if (isEditableFocus()) return false;
@@ -904,6 +932,7 @@
         { icon: 'fa-history', text: 'Historial de ventas', shortcut: 'H', run: () => { const b = document.getElementById('toggleHistoryBtn'); if (b) b.click(); } },
         { icon: 'fa-tv', text: 'Pantalla cliente', shortcut: 'P', run: () => { const b = document.getElementById('toggleCustomerDisplayBtn'); if (b) b.click(); } },
         { icon: 'fa-user', text: 'Vincular cliente', shortcut: 'Ctrl+U', run: () => { const b = document.getElementById('posCustomerBtn'); if (b && !b.classList.contains('hidden')) b.click(); } },
+        { icon: 'fa-user-plus', text: 'Nuevo cliente (POS)', shortcut: 'Ctrl+N', run: () => { if (typeof openPosQuickCustomerModal === 'function') openPosQuickCustomerModal(); } },
         { icon: 'fa-trash-alt', text: 'Vaciar carrito', shortcut: 'X', run: vaciarCarritoConConfirmacion }
       );
     }
@@ -1367,6 +1396,10 @@
     if (handleSidebarKeys(e)) return;
 
     if (!isPosPage()) return;
+
+    // Modal de crear cliente / panel de cliente abierto: suprimir el
+    // modo carrito, el cursor de galería y todo lo demás del POS.
+    if (isModalOpen()) return;
 
     // 10.5 Modo carrito (Ctrl+G): navegar items, +/- cantidades, Esc salir
     if (handleCartKeys(e)) return;

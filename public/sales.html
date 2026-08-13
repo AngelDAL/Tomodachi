@@ -95,7 +95,7 @@
                                         </div>
                                         <button type="button" class="pos-customer-create" id="posCustomerCreate" onclick="openPosQuickCustomerModal()">
                                             <i class="fas fa-user-plus"></i> Crear cliente nuevo
-                                            <span class="pos-customer-create-kbd">Ctrl+U</span>
+                                            <span class="pos-customer-create-kbd">Ctrl+N</span>
                                         </button>
                                     </div>
                                     <!-- Chip del cliente vinculado -->
@@ -474,8 +474,8 @@
     </div>
 
     <!-- Modal: Crear cliente rápido desde el POS (sin salir del carrito) -->
-    <div id="posQuickCustomerModal" class="drawer-overlay">
-        <div class="drawer-content pos-quick-customer" style="max-width:420px; width:100%;">
+    <div id="posQuickCustomerModal" class="drawer-overlay pos-quick-overlay">
+        <div class="drawer-content pos-quick-customer">
             <div class="drawer-header">
                 <h2><i class="fas fa-user-plus"></i> Nuevo cliente</h2>
                 <button class="drawer-close" onclick="closePosQuickCustomerModal()"><i class="fas fa-times"></i></button>

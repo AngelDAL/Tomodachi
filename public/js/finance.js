@@ -1,7 +1,14 @@
 async function loadTerminals() {
     const grid = document.getElementById('terminalsGrid');
+    // Reintento: el SW o la red pueden fallar la primera vez al navegar.
+    for (let attempt = 1; attempt <= 3; attempt++) {
     try {
         const response = await fetch('../api/terminals/read.php');
+        if (!response.ok) {
+            if (attempt < 3) { await new Promise(r => setTimeout(r, 600 * attempt)); continue; }
+            showNotification('Error al cargar terminales', 'error');
+            return;
+        }
         const result = await response.json();
         
         if (!result.success) {
@@ -86,6 +93,9 @@ async function loadTerminals() {
     } catch (error) {
         console.error(error);
         grid.innerHTML = '<p>Error de conexión</p>';
+        if (attempt < 3) { await new Promise(r => setTimeout(r, 600 * attempt)); continue; }
+    }
+    return; // Éxito
     }
 }
 

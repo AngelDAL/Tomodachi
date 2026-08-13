@@ -770,32 +770,50 @@ async function uploadImage() {
 }
 
 async function loadProducts() {
-    try {
-        // Eliminado store_id de los parámetros, el backend usa la sesión
-        const response = await fetch(`../api/inventory/products.php`);
-        const data = await response.json();
+    // Reintento: el SW o la red pueden fallar la primera vez al navegar.
+    for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+            // Eliminado store_id de los parámetros, el backend usa la sesión
+            const response = await fetch(`../api/inventory/products.php`);
+            if (!response.ok) {
+                if (attempt < 3) { await new Promise(r => setTimeout(r, 600 * attempt)); continue; }
+                return;
+            }
+            const data = await response.json();
 
-        if (data.success) {
-            products = data.data || [];
-            renderProducts(products);
-        } else {
-            console.error('Error:', data.error);
+            if (data.success) {
+                products = data.data || [];
+                renderProducts(products);
+            } else {
+                console.error('Error:', data.error);
+            }
+            return;
+        } catch (error) {
+            console.error('Error cargando productos (intento ' + attempt + '):', error);
+            if (attempt < 3) { await new Promise(r => setTimeout(r, 600 * attempt)); continue; }
         }
-    } catch (error) {
-        console.error('Error cargando productos:', error);
     }
 }
 
 async function loadCategories() {
-    try {
-        const response = await fetch('../api/inventory/categories.php');
-        const data = await response.json();
-        if (data.success) {
-            categories = data.data || [];
-            populateCategorySelects();
+    // Reintento: el SW o la red pueden fallar la primera vez al navegar.
+    for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+            const response = await fetch('../api/inventory/categories.php');
+            if (!response.ok) {
+                if (attempt < 3) { await new Promise(r => setTimeout(r, 600 * attempt)); continue; }
+                return;
+            }
+            const data = await response.json();
+            if (data.success) {
+                categories = data.data || [];
+                populateCategorySelects();
+            }
+            return;
+        } catch (error) {
+            console.error('Error cargando categorías (intento ' + attempt + '):', error);
+            if (attempt < 3) { await new Promise(r => setTimeout(r, 600 * attempt)); continue; }
         }
-    } catch (error) {
-        console.error('Error cargando categorías:', error);
     }
 }
 

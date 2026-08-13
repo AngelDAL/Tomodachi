@@ -537,15 +537,26 @@ function calculateProfit() {
 async function loadPromotions() {
     const list = document.getElementById("promotionsList");
     if (!list) return;
-    try {
-        const res = await fetch("../api/promotions/read.php");
-        const data = await res.json();
-        if (data && data.success) {
-            loadedPromotionsData = data.data; // Store global
-            renderPromotions(loadedPromotionsData);
+    // Reintento: el SW o la red pueden fallar la primera vez al navegar.
+    for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+            const res = await fetch("../api/promotions/read.php");
+            if (!res.ok) {
+                if (attempt < 3) { await new Promise(r => setTimeout(r, 600 * attempt)); continue; }
+                list.innerHTML = "Error de conexión";
+                return;
+            }
+            const data = await res.json();
+            if (data && data.success) {
+                loadedPromotionsData = data.data; // Store global
+                renderPromotions(loadedPromotionsData);
+                return;
+            }
+            if (attempt < 3) { await new Promise(r => setTimeout(r, 600 * attempt)); continue; }
+        } catch (e) {
+            list.innerHTML = "Error de conexión";
+            if (attempt < 3) { await new Promise(r => setTimeout(r, 600 * attempt)); continue; }
         }
-    } catch (e) {
-        list.innerHTML = "Error de conexión";
     }
 }
 

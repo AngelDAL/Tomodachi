@@ -22,33 +22,44 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function loadDashboardStats() {
-    try {
-        const response = await fetch('../api/reports/dashboard_stats.php');
-        const result = await response.json();
-        if (result.success) {
-            const data = result.data;
-            
-            // Update cards
-            if (document.getElementById('dailySales')) document.getElementById('dailySales').textContent = formatCurrency(data.dailySales);
-            if (document.getElementById('dailyProfit')) document.getElementById('dailyProfit').textContent = formatCurrency(data.dailyProfit);
-            if (document.getElementById('transactions')) document.getElementById('transactions').textContent = data.transactions;
+    // Reintento: el SW o la red pueden fallar la primera vez al navegar.
+    for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+            const response = await fetch('../api/reports/dashboard_stats.php');
+            if (!response.ok) {
+                if (attempt < 3) { await new Promise(r => setTimeout(r, 600 * attempt)); continue; }
+                return;
+            }
+            const result = await response.json();
+            if (result.success) {
+                const data = result.data;
+                
+                // Update cards
+                if (document.getElementById('dailySales')) document.getElementById('dailySales').textContent = formatCurrency(data.dailySales);
+                if (document.getElementById('dailyProfit')) document.getElementById('dailyProfit').textContent = formatCurrency(data.dailyProfit);
+                if (document.getElementById('transactions')) document.getElementById('transactions').textContent = data.transactions;
 
-            // New cards
-            if (document.getElementById('inventoryValue')) document.getElementById('inventoryValue').textContent = formatCurrency(data.inventoryValue || 0);
-            if (document.getElementById('lowStockCount')) document.getElementById('lowStockCount').textContent = data.lowStockCount || 0;
-            if (document.getElementById('topCategory')) document.getElementById('topCategory').textContent = data.topCategory || '-';
+                // New cards
+                if (document.getElementById('inventoryValue')) document.getElementById('inventoryValue').textContent = formatCurrency(data.inventoryValue || 0);
+                if (document.getElementById('lowStockCount')) document.getElementById('lowStockCount').textContent = data.lowStockCount || 0;
+                if (document.getElementById('topCategory')) document.getElementById('topCategory').textContent = data.topCategory || '-';
 
-            // Render Lists
-            renderLowStockList(data.lowStockList);
-            renderTopProductsList(data.topProducts);
-            renderRecentSalesList(data.recentSales);
+                // Render Lists
+                renderLowStockList(data.lowStockList);
+                renderTopProductsList(data.topProducts);
+                renderRecentSalesList(data.recentSales);
+            }
+            return;
+        } catch (error) {
+            console.error('Error fetching dashboard stats (intento ' + attempt + '):', error);
+            if (attempt < 3) { await new Promise(r => setTimeout(r, 600 * attempt)); continue; }
         }
-    } catch (error) {
-        console.error('Error fetching dashboard stats:', error);
     }
 }
 
 async function loadChartData() {
+    // Reintento: el SW o la red pueden fallar la primera vez al navegar.
+    for (let attempt = 1; attempt <= 3; attempt++) {
     try {
         // Calculate dates based on offset
         // Offset 0 = Current week (last 7 days)
@@ -74,13 +85,20 @@ async function loadChartData() {
 
         const url = `../api/reports/get_chart_data.php?start_date=${formatDate(startDate)}&end_date=${formatDate(endDate)}`;
         const response = await fetch(url);
+        if (!response.ok) {
+            if (attempt < 3) { await new Promise(r => setTimeout(r, 600 * attempt)); continue; }
+            return;
+        }
         const result = await response.json();
         
         if (result.success) {
             renderSalesChart(result.data);
         }
+        return;
     } catch (error) {
-        console.error('Error loading chart data:', error);
+        console.error('Error loading chart data (intento ' + attempt + '):', error);
+        if (attempt < 3) { await new Promise(r => setTimeout(r, 600 * attempt)); continue; }
+    }
     }
 }
 

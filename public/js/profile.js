@@ -89,26 +89,35 @@ function switchTab(tabId) {
 }
 
 async function loadProfile() {
+  // Reintento: el SW o la red pueden fallar la primera vez al navegar.
+  for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-        const res = await fetch('../api/users/profile.php');
-        const data = await res.json();
-        if (data.success) {
-            const user = data.data;
-            const form = document.getElementById('profileForm');
-            form.full_name.value = user.full_name;
-            form.email.value = user.email || '';
-            form.phone.value = user.phone || '';
-            document.getElementById('userRoleDisplay').value = user.role.toUpperCase();
+      const res = await fetch('../api/users/profile.php');
+      if (!res.ok) {
+        if (attempt < 3) { await new Promise(r => setTimeout(r, 600 * attempt)); continue; }
+        return;
+      }
+      const data = await res.json();
+      if (data.success) {
+        const user = data.data;
+        const form = document.getElementById('profileForm');
+        form.full_name.value = user.full_name;
+        form.email.value = user.email || '';
+        form.phone.value = user.phone || '';
+        document.getElementById('userRoleDisplay').value = user.role.toUpperCase();
 
-            // Onboarding setting
-            const onboardingCheck = document.getElementById('showOnboarding');
-            if (onboardingCheck) {
-                onboardingCheck.checked = user.show_onboarding !== undefined ? !!Number(user.show_onboarding) : true;
-            }
+        // Onboarding setting
+        const onboardingCheck = document.getElementById('showOnboarding');
+        if (onboardingCheck) {
+          onboardingCheck.checked = user.show_onboarding !== undefined ? !!Number(user.show_onboarding) : true;
         }
+      }
+      return;
     } catch (error) {
-        console.error('Error loading profile:', error);
+      console.error('Error loading profile (intento ' + attempt + '):', error);
+      if (attempt < 3) { await new Promise(r => setTimeout(r, 600 * attempt)); continue; }
     }
+  }
 }
 
 document.getElementById('profileForm').addEventListener('submit', async (e) => {
@@ -139,25 +148,31 @@ document.getElementById('profileForm').addEventListener('submit', async (e) => {
 });
 
 async function loadCompanySettings() {
+  // Reintento: el SW o la red pueden fallar la primera vez al navegar.
+  for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-        const res = await fetch('../api/stores/settings.php');
-        const data = await res.json();
-        if (data.success) {
-            const store = data.data;
-            const form = document.getElementById('companyForm');
-            form.store_name.value = store.store_name;
-            form.phone.value = store.phone || '';
-            form.address.value = store.address || '';
+      const res = await fetch('../api/stores/settings.php');
+      if (!res.ok) {
+        if (attempt < 3) { await new Promise(r => setTimeout(r, 600 * attempt)); continue; }
+        return;
+      }
+      const data = await res.json();
+      if (data.success) {
+        const store = data.data;
+        const form = document.getElementById('companyForm');
+        form.store_name.value = store.store_name;
+        form.phone.value = store.phone || '';
+        form.address.value = store.address || '';
 
-            if (store.logo_url) {
-                document.getElementById('companyLogoPreview').src = store.logo_url;
-            }
+        if (store.logo_url) {
+          document.getElementById('companyLogoPreview').src = store.logo_url;
+        }
 
-            // Cargar configuración de negocio
-            if (store.settings) {
-                document.getElementById('allowNegativeStock').checked = !!store.settings.allow_negative_stock;
-                document.getElementById('requireOpenRegister').checked = !!store.settings.require_open_register;
-                // Cargar formato regional
+        // Cargar configuración de negocio
+        if (store.settings) {
+          document.getElementById('allowNegativeStock').checked = !!store.settings.allow_negative_stock;
+          document.getElementById('requireOpenRegister').checked = !!store.settings.require_open_register;
+          // Cargar formato regional
                 loadFormatConfig(store.settings.format || null);
             }
 
@@ -291,7 +306,9 @@ async function loadCompanySettings() {
         }
     } catch (error) {
         console.error('Error loading settings:', error);
+        if (attempt < 3) { await new Promise(r => setTimeout(r, 600 * attempt)); continue; }
     }
+  }
 }
 
 // ==========================================

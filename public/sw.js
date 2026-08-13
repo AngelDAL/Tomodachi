@@ -15,7 +15,7 @@
  * Registro: public/js/offline.js (guard para HTTPS).
  * ============================================================ */
 
-const CACHE_NAME = 'tomodachi-cache-v2';
+const CACHE_NAME = 'tomodachi-cache-v3';
 const STATIC_ASSETS = [
   '/public/css/fonts.css',
   '/public/css/main.css',
@@ -59,14 +59,25 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
   if (!url.pathname.startsWith('/public/')) return;
 
-  // API de solo lectura: network-first con fallback a caché
+  // API de solo lectura: network-first con fallback a caché.
+  // SOLO se cachean respuestas exitosas (status 200) — nunca errores,
+  // 401/403/500 ni bodies de error, o el SW serviría "vacíos" después.
+  // verify_session.php NO se cachea (depende de la sesión activa).
   if (url.pathname.includes('/api/')) {
     if (event.request.method !== 'GET') return; // POST/PUT/DELETE pasan directo (cola offline del frontend)
+    if (url.pathname.includes('verify_session.php')) {
+      // Sesión: siempre a red, sin caché (evita servir sesiones viejas)
+      event.respondWith(fetch(event.request).catch(() => new Response('{"success":false,"message":"offline"}', { status: 503, headers: { 'Content-Type': 'application/json' } })));
+      return;
+    }
     event.respondWith(
       fetch(event.request)
         .then((resp) => {
-          const clone = resp.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          // Solo cachear respuestas válidas de datos
+          if (resp && resp.status === 200) {
+            const clone = resp.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
           return resp;
         })
         .catch(() => caches.match(event.request))

@@ -1680,46 +1680,55 @@ function escapeHtml(str) {
 
 // Galería de productos + categorías
 async function loadCategoriesAndProducts() {
-  try {
-    const [catRes, prodRes] = await Promise.all([
-      fetch('../api/inventory/categories.php'),
-      fetch('../api/inventory/products.php')
-    ]);
+  // Reintento: a veces el SW o la red fallan la primera vez al navegar.
+  // Se intenta hasta 3 veces con espera corta antes de rendirse.
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const [catRes, prodRes] = await Promise.all([
+        fetch('../api/inventory/categories.php'),
+        fetch('../api/inventory/products.php')
+      ]);
 
-    if (!catRes.ok || !prodRes.ok) return; // Simple check
+      if (!catRes.ok || !prodRes.ok) {
+        if (attempt < 3) { await new Promise(r => setTimeout(r, 600 * attempt)); continue; }
+        return; // Silencioso solo tras agotar reintentos
+      }
 
-    const catData = await catRes.json();
-    const prodData = await prodRes.json();
+      const catData = await catRes.json();
+      const prodData = await prodRes.json();
 
-    if (catData.success) {
-      allCategories = catData.data || [];
-    }
-    
-    // Si la respuesta de productos es un array directo o tiene propiedad data
-    if (Array.isArray(prodData)) {
+      if (catData.success) {
+        allCategories = catData.data || [];
+      }
+
+      // Si la respuesta de productos es un array directo o tiene propiedad data
+      if (Array.isArray(prodData)) {
          allProducts = prodData;
-    } else if (prodData.success) {
+      } else if (prodData.success) {
          allProducts = prodData.data || [];
-    } else {
+      } else {
          allProducts = [];
-    }
+      }
 
-    // Poblar Select de Categorías
-    const catSelect = document.getElementById('categoryFilter');
-    if (catSelect) {
-        // Mantener la opción "Todas" y agregar las demás
-        catSelect.innerHTML = '<option value="all">Todas las categorías</option>';
-        allCategories.forEach(cat => {
-            const opt = document.createElement('option');
-            opt.value = cat.category_id;
-            opt.textContent = cat.category_name || cat.name || 'Sin nombre';
-            catSelect.appendChild(opt);
-        });
-    }
+      // Poblar Select de Categorías
+      const catSelect = document.getElementById('categoryFilter');
+      if (catSelect) {
+          // Mantener la opción "Todas" y agregar las demás
+          catSelect.innerHTML = '<option value="all">Todas las categorías</option>';
+          allCategories.forEach(cat => {
+              const opt = document.createElement('option');
+              opt.value = cat.category_id;
+              opt.textContent = cat.category_name || cat.name || 'Sin nombre';
+              catSelect.appendChild(opt);
+          });
+      }
 
-    filterAndRenderProducts(); // Render inicial
-  } catch (e) {
-    console.error('Error loading data:', e);
+      filterAndRenderProducts(); // Render inicial
+      return; // Éxito
+    } catch (e) {
+      console.error('Error loading data (intento ' + attempt + '):', e);
+      if (attempt < 3) { await new Promise(r => setTimeout(r, 600 * attempt)); continue; }
+    }
   }
 }
 

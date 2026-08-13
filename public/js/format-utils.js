@@ -31,6 +31,12 @@
             if (parsed && typeof parsed === 'object') config = { ...DEFAULTS, ...parsed };
         }
     } catch (e) { /* sin caché */ }
+    // Si ya hay config (caché), aplicar símbolos de moneda de inmediato
+    try {
+        if (config && config.currency_symbol) {
+            document.addEventListener('DOMContentLoaded', () => applyCurrencyIcons());
+        }
+    } catch (e) { /* noop */ }
 
     function init(cfg) {
         config = { ...DEFAULTS, ...(cfg || {}) };
@@ -43,7 +49,20 @@
         try {
             if (cfg && typeof cfg === 'object') localStorage.setItem('pos_format_config', JSON.stringify(cfg));
         } catch (e) { /* noop */ }
+        // Actualizar símbolos de moneda en el DOM (iconos .currency-icon)
+        applyCurrencyIcons();
         return config;
+    }
+
+    // Reemplaza los iconos fa-dollar-sign (ahora .currency-icon) con el
+    // símbolo de la moneda configurada (¥, $, €, "COP $"...).
+    function applyCurrencyIcons() {
+        try {
+            const sym = config.currency_symbol || '$';
+            document.querySelectorAll('.currency-icon').forEach(el => {
+                el.textContent = sym;
+            });
+        } catch (e) { /* DOM no disponible aún */ }
     }
 
     function getConfig() {
@@ -201,6 +220,7 @@
     window.FormatUtils = {
         init: init,
         getConfig: getConfig,
+        applyCurrencyIcons: applyCurrencyIcons,
         number: number,
         quantity: quantity,
         qty: qty,

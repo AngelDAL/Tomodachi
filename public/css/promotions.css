@@ -335,12 +335,15 @@ body.modal-open { overflow: hidden; }
     display: flex;
     align-items: center;
 }
-.input-icon-wrapper i {
+.input-icon-wrapper i,
+.input-icon-wrapper .currency-icon {
     position: absolute;
     left: 12px;
     color: var(--text-muted);
     pointer-events: none;
     font-size: 0.9rem;
+    font-style: normal;
+    font-weight: 600;
 }
 .input-icon-wrapper input, 
 .input-icon-wrapper select {
@@ -950,7 +953,8 @@ body.modal-open { overflow: hidden; }
     gap: 10px;
 }
 
-.promo-stat i {
+.promo-stat i,
+.promo-stat .currency-icon {
     width: 32px;
     height: 32px;
     border-radius: 9px;
@@ -960,6 +964,8 @@ body.modal-open { overflow: hidden; }
     align-items: center;
     justify-content: center;
     font-size: 0.85rem;
+    font-style: normal;
+    font-weight: 700;
     flex-shrink: 0;
 }
 

@@ -2080,3 +2080,26 @@ html[data-theme] textarea {
 .sub-section-body {
     padding: 0 0.25rem;
 }
+
+/* ============================================================
+ * Símbolo de moneda regional (.currency-icon)
+ * Reemplaza a los iconos fa-dollar-sign; se rellena con el
+ * símbolo configurado (¥, $, €, "COP $"...) por FormatUtils.
+ * ============================================================ */
+.currency-icon {
+    font-style: normal;
+    font-weight: 700;
+    display: inline-block;
+    line-height: 1;
+}
+
+/* En encabezados de tabla (dashboard) */
+th .currency-icon {
+    margin-right: 2px;
+}
+
+/* En labels de formulario (inventory) */
+label .currency-icon {
+    margin-right: 3px;
+    color: var(--primary-color);
+}

@@ -828,7 +828,7 @@ function renderPromotions(promotions) {
                         </div>
                     </div>
                     <div class="promo-stat">
-                        <i class="fas fa-dollar-sign"></i>
+                        <span class="currency-icon">${window.FormatUtils ? (window.FormatUtils.getConfig().currency_symbol || '$') : '$'}</span>
                         <div>
                             <span class="promo-stat-value">${formatCurrency(stats.revenue)}</span>
                             <span class="promo-stat-label">Ingresos</span>
@@ -1042,7 +1042,7 @@ function updateDrawerFields() {
                 <div class="form-group">
                     <label>Monto Mínimo de Compra</label>
                     <div class="input-icon-wrapper">
-                        <i class="fas fa-dollar-sign"></i>
+                        <span class="currency-icon">${window.FormatUtils ? (window.FormatUtils.getConfig().currency_symbol || '$') : '$'}</span>
                         <input type="number" name="min_purchase_amount" class="form-control" value="0">
                     </div>
                 </div>

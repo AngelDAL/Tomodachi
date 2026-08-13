@@ -148,27 +148,71 @@ El ticket impreso usa `formatCurrency` → heredará el formato automáticamente
 El backend `close_register.php` (arqueo) usa `date('d/m/Y H:i')` — se puede
 dejar (es el estándar de arqueo) o parametrizar después; **decisión abierta**.
 
+### 8. FUTURO — Denominaciones por país (panel "Monedas y Billetes")
+
+**Estado: PROPUESTA — no implementado aún (feature futura)**
+
+El panel de "Total Acumulado" del POS (sales.js:2858-2859) y el arqueo por
+denominaciones del cierre de caja (finance.js) tienen denominaciones
+HARDCODEADAS como arreglo mexicano:
+`coins = [1, 2, 5, 10]` y `bills = [20, 50, 100, 200, 500, 1000]`.
+
+Eso es invariable por país: una empresa de Japón vería botones de "¥500"
+o "¥1000" que no existen en su circulante real (JPY: billetes 1000/2000/
+5000/10000, monedas 1/5/10/50/100/500). Mismo problema con COP, USD, EUR.
+
+**Diseño propuesto** (extiende el sistema actual, cero SQL nuevo):
+
+1. **Persistencia**: agregar `denominations` al objeto `format` de
+   `stores.settings` (JSON ya existente):
+   ```json
+   "format": {
+     "...": "...",
+     "denominations": {
+       "bills": [20, 50, 100, 200, 500, 1000],
+       "coins": [1, 2, 5, 10]
+     }
+   }
+   ```
+2. **Presets**: cada preset (MX/CO/US/JP/ES/AR/BR) carga su circulante real.
+3. **UI en profile.html**: sección extra en Formato Regional para editar
+   billetes/monedas (chips editables) + presets.
+4. **POS (sales.js)**: el panel de Total Acumulado renderiza desde
+   `FormatUtils.getConfig().denominations` en vez del arreglo fijo.
+5. **Arqueo (finance.js)**: el modal de cierre de caja usa las mismas
+   denominaciones — un solo lugar de verdad para cuadrar el corte.
+
+**Beneficio**: el conteo de billetes/monedas refleja el circulante real del
+país, y el arqueo cuadra con las denominaciones que el cajero tiene a mano.
+
+## Estado de implementación (2026-08-13)
+
+| Parte | Estado |
+|---|---|
+| Persistencia (settings.format JSON) | ✅ Implementado |
+| format-utils.js (helper central) | ✅ Implementado |
+| Reemplazo ~100 formatos (JS + HTML inline) | ✅ Implementado |
+| Backend FormatHelper.class.php (salidas) | ✅ Implementado |
+| UI Formato Regional (presets + preview) | ✅ Implementado |
+| Cantidades inteligentes (FormatUtils.qty) | ✅ Implementado |
+| Símbolos de moneda (.currency-icon) | ✅ Implementado |
+| Denominaciones por país | ⏳ Futuro (sección 8) |
+
 ## Preguntas abiertas (para ti, Angel)
 
-1. **¿Alcance inicial?** ¿Empezamos con la config + frontend web (pantallas),
-   o también tickets térmicos y PDF de reportes desde el inicio?
-   - PDF de reportes (reports.html) tiene ~61 ocurrencias inline — es el
-     pedazo más grande. ¿Lo incluimos en esta fase o en una segunda?
+> ✅ **Resueltas el 2026-08-13**:
+> 1. Alcance GLOBAL (pantallas + tickets + PDF) — implementado.
+> 2. Solo visual, sin conversión — implementado.
+> 3. Símbolo editable — implementado.
+> 4. Fechas backend solo en salidas, SQL intacto — implementado.
+> 5. Paquetes de idioma como plugin futuro (locale ya se guarda).
 
-2. **¿Moneda = solo visual o también conversión?** Esta feature es SOLO
-   formato de presentación (cómo se ven los números). No incluye tipo de
-   cambio ni conversión MXN↔COP. ¿Correcto? (asumo que sí)
-
-3. **¿Símbolo personalizado o solo código ISO?** ¿Quieres poder escribir
-   "COP $" o prefieres que el símbolo se derive del código?
-
-4. **¿Las fechas en el backend (PHP) también?** Los tickets de arqueo
-   (close_register) y mensajes de error usan formato PHP fijo. ¿Los
-   tocamos o los dejamos como están por ahora?
-
-5. **¿Locale de idioma?** ¿Además del formato numérico, quieres que los
-   nombres de días/meses se muestren en el idioma del preset (es-CO, es-MX,
-   en-US)? Esto afecta etiquetas tipo "martes, 11 de agosto".
+Pendiente de decidir (futuro):
+- **Denominaciones por país** (sección 8): ¿lo hacemos cuando? ¿Solo el
+  panel del POS o también el arqueo de cierre?
+- **Paquetes de idioma**: conectarlos con el campo `locale` guardado.
+- **Backend close_register.php**: fecha de arqueo `d/m/Y` — dejar estándar
+  o parametrizar (bajo impacto).
 
 ## Verificación
 

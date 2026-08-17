@@ -127,3 +127,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 `schema.sql` incluye seed inicial: tienda 1 "Tienda Principal", usuario
 `admin/admin123`, 4 categorías, 6 productos. `SEED_DEMO=true` (default) añade
 datos demo adicionales al primer arranque (ver docker/entrypoint.sh).
+
+## Lineamientos de UI/UX — OBLIGATORIO
+
+**NUNCA uses esto en el frontend:**
+- ❌ `alert()` — bloquea el hilo y es intrusivo
+- ❌ `confirm()` — bloquea el hilo y es intrusivo
+- ❌ Emojis en texto (🎉 🚀 ✅ ❌ etc.) — no son profesionales
+
+**EN SU LUGAR usa:**
+- ✅ Iconos FontAwesome (`<i class="fas fa-check"></i>`)
+- ✅ Sistema de notificaciones personalizado (toast/alerts del proyecto)
+- ✅ Modales personalizados (`<dialog>` o componentes custom)
+- ✅ `window.tomodachi?.notify()` si existe, o crea un toast simple
+
+**Ejemplo de notificación no-bloqueante:**
+```javascript
+function showNotification(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `notification notification-${type}`;
+    toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : 'exclamation-triangle'}"></i> ${message}`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+// En lugar de confirm():
+function confirmAction(message, callback) {
+    // Usar modal personalizado o crear uno
+    const modal = document.createElement('dialog');
+    modal.innerHTML = `
+        <div class="confirm-dialog">
+            <p>${message}</p>
+            <button class="btn-confirm">Confirmar</button>
+            <button class="btn-cancel">Cancelar</button>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.showModal();
+    
+    modal.querySelector('.btn-confirm').onclick = () => {
+        callback();
+        modal.close();
+        modal.remove();
+    };
+    modal.querySelector('.btn-cancel').onclick = () => {
+        modal.close();
+        modal.remove();
+    };
+}
+```
+
+**Botones:**
+- Acción principal: "Crear", "Guardar", "Actualizar" (NO "OK", "Sí")
+- Acción destructiva: "Eliminar" (con confirmación via modal)
+- Cancelar: "Cancelar" (siempre disponible)
+
+**Textos en español:**
+- Usa acentos correctamente (menú, no menu)
+- Ortografía profesional
+- Sin emojis en labels, placeholders, ni mensajes

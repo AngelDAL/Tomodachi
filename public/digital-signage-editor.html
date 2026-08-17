@@ -664,7 +664,7 @@
 
             if (content.text) {
                 inner = `<div class="block-text" style="font-size:${content.text_size || '24px'};">${escapeHtml(content.text)}</div>`;
-            } else if (el.type === 'product' && content.name) {
+            } else if ((el.type === 'product_card' || el.type === 'product') && content.name) {
                 inner = `<div class="block-text">${escapeHtml(content.name)}</div>`;
                 if (content.price) inner += `<div style="font-weight:800;">${escapeHtml(content.price)}</div>`;
             }
@@ -695,14 +695,14 @@
                 case 'text': return 'fa-font';
                 case 'image': return 'fa-image';
                 case 'banner': return 'fa-photo-video';
-                case 'product': return 'fa-tag';
+                case 'product_card': return 'fa-tag';
                 case 'clock': return 'fa-clock';
                 default: return 'fa-square';
             }
         }
 
         function typeLabel(type) {
-            return { text: 'Texto', image: 'Imagen', banner: 'Imagen + Texto', product: 'Producto', clock: 'Reloj' }[type] || type;
+            return { text: 'Texto', image: 'Imagen', banner: 'Imagen + Texto', product_card: 'Producto', product: 'Producto', clock: 'Reloj' }[type] || type;
         }
 
         // ===== Manejo de eventos en canvas =====
@@ -743,6 +743,8 @@
         });
 
         function addBlock(type) {
+            // Normalizar tipo 'product' -> 'product_card' (valor del ENUM en BD)
+            if (type === 'product') type = 'product_card';
             _blockSeq++;
             const cols = slides[currentSlide]?.grid_cols || 3;
             const el = {
@@ -766,7 +768,7 @@
                 case 'text': return { text: 'Texto de ejemplo', text_size: '28px', background_color: '' };
                 case 'image': return { image_url: '', background_color: '#334155' };
                 case 'banner': return { text: 'Texto sobre imagen', text_size: '32px', background_image: '', background_color: '#0f3460' };
-                case 'product': return { name: 'Producto', price: '$0.00', text_size: '22px', background_color: '#1a1a2e' };
+                case 'product_card': return { name: 'Producto', price: '$0.00', text_size: '22px', background_color: '#1a1a2e' };
                 case 'clock': return { background_color: '#334155' };
                 default: return {};
             }
@@ -801,8 +803,8 @@
             </div>`;
 
             // Texto (si aplica)
-            if (['text', 'product', 'banner'].includes(el.type)) {
-                if (el.type === 'product') {
+            if (['text', 'product_card', 'product', 'banner'].includes(el.type)) {
+                if (el.type === 'product_card' || el.type === 'product') {
                     html += `<div class="prop-section">
                         <div class="tool-group"><label>Nombre del producto</label>
                             <input type="text" id="prop-name" value="${escapeHtml(c.name || '')}">

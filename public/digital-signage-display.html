@@ -494,8 +494,8 @@
             }
             
             let inner = '';
-            if (['text', 'banner', 'product'].includes(element.element_type)) {
-                if (element.element_type === 'product') {
+            if (['text', 'banner', 'product', 'product_card'].includes(element.element_type)) {
+                if (element.element_type === 'product' || element.element_type === 'product_card') {
                     if (content.name) {
                         inner += `<div class="block-text" style="font-size:${content.text_size || '28px'};">${escapeHtml(content.name)}</div>`;
                     }

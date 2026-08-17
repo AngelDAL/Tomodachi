@@ -598,7 +598,9 @@
             html += `<div class="el-content" style="justify-content:${hJustify(el.text_pos_h)}; align-items:${vAlign(el.text_pos_v)}; padding:0;">`;
             if (el.type === 'text' || el.type === 'rect') {
                 if (el.text) {
-                    const sizePx = (el.text_size_pct / 100) * canvasDimensions().height;
+                    // Usar la dimensión menor evita texto desproporcionado en diseño vertical.
+                    const dims = canvasDimensions();
+                    const sizePx = (el.text_size_pct / 100) * Math.min(dims.width, dims.height);
                     html += `<div class="el-text" style="font-size:${sizePx}px; color:${esc(el.text_color)}; transform:translate(${el.text_offset_x}px, ${el.text_offset_y}px); white-space:pre-line; text-align:${el.text_pos_h};">${esc(el.text)}</div>`;
                 } else if (el.type === 'text') {
                     html += `<div class="el-text" style="font-size:24px; color:${esc(el.text_color)};">Texto</div>`;

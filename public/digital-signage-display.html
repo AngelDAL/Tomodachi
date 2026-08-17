@@ -558,7 +558,8 @@
                         const text = document.createElement('div');
                         text.className = 'presentation-text';
                         text.textContent = c.text;
-                        text.style.fontSize = `${c.text_size_pct || 4}vh`;
+                        // vmin conserva una escala legible tanto en TV horizontal como vertical.
+                        text.style.fontSize = `${c.text_size_pct || 4}vmin`;
                         text.style.color = c.text_color || '#ffffff';
                         text.style.textAlign = c.text_pos_h || 'center';
                         text.style.transform = `translate(${c.text_offset_x || 0}px, ${c.text_offset_y || 0}px)`;

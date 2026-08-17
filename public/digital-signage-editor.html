@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="view-transition" content="same-origin">
+    <title>Editor de Pantalla - Tomodachi</title>
+    <link rel="stylesheet" href="css/fonts.css?v=4">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css?v=4">
+    <link rel="stylesheet" href="css/main.css?v=4">
+    <link rel="stylesheet" href="css/sidebar-modern.css?v=4">
+    <link rel="stylesheet" href="css/mobile-nav.css?v=4">
+    <script src="js/theme-init.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+
+        .editor-container {
+            display: flex;
+            height: calc(100vh);
+        }
+
+        /* ===== Panel izquierdo: tools ===== */
+        .editor-tools {
+            width: 260px;
+            background: var(--card-bg, #fff);
+            border-right: 1px solid var(--border-color, #e2e8f0);
+            padding: 1.25rem;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        .editor-tools h3 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted, #64748b);
+            margin: 0 0 1rem 0;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color, #e2e8f0);
+        }
+
+        .tool-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .tool-group label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-primary, #333);
+            margin-bottom: 0.4rem;
+        }
+
+        .tool-group input[type="text"],
+        .tool-group select,
+        .tool-group input[type="number"],
+        .tool-group input[type="color"] {
+            width: 100%;
+            padding: 0.5rem 0.6rem;
+            border: 1px solid var(--border-color, #ddd);
+            border-radius: 6px;
+            background: var(--bg-primary, #fff);
+            color: var(--text-primary, #333);
+            font-size: 0.9rem;
+        }
+
+        .tool-group input[type="range"] {
+            width: 100%;
+        }
+
+        .size-options {
+            display: flex;
+            gap: 0.4rem;
+        }
+
+        .size-btn {
+            flex: 1;
+            padding: 0.45rem;
+            border: 2px solid var(--border-color, #ddd);
+            border-radius: 6px;
+            background: var(--bg-primary, #fff);
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-primary, #333);
+            text-align: center;
+            transition: all 0.15s;
+        }
+
+        .size-btn.active {
+            border-color: var(--primary-color);
+            background: var(--primary-color);
+            color: #fff;
+        }
+
+        .tool-btn {
+            width: 100%;
+            padding: 0.6rem;
+            border: none;
+            border-radius: 6px;
+            background: var(--primary-color);
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: background 0.15s;
+        }
+
+        .tool-btn:hover { background: var(--primary-dark, #005a9e); }
+
+        .btn-secondary {
+            background: var(--bg-secondary, #e5e5e5);
+            color: var(--text-primary, #333);
+        }
+        .btn-secondary:hover { background: var(--bg-tertiary, #d5d5d5); }
+
+        .btn-danger {
+            background: var(--danger-color, #ef4444);
+            color: #fff;
+        }
+        .btn-danger:hover { background: #dc2626; }
+
+        .tool-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .tool-btn + .tool-btn { margin-top: 0.5rem; }
+
+        /* ===== Panel central: canvas ===== */
+        .editor-canvas-wrap {
+            flex: 1;
+            background: var(--bg-secondary, #f0f2f5);
+            overflow: auto;
+            display: flex;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .canvas-device {
+            width: 100%;
+            max-width: 900px;
+            background: #1a1a1a;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            position: relative;
+        }
+
+        .canvas-device.vertical {
+            max-width: 480px;
+        }
+
+        .canvas-slide {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 6px;
+            min-height: 420px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .canvas-slide.bg-image {
+            background-size: cover;
+            background-position: center;
+        }
+
+        .block {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: #fff;
+            cursor: move;
+            transition: outline 0.15s;
+            flex-shrink: 0;
+        }
+
+        .block.selected {
+            outline: 3px solid #38bdf8;
+            outline-offset: -3px;
+        }
+
+        .block.bg-image {
+            background-size: cover;
+            background-position: center;
+        }
+
+        /* Tamaños de bloque (altura) */
+        .block.h-xs { min-height: 60px; }
+        .block.h-sm { min-height: 90px; }
+        .block.h-md { min-height: 140px; }
+        .block.h-lg { min-height: 200px; }
+        .block.h-full { min-height: 380px; }
+
+        .block .block-inner {
+            padding: 1rem;
+            width: 100%;
+            z-index: 1;
+        }
+
+        .block .block-text {
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        /* Grid mode */
+        .canvas-slide.grid-mode {
+            display: grid;
+            gap: 0.5rem;
+        }
+
+        .block-overlay-controls {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            z-index: 5;
+            display: flex;
+            gap: 4px;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+
+        .block.selected .block-overlay-controls,
+        .block:hover .block-overlay-controls {
+            opacity: 1;
+        }
+
+        .block-control-btn {
+            width: 26px;
+            height: 26px;
+            border: none;
+            border-radius: 4px;
+            background: rgba(0,0,0,0.6);
+            color: #fff;
+            cursor: pointer;
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .block-control-btn:hover { background: rgba(0,0,0,0.85); }
+        .block-control-btn.danger:hover { background: #dc2626; }
+
+        /* ===== Panel derecho: propiedades ===== */
+        .editor-props {
+            width: 280px;
+            background: var(--card-bg, #fff);
+            border-left: 1px solid var(--border-color, #e2e8f0);
+            padding: 1.25rem;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        .editor-props h3 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted, #64748b);
+            margin: 0 0 1rem 0;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color, #e2e8f0);
+        }
+
+        .editor-props .tool-group label {
+            font-size: 0.8rem;
+        }
+
+        .editor-props input[type="text"],
+        .editor-props textarea,
+        .editor-props input[type="number"] {
+            width: 100%;
+            padding: 0.5rem 0.6rem;
+            border: 1px solid var(--border-color, #ddd);
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-family: inherit;
+        }
+
+        .editor-props textarea { resize: vertical; min-height: 60px; }
+
+        .prop-section {
+            margin-bottom: 1.25rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color, #e2e8f0);
+        }
+
+        .img-preview {
+            width: 100%;
+            height: 70px;
+            border-radius: 6px;
+            margin-top: 0.4rem;
+            background-size: cover;
+            background-position: center;
+            border: 1px solid var(--border-color, #ddd);
+        }
+
+        .empty-props {
+            color: var(--text-muted, #666);
+            font-size: 0.9rem;
+            text-align: center;
+            padding: 2rem 0;
+        }
+
+        /* Header bar */
+        .editor-topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1.5rem;
+            background: var(--card-bg, #fff);
+            border-bottom: 1px solid var(--border-color, #e2e8f0);
+        }
+
+        .editor-topbar .br-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .topbar-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .topbar-actions button {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .btn-save-top {
+            background: var(--primary-color);
+            color: #fff;
+        }
+        .btn-save-top:hover { background: var(--primary-dark, #005a9e); }
+
+        .btn-back {
+            background: var(--bg-secondary, #e5e5e5);
+            color: var(--text-primary, #333);
+        }
+
+        .mode-toggle {
+            display: flex;
+            background: var(--bg-secondary, #e5e5e5);
+            border-radius: 6px;
+            padding: 3px;
+            gap: 3px;
+        }
+
+        .mode-toggle button {
+            border: none;
+            background: transparent;
+            padding: 0.35rem 0.8rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-muted, #666);
+        }
+
+        .mode-toggle button.active {
+            background: var(--card-bg, #fff);
+            color: var(--text-primary, #333);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .layout-badge {
+            font-size: 0.7rem;
+            background: var(--bg-secondary, #e5e5e5);
+            color: var(--text-muted, #666);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            margin-left: 0.5rem;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            background: #1e293b;
+            color: #fff;
+            padding: 0.85rem 1.25rem;
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+            z-index: 10000;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s;
+        }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast.success { background: #10b981; }
+        .toast.error { background: #ef4444; }
+
+        @media (max-width: 900px) {
+            .editor-container { flex-direction: column; }
+            .editor-tools { width: 100%; border-right: none; border-bottom: 1px solid var(--border-color); }
+            .editor-props { width: 100%; border-left: none; border-top: 1px solid var(--border-color); }
+            .editor-canvas-wrap { order: -1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="editor-topbar">
+        <div class="br-title">
+            <button class="btn-back" id="btnBack"><i class="fas fa-arrow-left"></i></button>
+            <span id="boardTitle">Editor de Pantalla</span>
+        </div>
+        <div class="topbar-actions">
+            <div class="mode-toggle" id="modeToggle">
+                <button data-mode="vertical" class="active"><i class="fas fa-list-ul"></i> Filas</button>
+                <button data-mode="grid"><i class="fas fa-th"></i> Grid</button>
+            </div>
+            <button class="btn-save-top" id="btnSave"><i class="fas fa-save"></i> Guardar</button>
+        </div>
+    </div>
+
+    <div class="editor-container">
+        <!-- Herramientas -->
+        <aside class="editor-tools">
+            <h3><i class="fas fa-plus-circle"></i> Agregar bloque</h3>
+            <div class="tool-group">
+                <button class="tool-btn" data-add="text"><i class="fas fa-font"></i> Texto</button>
+                <button class="tool-btn" data-add="image" style="margin-top:0.5rem;"><i class="fas fa-image"></i> Imagen</button>
+                <button class="tool-btn" data-add="banner" style="margin-top:0.5rem;"><i class="fas fa-photo-video"></i> Imagen + Texto</button>
+                <button class="tool-btn" data-add="product" style="margin-top:0.5rem;"><i class="fas fa-tag"></i> Producto</button>
+            </div>
+        </aside>
+
+        <!-- Canvas -->
+        <div class="editor-canvas-wrap">
+            <div class="canvas-device" id="canvasDevice">
+                <div class="canvas-slide" id="canvasSlide">
+                    <div class="block" data-placeholder style="height:100%; color:rgba(255,255,255,0.6); font-size:0.9rem; opacity:0.7;">
+                        Agrega un bloque o selecciona uno existente
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Propiedades -->
+        <aside class="editor-props" id="editorProps">
+            <h3><i class="fas fa-sliders-h"></i> Propiedades</h3>
+            <div id="propsContent">
+                <div class="empty-props">
+                    <i class="fas fa-mouse-pointer" style="font-size:2rem; opacity:0.3;"></i>
+                    <p>Selecciona un bloque para editarlo</p>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="js/sidebar-loader.js?v=4"></script>
+    <script>
+        // ===== Estado global =====
+        const API_BASE = '../api';
+        const urlParams = new URLSearchParams(window.location.search);
+        const boardId = urlParams.get('board');
+        let board = null;
+        let slides = [];
+        let currentSlide = 0;
+        let selectedBlockId = null;
+        let editMode = 'vertical'; // 'vertical' | 'grid'
+        let _blockSeq = 0;
+
+        // Elementos transient (no persistidos aun)
+        let elements = []; // { tempId, type, content, size, grid pos }
+
+        // ===== Utilidades =====
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text == null ? '' : text;
+            return div.innerHTML;
+        }
+
+        function notify(message, type = 'success') {
+            const t = document.getElementById('toast');
+            t.textContent = message;
+            t.className = `toast ${type} show`;
+            clearTimeout(notify._t);
+            notify._t = setTimeout(() => t.classList.remove('show'), 3000);
+        }
+
+        async function api(url, opts = {}) {
+            const res = await fetch(`${API_BASE}/${url}`, { credentials: 'include', ...opts });
+            return res.json();
+        }
+
+        // ===== Carga inicial =====
+        async function init() {
+            if (!boardId) {
+                notify('Falta ID de pantalla', 'error');
+                window.location.href = 'digital-signage.html';
+                return;
+            }
+            document.getElementById('boardTitle').textContent = 'Cargando...';
+            const data = await api(`digital_boards/read.php`);
+            if (data.success) {
+                board = data.data.find(b => b.board_id == boardId);
+                if (board) {
+                    document.getElementById('boardTitle').textContent = board.name;
+                }
+            }
+            await loadContent();
+        }
+
+        async function loadContent() {
+            // Cargar slides del board
+            const data = await api(`board_slides/read.php?board_id=${boardId}`);
+            if (!data.success) { notify('Error al cargar slides', 'error'); return; }
+
+            if (data.data.length > 0) {
+                currentSlide = 0;
+            } else {
+                // Crear un slide por defecto
+                const created = await api('board_slides/create.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ board_id: boardId, title: 'Slide 1' })
+                });
+                if (created.success) currentSlide = 0;
+            }
+
+            const slidesRes = await api(`board_slides/read.php?board_id=${boardId}`);
+            slides = slidesRes.data || [];
+            await loadElements();
+        }
+
+        async function loadElements() {
+            if (!slides[currentSlide]) return;
+            const slideId = slides[currentSlide].slide_id;
+            const data = await api(`slide_elements/read.php?slide_id=${slideId}`);
+            // Normalizar con tempId
+            elements = (data.data || []).map(el => ({
+                ...el,
+                tempId: 'srv_' + el.element_id,
+                type: el.element_type,
+                size: (el.content && el.content.height) || 'md'
+            }));
+            render();
+        }
+
+        // ===== Render canvas =====
+        function render() {
+            renderCanvas();
+            renderProps();
+        }
+
+        function renderCanvas() {
+            const canvas = document.getElementById('canvasSlide');
+            canvas.className = 'canvas-slide';
+            canvas.style.background = '';
+
+            if (editMode === 'vertical') {
+                canvas.classList.remove('grid-mode');
+                canvas.style.display = 'flex';
+                canvas.style.flexDirection = 'column';
+                canvas.style.gap = '0.5rem';
+
+                if (elements.length === 0) {
+                    canvas.innerHTML = `<div class="block" data-placeholder style="height:100%; color:rgba(255,255,255,0.6); font-size:0.9rem; opacity:0.7;">Agrega un bloque para comenzar</div>`;
+                    return;
+                }
+
+                canvas.innerHTML = elements.map(el => renderBlockVertical(el)).join('');
+                bindBlockEvents();
+            } else {
+                // Modo grid
+                const cols = slides[currentSlide]?.grid_cols || 3;
+                canvas.classList.add('grid-mode');
+                canvas.style.display = 'grid';
+                canvas.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+                canvas.style.flexDirection = '';
+
+                if (elements.length === 0) {
+                    canvas.innerHTML = `<div class="block" data-placeholder style="grid-column:1/-1; color:rgba(255,255,255,0.6); font-size:0.9rem; opacity:0.7; min-height:380px;">Agrega un bloque para comenzar</div>`;
+                    return;
+                }
+
+                canvas.innerHTML = elements.map(el => renderBlockGrid(el)).join('');
+                bindBlockEvents();
+            }
+        }
+
+        function renderBlockVertical(el) {
+            const sizeClass = `h-${el.size}`;
+            const content = el.content || {};
+            let inner = '';
+            let bgStyle = '';
+
+            if (el.type === 'text' || el.type === 'banner') {
+                if (content.text) {
+                    inner = `<div class="block-text" style="font-size:${content.text_size || '24px'};">${escapeHtml(content.text)}</div>`;
+                }
+            }
+            if (el.type === 'image') {
+                inner = '';
+            }
+            if (el.type === 'product') {
+                inner = `<div class="block-text" style="font-size:${content.text_size || '24px'};">${escapeHtml(content.name || '')}</div>`;
+                if (content.price) inner += `<div style="font-size:${content.price_size || '18px'}; font-weight:800;">${escapeHtml(content.price)}</div>`;
+            }
+            if (el.type === 'banner') {
+                if (content.text) {
+                    inner = `<div class="block-text" style="font-size:${content.text_size || '28px'};">${escapeHtml(content.text)}</div>`;
+                }
+            }
+
+            // Fondo
+            if (content.background_image || content.image_url) {
+                bgStyle = `background-image:url('${escapeHtml(content.background_image || content.image_url)}');`;
+            } else if (content.background_color) {
+                bgStyle = `background:${content.background_color};`;
+            }
+
+            return `
+                <div class="block ${sizeClass} ${content.background_image ? 'bg-image' : ''} ${selectedBlockId === el.tempId ? 'selected' : ''}"
+                     data-id="${el.tempId}" style="${bgStyle}">
+                    <div class="block-overlay-controls">
+                        <button class="block-control-btn" data-act="up" title="Subir"><i class="fas fa-arrow-up"></i></button>
+                        <button class="block-control-btn" data-act="down" title="Bajar"><i class="fas fa-arrow-down"></i></button>
+                        <button class="block-control-btn" data-act="remove" title="Eliminar"><i class="fas fa-trash"></i></button>
+                    </div>
+                    <div class="block-inner">
+                        <div class="block-type-hint"><i class="fas ${typeIcon(el.type)}"></i> ${typeLabel(el.type)}</div>
+                        ${inner}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderBlockGrid(el) {
+            const content = el.content || {};
+            const colStart = el.grid_col || 1;
+            const colSpan = el.col_span || 1;
+            const rowStart = el.grid_row || 1;
+            const rowSpan = el.row_span || 1;
+
+            let inner = '';
+            let bgStyle = '';
+
+            if (content.text) {
+                inner = `<div class="block-text" style="font-size:${content.text_size || '24px'};">${escapeHtml(content.text)}</div>`;
+            } else if (el.type === 'product' && content.name) {
+                inner = `<div class="block-text">${escapeHtml(content.name)}</div>`;
+                if (content.price) inner += `<div style="font-weight:800;">${escapeHtml(content.price)}</div>`;
+            }
+
+            if (content.background_image || content.image_url) {
+                bgStyle = `background-image:url('${escapeHtml(content.background_image || content.image_url)}');`;
+            } else if (content.background_color) {
+                bgStyle = `background:${content.background_color};`;
+            }
+
+            return `
+                <div class="block ${content.background_image ? 'bg-image' : ''} ${selectedBlockId === el.tempId ? 'selected' : ''}"
+                     data-id="${el.tempId}"
+                     style="grid-column:${colStart} / span ${colSpan}; grid-row:${rowStart} / span ${rowSpan}; min-height:100px; ${bgStyle}">
+                    <div class="block-overlay-controls">
+                        <button class="block-control-btn" data-act="remove" title="Eliminar"><i class="fas fa-trash"></i></button>
+                    </div>
+                    <div class="block-inner">
+                        <div class="block-type-hint"><i class="fas ${typeIcon(el.type)}"></i> ${typeLabel(el.type)}</div>
+                        ${inner}
+                    </div>
+                </div>
+            `;
+        }
+
+        function typeIcon(type) {
+            switch (type) {
+                case 'text': return 'fa-font';
+                case 'image': return 'fa-image';
+                case 'banner': return 'fa-photo-video';
+                case 'product': return 'fa-tag';
+                case 'clock': return 'fa-clock';
+                default: return 'fa-square';
+            }
+        }
+
+        function typeLabel(type) {
+            return { text: 'Texto', image: 'Imagen', banner: 'Imagen + Texto', product: 'Producto', clock: 'Reloj' }[type] || type;
+        }
+
+        // ===== Manejo de eventos en canvas =====
+        function bindBlockEvents() {
+            document.querySelectorAll('.block[data-id]').forEach(block => {
+                block.addEventListener('click', (e) => {
+                    if (e.target.closest('[data-act]')) return;
+                    selectedBlockId = block.dataset.id;
+                    render();
+                });
+
+                block.querySelectorAll('[data-act]').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const act = btn.dataset.act;
+                        const id = block.dataset.id;
+                        const idx = elements.findIndex(el => el.tempId === id);
+                        if (idx === -1) return;
+                        if (act === 'remove') {
+                            elements.splice(idx, 1);
+                            selectedBlockId = null;
+                            render();
+                        } else if (act === 'up' && idx > 0) {
+                            [elements[idx-1], elements[idx]] = [elements[idx], elements[idx-1]];
+                            render();
+                        } else if (act === 'down' && idx < elements.length - 1) {
+                            [elements[idx+1], elements[idx]] = [elements[idx], elements[idx+1]];
+                            render();
+                        }
+                    });
+                });
+            });
+        }
+
+        // ===== Agregar bloque =====
+        document.querySelectorAll('[data-add]').forEach(btn => {
+            btn.addEventListener('click', () => addBlock(btn.dataset.add));
+        });
+
+        function addBlock(type) {
+            _blockSeq++;
+            const cols = slides[currentSlide]?.grid_cols || 3;
+            const el = {
+                tempId: 'tmp_' + _blockSeq,
+                type: type,
+                content: defaultContent(type),
+                size: type === 'banner' ? 'lg' : (type === 'text' ? 'md' : 'md'),
+                element_type: type,
+                grid_col: 1,
+                grid_row: (elements.length % 6) + 1,
+                col_span: type === 'banner' ? cols : 1,
+                row_span: 1
+            };
+            elements.push(el);
+            selectedBlockId = el.tempId;
+            render();
+        }
+
+        function defaultContent(type) {
+            switch (type) {
+                case 'text': return { text: 'Texto de ejemplo', text_size: '28px', background_color: '' };
+                case 'image': return { image_url: '', background_color: '#334155' };
+                case 'banner': return { text: 'Texto sobre imagen', text_size: '32px', background_image: '', background_color: '#0f3460' };
+                case 'product': return { name: 'Producto', price: '$0.00', text_size: '22px', background_color: '#1a1a2e' };
+                case 'clock': return { background_color: '#334155' };
+                default: return {};
+            }
+        }
+
+        // ===== Propiedades =====
+        function renderProps() {
+            const container = document.getElementById('propsContent');
+            if (!selectedBlockId) {
+                container.innerHTML = `
+                    <div class="empty-props">
+                        <i class="fas fa-mouse-pointer" style="font-size:2rem; opacity:0.3;"></i>
+                        <p>Selecciona un bloque para editarlo</p>
+                    </div>
+                `;
+                return;
+            }
+            const el = elements.find(e => e.tempId === selectedBlockId);
+            if (!el) { container.innerHTML = ''; return; }
+            const c = el.content || {};
+
+            let html = '';
+
+            // Tipo de bloque
+            html += `<div class="prop-section">
+                <div class="tool-group">
+                    <label>Tipo de bloque</label>
+                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                        <i class="fas ${typeIcon(el.type)}"></i> <strong>${typeLabel(el.type)}</strong>
+                    </div>
+                </div>
+            </div>`;
+
+            // Texto (si aplica)
+            if (['text', 'product', 'banner'].includes(el.type)) {
+                if (el.type === 'product') {
+                    html += `<div class="prop-section">
+                        <div class="tool-group"><label>Nombre del producto</label>
+                            <input type="text" id="prop-name" value="${escapeHtml(c.name || '')}">
+                        </div>
+                        <div class="tool-group"><label>Precio</label>
+                            <input type="text" id="prop-price" value="${escapeHtml(c.price || '')}">
+                        </div>
+                    </div>`;
+                } else {
+                    html += `<div class="prop-section">
+                        <div class="tool-group"><label>Texto</label>
+                            <textarea id="prop-text">${escapeHtml(c.text || '')}</textarea>
+                        </div>
+                    </div>`;
+                }
+
+                html += `<div class="prop-section">
+                    <div class="tool-group">
+                        <label>Tamaño del texto <span id="textSizeVal" style="color:var(--text-muted);">${c.text_size || '24px'}</span></label>
+                        <input type="range" id="prop-textsize" min="12" max="80" value="${parseInt(c.text_size) || 24}">
+                    </div>
+                </div>`;
+            }
+
+            // Imagen de fondo
+            if (['image', 'banner', 'text'].includes(el.type)) {
+                html += `<div class="prop-section">
+                    <div class="tool-group">
+                        <label>Imagen de fondo (URL)</label>
+                        <input type="text" id="prop-bgimage" value="${escapeHtml(c.background_image || c.image_url || '')}">
+                        <div class="img-preview" id="bgPreview" style="${(c.background_image || c.image_url) ? `background-image:url('${escapeHtml(c.background_image || c.image_url)}')` : 'display:none;'}"></div>
+                    </div>
+                    <div class="tool-group">
+                        <label>Color de fondo</label>
+                        <input type="text" id="prop-bgcolor" value="${escapeHtml(c.background_color || '')}" placeholder="#000000">
+                    </div>
+                </div>`;
+            }
+
+            // Tamaño del bloque (solo modo vertical)
+            if (editMode === 'vertical' && el.type !== 'clock') {
+                html += `<div class="prop-section">
+                    <div class="tool-group">
+                        <label>Tamaño del bloque</label>
+                        <div class="size-options">
+                            ${['xs','sm','md','lg','full'].map(s =>
+                                `<button class="size-btn ${el.size === s ? 'active' : ''}" data-size="${s}">${{xs:'Mini',sm:'Pequeño',md:'Mediano',lg:'Grande',full:'Pantalla'}[s]}</button>`
+                            ).join('')}
+                        </div>
+                    </div>
+                </div>`;
+            }
+
+            // En modo grid, control de posición
+            if (editMode === 'grid') {
+                const cols = slides[currentSlide]?.grid_cols || 3;
+                html += `<div class="prop-section">
+                    <div class="tool-group"><label>Columna (1-${cols})</label>
+                        <input type="number" id="prop-col" min="1" max="${cols}" value="${el.grid_col || 1}">
+                    </div>
+                    <div class="tool-group"><label>Ancho (celdas)</label>
+                        <input type="number" id="prop-coln" min="1" max="${cols}" value="${el.col_span || 1}">
+                    </div>
+                    <div class="tool-group"><label>Fila</label>
+                        <input type="number" id="prop-row" min="1" value="${el.grid_row || 1}">
+                    </div>
+                    <div class="tool-group"><label>Alto (filas)</label>
+                        <input type="number" id="prop-rown" min="1" value="${el.row_span || 1}">
+                    </div>
+                </div>`;
+            }
+
+            // Eliminar
+            html += `<div class="tool-group">
+                <button class="tool-btn btn-danger" id="prop-remove-block"><i class="fas fa-trash"></i> Eliminar bloque</button>
+            </div>`;
+
+            container.innerHTML = html;
+
+            // Bind events
+            if (document.getElementById('prop-text')) {
+                document.getElementById('prop-text').addEventListener('input', (e) => {
+                    el.content.text = e.target.value;
+                    renderCanvas();
+                });
+            }
+            if (document.getElementById('prop-name')) {
+                document.getElementById('prop-name').addEventListener('input', (e) => { el.content.name = e.target.value; renderCanvas(); });
+            }
+            if (document.getElementById('prop-price')) {
+                document.getElementById('prop-price').addEventListener('input', (e) => { el.content.price = e.target.value; renderCanvas(); });
+            }
+            if (document.getElementById('prop-textsize')) {
+                document.getElementById('prop-textsize').addEventListener('input', (e) => {
+                    el.content.text_size = e.target.value + 'px';
+                    const label = document.getElementById('textSizeVal');
+                    if (label) label.textContent = e.target.value + 'px';
+                    renderCanvas();
+                });
+            }
+            if (document.getElementById('prop-bgimage')) {
+                document.getElementById('prop-bgimage').addEventListener('input', (e) => {
+                    el.content.background_image = e.target.value;
+                    el.content.image_url = e.target.value;
+                    const prev = document.getElementById('bgPreview');
+                    if (e.target.value) {
+                        prev.style.backgroundImage = `url('${e.target.value}')`;
+                        prev.style.display = '';
+                    } else {
+                        prev.style.display = 'none';
+                    }
+                    renderCanvas();
+                });
+            }
+            if (document.getElementById('prop-bgcolor')) {
+                document.getElementById('prop-bgcolor').addEventListener('input', (e) => {
+                    el.content.background_color = e.target.value;
+                    if (!el.content.background_image) renderCanvas();
+                });
+            }
+            document.querySelectorAll('[data-size]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const size = btn.dataset.size;
+                    el.size = size;
+                    el.content.height = size; // persistir
+                    render();
+                });
+            });
+            if (document.getElementById('prop-col')) {
+                document.getElementById('prop-col').addEventListener('change', (e) => { el.grid_col = parseInt(e.target.value); renderCanvas(); });
+            }
+            if (document.getElementById('prop-coln')) {
+                document.getElementById('prop-coln').addEventListener('change', (e) => { el.col_span = parseInt(e.target.value); renderCanvas(); });
+            }
+            if (document.getElementById('prop-row')) {
+                document.getElementById('prop-row').addEventListener('change', (e) => { el.grid_row = parseInt(e.target.value); renderCanvas(); });
+            }
+            if (document.getElementById('prop-rown')) {
+                document.getElementById('prop-rown').addEventListener('change', (e) => { el.row_span = parseInt(e.target.value); renderCanvas(); });
+            }
+            if (document.getElementById('prop-remove-block')) {
+                document.getElementById('prop-remove-block').addEventListener('click', () => {
+                    const idx = elements.findIndex(e => e.tempId === selectedBlockId);
+                    if (idx > -1) elements.splice(idx, 1);
+                    selectedBlockId = null;
+                    render();
+                });
+            }
+        }
+
+        // ===== Cambio de modo =====
+        document.querySelectorAll('#modeToggle button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                editMode = btn.dataset.mode;
+                document.querySelectorAll('#modeToggle button').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                renderCanvas();
+            });
+        });
+
+        // ===== Guardar =====
+        document.getElementById('btnSave').addEventListener('click', saveElements);
+        document.getElementById('btnBack').addEventListener('click', () => {
+            window.location.href = 'digital-signage.html';
+        });
+
+        async function saveElements() {
+            if (!slides[currentSlide]) { notify('No hay slide', 'error'); return; }
+            const slideId = slides[currentSlide].slide_id;
+
+            notify('Guardando...', 'success');
+
+            // Borrar elementos servidor existentes del slide
+            const existing = await api(`slide_elements/read.php?slide_id=${slideId}`);
+            if (existing.success) {
+                for (const el of existing.data) {
+                    await api('slide_elements/delete.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ element_id: el.element_id })
+                    });
+                }
+            }
+
+            // Insertar cada elemento
+            let ok = 0;
+            let rowCounter = 0;
+            const cols = slides[currentSlide].grid_cols || 3;
+
+            for (const el of elements) {
+                // En vertical, cada bloque ocupa fila completa
+                let gridRow, gridCol, colSpan, rowSpan;
+                if (editMode === 'vertical') {
+                    gridRow = rowCounter + 1;
+                    gridCol = 1;
+                    colSpan = cols;
+                    rowSpan = 1;
+                } else {
+                    gridRow = el.grid_row || 1;
+                    gridCol = el.grid_col || 1;
+                    colSpan = el.col_span || 1;
+                    rowSpan = el.row_span || 1;
+                }
+                rowCounter++;
+
+                const content = { ...el.content, height: el.size };
+                const res = await api('slide_elements/create.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        slide_id: slideId,
+                        element_type: el.type,
+                        grid_col: gridCol,
+                        grid_row: gridRow,
+                        col_span: colSpan,
+                        row_span: rowSpan,
+                        content: content,
+                        animation: 'fade_in',
+                        animation_delay: 0
+                    })
+                });
+                if (res.success) ok++;
+            }
+
+            notify(`Guardados ${ok} bloques`, ok === elements.length ? 'success' : 'error');
+        }
+
+        init();
+    </script>
+</body>
+</html>

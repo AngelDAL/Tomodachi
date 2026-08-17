@@ -45,8 +45,56 @@
             display: grid;
             width: 100%;
             height: 100%;
-            padding: 2rem;
-            gap: 1.5rem;
+            padding: 1.5rem;
+            gap: 1rem;
+        }
+
+        /* Modo vertical (filas apiladas) */
+        .slide-vertical {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+            padding: 1.5rem;
+            gap: 1rem;
+            overflow: hidden;
+        }
+
+        .block {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: #fff;
+            border-radius: 10px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .block.bg-image {
+            background-size: cover;
+            background-position: center;
+        }
+
+        /* Tamaños */
+        .block.h-xs { min-height: 8vh; }
+        .block.h-sm { min-height: 12vh; }
+        .block.h-md { min-height: 18vh; }
+        .block.h-lg { min-height: 26vh; }
+        .block.h-full { min-height: 88vh; }
+
+        .block-inner {
+            padding: 1rem 2rem;
+            width: 100%;
+            z-index: 1;
+            position: relative;
+        }
+
+        .block-text {
+            font-weight: 700;
+            line-height: 1.2;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.6);
         }
         
         .element {
@@ -391,25 +439,82 @@
                     slideEl.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
                 }
                 
-                // Grid
-                const grid = document.createElement('div');
-                grid.className = 'slide-grid';
-                grid.style.gridTemplateColumns = `repeat(${slide.grid_cols}, 1fr)`;
-                grid.style.gridTemplateRows = `repeat(${slide.grid_rows}, 1fr)`;
+                // Detectar modo: vertical si al menos un elemento tiene height en content
+                const hasVertical = (slide.elements || []).some(el => 
+                    el.content && el.content.height && ['xs','sm','md','lg','full'].includes(el.content.height)
+                );
                 
-                // Elements
-                (slide.elements || []).forEach(element => {
-                    const el = renderElement(element);
-                    if (el) {
-                        el.style.gridColumn = `${element.grid_col} / span ${element.col_span}`;
-                        el.style.gridRow = `${element.grid_row} / span ${element.row_span}`;
-                        grid.appendChild(el);
-                    }
-                });
+                if (hasVertical) {
+                    // Modo vertical: bloques apilados
+                    const vertical = document.createElement('div');
+                    vertical.className = 'slide-vertical';
+                    
+                    (slide.elements || []).forEach(element => {
+                        const block = renderVerticalBlock(element);
+                        if (block) vertical.appendChild(block);
+                    });
+                    
+                    slideEl.appendChild(vertical);
+                } else {
+                    // Modo grid
+                    const grid = document.createElement('div');
+                    grid.className = 'slide-grid';
+                    grid.style.gridTemplateColumns = `repeat(${slide.grid_cols}, 1fr)`;
+                    grid.style.gridTemplateRows = `repeat(${slide.grid_rows}, 1fr)`;
+                    
+                    (slide.elements || []).forEach(element => {
+                        const el = renderElement(element);
+                        if (el) {
+                            el.style.gridColumn = `${element.grid_col} / span ${element.col_span}`;
+                            el.style.gridRow = `${element.grid_row} / span ${element.row_span}`;
+                            grid.appendChild(el);
+                        }
+                    });
+                    
+                    slideEl.appendChild(grid);
+                }
                 
-                slideEl.appendChild(grid);
                 container.appendChild(slideEl);
             });
+        }
+
+        // Renderiza un bloque en modo vertical (imagen de fondo + texto + tamaño)
+        function renderVerticalBlock(element) {
+            const content = element.content || {};
+            const height = content.height || 'md';
+            const block = document.createElement('div');
+            block.className = `block h-${height}`;
+            
+            // Fondo de imagen o color
+            if (content.background_image) {
+                block.style.backgroundImage = `url('${escapeHtml(content.background_image)}')`;
+                block.classList.add('bg-image');
+            } else if (content.background_color) {
+                block.style.background = content.background_color;
+            }
+            
+            let inner = '';
+            if (['text', 'banner', 'product'].includes(element.element_type)) {
+                if (element.element_type === 'product') {
+                    if (content.name) {
+                        inner += `<div class="block-text" style="font-size:${content.text_size || '28px'};">${escapeHtml(content.name)}</div>`;
+                    }
+                    if (content.price) {
+                        inner += `<div style="font-weight:800; font-size:${content.price_size || '20px'};">${escapeHtml(content.price)}</div>`;
+                    }
+                } else if (content.text) {
+                    inner = `<div class="block-text" style="font-size:${content.text_size || '28px'};">${escapeHtml(content.text)}</div>`;
+                }
+            }
+            
+            // Imagen sola
+            if (element.element_type === 'image' && (content.background_image || content.image_url)) {
+                block.style.backgroundImage = `url('${escapeHtml(content.background_image || content.image_url)}')`;
+                block.classList.add('bg-image');
+            }
+            
+            block.innerHTML = `<div class="block-inner">${inner}</div>`;
+            return block;
         }
         
         function renderElement(element) {

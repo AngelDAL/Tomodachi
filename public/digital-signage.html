@@ -476,7 +476,7 @@
                         
                         <div class="ds-board-actions">
                             <button class="btn-edit" onclick="editBoard(${board.board_id})">
-                                <i class="fas fa-edit"></i> Editar
+                                <i class="fas fa-paint-brush"></i> Diseñar
                             </button>
                             <button class="btn-preview" onclick="previewBoard(${board.board_id})">
                                 <i class="fas fa-eye"></i> Ver
@@ -531,13 +531,7 @@
         }
         
         function editBoard(boardId) {
-            const board = boards.find(b => b.board_id === boardId);
-            if (!board) return;
-            
-            const newName = prompt('Nuevo nombre para la pantalla:', board.name);
-            if (newName && newName !== board.name) {
-                updateBoard(boardId, { name: newName });
-            }
+            window.location.href = `digital-signage-editor.html?board=${boardId}`;
         }
         
         async function updateBoard(boardId, data) {

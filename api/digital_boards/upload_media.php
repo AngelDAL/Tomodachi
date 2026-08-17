@@ -28,6 +28,7 @@ try {
     }
     
     $store_id = (int)$actor['store_id'];
+    $data = [];
     
     // Crear directorio de uploads si no existe
     $upload_dir = __DIR__ . '/../../uploads/digital_signage/';
@@ -125,7 +126,7 @@ try {
     $tags = isset($data['tags']) ? $data['tags'] : (isset($_POST['tags']) ? $_POST['tags'] : null);
     
     // Guardar en BD
-    $db->insert(
+    $media_id = $db->insert(
         'INSERT INTO digital_signage_media 
          (store_id, filename, original_name, mime_type, file_size, width, height, tags)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
@@ -140,8 +141,6 @@ try {
             $tags
         ]
     );
-    
-    $media_id = $db->lastInsertId();
     
     // URL relativa para acceder a la imagen
     $relative_url = '/uploads/digital_signage/' . $filename;

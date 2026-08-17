@@ -21,6 +21,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 0.75rem;
             padding: 0.6rem 1.25rem;
             background: var(--card-bg, #fff);
             border-bottom: 1px solid var(--border-color, #e2e8f0);
@@ -36,6 +37,27 @@
         }
         .br-title span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .topbar-actions { display: flex; gap: 0.5rem; align-items: center; }
+        .editor-orientation {
+            min-height: 34px;
+            padding: 0.35rem 0.55rem;
+            border: 1px solid var(--border-color, #ddd);
+            border-radius: 6px;
+            background: var(--bg-primary, #fff);
+            color: var(--text-primary, #333);
+            font: inherit;
+            font-size: 0.82rem;
+        }
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
         .topbar-actions button {
             padding: 0.45rem 1rem;
             border: none; border-radius: 6px;
@@ -108,28 +130,31 @@
             position: absolute;
             border: 1px solid transparent;
             cursor: move;
+            touch-action: none;
             user-select: none;
             -webkit-user-select: none;
         }
         .ppt-el.selected {
-            border-color: #38bdf8;
-            outline: 1px solid #38bdf8;
+            border: 2px solid #38bdf8;
+            outline: 1px solid rgba(56,189,248,0.55);
         }
         .ppt-el .resizer {
             position: absolute;
-            width: 10px; height: 10px;
+            width: 14px; height: 14px;
             background: #fff;
-            border: 1px solid #38bdf8;
+            border: 2px solid #38bdf8;
+            border-radius: 50%;
             z-index: 20;
+            touch-action: none;
         }
-        .ppt-el .resizer.nw { top: -5px; left: -5px; cursor: nw-resize; }
-        .ppt-el .resizer.n { top: -5px; left: 50%; margin-left: -5px; cursor: n-resize; }
-        .ppt-el .resizer.ne { top: -5px; right: -5px; cursor: ne-resize; }
-        .ppt-el .resizer.e { top: 50%; right: -5px; margin-top: -5px; cursor: e-resize; }
-        .ppt-el .resizer.se { bottom: -5px; right: -5px; cursor: se-resize; }
-        .ppt-el .resizer.s { bottom: -5px; left: 50%; margin-left: -5px; cursor: s-resize; }
-        .ppt-el .resizer.sw { bottom: -5px; left: -5px; cursor: sw-resize; }
-        .ppt-el .resizer.w { top: 50%; left: -5px; margin-top: -5px; cursor: w-resize; }
+        .ppt-el .resizer.nw { top: -7px; left: -7px; cursor: nw-resize; }
+        .ppt-el .resizer.n { top: -7px; left: 50%; margin-left: -7px; cursor: n-resize; }
+        .ppt-el .resizer.ne { top: -7px; right: -7px; cursor: ne-resize; }
+        .ppt-el .resizer.e { top: 50%; right: -7px; margin-top: -7px; cursor: e-resize; }
+        .ppt-el .resizer.se { bottom: -7px; right: -7px; cursor: se-resize; }
+        .ppt-el .resizer.s { bottom: -7px; left: 50%; margin-left: -7px; cursor: s-resize; }
+        .ppt-el .resizer.sw { bottom: -7px; left: -7px; cursor: sw-resize; }
+        .ppt-el .resizer.w { top: 50%; left: -7px; margin-top: -7px; cursor: w-resize; }
         .ppt-el .resizer { display: none; }
         .ppt-el.selected .resizer { display: block; }
 
@@ -201,6 +226,27 @@
             background-size: cover; background-position: center;
             border: 1px solid var(--border-color, #ddd);
         }
+        .media-upload-row {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            margin-top: 0.45rem;
+        }
+        .media-upload-btn {
+            flex: 0 0 auto;
+            padding: 0.45rem 0.6rem;
+            border: 1px solid var(--border-color, #ddd);
+            border-radius: 6px;
+            background: var(--bg-primary, #fff);
+            color: var(--text-primary, #333);
+            font: inherit;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .media-upload-btn:hover { border-color: var(--primary-color); color: var(--primary-color); }
+        .media-upload-btn:disabled { opacity: 0.6; cursor: wait; }
+        .media-upload-status { font-size: 0.72rem; color: var(--text-muted, #64748b); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .empty-props {
             color: var(--text-muted, #666); font-size: 0.85rem; text-align: center;
             padding: 1.5rem 0;
@@ -214,6 +260,21 @@
             font-size: 0.75rem; color: var(--text-primary, #333);
         }
         .pos-btn.active { background: var(--primary-color); color: #fff; border-color: var(--primary-color); }
+        .element-actions { display: flex; gap: 0.35rem; }
+        .element-actions button {
+            flex: 1;
+            min-height: 32px;
+            padding: 0.35rem 0.45rem;
+            border: 1px solid var(--border-color, #ddd);
+            border-radius: 5px;
+            background: var(--bg-primary, #fff);
+            color: var(--text-primary, #333);
+            cursor: pointer;
+            font: inherit;
+            font-size: 0.76rem;
+        }
+        .element-actions button:hover { border-color: var(--primary-color); color: var(--primary-color); }
+        .element-actions button.danger:hover { border-color: var(--danger-color, #dc2626); color: var(--danger-color, #dc2626); }
 
         /* Toast */
         .toast {
@@ -229,10 +290,46 @@
         .toast.error { background: #ef4444; }
 
         @media (max-width: 900px) {
-            .editor-wrap { flex-direction: column; }
-            .editor-tools { width: 100%; border-right: none; border-bottom: 1px solid var(--border-color); }
-            .editor-props { width: 100%; border-left: none; border-top: 1px solid var(--border-color); }
-            .editor-canvas-wrap { min-height: 300px; }
+            .editor-topbar { height: auto; min-height: 56px; padding: 0.55rem 0.75rem; }
+            .br-title { max-width: 52vw; }
+            .topbar-actions button { padding: 0.5rem 0.7rem; }
+            .editor-wrap {
+                height: calc(100vh - 62px);
+                display: grid;
+                grid-template-rows: auto minmax(320px, 1fr) auto;
+                overflow: hidden;
+            }
+            .editor-tools {
+                grid-row: 1;
+                width: 100%; padding: 0.7rem;
+                border-right: none; border-bottom: 1px solid var(--border-color);
+                display: flex; align-items: center; gap: 0.5rem;
+                overflow-x: auto; overflow-y: hidden;
+                white-space: nowrap;
+            }
+            .editor-tools h3, .editor-tools .tools-divider, .editor-tools .layer-list { display: none; }
+            .editor-tools .tool-btn { flex: 0 0 auto; width: auto; margin: 0; min-height: 40px; }
+            .editor-canvas-wrap { grid-row: 2; min-height: 0; padding: 1rem; }
+            .editor-props {
+                grid-row: 3; width: 100%; max-height: 38vh;
+                border-left: none; border-top: 1px solid var(--border-color);
+                padding: 0.8rem; overflow-y: auto;
+            }
+            .ppt-el .resizer { width: 24px; height: 24px; border-width: 3px; }
+            .ppt-el .resizer.nw { top: -12px; left: -12px; }
+            .ppt-el .resizer.n { top: -12px; margin-left: -12px; }
+            .ppt-el .resizer.ne { top: -12px; right: -12px; }
+            .ppt-el .resizer.e { right: -12px; margin-top: -12px; }
+            .ppt-el .resizer.se { bottom: -12px; right: -12px; }
+            .ppt-el .resizer.s { bottom: -12px; margin-left: -12px; }
+            .ppt-el .resizer.sw { bottom: -12px; left: -12px; }
+            .ppt-el .resizer.w { left: -12px; margin-top: -12px; }
+        }
+
+        @media (max-width: 520px) {
+            .topbar-actions .topbar-label { display: none; }
+            .editor-topbar .br-title { font-size: 0.95rem; }
+            .tool-row { gap: 0.35rem; }
         }
     </style>
 </head>
@@ -243,7 +340,12 @@
             <span id="boardTitle">Editor de Pantalla</span>
         </div>
         <div class="topbar-actions">
-            <button class="btn-save-top" id="btnSave"><i class="fas fa-save"></i> Guardar</button>
+            <label class="sr-only" for="canvasOrientation">Orientación</label>
+            <select id="canvasOrientation" class="editor-orientation" title="Orientación de la pantalla">
+                <option value="horizontal">Horizontal</option>
+                <option value="vertical">Vertical</option>
+            </select>
+            <button class="btn-save-top" id="btnSave"><i class="fas fa-save"></i> <span class="topbar-label">Guardar</span></button>
         </div>
     </div>
 
@@ -286,9 +388,14 @@
     <script>
         // ===== Config =====
         const API_BASE = '../api';
-        const BOARD_ASPECT = 16 / 9;        // Relación del lienzo
-        const BOARD_WIDTH = 1600;            // Ancho lógico del canvas
-        const BOARD_HEIGHT = BOARD_WIDTH / BOARD_ASPECT;
+        const LOGICAL_WIDTH = 1600;
+        let canvasOrientation = 'horizontal';
+
+        function canvasDimensions() {
+            return canvasOrientation === 'vertical'
+                ? { width: 900, height: 1600 }
+                : { width: LOGICAL_WIDTH, height: 900 };
+        }
 
         const urlParams = new URLSearchParams(window.location.search);
         const boardId = urlParams.get('board');
@@ -331,7 +438,11 @@
             const data = await api('digital_boards/read.php');
             if (data.success) {
                 board = data.data.find(b => b.board_id == boardId);
-                if (board) $('boardTitle').textContent = board.name;
+                if (board) {
+                    $('boardTitle').textContent = board.name;
+                    canvasOrientation = board.orientation === 'vertical' ? 'vertical' : 'horizontal';
+                    $('canvasOrientation').value = canvasOrientation;
+                }
             }
             const slidesRes = await api(`board_slides/read.php?board_id=${boardId}`);
             slides = slidesRes.success ? (slidesRes.data || []) : [];
@@ -487,7 +598,7 @@
             html += `<div class="el-content" style="justify-content:${hJustify(el.text_pos_h)}; align-items:${vAlign(el.text_pos_v)}; padding:0;">`;
             if (el.type === 'text' || el.type === 'rect') {
                 if (el.text) {
-                    const sizePx = (el.text_size_pct / 100) * BOARD_HEIGHT;
+                    const sizePx = (el.text_size_pct / 100) * canvasDimensions().height;
                     html += `<div class="el-text" style="font-size:${sizePx}px; color:${esc(el.text_color)}; transform:translate(${el.text_offset_x}px, ${el.text_offset_y}px); white-space:pre-line; text-align:${el.text_pos_h};">${esc(el.text)}</div>`;
                 } else if (el.type === 'text') {
                     html += `<div class="el-text" style="font-size:24px; color:${esc(el.text_color)};">Texto</div>`;
@@ -511,6 +622,7 @@
 
             interact('#canvasFrame .ppt-el')
                 .draggable({
+                    ignoreFrom: '.resizer',
                     listeners: {
                         move: (event) => {
                             const id = event.target.dataset.id;
@@ -528,7 +640,12 @@
                     }
                 })
                 .resizable({
-                    edges: { left: true, right: true, bottom: true, top: true },
+                    edges: {
+                        top: '.resizer.n, .resizer.ne, .resizer.nw',
+                        right: '.resizer.e, .resizer.ne, .resizer.se',
+                        bottom: '.resizer.s, .resizer.se, .resizer.sw',
+                        left: '.resizer.w, .resizer.nw, .resizer.sw'
+                    },
                     listeners: {
                         move: (event) => {
                             const target = event.target;
@@ -564,7 +681,7 @@
         }
 
         // ===== Selección =====
-        $('canvasFrame').addEventListener('mousedown', (e) => {
+        $('canvasFrame').addEventListener('pointerdown', (e) => {
             const ppt = e.target.closest('.ppt-el');
             if (ppt) {
                 selectedId = ppt.dataset.id;
@@ -627,9 +744,15 @@
             let html = '';
             // Encabezado
             html += `<div class="prop-section">
-                <div style="display:flex; align-items:center; gap:0.5rem;">
+                <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.7rem;">
                     <i class="fas ${elTypeIcon(el.type)}" style="color:var(--primary-color);"></i>
                     <strong>${elTypeLabel(el.type)}</strong>
+                </div>
+                <div class="element-actions">
+                    <button type="button" id="pf-back" title="Enviar atrás"><i class="fas fa-layer-group"></i> Atrás</button>
+                    <button type="button" id="pf-front" title="Traer al frente"><i class="fas fa-layer-group"></i> Frente</button>
+                    <button type="button" id="pf-duplicate" title="Duplicar"><i class="fas fa-copy"></i></button>
+                    <button type="button" id="pf-delete" class="danger" title="Eliminar"><i class="fas fa-trash"></i></button>
                 </div>
             </div>`;
 
@@ -649,7 +772,12 @@
             if (el.type === 'rect' || el.type === 'image' || el.type === 'text') {
                 html += `<div class="prop-section">
                     <div class="tool-group"><label>Imagen de fondo (URL)</label>
-                        <input type="text" id="pf-bgimg" value="${esc(el.background_image)}">
+                        <input type="text" id="pf-bgimg" value="${esc(el.background_image)}" placeholder="https://...">
+                        <div class="media-upload-row">
+                            <input type="file" id="pf-upload" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
+                            <button type="button" class="media-upload-btn" id="pf-upload-btn"><i class="fas fa-upload"></i> Subir desde equipo</button>
+                            <span class="media-upload-status" id="pf-upload-status"></span>
+                        </div>
                         <div class="img-preview" id="pf-bgprev" style="${el.background_image ? `background-image:url('${esc(el.background_image)}')` : 'display:none;'}"></div>
                     </div>
                     <div class="tool-group"><label>Ajuste de imagen</label>
@@ -713,6 +841,44 @@
             bindPropNum('pf-w', el, (v, e) => { e.rect.w_pct = v; renderCanvas(); });
             bindPropNum('pf-h', el, (v, e) => { e.rect.h_pct = v; renderCanvas(); });
             bindProp('pf-bgimg', el, (v, e) => { e.background_image = v; const p=$('pf-bgprev'); if(v){p.style.backgroundImage=`url('${v}')`;p.style.display='';}else{p.style.display='none';} renderCanvas(); });
+            $('pf-upload-btn') && $('pf-upload-btn').addEventListener('click', () => $('pf-upload').click());
+            $('pf-upload') && $('pf-upload').addEventListener('change', async (event) => {
+                const file = event.target.files && event.target.files[0];
+                if (!file) return;
+                const status = $('pf-upload-status');
+                const button = $('pf-upload-btn');
+                if (file.size > 5 * 1024 * 1024) {
+                    status.textContent = 'Máximo 5 MB';
+                    notify('La imagen supera el tamaño permitido', 'error');
+                    return;
+                }
+                button.disabled = true;
+                status.textContent = 'Subiendo...';
+                try {
+                    const body = new FormData();
+                    body.append('file', file);
+                    const response = await fetch(`${API_BASE}/digital_boards/upload_media.php`, {
+                        method: 'POST', credentials: 'include', body
+                    });
+                    const result = await response.json();
+                    if (!result.success) throw new Error(result.message || 'No se pudo subir la imagen');
+                    const url = result.data.url;
+                    el.background_image = url;
+                    $('pf-bgimg').value = url;
+                    const preview = $('pf-bgprev');
+                    preview.style.backgroundImage = `url('${url}')`;
+                    preview.style.display = '';
+                    status.textContent = 'Imagen lista';
+                    renderCanvas();
+                    notify('Imagen subida');
+                } catch (error) {
+                    status.textContent = 'No se pudo subir';
+                    notify(error.message || 'No se pudo subir la imagen', 'error');
+                } finally {
+                    button.disabled = false;
+                    event.target.value = '';
+                }
+            });
             $('pf-bgfit') && $('pf-bgfit').addEventListener('change', (ev) => { el.background_fit = ev.target.value; renderCanvas(); });
             bindProp('pf-bgcolor', el, (v, e) => { e.background_color = v; if(!e.background_image) renderCanvas(); });
             bindProp('pf-textcolor', el, (v, e) => { e.text_color = v; renderCanvas(); });
@@ -720,7 +886,33 @@
             bindPropNum('pf-texoffx', el, (v, e) => { e.text_offset_x = v; renderCanvas(); });
             bindPropNum('pf-texoffy', el, (v, e) => { e.text_offset_y = v; renderCanvas(); });
             $('pf-anim') && $('pf-anim').addEventListener('change', (ev) => { el.animation = ev.target.value; });
-            // Posicion
+            $('pf-back') && $('pf-back').addEventListener('click', () => {
+                el.z_index = Math.max(1, el.z_index - 1);
+                render();
+            });
+            $('pf-front') && $('pf-front').addEventListener('click', () => {
+                el.z_index = Math.max(...elements.map(item => item.z_index)) + 1;
+                render();
+            });
+            $('pf-duplicate') && $('pf-duplicate').addEventListener('click', () => {
+                seq++;
+                const copy = JSON.parse(JSON.stringify(el));
+                copy.tempId = 'tmp_' + seq;
+                delete copy.element_id;
+                copy.z_index = Math.max(...elements.map(item => item.z_index)) + 1;
+                copy.rect.x_pct = clamp(copy.rect.x_pct + 3, 0, 100 - copy.rect.w_pct);
+                copy.rect.y_pct = clamp(copy.rect.y_pct + 3, 0, 100 - copy.rect.h_pct);
+                elements.push(copy);
+                selectedId = copy.tempId;
+                render();
+            });
+            $('pf-delete') && $('pf-delete').addEventListener('click', () => {
+                elements = elements.filter(item => item.tempId !== el.tempId);
+                selectedId = null;
+                render();
+                notify('Elemento eliminado');
+            });
+            // Posición relativa del texto
             container.querySelectorAll('[data-ph]').forEach(btn => {
                 btn.addEventListener('click', () => {
                     el.text_pos_h = btn.dataset.ph;
@@ -806,16 +998,36 @@
             notify(`Guardados ${ok} elementos`, ok === elements.length ? 'success' : 'error');
         }
 
-        // Escalar canvas al viewport manteniendo relación
+        // Escalar canvas al viewport manteniendo la relación horizontal o vertical.
         function fitCanvas() {
             const wrap = $('canvasWrap');
             const frame = $('canvasFrame');
-            const availW = wrap.clientWidth - 60;
-            const availH = wrap.clientHeight - 60;
-            const scale = Math.min(availW / BOARD_WIDTH, availH / BOARD_HEIGHT);
-            frame.style.width = (BOARD_WIDTH * scale) + 'px';
-            frame.style.height = (BOARD_HEIGHT * scale) + 'px';
+            const dims = canvasDimensions();
+            const availW = Math.max(200, wrap.clientWidth - 60);
+            const availH = Math.max(200, wrap.clientHeight - 60);
+            const scale = Math.min(availW / dims.width, availH / dims.height);
+            frame.style.width = (dims.width * scale) + 'px';
+            frame.style.height = (dims.height * scale) + 'px';
         }
+
+        $('canvasOrientation').addEventListener('change', async (event) => {
+            canvasOrientation = event.target.value;
+            fitCanvas();
+            renderCanvas();
+            if (!board) return;
+            const result = await api('digital_boards/update.php', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ board_id: board.board_id, orientation: canvasOrientation })
+            });
+            if (result.success) {
+                board.orientation = canvasOrientation;
+                notify('Orientación actualizada');
+            } else {
+                notify('No se pudo actualizar la orientación', 'error');
+            }
+        });
+
         window.addEventListener('resize', fitCanvas);
 
         init();

@@ -66,7 +66,7 @@ try {
         }
     }
     
-    $db->insert(
+    $board_id = $db->insert(
         'INSERT INTO digital_boards 
          (store_id, name, description, is_active, orientation, slide_duration, 
           transition_animation, theme_config, template, scheduled_start, scheduled_end, show_qr)
@@ -86,8 +86,6 @@ try {
             (int)($input['show_qr'] ?? 1)
         ]
     );
-    
-    $board_id = $db->lastInsertId();
     
     $board = $db->selectOne(
         'SELECT * FROM digital_boards WHERE board_id = ? AND store_id = ?',

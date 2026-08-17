@@ -38,10 +38,13 @@ services:
     volumes:
       # Persistir imágenes subidas (logos, productos, fondos)
       - app_uploads:/var/www/html/public/assets/images
+      # Persistir recursos de Pantallas Digitales fuera de la imagen
+      - signage_uploads:/var/www/html/uploads
       # Persistir sesiones PHP (sobreviven a rebuilds del contenedor)
       - app_sessions:/var/lib/php/sessions
 
 volumes:
   db_data:
   app_uploads:
+  signage_uploads:
   app_sessions:

@@ -72,7 +72,7 @@ try {
     );
     $position = ($max_position['max_pos'] ?? -1) + 1;
     
-    $db->insert(
+    $slide_id = $db->insert(
         'INSERT INTO board_slides 
          (board_id, position, title, grid_cols, grid_rows, enter_animation, exit_animation, 
           custom_duration, background_color, background_image)
@@ -90,8 +90,6 @@ try {
             $input['background_image'] ?? null
         ]
     );
-    
-    $slide_id = $db->lastInsertId();
     
     $slide = $db->selectOne(
         'SELECT * FROM board_slides WHERE slide_id = ?',

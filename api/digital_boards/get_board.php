@@ -19,7 +19,7 @@ try {
         Response::validationError(['board_id' => 'Requerido']);
     }
     
-    // Obtener board (debe estar activo)
+    // Obtener board (debe estar activo y verificar store_id para seguridad)
     $board = $db->selectOne(
         'SELECT board_id, store_id, name, orientation, slide_duration, 
                 transition_animation, theme_config, show_qr
@@ -31,6 +31,9 @@ try {
     if (!$board) {
         Response::notFound('Board no encontrado o inactivo');
     }
+    
+    // Nota: Este endpoint es público (sin auth) para pantallas/TVs, pero verificamos
+    // que el board pertenezca a una tienda válida para evitar accesos cross-tenant
     
     // Verificar activación automática por fecha
     $now = date('Y-m-d H:i:s');

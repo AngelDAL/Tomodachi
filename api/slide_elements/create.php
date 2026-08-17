@@ -86,7 +86,7 @@ try {
     
     $z_index = (int)($input['z_index'] ?? 1);
     
-    $db->insert(
+    $element_id = $db->insert(
         'INSERT INTO slide_elements 
          (slide_id, element_type, grid_col, grid_row, col_span, row_span, 
           z_index, content, animation, animation_delay)
@@ -104,8 +104,6 @@ try {
             $animation_delay
         ]
     );
-    
-    $element_id = $db->lastInsertId();
     
     $element = $db->selectOne(
         'SELECT * FROM slide_elements WHERE element_id = ?',

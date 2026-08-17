@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pantalla Digital - Tomodachi</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            background: #000;
+        }
+        
+        .display-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            display: none;
+        }
+        
+        .slide.active {
+            opacity: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .slide-grid {
+            display: grid;
+            width: 100%;
+            height: 100%;
+            padding: 2rem;
+            gap: 1.5rem;
+        }
+        
+        .element {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Product Card */
+        .element-product {
+            padding: 1.5rem;
+        }
+        
+        .element-product img {
+            width: 100%;
+            height: 60%;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        
+        .product-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 0.5rem;
+        }
+        
+        .product-price {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #dc2626;
+        }
+        
+        .product-badge {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: #dc2626;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+        
+        /* Image Element */
+        .element-image {
+            background: transparent;
+        }
+        
+        .element-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        /* Text Element */
+        .element-text {
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        
+        .text-content {
+            font-size: 2.5rem;
+            font-weight: 700;
+            line-height: 1.3;
+            color: #1a1a1a;
+        }
+        
+        /* Banner */
+        .element-banner {
+            position: relative;
+            background: transparent;
+        }
+        
+        .element-banner img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .banner-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+            padding: 3rem 2rem 2rem;
+            color: white;
+        }
+        
+        .banner-text {
+            font-size: 3rem;
+            font-weight: 800;
+        }
+        
+        /* Clock */
+        .element-clock {
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .clock-time {
+            font-size: 5rem;
+            font-weight: 800;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .clock-date {
+            font-size: 1.5rem;
+            opacity: 0.9;
+            margin-top: 1rem;
+        }
+        
+        /* Category Grid */
+        .element-category {
+            padding: 1.5rem;
+        }
+        
+        .category-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: #1a1a1a;
+        }
+        
+        .category-items {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        .category-item {
+            background: #f3f4f6;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .category-item img {
+            width: 100%;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .category-item-name {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .category-item-price {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: #dc2626;
+        }
+        
+        /* QR Code */
+        .qr-container {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        
+        .qr-container img {
+            width: 150px;
+            height: 150px;
+        }
+        
+        .qr-text {
+            margin-top: 0.75rem;
+            font-size: 0.9rem;
+            color: #1a1a1a;
+            font-weight: 600;
+        }
+        
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideUp {
+            from { 
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to { 
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes scaleIn {
+            from { 
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to { 
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        .anim-fade { animation: fadeIn 0.8s ease-out; }
+        .anim-slide-up { animation: slideUp 0.8s ease-out; }
+        .anim-scale-in { animation: scaleIn 0.8s ease-out; }
+        
+        /* Loading */
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+        }
+        
+        .loading-spinner {
+            border: 4px solid rgba(255,255,255,0.2);
+            border-top-color: white;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin-right: 1rem;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading">
+        <div class="loading-spinner"></div>
+        <div>Cargando pantalla...</div>
+    </div>
+    
+    <div class="display-container" id="displayContainer" style="display: none;">
+        <!-- Slides rendered dynamically -->
+    </div>
+    
+    <div class="qr-container" id="qrContainer" style="display: none;">
+        <div id="qrCode"></div>
+        <div class="qr-text">Escanea para ver en tu celular</div>
+    </div>
+    
+    <script>
+        const API_BASE = '/api';
+        let currentSlide = 0;
+        let slides = [];
+        let slideTimer = null;
+        let boardConfig = null;
+        
+        // Obtener board_id de URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const boardId = urlParams.get('board');
+        
+        if (!boardId) {
+            showError('ID de board no proporcionado');
+        } else {
+            loadBoard(boardId);
+        }
+        
+        async function loadBoard(boardId) {
+            try {
+                const response = await fetch(`${API_BASE}/digital_boards/get_board.php?board_id=${boardId}`);
+                const data = await response.json();
+                
+                if (!data.success) {
+                    showError(data.message || 'Error al cargar board');
+                    return;
+                }
+                
+                boardConfig = data.data;
+                slides = boardConfig.slides || [];
+                
+                if (slides.length === 0) {
+                    showError('Este board no tiene slides configurados');
+                    return;
+                }
+                
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('displayContainer').style.display = 'block';
+                
+                renderSlides();
+                showSlide(0);
+                
+                if (boardConfig.show_qr == 1) {
+                    showQRCode(boardId);
+                }
+                
+                startSlideshow();
+            } catch (error) {
+                console.error('Error:', error);
+                showError('Error de conexión');
+            }
+        }
+        
+        function renderSlides() {
+            const container = document.getElementById('displayContainer');
+            
+            slides.forEach((slide, index) => {
+                const slideEl = document.createElement('div');
+                slideEl.className = 'slide';
+                slideEl.dataset.index = index;
+                
+                // Background
+                if (slide.background_color) {
+                    slideEl.style.background = slide.background_color;
+                } else if (slide.background_image) {
+                    slideEl.style.background = `url(${slide.background_image}) center/cover`;
+                } else {
+                    slideEl.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                }
+                
+                // Grid
+                const grid = document.createElement('div');
+                grid.className = 'slide-grid';
+                grid.style.gridTemplateColumns = `repeat(${slide.grid_cols}, 1fr)`;
+                grid.style.gridTemplateRows = `repeat(${slide.grid_rows}, 1fr)`;
+                
+                // Elements
+                (slide.elements || []).forEach(element => {
+                    const el = renderElement(element);
+                    if (el) {
+                        el.style.gridColumn = `${element.grid_col} / span ${element.col_span}`;
+                        el.style.gridRow = `${element.grid_row} / span ${element.row_span}`;
+                        grid.appendChild(el);
+                    }
+                });
+                
+                slideEl.appendChild(grid);
+                container.appendChild(slideEl);
+            });
+        }
+        
+        function renderElement(element) {
+            const el = document.createElement('div');
+            el.className = 'element';
+            
+            switch (element.element_type) {
+                case 'product_card':
+                    el.classList.add('element-product');
+                    const content = element.content || {};
+                    if (content.image_url) {
+                        el.innerHTML = `
+                            <img src="${escapeHtml(content.image_url)}" alt="${escapeHtml(content.name || '')}">
+                            <div class="product-name">${escapeHtml(content.name || 'Producto')}</div>
+                            <div class="product-price">${escapeHtml(content.price || '$0.00')}</div>
+                        `;
+                        if (content.badge) {
+                            el.innerHTML += `<div class="product-badge">${escapeHtml(content.badge)}</div>`;
+                        }
+                    } else {
+                        el.innerHTML = `
+                            <div class="product-name">${escapeHtml(content.name || 'Producto')}</div>
+                            <div class="product-price">${escapeHtml(content.price || '$0.00')}</div>
+                        `;
+                    }
+                    break;
+                
+                case 'image':
+                    el.classList.add('element-image');
+                    el.innerHTML = `<img src="${escapeHtml(element.content?.url || '')}" alt="${escapeHtml(element.content?.alt || '')}">`;
+                    break;
+                
+                case 'text':
+                    el.classList.add('element-text');
+                    el.innerHTML = `<div class="text-content">${escapeHtml(element.content?.text || '')}</div>`;
+                    if (element.content?.color) {
+                        el.querySelector('.text-content').style.color = element.content.color;
+                    }
+                    break;
+                
+                case 'banner':
+                    el.classList.add('element-banner');
+                    el.innerHTML = `
+                        <img src="${escapeHtml(element.content?.url || '')}" alt="">
+                        ${element.content?.text ? `<div class="banner-overlay"><div class="banner-text">${escapeHtml(element.content.text)}</div></div>` : ''}
+                    `;
+                    break;
+                
+                case 'clock':
+                    el.classList.add('element-clock');
+                    el.innerHTML = `
+                        <div class="clock-time" id="clock-time">--:--:--</div>
+                        <div class="clock-date" id="clock-date">--</div>
+                    `;
+                    startClock();
+                    break;
+                
+                case 'category_grid':
+                    el.classList.add('element-category');
+                    const catContent = element.content || {};
+                    el.innerHTML = `
+                        <div class="category-title">${escapeHtml(catContent.category_name || 'Categoría')}</div>
+                        <div class="category-items">
+                            ${(catContent.products || []).map(p => `
+                                <div class="category-item">
+                                    ${p.image_url ? `<img src="${escapeHtml(p.image_url)}" alt="">` : ''}
+                                    <div class="category-item-name">${escapeHtml(p.name || '')}</div>
+                                    <div class="category-item-price">${escapeHtml(p.price || '')}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                    break;
+                
+                default:
+                    return null;
+            }
+            
+            // Animación
+            if (element.animation && element.animation !== 'none') {
+                const animClass = `anim-${element.animation.replace('_', '-')}`;
+                el.classList.add(animClass);
+                if (element.animation_delay) {
+                    el.style.animationDelay = `${element.animation_delay}s`;
+                }
+            }
+            
+            return el;
+        }
+        
+        function showSlide(index) {
+            const allSlides = document.querySelectorAll('.slide');
+            allSlides.forEach(s => s.classList.remove('active'));
+            
+            if (allSlides[index]) {
+                allSlides[index].classList.add('active');
+            }
+        }
+        
+        function startSlideshow() {
+            if (slides.length <= 1) return;
+            
+            const duration = (slides[currentSlide].custom_duration || boardConfig.slide_duration || 10) * 1000;
+            
+            slideTimer = setTimeout(() => {
+                currentSlide = (currentSlide + 1) % slides.length;
+                showSlide(currentSlide);
+                startSlideshow();
+            }, duration);
+        }
+        
+        function startClock() {
+            function updateClock() {
+                const now = new Date();
+                const timeEl = document.getElementById('clock-time');
+                const dateEl = document.getElementById('clock-date');
+                
+                if (timeEl) {
+                    timeEl.textContent = now.toLocaleTimeString('es-MX', { hour12: false });
+                }
+                if (dateEl) {
+                    dateEl.textContent = now.toLocaleDateString('es-MX', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                    });
+                }
+            }
+            
+            updateClock();
+            setInterval(updateClock, 1000);
+        }
+        
+        function showQRCode(boardId) {
+            const qrContainer = document.getElementById('qrContainer');
+            const url = `${window.location.origin}/public/digital-signage-display.html?board=${boardId}`;
+            
+            // Generar QR con API pública
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(url)}`;
+            
+            qrContainer.innerHTML = `
+                <img src="${qrUrl}" alt="QR Code">
+                <div class="qr-text">Escanea para ver en tu celular</div>
+            `;
+            qrContainer.style.display = 'block';
+        }
+        
+        function showError(message) {
+            document.getElementById('loading').innerHTML = `
+                <div style="text-align: center;">
+                    <div style="font-size: 4rem; margin-bottom: 1rem;">⚠️</div>
+                    <div style="font-size: 1.5rem;">${escapeHtml(message)}</div>
+                </div>
+            `;
+        }
+        
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Fullscreen en doble clic
+        document.addEventListener('dblclick', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        });
+    </script>
+</body>
+</html>

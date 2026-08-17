@@ -350,6 +350,24 @@
         .btn-save:hover {
             background: var(--primary-dark, #005a9e);
         }
+
+        .ds-toast {
+            position: fixed;
+            right: 1.5rem;
+            bottom: 1.5rem;
+            z-index: 11000;
+            padding: 0.8rem 1rem;
+            color: #fff;
+            background: #1e293b;
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.2s;
+        }
+        .ds-toast.show { transform: translateY(0); opacity: 1; }
+        .ds-toast.error { background: var(--danger-color, #dc2626); }
+        .ds-confirm-message { margin: 0 0 1.25rem; color: var(--text-primary, #333); }
     </style>
 </head>
 <body>
@@ -405,10 +423,37 @@
         </div>
     </div>
     
+    <div class="ds-toast" id="dsToast" role="status"></div>
+
+    <!-- Confirmación de borrado sin confirm() nativo -->
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title"><i class="fas fa-trash"></i> Eliminar pantalla</h2>
+                <button class="modal-close" id="closeDeleteModal" aria-label="Cerrar"><i class="fas fa-times"></i></button>
+            </div>
+            <p class="ds-confirm-message" id="deleteMessage"></p>
+            <div class="form-actions">
+                <button type="button" class="btn-cancel" id="cancelDelete">Cancelar</button>
+                <button type="button" class="btn-delete" id="confirmDelete">Eliminar</button>
+            </div>
+        </div>
+    </div>
+
     <script src="js/sidebar-loader.js?v=4"></script>
     <script>
         const API_BASE = '../api';
         let boards = [];
+        let pendingDelete = null;
+        let toastTimer = null;
+
+        function notify(message, type = 'success') {
+            const toast = document.getElementById('dsToast');
+            toast.textContent = message;
+            toast.className = `ds-toast ${type === 'error' ? 'error' : ''} show`;
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => toast.classList.remove('show'), 3000);
+        }
         
         async function loadBoards() {
             try {
@@ -421,11 +466,11 @@
                     boards = data.data;
                     renderBoards();
                 } else {
-                    alert('Error al cargar pantallas: ' + data.message);
+                    notify('No se pudieron cargar las pantallas: ' + data.message, 'error');
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('Error de conexion');
+                notify('Error de conexión', 'error');
             }
         }
         
@@ -546,11 +591,12 @@
                 const result = await response.json();
                 if (result.success) {
                     await loadBoards();
+                    notify('Pantalla actualizada');
                 } else {
-                    alert('Error: ' + result.message);
+                    notify('No se pudo actualizar la pantalla: ' + result.message, 'error');
                 }
             } catch (error) {
-                alert('Error de conexion');
+                notify('Error de conexión', 'error');
             }
         }
         
@@ -558,8 +604,21 @@
             await updateBoard(boardId, { is_active: newState });
         }
         
-        async function deleteBoard(boardId, name) {
-            if (!confirm(`Eliminar la pantalla "${name}"?`)) return;
+        function deleteBoard(boardId, name) {
+            pendingDelete = boardId;
+            document.getElementById('deleteMessage').textContent = `Eliminar la pantalla "${name}"? Esta acción no se puede deshacer.`;
+            document.getElementById('deleteModal').classList.add('active');
+        }
+
+        function closeDeleteModal() {
+            pendingDelete = null;
+            document.getElementById('deleteModal').classList.remove('active');
+        }
+
+        async function confirmDeleteBoard() {
+            if (!pendingDelete) return;
+            const boardId = pendingDelete;
+            closeDeleteModal();
             
             try {
                 const response = await fetch(`${API_BASE}/digital_boards/delete.php`, {
@@ -572,11 +631,12 @@
                 const data = await response.json();
                 if (data.success) {
                     await loadBoards();
+                    notify('Pantalla eliminada');
                 } else {
-                    alert('Error: ' + data.message);
+                    notify('No se pudo eliminar la pantalla: ' + data.message, 'error');
                 }
             } catch (error) {
-                alert('Error de conexion');
+                notify('Error de conexión', 'error');
             }
         }
         
@@ -609,15 +669,19 @@
                 if (result.success) {
                     closeModal();
                     await loadBoards();
+                    notify('Pantalla creada');
                 } else {
-                    alert('Error: ' + result.message);
+                    notify('No se pudo crear la pantalla: ' + result.message, 'error');
                 }
             } catch (error) {
-                alert('Error de conexion');
+                notify('Error de conexión', 'error');
             }
         });
         
         document.getElementById('btnCreateBoard').addEventListener('click', openModal);
+        document.getElementById('closeDeleteModal').addEventListener('click', closeDeleteModal);
+        document.getElementById('cancelDelete').addEventListener('click', closeDeleteModal);
+        document.getElementById('confirmDelete').addEventListener('click', confirmDeleteBoard);
         
         loadBoards();
     </script>

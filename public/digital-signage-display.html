@@ -40,6 +40,40 @@
             align-items: center;
             justify-content: center;
         }
+
+        /* Lienzo de presentación: posiciones en porcentajes, responsive sin perder relación */
+        .presentation-canvas {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        .presentation-element {
+            position: absolute;
+            overflow: hidden;
+        }
+        .presentation-bg {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .presentation-bg.fit-fill { background-size: 100% 100%; }
+        .presentation-bg.fit-cover { background-size: cover; background-position: center; }
+        .presentation-bg.fit-contain { background-size: contain; background-position: center; background-repeat: no-repeat; }
+        .presentation-content {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            padding: 0;
+            overflow: hidden;
+        }
+        .presentation-text {
+            font-weight: 700;
+            line-height: 1.2;
+            white-space: pre-line;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.55);
+        }
         
         .slide-grid {
             display: grid;
@@ -439,12 +473,16 @@
                     slideEl.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
                 }
                 
-                // Detectar modo: vertical si al menos un elemento tiene height en content
+                // El editor tipo presentación guarda la geometría absoluta en content.rect.
+                const hasPresentation = (slide.elements || []).some(el => el.content && el.content.rect);
+                // Detectar modo anterior: vertical si al menos un elemento tiene height en content
                 const hasVertical = (slide.elements || []).some(el => 
                     el.content && el.content.height && ['xs','sm','md','lg','full'].includes(el.content.height)
                 );
                 
-                if (hasVertical) {
+                if (hasPresentation) {
+                    slideEl.appendChild(renderPresentationCanvas(slide.elements || []));
+                } else if (hasVertical) {
                     // Modo vertical: bloques apilados
                     const vertical = document.createElement('div');
                     vertical.className = 'slide-vertical';
@@ -476,6 +514,66 @@
                 
                 container.appendChild(slideEl);
             });
+        }
+
+        // Renderiza un slide creado en el editor tipo presentación.
+        // Cada geometría usa porcentajes para conservar su proporción en cualquier pantalla.
+        function renderPresentationCanvas(elements) {
+            const canvas = document.createElement('div');
+            canvas.className = 'presentation-canvas';
+
+            [...elements]
+                .sort((a, b) => (a.z_index || 1) - (b.z_index || 1))
+                .forEach(element => {
+                    const c = element.content || {};
+                    const r = c.rect;
+                    if (!r) return;
+
+                    const item = document.createElement('div');
+                    item.className = 'presentation-element';
+                    item.style.left = `${r.x_pct || 0}%`;
+                    item.style.top = `${r.y_pct || 0}%`;
+                    item.style.width = `${r.w_pct || 10}%`;
+                    item.style.height = `${r.h_pct || 10}%`;
+                    item.style.zIndex = element.z_index || c.z_index || 1;
+
+                    if (c.background_image) {
+                        const bg = document.createElement('div');
+                        bg.className = `presentation-bg fit-${c.background_fit || 'fill'}`;
+                        bg.style.backgroundImage = `url('${c.background_image}')`;
+                        item.appendChild(bg);
+                    } else if (c.background_color) {
+                        const bg = document.createElement('div');
+                        bg.className = 'presentation-bg';
+                        bg.style.background = c.background_color;
+                        item.appendChild(bg);
+                    }
+
+                    if (c.text) {
+                        const content = document.createElement('div');
+                        content.className = 'presentation-content';
+                        content.style.justifyContent = { left: 'flex-start', center: 'center', right: 'flex-end' }[c.text_pos_h] || 'center';
+                        content.style.alignItems = { top: 'flex-start', middle: 'center', bottom: 'flex-end' }[c.text_pos_v] || 'center';
+
+                        const text = document.createElement('div');
+                        text.className = 'presentation-text';
+                        text.textContent = c.text;
+                        text.style.fontSize = `${c.text_size_pct || 4}vh`;
+                        text.style.color = c.text_color || '#ffffff';
+                        text.style.textAlign = c.text_pos_h || 'center';
+                        text.style.transform = `translate(${c.text_offset_x || 0}px, ${c.text_offset_y || 0}px)`;
+                        content.appendChild(text);
+                        item.appendChild(content);
+                    }
+
+                    if (c.animation && c.animation !== 'none') {
+                        const anim = `anim-${c.animation.replace('_', '-')}`;
+                        item.classList.add(anim);
+                    }
+                    canvas.appendChild(item);
+                });
+
+            return canvas;
         }
 
         // Renderiza un bloque en modo vertical (imagen de fondo + texto + tamaño)

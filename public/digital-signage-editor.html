@@ -14,410 +14,225 @@
     <style>
         * { box-sizing: border-box; }
 
-        .editor-container {
-            display: flex;
-            height: calc(100vh);
-        }
+        body { margin: 0; }
 
-        /* ===== Panel izquierdo: tools ===== */
-        .editor-tools {
-            width: 260px;
-            background: var(--card-bg, #fff);
-            border-right: 1px solid var(--border-color, #e2e8f0);
-            padding: 1.25rem;
-            overflow-y: auto;
-            flex-shrink: 0;
-        }
-
-        .editor-tools h3 {
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: var(--text-muted, #64748b);
-            margin: 0 0 1rem 0;
-            padding-bottom: 0.5rem;
-            border-bottom: 1px solid var(--border-color, #e2e8f0);
-        }
-
-        .tool-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .tool-group label {
-            display: block;
-            font-size: 0.8rem;
-            font-weight: 600;
-            color: var(--text-primary, #333);
-            margin-bottom: 0.4rem;
-        }
-
-        .tool-group input[type="text"],
-        .tool-group select,
-        .tool-group input[type="number"],
-        .tool-group input[type="color"] {
-            width: 100%;
-            padding: 0.5rem 0.6rem;
-            border: 1px solid var(--border-color, #ddd);
-            border-radius: 6px;
-            background: var(--bg-primary, #fff);
-            color: var(--text-primary, #333);
-            font-size: 0.9rem;
-        }
-
-        .tool-group input[type="range"] {
-            width: 100%;
-        }
-
-        .size-options {
-            display: flex;
-            gap: 0.4rem;
-        }
-
-        .size-btn {
-            flex: 1;
-            padding: 0.45rem;
-            border: 2px solid var(--border-color, #ddd);
-            border-radius: 6px;
-            background: var(--bg-primary, #fff);
-            cursor: pointer;
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: var(--text-primary, #333);
-            text-align: center;
-            transition: all 0.15s;
-        }
-
-        .size-btn.active {
-            border-color: var(--primary-color);
-            background: var(--primary-color);
-            color: #fff;
-        }
-
-        .tool-btn {
-            width: 100%;
-            padding: 0.6rem;
-            border: none;
-            border-radius: 6px;
-            background: var(--primary-color);
-            color: #fff;
-            font-weight: 600;
-            cursor: pointer;
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            transition: background 0.15s;
-        }
-
-        .tool-btn:hover { background: var(--primary-dark, #005a9e); }
-
-        .btn-secondary {
-            background: var(--bg-secondary, #e5e5e5);
-            color: var(--text-primary, #333);
-        }
-        .btn-secondary:hover { background: var(--bg-tertiary, #d5d5d5); }
-
-        .btn-danger {
-            background: var(--danger-color, #ef4444);
-            color: #fff;
-        }
-        .btn-danger:hover { background: #dc2626; }
-
-        .tool-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .tool-btn + .tool-btn { margin-top: 0.5rem; }
-
-        /* ===== Panel central: canvas ===== */
-        .editor-canvas-wrap {
-            flex: 1;
-            background: var(--bg-secondary, #f0f2f5);
-            overflow: auto;
-            display: flex;
-            justify-content: center;
-            padding: 2rem;
-        }
-
-        .canvas-device {
-            width: 100%;
-            max-width: 900px;
-            background: #1a1a1a;
-            border-radius: 8px;
-            padding: 1.5rem;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-            position: relative;
-        }
-
-        .canvas-device.vertical {
-            max-width: 480px;
-        }
-
-        .canvas-slide {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            border-radius: 6px;
-            min-height: 420px;
-            position: relative;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .canvas-slide.bg-image {
-            background-size: cover;
-            background-position: center;
-        }
-
-        .block {
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            color: #fff;
-            cursor: move;
-            transition: outline 0.15s;
-            flex-shrink: 0;
-        }
-
-        .block.selected {
-            outline: 3px solid #38bdf8;
-            outline-offset: -3px;
-        }
-
-        .block.bg-image {
-            background-size: cover;
-            background-position: center;
-        }
-
-        /* Tamaños de bloque (altura) */
-        .block.h-xs { min-height: 60px; }
-        .block.h-sm { min-height: 90px; }
-        .block.h-md { min-height: 140px; }
-        .block.h-lg { min-height: 200px; }
-        .block.h-full { min-height: 380px; }
-
-        .block .block-inner {
-            padding: 1rem;
-            width: 100%;
-            z-index: 1;
-        }
-
-        .block .block-text {
-            font-weight: 700;
-            line-height: 1.2;
-        }
-
-        /* Grid mode */
-        .canvas-slide.grid-mode {
-            display: grid;
-            gap: 0.5rem;
-        }
-
-        .block-overlay-controls {
-            position: absolute;
-            top: 4px;
-            right: 4px;
-            z-index: 5;
-            display: flex;
-            gap: 4px;
-            opacity: 0;
-            transition: opacity 0.15s;
-        }
-
-        .block.selected .block-overlay-controls,
-        .block:hover .block-overlay-controls {
-            opacity: 1;
-        }
-
-        .block-control-btn {
-            width: 26px;
-            height: 26px;
-            border: none;
-            border-radius: 4px;
-            background: rgba(0,0,0,0.6);
-            color: #fff;
-            cursor: pointer;
-            font-size: 0.7rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .block-control-btn:hover { background: rgba(0,0,0,0.85); }
-        .block-control-btn.danger:hover { background: #dc2626; }
-
-        /* ===== Panel derecho: propiedades ===== */
-        .editor-props {
-            width: 280px;
-            background: var(--card-bg, #fff);
-            border-left: 1px solid var(--border-color, #e2e8f0);
-            padding: 1.25rem;
-            overflow-y: auto;
-            flex-shrink: 0;
-        }
-
-        .editor-props h3 {
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: var(--text-muted, #64748b);
-            margin: 0 0 1rem 0;
-            padding-bottom: 0.5rem;
-            border-bottom: 1px solid var(--border-color, #e2e8f0);
-        }
-
-        .editor-props .tool-group label {
-            font-size: 0.8rem;
-        }
-
-        .editor-props input[type="text"],
-        .editor-props textarea,
-        .editor-props input[type="number"] {
-            width: 100%;
-            padding: 0.5rem 0.6rem;
-            border: 1px solid var(--border-color, #ddd);
-            border-radius: 6px;
-            font-size: 0.9rem;
-            font-family: inherit;
-        }
-
-        .editor-props textarea { resize: vertical; min-height: 60px; }
-
-        .prop-section {
-            margin-bottom: 1.25rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid var(--border-color, #e2e8f0);
-        }
-
-        .img-preview {
-            width: 100%;
-            height: 70px;
-            border-radius: 6px;
-            margin-top: 0.4rem;
-            background-size: cover;
-            background-position: center;
-            border: 1px solid var(--border-color, #ddd);
-        }
-
-        .empty-props {
-            color: var(--text-muted, #666);
-            font-size: 0.9rem;
-            text-align: center;
-            padding: 2rem 0;
-        }
-
-        /* Header bar */
+        /* ===== Topbar ===== */
         .editor-topbar {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0.75rem 1.5rem;
+            padding: 0.6rem 1.25rem;
             background: var(--card-bg, #fff);
             border-bottom: 1px solid var(--border-color, #e2e8f0);
+            height: 56px;
         }
-
         .editor-topbar .br-title {
-            font-size: 1.1rem;
+            font-size: 1.05rem;
             font-weight: 700;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.6rem;
+            min-width: 0;
         }
-
-        .topbar-actions {
-            display: flex;
-            gap: 0.5rem;
-            align-items: center;
-        }
-
+        .br-title span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .topbar-actions { display: flex; gap: 0.5rem; align-items: center; }
         .topbar-actions button {
-            padding: 0.5rem 1rem;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 0.85rem;
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
+            padding: 0.45rem 1rem;
+            border: none; border-radius: 6px;
+            cursor: pointer; font-weight: 600; font-size: 0.85rem;
+            display: flex; align-items: center; gap: 0.4rem;
+            transition: all 0.15s;
         }
-
-        .btn-save-top {
-            background: var(--primary-color);
-            color: #fff;
-        }
+        .btn-save-top { background: var(--primary-color); color: #fff; }
         .btn-save-top:hover { background: var(--primary-dark, #005a9e); }
+        .btn-back { background: var(--bg-secondary, #e5e5e5); color: var(--text-primary, #333); }
+        .btn-back:hover { background: var(--bg-tertiary, #d5d5d5); }
 
-        .btn-back {
-            background: var(--bg-secondary, #e5e5e5);
-            color: var(--text-primary, #333);
-        }
+        /* ===== Layout ===== */
+        .editor-wrap { display: flex; height: calc(100vh - 56px); }
 
-        .mode-toggle {
-            display: flex;
-            background: var(--bg-secondary, #e5e5e5);
-            border-radius: 6px;
-            padding: 3px;
-            gap: 3px;
-        }
-
-        .mode-toggle button {
-            border: none;
-            background: transparent;
-            padding: 0.35rem 0.8rem;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.8rem;
-            font-weight: 600;
-            color: var(--text-muted, #666);
-        }
-
-        .mode-toggle button.active {
+        /* ===== Panel izquierdo: tools ===== */
+        .editor-tools {
+            width: 220px;
             background: var(--card-bg, #fff);
-            color: var(--text-primary, #333);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-right: 1px solid var(--border-color, #e2e8f0);
+            padding: 1rem;
+            overflow-y: auto; flex-shrink: 0;
+        }
+        .editor-tools h3 {
+            font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;
+            color: var(--text-muted, #64748b); margin: 0 0 0.8rem 0;
+            padding-bottom: 0.4rem; border-bottom: 1px solid var(--border-color, #e2e8f0);
+        }
+        .tool-btn {
+            width: 100%; padding: 0.6rem; margin-bottom: 0.5rem;
+            border: 1px solid var(--border-color, #ddd); border-radius: 6px;
+            background: var(--bg-primary, #fff); color: var(--text-primary, #333);
+            cursor: pointer; font-size: 0.85rem; font-weight: 600;
+            display: flex; align-items: center; gap: 0.5rem;
+            transition: all 0.15s; text-align: left;
+        }
+        .tool-btn:hover { border-color: var(--primary-color); background: var(--primary-color); color: #fff; }
+        .tool-btn i { width: 18px; text-align: center; }
+        .tools-divider {
+            height: 1px; background: var(--border-color, #e2e8f0);
+            margin: 0.8rem 0;
+        }
+        .layer-list { list-style: none; padding: 0; margin: 0; }
+        .layer-item {
+            display: flex; align-items: center; gap: 0.5rem;
+            padding: 0.4rem 0.5rem; border-radius: 4px; cursor: pointer;
+            font-size: 0.8rem; color: var(--text-primary, #333);
+            transition: all 0.12s;
+        }
+        .layer-item:hover { background: var(--bg-secondary, #f5f5f5); }
+        .layer-item.active { background: var(--primary-color); color: #fff; }
+        .layer-item i { width: 14px; text-align: center; font-size: 0.75rem; }
+        .layer-item .layer-name { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+        /* ===== Canvas ===== */
+        .editor-canvas-wrap {
+            flex: 1; background: linear-gradient(135deg, #1e293b, #0f172a);
+            display: flex; align-items: center; justify-content: center;
+            overflow: auto; position: relative;
+        }
+        .canvas-frame {
+            position: relative;
+            background: #fff;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            transform-origin: center;
+            overflow: hidden;
+        }
+        /* Elemento absoluto dentro del canvas */
+        .ppt-el {
+            position: absolute;
+            border: 1px solid transparent;
+            cursor: move;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .ppt-el.selected {
+            border-color: #38bdf8;
+            outline: 1px solid #38bdf8;
+        }
+        .ppt-el .resizer {
+            position: absolute;
+            width: 10px; height: 10px;
+            background: #fff;
+            border: 1px solid #38bdf8;
+            z-index: 20;
+        }
+        .ppt-el .resizer.nw { top: -5px; left: -5px; cursor: nw-resize; }
+        .ppt-el .resizer.n { top: -5px; left: 50%; margin-left: -5px; cursor: n-resize; }
+        .ppt-el .resizer.ne { top: -5px; right: -5px; cursor: ne-resize; }
+        .ppt-el .resizer.e { top: 50%; right: -5px; margin-top: -5px; cursor: e-resize; }
+        .ppt-el .resizer.se { bottom: -5px; right: -5px; cursor: se-resize; }
+        .ppt-el .resizer.s { bottom: -5px; left: 50%; margin-left: -5px; cursor: s-resize; }
+        .ppt-el .resizer.sw { bottom: -5px; left: -5px; cursor: sw-resize; }
+        .ppt-el .resizer.w { top: 50%; left: -5px; margin-top: -5px; cursor: w-resize; }
+        .ppt-el .resizer { display: none; }
+        .ppt-el.selected .resizer { display: block; }
+
+        /* Contenido del elemento */
+        .ppt-el .el-bg {
+            position: absolute; inset: 0;
+            width: 100%; height: 100%;
+        }
+        .ppt-el .el-bg.bg-fill { background-size: 100% 100%; }
+        .ppt-el .el-bg.bg-cover { background-size: cover; }
+        .ppt-el .el-bg.bg-contain { background-size: contain; background-repeat: no-repeat; background-position: center; }
+        .ppt-el .el-content {
+            position: absolute; inset: 0;
+            width: 100%; height: 100%;
+            display: flex;
+            overflow: hidden;
+        }
+        .ppt-el .el-text {
+            font-weight: 700;
+            line-height: 1.2;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+        }
+        .ppt-el.placeholder-hint {
+            background: rgba(255,255,255,0.08);
+            border: 1px dashed rgba(255,255,255,0.3);
+            color: #94a3b8;
+            display: flex; align-items: center; justify-content: center;
+            width: 100%; height: 100%;
+            font-size: 0.9rem;
         }
 
-        .layout-badge {
-            font-size: 0.7rem;
-            background: var(--bg-secondary, #e5e5e5);
-            color: var(--text-muted, #666);
-            padding: 0.2rem 0.5rem;
-            border-radius: 4px;
-            margin-left: 0.5rem;
+        /* ===== Panel propiedades ===== */
+        .editor-props {
+            width: 280px;
+            background: var(--card-bg, #fff);
+            border-left: 1px solid var(--border-color, #e2e8f0);
+            padding: 1rem; overflow-y: auto; flex-shrink: 0;
         }
+        .editor-props h3 {
+            font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;
+            color: var(--text-muted, #64748b); margin: 0 0 0.8rem 0;
+            padding-bottom: 0.4rem; border-bottom: 1px solid var(--border-color, #e2e8f0);
+        }
+        .prop-section {
+            margin-bottom: 1rem; padding-bottom: 0.8rem;
+            border-bottom: 1px solid var(--border-color, #e2e8f0);
+        }
+        .tool-group { margin-bottom: 0.7rem; }
+        .tool-group label {
+            display: block; font-size: 0.75rem; font-weight: 600;
+            color: var(--text-primary, #333); margin-bottom: 0.3rem;
+        }
+        .tool-group input[type="text"],
+        .tool-group textarea,
+        .tool-group input[type="number"],
+        .tool-group select {
+            width: 100%; padding: 0.45rem 0.6rem;
+            border: 1px solid var(--border-color, #ddd); border-radius: 6px;
+            font-size: 0.85rem; font-family: inherit;
+            background: var(--bg-primary, #fff); color: var(--text-primary, #333);
+        }
+        .tool-group textarea { resize: vertical; min-height: 50px; }
+        .tool-group input[type="color"] { width: 40px; height: 32px; padding: 2px; border: 1px solid var(--border-color); border-radius: 4px; }
+        .tool-row { display: flex; gap: 0.5rem; }
+        .tool-row .tool-group { flex: 1; }
+
+        .img-preview {
+            width: 100%; height: 60px; border-radius: 6px; margin-top: 0.35rem;
+            background-size: cover; background-position: center;
+            border: 1px solid var(--border-color, #ddd);
+        }
+        .empty-props {
+            color: var(--text-muted, #666); font-size: 0.85rem; text-align: center;
+            padding: 1.5rem 0;
+        }
+        .pos-hint {
+            display: flex; gap: 0.3rem; flex-wrap: wrap;
+        }
+        .pos-btn {
+            padding: 0.3rem 0.4rem; border: 1px solid var(--border-color, #ddd);
+            border-radius: 4px; background: var(--bg-primary, #fff); cursor: pointer;
+            font-size: 0.75rem; color: var(--text-primary, #333);
+        }
+        .pos-btn.active { background: var(--primary-color); color: #fff; border-color: var(--primary-color); }
 
         /* Toast */
         .toast {
-            position: fixed;
-            bottom: 1.5rem;
-            right: 1.5rem;
-            background: #1e293b;
-            color: #fff;
-            padding: 0.85rem 1.25rem;
-            border-radius: 8px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.25);
-            z-index: 10000;
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            transform: translateY(100px);
-            opacity: 0;
-            transition: all 0.3s;
+            position: fixed; bottom: 1.5rem; right: 1.5rem;
+            background: #1e293b; color: #fff; padding: 0.85rem 1.25rem;
+            border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+            z-index: 10000; font-size: 0.9rem;
+            display: flex; align-items: center; gap: 0.5rem;
+            transform: translateY(100px); opacity: 0; transition: all 0.3s;
         }
         .toast.show { transform: translateY(0); opacity: 1; }
         .toast.success { background: #10b981; }
         .toast.error { background: #ef4444; }
 
         @media (max-width: 900px) {
-            .editor-container { flex-direction: column; }
+            .editor-wrap { flex-direction: column; }
             .editor-tools { width: 100%; border-right: none; border-bottom: 1px solid var(--border-color); }
             .editor-props { width: 100%; border-left: none; border-top: 1px solid var(--border-color); }
-            .editor-canvas-wrap { order: -1; }
+            .editor-canvas-wrap { min-height: 300px; }
         }
     </style>
 </head>
@@ -428,44 +243,37 @@
             <span id="boardTitle">Editor de Pantalla</span>
         </div>
         <div class="topbar-actions">
-            <div class="mode-toggle" id="modeToggle">
-                <button data-mode="vertical" class="active"><i class="fas fa-list-ul"></i> Filas</button>
-                <button data-mode="grid"><i class="fas fa-th"></i> Grid</button>
-            </div>
             <button class="btn-save-top" id="btnSave"><i class="fas fa-save"></i> Guardar</button>
         </div>
     </div>
 
-    <div class="editor-container">
+    <div class="editor-wrap">
         <!-- Herramientas -->
         <aside class="editor-tools">
-            <h3><i class="fas fa-plus-circle"></i> Agregar bloque</h3>
-            <div class="tool-group">
-                <button class="tool-btn" data-add="text"><i class="fas fa-font"></i> Texto</button>
-                <button class="tool-btn" data-add="image" style="margin-top:0.5rem;"><i class="fas fa-image"></i> Imagen</button>
-                <button class="tool-btn" data-add="banner" style="margin-top:0.5rem;"><i class="fas fa-photo-video"></i> Imagen + Texto</button>
-                <button class="tool-btn" data-add="product" style="margin-top:0.5rem;"><i class="fas fa-tag"></i> Producto</button>
-            </div>
+            <h3>Agregar elemento</h3>
+            <button class="tool-btn" data-add="rect" id="addRect"><i class="fas fa-square"></i> Rectángulo</button>
+            <button class="tool-btn" data-add="text"><i class="fas fa-font"></i> Texto</button>
+            <button class="tool-btn" data-add="image"><i class="fas fa-image"></i> Imagen</button>
+
+            <div class="tools-divider"></div>
+            <h3>Capas</h3>
+            <ul class="layer-list" id="layerList"></ul>
         </aside>
 
         <!-- Canvas -->
-        <div class="editor-canvas-wrap">
-            <div class="canvas-device" id="canvasDevice">
-                <div class="canvas-slide" id="canvasSlide">
-                    <div class="block" data-placeholder style="height:100%; color:rgba(255,255,255,0.6); font-size:0.9rem; opacity:0.7;">
-                        Agrega un bloque o selecciona uno existente
-                    </div>
-                </div>
+        <div class="editor-canvas-wrap" id="canvasWrap">
+            <div class="canvas-frame" id="canvasFrame">
+                <div class="placeholder-hint">Agrega un elemento para comenzar</div>
             </div>
         </div>
 
         <!-- Propiedades -->
         <aside class="editor-props" id="editorProps">
-            <h3><i class="fas fa-sliders-h"></i> Propiedades</h3>
+            <h3>Propiedades</h3>
             <div id="propsContent">
                 <div class="empty-props">
-                    <i class="fas fa-mouse-pointer" style="font-size:2rem; opacity:0.3;"></i>
-                    <p>Selecciona un bloque para editarlo</p>
+                    <i class="fas fa-mouse-pointer" style="font-size:1.5rem; opacity:0.3; margin-bottom:0.5rem; display:block;"></i>
+                    Selecciona un elemento para editarlo
                 </div>
             </div>
         </aside>
@@ -473,511 +281,481 @@
 
     <div class="toast" id="toast"></div>
 
+    <script src="lib/interactjs/interact.min.js"></script>
     <script src="js/sidebar-loader.js?v=4"></script>
     <script>
-        // ===== Estado global =====
+        // ===== Config =====
         const API_BASE = '../api';
+        const BOARD_ASPECT = 16 / 9;        // Relación del lienzo
+        const BOARD_WIDTH = 1600;            // Ancho lógico del canvas
+        const BOARD_HEIGHT = BOARD_WIDTH / BOARD_ASPECT;
+
         const urlParams = new URLSearchParams(window.location.search);
         const boardId = urlParams.get('board');
+
+        // Estado
         let board = null;
         let slides = [];
         let currentSlide = 0;
-        let selectedBlockId = null;
-        let editMode = 'vertical'; // 'vertical' | 'grid'
-        let _blockSeq = 0;
-
-        // Elementos transient (no persistidos aun)
-        let elements = []; // { tempId, type, content, size, grid pos }
+        let elements = [];      // elementos actuales (local, no persistido)
+        let selectedId = null;
+        let seq = 0;
 
         // ===== Utilidades =====
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text == null ? '' : text;
-            return div.innerHTML;
-        }
-
-        function notify(message, type = 'success') {
-            const t = document.getElementById('toast');
-            t.textContent = message;
+        function $(id) { return document.getElementById(id); }
+        function esc(t) { const d = document.createElement('div'); d.textContent = t == null ? '' : t; return d.innerHTML; }
+        let _toastTimer;
+        function notify(msg, type = 'success') {
+            const t = $('toast');
+            t.textContent = msg;
             t.className = `toast ${type} show`;
-            clearTimeout(notify._t);
-            notify._t = setTimeout(() => t.classList.remove('show'), 3000);
+            clearTimeout(_toastTimer);
+            _toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
         }
-
         async function api(url, opts = {}) {
             const res = await fetch(`${API_BASE}/${url}`, { credentials: 'include', ...opts });
-            return res.json();
+            return res.json().catch(() => ({ success: false, message: 'Respuesta inválida' }));
         }
+        function elTypeIcon(t) {
+            return { rect: 'fa-square', text: 'fa-font', image: 'fa-image', video: 'fa-video' }[t] || 'fa-square';
+        }
+        function elTypeLabel(t) {
+            return { rect: 'Rectángulo', text: 'Texto', image: 'Imagen', video: 'Video' }[t] || t;
+        }
+        function clamp(v, min, max) { return Math.min(max, Math.max(min, v)); }
 
-        // ===== Carga inicial =====
+        // ===== Carga =====
         async function init() {
-            if (!boardId) {
-                notify('Falta ID de pantalla', 'error');
-                window.location.href = 'digital-signage.html';
-                return;
-            }
-            document.getElementById('boardTitle').textContent = 'Cargando...';
-            const data = await api(`digital_boards/read.php`);
+            if (!boardId) { notify('Falta ID de pantalla', 'error'); window.location.href = 'digital-signage.html'; return; }
+            $('boardTitle').textContent = 'Cargando...';
+            const data = await api('digital_boards/read.php');
             if (data.success) {
                 board = data.data.find(b => b.board_id == boardId);
-                if (board) {
-                    document.getElementById('boardTitle').textContent = board.name;
-                }
+                if (board) $('boardTitle').textContent = board.name;
             }
-            await loadContent();
-        }
-
-        async function loadContent() {
-            // Cargar slides del board
-            const data = await api(`board_slides/read.php?board_id=${boardId}`);
-            if (!data.success) { notify('Error al cargar slides', 'error'); return; }
-
-            if (data.data.length > 0) {
-                currentSlide = 0;
-            } else {
-                // Crear un slide por defecto
+            const slidesRes = await api(`board_slides/read.php?board_id=${boardId}`);
+            slides = slidesRes.success ? (slidesRes.data || []) : [];
+            if (slides.length === 0) {
                 const created = await api('board_slides/create.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ board_id: boardId, title: 'Slide 1' })
                 });
-                if (created.success) currentSlide = 0;
+                if (created.success) {
+                    slides = (await api(`board_slides/read.php?board_id=${boardId}`)).data || [];
+                }
             }
-
-            const slidesRes = await api(`board_slides/read.php?board_id=${boardId}`);
-            slides = slidesRes.data || [];
-            await loadElements();
+            if (slides.length > 0) await loadElements();
+            else notify('No se pudo crear el slide', 'error');
         }
 
         async function loadElements() {
-            if (!slides[currentSlide]) return;
             const slideId = slides[currentSlide].slide_id;
             const data = await api(`slide_elements/read.php?slide_id=${slideId}`);
-            // Normalizar con tempId
-            elements = (data.data || []).map(el => ({
-                ...el,
-                tempId: 'srv_' + el.element_id,
-                type: el.element_type,
-                size: (el.content && el.content.height) || 'md'
-            }));
+            elements = (data.success ? data.data : []).map(el => normalizeEl(el));
+            if (elements.length === 0) {
+                // Demo: crear elementos de ejemplo si está vacío
+                createDemo();
+            }
             render();
         }
 
-        // ===== Render canvas =====
+        // Normalizar elemento servidor a estructura local
+        function normalizeEl(el) {
+            const c = el.content && typeof el.content === 'object' ? el.content : {};
+            // Los elementos del editor PowerPoint se distinguen por content.rect.
+            // Los rectángulos se persisten como banner porque es un tipo válido de la tabla.
+            let type = c.presentation_type || el.element_type;
+            if (c.rect && el.element_type === 'banner') type = 'rect';
+            // Campos de geometría en content
+            const rect = c.rect || { x_pct: 30, y_pct: 30, w_pct: 20, h_pct: 20 };
+            return {
+                tempId: 'srv_' + el.element_id,
+                element_id: el.element_id,
+                type: type,
+                background_image: c.background_image || '',
+                background_fit: c.background_fit || 'fill',
+                background_color: c.background_color || '',
+                text: c.text || '',
+                text_size_pct: c.text_size_pct || 4,
+                text_color: c.text_color || '#ffffff',
+                text_pos_h: c.text_pos_h || 'center',
+                text_pos_v: c.text_pos_v || 'middle',
+                text_offset_x: c.text_offset_x || 0,
+                text_offset_y: c.text_offset_y || 0,
+                animation: c.animation || el.animation || 'none',
+                z_index: el.z_index || 1,
+                rect: rect
+            };
+        }
+
+        function createDemo() {
+            elements = [
+                {
+                    tempId: 'tmp_demo_bg', type: 'rect',
+                    background_image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1600&h=900&fit=crop',
+                    background_fit: 'fill', background_color: '',
+                    text: '', text_size_pct: 5, text_color: '#fff',
+                    text_pos_h: 'center', text_pos_v: 'middle', text_offset_x: 0, text_offset_y: 0,
+                    animation: 'none', z_index: 1,
+                    rect: { x_pct: 0, y_pct: 0, w_pct: 100, h_pct: 100 }
+                },
+                {
+                    tempId: 'tmp_demo_title', type: 'text',
+                    background_image: '', background_fit: 'fill', background_color: 'rgba(0,0,0,0.5)',
+                    text: 'BIENVENIDO A NUESTRO RESTAURANTE', text_size_pct: 5, text_color: '#ffffff',
+                    text_pos_h: 'center', text_pos_v: 'middle', text_offset_x: 0, text_offset_y: -120,
+                    animation: 'fade_in', z_index: 2,
+                    rect: { x_pct: 20, y_pct: 15, w_pct: 60, h_pct: 15 }
+                },
+                {
+                    tempId: 'tmp_demo_card', type: 'rect',
+                    background_image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800&h=600&fit=crop',
+                    background_fit: 'cover', background_color: '',
+                    text: 'HAMBURGUESA CLASICA\n$89', text_size_pct: 3.5, text_color: '#fff',
+                    text_pos_h: 'center', text_pos_v: 'bottom', text_offset_x: 0, text_offset_y: -30,
+                    animation: 'fade_in', z_index: 3,
+                    rect: { x_pct: 8, y_pct: 55, w_pct: 38, h_pct: 35 }
+                },
+                {
+                    tempId: 'tmp_demo_card2', type: 'rect',
+                    background_image: 'https://images.unsplash.com/photo-1604068549290-dea0e4a3057e?w=800&h=600&fit=crop',
+                    background_fit: 'cover', background_color: '',
+                    text: 'PIZZA MARGHERITA\n$129', text_size_pct: 3.5, text_color: '#fff',
+                    text_pos_h: 'center', text_pos_v: 'bottom', text_offset_x: 0, text_offset_y: -30,
+                    animation: 'slide_up', z_index: 4,
+                    rect: { x_pct: 54, y_pct: 55, w_pct: 38, h_pct: 35 }
+                },
+                {
+                    tempId: 'tmp_demo_promo', type: 'text',
+                    background_image: '', background_fit: 'fill', background_color: '#e11d48',
+                    text: '2x1 EN BEBIDAS TODA LA SEMANA', text_size_pct: 3, text_color: '#fff',
+                    text_pos_h: 'center', text_pos_v: 'middle', text_offset_x: 0, text_offset_y: 0,
+                    animation: 'fade_in', z_index: 5,
+                    rect: { x_pct: 10, y_pct: 93, w_pct: 80, h_pct: 6 }
+                }
+            ];
+            selectedId = null;
+        }
+
+        // ===== Render =====
         function render() {
             renderCanvas();
+            renderLayers();
             renderProps();
         }
 
         function renderCanvas() {
-            const canvas = document.getElementById('canvasSlide');
-            canvas.className = 'canvas-slide';
-            canvas.style.background = '';
+            const frame = $('canvasFrame');
+            frame.innerHTML = '';
+            const placeholder = document.createElement('div');
+            placeholder.className = 'placeholder-hint';
+            placeholder.textContent = 'Agrega un elemento para comenzar';
+            frame.appendChild(placeholder);
 
-            if (editMode === 'vertical') {
-                canvas.classList.remove('grid-mode');
-                canvas.style.display = 'flex';
-                canvas.style.flexDirection = 'column';
-                canvas.style.gap = '0.5rem';
+            if (elements.length === 0) return;
+            placeholder.style.display = 'none';
 
-                if (elements.length === 0) {
-                    canvas.innerHTML = `<div class="block" data-placeholder style="height:100%; color:rgba(255,255,255,0.6); font-size:0.9rem; opacity:0.7;">Agrega un bloque para comenzar</div>`;
-                    return;
-                }
-
-                canvas.innerHTML = elements.map(el => renderBlockVertical(el)).join('');
-                bindBlockEvents();
-            } else {
-                // Modo grid
-                const cols = slides[currentSlide]?.grid_cols || 3;
-                canvas.classList.add('grid-mode');
-                canvas.style.display = 'grid';
-                canvas.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-                canvas.style.flexDirection = '';
-
-                if (elements.length === 0) {
-                    canvas.innerHTML = `<div class="block" data-placeholder style="grid-column:1/-1; color:rgba(255,255,255,0.6); font-size:0.9rem; opacity:0.7; min-height:380px;">Agrega un bloque para comenzar</div>`;
-                    return;
-                }
-
-                canvas.innerHTML = elements.map(el => renderBlockGrid(el)).join('');
-                bindBlockEvents();
-            }
+            // Ordenar por z_index
+            const sorted = [...elements].sort((a, b) => a.z_index - b.z_index);
+            sorted.forEach(el => {
+                const div = buildElementDiv(el);
+                frame.appendChild(div);
+            });
+            attachInteract();
         }
 
-        function renderBlockVertical(el) {
-            const sizeClass = `h-${el.size}`;
-            const content = el.content || {};
-            let inner = '';
-            let bgStyle = '';
+        function buildElementDiv(el) {
+            const div = document.createElement('div');
+            div.className = 'ppt-el' + (selectedId === el.tempId ? ' selected' : '');
+            div.dataset.id = el.tempId;
+            div.style.zIndex = el.z_index;
+            const r = el.rect;
+            div.style.left = r.x_pct + '%';
+            div.style.top = r.y_pct + '%';
+            div.style.width = r.w_pct + '%';
+            div.style.height = r.h_pct + '%';
 
-            if (el.type === 'text' || el.type === 'banner') {
-                if (content.text) {
-                    inner = `<div class="block-text" style="font-size:${content.text_size || '24px'};">${escapeHtml(content.text)}</div>`;
-                }
-            }
-            if (el.type === 'image') {
-                inner = '';
-            }
-            if (el.type === 'product') {
-                inner = `<div class="block-text" style="font-size:${content.text_size || '24px'};">${escapeHtml(content.name || '')}</div>`;
-                if (content.price) inner += `<div style="font-size:${content.price_size || '18px'}; font-weight:800;">${escapeHtml(content.price)}</div>`;
-            }
-            if (el.type === 'banner') {
-                if (content.text) {
-                    inner = `<div class="block-text" style="font-size:${content.text_size || '28px'};">${escapeHtml(content.text)}</div>`;
-                }
-            }
-
+            let html = '';
             // Fondo
-            if (content.background_image || content.image_url) {
-                bgStyle = `background-image:url('${escapeHtml(content.background_image || content.image_url)}');`;
-            } else if (content.background_color) {
-                bgStyle = `background:${content.background_color};`;
+            if (el.background_image) {
+                html += `<div class="el-bg bg-${el.background_fit}" style="background-image:url('${esc(el.background_image)}');"></div>`;
             }
-
-            return `
-                <div class="block ${sizeClass} ${content.background_image ? 'bg-image' : ''} ${selectedBlockId === el.tempId ? 'selected' : ''}"
-                     data-id="${el.tempId}" style="${bgStyle}">
-                    <div class="block-overlay-controls">
-                        <button class="block-control-btn" data-act="up" title="Subir"><i class="fas fa-arrow-up"></i></button>
-                        <button class="block-control-btn" data-act="down" title="Bajar"><i class="fas fa-arrow-down"></i></button>
-                        <button class="block-control-btn" data-act="remove" title="Eliminar"><i class="fas fa-trash"></i></button>
-                    </div>
-                    <div class="block-inner">
-                        <div class="block-type-hint"><i class="fas ${typeIcon(el.type)}"></i> ${typeLabel(el.type)}</div>
-                        ${inner}
-                    </div>
-                </div>
-            `;
+            if (el.background_color && !el.background_image) {
+                html += `<div class="el-bg" style="background:${esc(el.background_color)};"></div>`;
+            }
+            // Contenido (texto)
+            html += `<div class="el-content" style="justify-content:${hJustify(el.text_pos_h)}; align-items:${vAlign(el.text_pos_v)}; padding:0;">`;
+            if (el.type === 'text' || el.type === 'rect') {
+                if (el.text) {
+                    const sizePx = (el.text_size_pct / 100) * BOARD_HEIGHT;
+                    html += `<div class="el-text" style="font-size:${sizePx}px; color:${esc(el.text_color)}; transform:translate(${el.text_offset_x}px, ${el.text_offset_y}px); white-space:pre-line; text-align:${el.text_pos_h};">${esc(el.text)}</div>`;
+                } else if (el.type === 'text') {
+                    html += `<div class="el-text" style="font-size:24px; color:${esc(el.text_color)};">Texto</div>`;
+                }
+            }
+            html += `</div>`;
+            // Resizers
+            const dirs = ['nw','n','ne','e','se','s','sw','w'];
+            html += dirs.map(d => `<div class="resizer ${d}" data-dir="${d}"></div>`).join('');
+            div.innerHTML = html;
+            return div;
         }
 
-        function renderBlockGrid(el) {
-            const content = el.content || {};
-            const colStart = el.grid_col || 1;
-            const colSpan = el.col_span || 1;
-            const rowStart = el.grid_row || 1;
-            const rowSpan = el.row_span || 1;
+        function hJustify(h) { return { left: 'flex-start', center: 'center', right: 'flex-end' }[h] || 'center'; }
+        function vAlign(v) { return { top: 'flex-start', middle: 'center', bottom: 'flex-end' }[v] || 'center'; }
 
-            let inner = '';
-            let bgStyle = '';
+        // ===== Interact.js: drag & resize =====
+        function attachInteract() {
+            // Limpiar interacciones previas
+            interact('#canvasFrame .ppt-el').unset();
 
-            if (content.text) {
-                inner = `<div class="block-text" style="font-size:${content.text_size || '24px'};">${escapeHtml(content.text)}</div>`;
-            } else if ((el.type === 'product_card' || el.type === 'product') && content.name) {
-                inner = `<div class="block-text">${escapeHtml(content.name)}</div>`;
-                if (content.price) inner += `<div style="font-weight:800;">${escapeHtml(content.price)}</div>`;
-            }
-
-            if (content.background_image || content.image_url) {
-                bgStyle = `background-image:url('${escapeHtml(content.background_image || content.image_url)}');`;
-            } else if (content.background_color) {
-                bgStyle = `background:${content.background_color};`;
-            }
-
-            return `
-                <div class="block ${content.background_image ? 'bg-image' : ''} ${selectedBlockId === el.tempId ? 'selected' : ''}"
-                     data-id="${el.tempId}"
-                     style="grid-column:${colStart} / span ${colSpan}; grid-row:${rowStart} / span ${rowSpan}; min-height:100px; ${bgStyle}">
-                    <div class="block-overlay-controls">
-                        <button class="block-control-btn" data-act="remove" title="Eliminar"><i class="fas fa-trash"></i></button>
-                    </div>
-                    <div class="block-inner">
-                        <div class="block-type-hint"><i class="fas ${typeIcon(el.type)}"></i> ${typeLabel(el.type)}</div>
-                        ${inner}
-                    </div>
-                </div>
-            `;
-        }
-
-        function typeIcon(type) {
-            switch (type) {
-                case 'text': return 'fa-font';
-                case 'image': return 'fa-image';
-                case 'banner': return 'fa-photo-video';
-                case 'product_card': return 'fa-tag';
-                case 'clock': return 'fa-clock';
-                default: return 'fa-square';
-            }
-        }
-
-        function typeLabel(type) {
-            return { text: 'Texto', image: 'Imagen', banner: 'Imagen + Texto', product_card: 'Producto', product: 'Producto', clock: 'Reloj' }[type] || type;
-        }
-
-        // ===== Manejo de eventos en canvas =====
-        function bindBlockEvents() {
-            document.querySelectorAll('.block[data-id]').forEach(block => {
-                block.addEventListener('click', (e) => {
-                    if (e.target.closest('[data-act]')) return;
-                    selectedBlockId = block.dataset.id;
-                    render();
+            interact('#canvasFrame .ppt-el')
+                .draggable({
+                    listeners: {
+                        move: (event) => {
+                            const id = event.target.dataset.id;
+                            const el = elements.find(e => e.tempId === id);
+                            if (!el) return;
+                            const frame = $('canvasFrame');
+                            const fw = frame.clientWidth;
+                            const fh = frame.clientHeight;
+                            el.rect.x_pct = clamp(el.rect.x_pct + (event.dx / fw * 100), 0, 100 - el.rect.w_pct);
+                            el.rect.y_pct = clamp(el.rect.y_pct + (event.dy / fh * 100), 0, 100 - el.rect.h_pct);
+                            event.target.style.left = el.rect.x_pct + '%';
+                            event.target.style.top = el.rect.y_pct + '%';
+                        },
+                        end: () => { renderProps(); }
+                    }
+                })
+                .resizable({
+                    edges: { left: true, right: true, bottom: true, top: true },
+                    listeners: {
+                        move: (event) => {
+                            const target = event.target;
+                            const id = target.dataset.id;
+                            const el = elements.find(e => e.tempId === id);
+                            if (!el) return;
+                            const frame = $('canvasFrame');
+                            const fw = frame.clientWidth;
+                            const fh = frame.clientHeight;
+                            const rect = el.rect;
+                            // Nuevo ancho/alto en %
+                            let w = (event.rect.width / fw) * 100;
+                            let h = (event.rect.height / fh) * 100;
+                            // event.rect is viewport-relative; convert it to canvas-relative coordinates
+                            const frameBox = frame.getBoundingClientRect();
+                            let x = ((event.rect.left - frameBox.left) / fw) * 100;
+                            let y = ((event.rect.top - frameBox.top) / fh) * 100;
+                            if (w < 2) w = 2;
+                            if (h < 2) h = 2;
+                            rect.w_pct = w;
+                            rect.h_pct = h;
+                            rect.x_pct = clamp(x, 0, 100 - w);
+                            rect.y_pct = clamp(y, 0, 100 - h);
+                            // Aplicar
+                            target.style.width = w + '%';
+                            target.style.height = h + '%';
+                            target.style.left = rect.x_pct + '%';
+                            target.style.top = rect.y_pct + '%';
+                        },
+                        end: () => { renderProps(); }
+                    }
                 });
+        }
 
-                block.querySelectorAll('[data-act]').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        const act = btn.dataset.act;
-                        const id = block.dataset.id;
-                        const idx = elements.findIndex(el => el.tempId === id);
-                        if (idx === -1) return;
-                        if (act === 'remove') {
-                            elements.splice(idx, 1);
-                            selectedBlockId = null;
-                            render();
-                        } else if (act === 'up' && idx > 0) {
-                            [elements[idx-1], elements[idx]] = [elements[idx], elements[idx-1]];
-                            render();
-                        } else if (act === 'down' && idx < elements.length - 1) {
-                            [elements[idx+1], elements[idx]] = [elements[idx], elements[idx+1]];
-                            render();
-                        }
-                    });
-                });
+        // ===== Selección =====
+        $('canvasFrame').addEventListener('mousedown', (e) => {
+            const ppt = e.target.closest('.ppt-el');
+            if (ppt) {
+                selectedId = ppt.dataset.id;
+                render();
+            } else {
+                selectedId = null;
+                render();
+            }
+        });
+
+        // ===== Capas =====
+        function renderLayers() {
+            const list = $('layerList');
+            const sorted = [...elements].sort((a, b) => a.z_index - b.z_index);
+            list.innerHTML = sorted.map(el => `
+                <li class="layer-item ${selectedId === el.tempId ? 'active' : ''}" data-id="${el.tempId}">
+                    <i class="fas ${elTypeIcon(el.type)}"></i>
+                    <span class="layer-name">${esc(el.text.split('\n')[0] || elTypeLabel(el.type))}</span>
+                </li>
+            `).join('');
+            list.querySelectorAll('.layer-item').forEach(li => {
+                li.addEventListener('click', () => { selectedId = li.dataset.id; renderCanvas(); renderProps(); renderLayers(); });
             });
         }
 
-        // ===== Agregar bloque =====
+        // ===== Agregar elemento =====
         document.querySelectorAll('[data-add]').forEach(btn => {
-            btn.addEventListener('click', () => addBlock(btn.dataset.add));
+            btn.addEventListener('click', () => addElement(btn.dataset.add));
         });
 
-        function addBlock(type) {
-            // Normalizar tipo 'product' -> 'product_card' (valor del ENUM en BD)
-            if (type === 'product') type = 'product_card';
-            _blockSeq++;
-            const cols = slides[currentSlide]?.grid_cols || 3;
+        function addElement(type) {
+            seq++;
             const el = {
-                tempId: 'tmp_' + _blockSeq,
+                tempId: 'tmp_' + seq,
                 type: type,
-                content: defaultContent(type),
-                size: type === 'banner' ? 'lg' : (type === 'text' ? 'md' : 'md'),
-                element_type: type,
-                grid_col: 1,
-                grid_row: (elements.length % 6) + 1,
-                col_span: type === 'banner' ? cols : 1,
-                row_span: 1
+                background_image: '', background_fit: 'fill', background_color: '',
+                text: type === 'text' ? 'Nuevo texto' : (type === 'image' ? '' : ''),
+                text_size_pct: 5, text_color: '#ffffff',
+                text_pos_h: 'center', text_pos_v: 'middle', text_offset_x: 0, text_offset_y: 0,
+                animation: 'none', z_index: (elements.length ? Math.max(...elements.map(e => e.z_index)) : 0) + 1,
+                rect: { x_pct: 30, y_pct: 30, w_pct: 20, h_pct: 20 }
             };
+            if (type === 'rect') el.background_color = '#2563eb';
+            if (type === 'image') { el.background_color = '#334155'; }
             elements.push(el);
-            selectedBlockId = el.tempId;
+            selectedId = el.tempId;
             render();
-        }
-
-        function defaultContent(type) {
-            switch (type) {
-                case 'text': return { text: 'Texto de ejemplo', text_size: '28px', background_color: '' };
-                case 'image': return { image_url: '', background_color: '#334155' };
-                case 'banner': return { text: 'Texto sobre imagen', text_size: '32px', background_image: '', background_color: '#0f3460' };
-                case 'product_card': return { name: 'Producto', price: '$0.00', text_size: '22px', background_color: '#1a1a2e' };
-                case 'clock': return { background_color: '#334155' };
-                default: return {};
-            }
         }
 
         // ===== Propiedades =====
         function renderProps() {
-            const container = document.getElementById('propsContent');
-            if (!selectedBlockId) {
-                container.innerHTML = `
-                    <div class="empty-props">
-                        <i class="fas fa-mouse-pointer" style="font-size:2rem; opacity:0.3;"></i>
-                        <p>Selecciona un bloque para editarlo</p>
-                    </div>
-                `;
+            const container = $('propsContent');
+            if (!selectedId) {
+                container.innerHTML = `<div class="empty-props">Selecciona un elemento para editarlo</div>`;
                 return;
             }
-            const el = elements.find(e => e.tempId === selectedBlockId);
+            const el = elements.find(e => e.tempId === selectedId);
             if (!el) { container.innerHTML = ''; return; }
-            const c = el.content || {};
 
             let html = '';
-
-            // Tipo de bloque
+            // Encabezado
             html += `<div class="prop-section">
-                <div class="tool-group">
-                    <label>Tipo de bloque</label>
-                    <div style="display:flex; align-items:center; gap:0.5rem;">
-                        <i class="fas ${typeIcon(el.type)}"></i> <strong>${typeLabel(el.type)}</strong>
-                    </div>
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <i class="fas ${elTypeIcon(el.type)}" style="color:var(--primary-color);"></i>
+                    <strong>${elTypeLabel(el.type)}</strong>
                 </div>
             </div>`;
 
-            // Texto (si aplica)
-            if (['text', 'product_card', 'product', 'banner'].includes(el.type)) {
-                if (el.type === 'product_card' || el.type === 'product') {
-                    html += `<div class="prop-section">
-                        <div class="tool-group"><label>Nombre del producto</label>
-                            <input type="text" id="prop-name" value="${escapeHtml(c.name || '')}">
-                        </div>
-                        <div class="tool-group"><label>Precio</label>
-                            <input type="text" id="prop-price" value="${escapeHtml(c.price || '')}">
-                        </div>
-                    </div>`;
-                } else {
-                    html += `<div class="prop-section">
-                        <div class="tool-group"><label>Texto</label>
-                            <textarea id="prop-text">${escapeHtml(c.text || '')}</textarea>
-                        </div>
-                    </div>`;
-                }
+            // Tamaño y posición
+            html += `<div class="prop-section">
+                <div class="tool-row">
+                    <div class="tool-group"><label>X (%)</label><input type="number" id="pf-x" value="${Math.round(el.rect.x_pct)}" min="0" step="0.5"></div>
+                    <div class="tool-group"><label>Y (%)</label><input type="number" id="pf-y" value="${Math.round(el.rect.y_pct)}" min="0" step="0.5"></div>
+                </div>
+                <div class="tool-row">
+                    <div class="tool-group"><label>Ancho (%)</label><input type="number" id="pf-w" value="${Math.round(el.rect.w_pct)}" min="2" step="0.5"></div>
+                    <div class="tool-group"><label>Alto (%)</label><input type="number" id="pf-h" value="${Math.round(el.rect.h_pct)}" min="2" step="0.5"></div>
+                </div>
+            </div>`;
 
+            // Fondo
+            if (el.type === 'rect' || el.type === 'image' || el.type === 'text') {
                 html += `<div class="prop-section">
-                    <div class="tool-group">
-                        <label>Tamaño del texto <span id="textSizeVal" style="color:var(--text-muted);">${c.text_size || '24px'}</span></label>
-                        <input type="range" id="prop-textsize" min="12" max="80" value="${parseInt(c.text_size) || 24}">
+                    <div class="tool-group"><label>Imagen de fondo (URL)</label>
+                        <input type="text" id="pf-bgimg" value="${esc(el.background_image)}">
+                        <div class="img-preview" id="pf-bgprev" style="${el.background_image ? `background-image:url('${esc(el.background_image)}')` : 'display:none;'}"></div>
+                    </div>
+                    <div class="tool-group"><label>Ajuste de imagen</label>
+                        <select id="pf-bgfit">
+                            <option value="fill" ${el.background_fit==='fill'?'selected':''}>Llenar (fill)</option>
+                            <option value="cover" ${el.background_fit==='cover'?'selected':''}>Cubrir (cover)</option>
+                            <option value="contain" ${el.background_fit==='contain'?'selected':''}>Contener (contain)</option>
+                        </select>
+                    </div>
+                    <div class="tool-group"><label>Color de fondo</label>
+                        <input type="text" id="pf-bgcolor" value="${el.background_color}" placeholder="#000000">
                     </div>
                 </div>`;
             }
 
-            // Imagen de fondo
-            if (['image', 'banner', 'text'].includes(el.type)) {
+            // Texto
+            if (el.type === 'text' || el.type === 'rect') {
                 html += `<div class="prop-section">
-                    <div class="tool-group">
-                        <label>Imagen de fondo (URL)</label>
-                        <input type="text" id="prop-bgimage" value="${escapeHtml(c.background_image || c.image_url || '')}">
-                        <div class="img-preview" id="bgPreview" style="${(c.background_image || c.image_url) ? `background-image:url('${escapeHtml(c.background_image || c.image_url)}')` : 'display:none;'}"></div>
+                    <div class="tool-group"><label>Texto</label>
+                        <textarea id="pf-text">${esc(el.text)}</textarea>
                     </div>
-                    <div class="tool-group">
-                        <label>Color de fondo</label>
-                        <input type="text" id="prop-bgcolor" value="${escapeHtml(c.background_color || '')}" placeholder="#000000">
+                    <div class="tool-group"><label>Tamaño de texto (%) <span id="pf-sizeval" style="color:var(--text-muted);">${el.text_size_pct}</span></label>
+                        <input type="range" id="pf-textsize" min="1" max="20" step="0.5" value="${el.text_size_pct}">
                     </div>
-                </div>`;
-            }
-
-            // Tamaño del bloque (solo modo vertical)
-            if (editMode === 'vertical' && el.type !== 'clock') {
-                html += `<div class="prop-section">
-                    <div class="tool-group">
-                        <label>Tamaño del bloque</label>
-                        <div class="size-options">
-                            ${['xs','sm','md','lg','full'].map(s =>
-                                `<button class="size-btn ${el.size === s ? 'active' : ''}" data-size="${s}">${{xs:'Mini',sm:'Pequeño',md:'Mediano',lg:'Grande',full:'Pantalla'}[s]}</button>`
+                    <div class="tool-row">
+                        <div class="tool-group"><label>Color</label><input type="text" id="pf-textcolor" value="${esc(el.text_color)}" placeholder="#ffffff"></div>
+                    </div>
+                    <div class="tool-group"><label>Posición del texto</label>
+                        <div class="pos-hint">
+                            ${[['center','center','CC'],['left','center','LC'],['right','center','RC'],['center','top','CT'],['center','bottom','CB']].map(([h,v,l]) =>
+                                `<button class="pos-btn ${el.text_pos_h===h && el.text_pos_v===v?'active':''}" data-ph="${h}" data-pv="${v}">${l}</button>`
                             ).join('')}
                         </div>
                     </div>
-                </div>`;
-            }
-
-            // En modo grid, control de posición
-            if (editMode === 'grid') {
-                const cols = slides[currentSlide]?.grid_cols || 3;
-                html += `<div class="prop-section">
-                    <div class="tool-group"><label>Columna (1-${cols})</label>
-                        <input type="number" id="prop-col" min="1" max="${cols}" value="${el.grid_col || 1}">
-                    </div>
-                    <div class="tool-group"><label>Ancho (celdas)</label>
-                        <input type="number" id="prop-coln" min="1" max="${cols}" value="${el.col_span || 1}">
-                    </div>
-                    <div class="tool-group"><label>Fila</label>
-                        <input type="number" id="prop-row" min="1" value="${el.grid_row || 1}">
-                    </div>
-                    <div class="tool-group"><label>Alto (filas)</label>
-                        <input type="number" id="prop-rown" min="1" value="${el.row_span || 1}">
+                    <div class="tool-row">
+                        <div class="tool-group"><label>Offset X</label><input type="number" id="pf-texoffx" value="${el.text_offset_x}"></div>
+                        <div class="tool-group"><label>Offset Y</label><input type="number" id="pf-texoffy" value="${el.text_offset_y}"></div>
                     </div>
                 </div>`;
             }
 
-            // Eliminar
-            html += `<div class="tool-group">
-                <button class="tool-btn btn-danger" id="prop-remove-block"><i class="fas fa-trash"></i> Eliminar bloque</button>
+            // Animación
+            html += `<div class="prop-section">
+                <div class="tool-group"><label>Animación</label>
+                    <select id="pf-anim">
+                        <option value="none" ${el.animation==='none'?'selected':''}>Ninguna</option>
+                        <option value="fade_in" ${el.animation==='fade_in'?'selected':''}>Aparecer</option>
+                        <option value="slide_up" ${el.animation==='slide_up'?'selected':''}>Subir</option>
+                        <option value="slide_left" ${el.animation==='slide_left'?'selected':''}>Deslizar izq</option>
+                        <option value="scale_in" ${el.animation==='scale_in'?'selected':''}>Escalar</option>
+                    </select>
+                </div>
             </div>`;
 
             container.innerHTML = html;
 
             // Bind events
-            if (document.getElementById('prop-text')) {
-                document.getElementById('prop-text').addEventListener('input', (e) => {
-                    el.content.text = e.target.value;
+            bindProp('pf-text', el, (v, e) => { e.text = v; renderCanvas(); renderLayers(); });
+            bindPropNum('pf-x', el, (v, e) => { e.rect.x_pct = v; renderCanvas(); });
+            bindPropNum('pf-y', el, (v, e) => { e.rect.y_pct = v; renderCanvas(); });
+            bindPropNum('pf-w', el, (v, e) => { e.rect.w_pct = v; renderCanvas(); });
+            bindPropNum('pf-h', el, (v, e) => { e.rect.h_pct = v; renderCanvas(); });
+            bindProp('pf-bgimg', el, (v, e) => { e.background_image = v; const p=$('pf-bgprev'); if(v){p.style.backgroundImage=`url('${v}')`;p.style.display='';}else{p.style.display='none';} renderCanvas(); });
+            $('pf-bgfit') && $('pf-bgfit').addEventListener('change', (ev) => { el.background_fit = ev.target.value; renderCanvas(); });
+            bindProp('pf-bgcolor', el, (v, e) => { e.background_color = v; if(!e.background_image) renderCanvas(); });
+            bindProp('pf-textcolor', el, (v, e) => { e.text_color = v; renderCanvas(); });
+            $('pf-textsize') && $('pf-textsize').addEventListener('input', (ev) => { el.text_size_pct = parseFloat(ev.target.value); $('pf-sizeval').textContent = parseFloat(ev.target.value); renderCanvas(); });
+            bindPropNum('pf-texoffx', el, (v, e) => { e.text_offset_x = v; renderCanvas(); });
+            bindPropNum('pf-texoffy', el, (v, e) => { e.text_offset_y = v; renderCanvas(); });
+            $('pf-anim') && $('pf-anim').addEventListener('change', (ev) => { el.animation = ev.target.value; });
+            // Posicion
+            container.querySelectorAll('[data-ph]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    el.text_pos_h = btn.dataset.ph;
+                    el.text_pos_v = btn.dataset.pv;
                     renderCanvas();
-                });
-            }
-            if (document.getElementById('prop-name')) {
-                document.getElementById('prop-name').addEventListener('input', (e) => { el.content.name = e.target.value; renderCanvas(); });
-            }
-            if (document.getElementById('prop-price')) {
-                document.getElementById('prop-price').addEventListener('input', (e) => { el.content.price = e.target.value; renderCanvas(); });
-            }
-            if (document.getElementById('prop-textsize')) {
-                document.getElementById('prop-textsize').addEventListener('input', (e) => {
-                    el.content.text_size = e.target.value + 'px';
-                    const label = document.getElementById('textSizeVal');
-                    if (label) label.textContent = e.target.value + 'px';
-                    renderCanvas();
-                });
-            }
-            if (document.getElementById('prop-bgimage')) {
-                document.getElementById('prop-bgimage').addEventListener('input', (e) => {
-                    el.content.background_image = e.target.value;
-                    el.content.image_url = e.target.value;
-                    const prev = document.getElementById('bgPreview');
-                    if (e.target.value) {
-                        prev.style.backgroundImage = `url('${e.target.value}')`;
-                        prev.style.display = '';
-                    } else {
-                        prev.style.display = 'none';
-                    }
-                    renderCanvas();
-                });
-            }
-            if (document.getElementById('prop-bgcolor')) {
-                document.getElementById('prop-bgcolor').addEventListener('input', (e) => {
-                    el.content.background_color = e.target.value;
-                    if (!el.content.background_image) renderCanvas();
-                });
-            }
-            document.querySelectorAll('[data-size]').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const size = btn.dataset.size;
-                    el.size = size;
-                    el.content.height = size; // persistir
-                    render();
+                    renderProps();
                 });
             });
-            if (document.getElementById('prop-col')) {
-                document.getElementById('prop-col').addEventListener('change', (e) => { el.grid_col = parseInt(e.target.value); renderCanvas(); });
-            }
-            if (document.getElementById('prop-coln')) {
-                document.getElementById('prop-coln').addEventListener('change', (e) => { el.col_span = parseInt(e.target.value); renderCanvas(); });
-            }
-            if (document.getElementById('prop-row')) {
-                document.getElementById('prop-row').addEventListener('change', (e) => { el.grid_row = parseInt(e.target.value); renderCanvas(); });
-            }
-            if (document.getElementById('prop-rown')) {
-                document.getElementById('prop-rown').addEventListener('change', (e) => { el.row_span = parseInt(e.target.value); renderCanvas(); });
-            }
-            if (document.getElementById('prop-remove-block')) {
-                document.getElementById('prop-remove-block').addEventListener('click', () => {
-                    const idx = elements.findIndex(e => e.tempId === selectedBlockId);
-                    if (idx > -1) elements.splice(idx, 1);
-                    selectedBlockId = null;
-                    render();
-                });
-            }
         }
 
-        // ===== Cambio de modo =====
-        document.querySelectorAll('#modeToggle button').forEach(btn => {
-            btn.addEventListener('click', () => {
-                editMode = btn.dataset.mode;
-                document.querySelectorAll('#modeToggle button').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                renderCanvas();
+        function bindProp(id, el, apply) {
+            const inp = $(id);
+            if (!inp) return;
+            inp.addEventListener('input', (e) => apply(e.target.value, el));
+        }
+        function bindPropNum(id, el, apply) {
+            const inp = $(id);
+            if (!inp) return;
+            inp.addEventListener('change', (e) => {
+                let v = parseFloat(e.target.value);
+                if (isNaN(v)) v = 0;
+                apply(v, el);
             });
-        });
+        }
 
         // ===== Guardar =====
-        document.getElementById('btnSave').addEventListener('click', saveElements);
-        document.getElementById('btnBack').addEventListener('click', () => {
-            window.location.href = 'digital-signage.html';
-        });
+        $('btnSave').addEventListener('click', save);
+        $('btnBack').addEventListener('click', () => window.location.href = 'digital-signage.html');
 
-        async function saveElements() {
+        async function save() {
             if (!slides[currentSlide]) { notify('No hay slide', 'error'); return; }
             const slideId = slides[currentSlide].slide_id;
-
             notify('Guardando...', 'success');
 
-            // Borrar elementos servidor existentes del slide
+            // Borrar existentes
             const existing = await api(`slide_elements/read.php?slide_id=${slideId}`);
             if (existing.success) {
                 for (const el of existing.data) {
@@ -989,50 +767,59 @@
                 }
             }
 
-            // Insertar cada elemento
+            // Guardar cada elemento
             let ok = 0;
-            let rowCounter = 0;
-            const cols = slides[currentSlide].grid_cols || 3;
-
             for (const el of elements) {
-                // En vertical, cada bloque ocupa fila completa
-                let gridRow, gridCol, colSpan, rowSpan;
-                if (editMode === 'vertical') {
-                    gridRow = rowCounter + 1;
-                    gridCol = 1;
-                    colSpan = cols;
-                    rowSpan = 1;
-                } else {
-                    gridRow = el.grid_row || 1;
-                    gridCol = el.grid_col || 1;
-                    colSpan = el.col_span || 1;
-                    rowSpan = el.row_span || 1;
-                }
-                rowCounter++;
-
-                const content = { ...el.content, height: el.size };
+                const content = {
+                    presentation_type: el.type,
+                    rect: el.rect,
+                    background_image: el.background_image,
+                    background_fit: el.background_fit,
+                    background_color: el.background_color,
+                    text: el.text,
+                    text_size_pct: el.text_size_pct,
+                    text_color: el.text_color,
+                    text_pos_h: el.text_pos_h,
+                    text_pos_v: el.text_pos_v,
+                    text_offset_x: el.text_offset_x,
+                    text_offset_y: el.text_offset_y,
+                    animation: el.animation,
+                    z_index: el.z_index
+                };
+                // La tabla usa tipos existentes: rectángulos se almacenan como banner.
+                const storageType = el.type === 'rect' ? 'banner' : (el.type === 'video' ? 'image' : el.type);
                 const res = await api('slide_elements/create.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         slide_id: slideId,
-                        element_type: el.type,
-                        grid_col: gridCol,
-                        grid_row: gridRow,
-                        col_span: colSpan,
-                        row_span: rowSpan,
+                        element_type: storageType,
+                        grid_col: 1, grid_row: 1, col_span: 1, row_span: 1,
+                        z_index: el.z_index,
                         content: content,
-                        animation: 'fade_in',
+                        animation: el.animation === 'none' ? 'fade_in' : el.animation,
                         animation_delay: 0
                     })
                 });
                 if (res.success) ok++;
             }
-
-            notify(`Guardados ${ok} bloques`, ok === elements.length ? 'success' : 'error');
+            notify(`Guardados ${ok} elementos`, ok === elements.length ? 'success' : 'error');
         }
 
+        // Escalar canvas al viewport manteniendo relación
+        function fitCanvas() {
+            const wrap = $('canvasWrap');
+            const frame = $('canvasFrame');
+            const availW = wrap.clientWidth - 60;
+            const availH = wrap.clientHeight - 60;
+            const scale = Math.min(availW / BOARD_WIDTH, availH / BOARD_HEIGHT);
+            frame.style.width = (BOARD_WIDTH * scale) + 'px';
+            frame.style.height = (BOARD_HEIGHT * scale) + 'px';
+        }
+        window.addEventListener('resize', fitCanvas);
+
         init();
+        setTimeout(fitCanvas, 100);
     </script>
 </body>
 </html>

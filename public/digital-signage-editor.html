@@ -188,6 +188,34 @@
             width: 100%; height: 100%;
             font-size: 0.9rem;
         }
+        .editor-state {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.65rem;
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-primary, #334155);
+            background: var(--bg-primary, #fff);
+        }
+        .editor-state > i { font-size: 2rem; color: var(--primary-color); }
+        .editor-state > strong { font-size: 1.05rem; }
+        .editor-state > span { max-width: 360px; color: var(--text-muted, #64748b); font-size: 0.9rem; }
+        .editor-state button {
+            margin-top: 0.5rem;
+            padding: 0.55rem 0.8rem;
+            border: none;
+            border-radius: 6px;
+            background: var(--primary-color);
+            color: #fff;
+            cursor: pointer;
+            font: inherit;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
 
         /* ===== Panel propiedades ===== */
         .editor-props {
@@ -436,30 +464,56 @@
 
         // ===== Carga =====
         async function init() {
-            if (!boardId) { notify('Falta ID de pantalla', 'error'); window.location.href = 'digital-signage.html'; return; }
+            if (!boardId) { showEditorState('Falta el identificador de la pantalla', 'Abre el editor desde la lista de Pantallas Digitales.'); return; }
             $('boardTitle').textContent = 'Cargando...';
             const data = await api('digital_boards/read.php');
-            if (data.success) {
-                board = data.data.find(b => b.board_id == boardId);
-                if (board) {
-                    $('boardTitle').textContent = board.name;
-                    canvasOrientation = board.orientation === 'vertical' ? 'vertical' : 'horizontal';
-                    $('canvasOrientation').value = canvasOrientation;
-                }
+            if (!data.success) {
+                showEditorState('No se pudieron cargar las pantallas', data.message || 'Intenta recargar la página.');
+                return;
             }
+            board = data.data.find(b => b.board_id == boardId);
+            if (!board) {
+                showEditorState('Esta pantalla no pertenece a la tienda activa', 'El display público puede verse desde cualquier dispositivo, pero el diseño solo se edita desde la tienda que lo creó.');
+                return;
+            }
+            $('boardTitle').textContent = board.name;
+            canvasOrientation = board.orientation === 'vertical' ? 'vertical' : 'horizontal';
+            $('canvasOrientation').value = canvasOrientation;
+
             const slidesRes = await api(`board_slides/read.php?board_id=${boardId}`);
-            slides = slidesRes.success ? (slidesRes.data || []) : [];
+            if (!slidesRes.success) {
+                showEditorState('No se pudieron cargar los slides', slidesRes.message || 'Verifica tus permisos e intenta de nuevo.');
+                return;
+            }
+            slides = slidesRes.data || [];
             if (slides.length === 0) {
                 const created = await api('board_slides/create.php', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ board_id: boardId, title: 'Slide 1' })
                 });
-                if (created.success) {
-                    slides = (await api(`board_slides/read.php?board_id=${boardId}`)).data || [];
+                if (!created.success) {
+                    showEditorState('No se pudo preparar el lienzo', created.message || 'No fue posible crear el primer slide.');
+                    return;
                 }
+                const refresh = await api(`board_slides/read.php?board_id=${boardId}`);
+                if (!refresh.success || !refresh.data?.length) {
+                    showEditorState('No se pudo cargar el primer slide', refresh.message || 'Intenta recargar la página.');
+                    return;
+                }
+                slides = refresh.data;
             }
-            if (slides.length > 0) await loadElements();
-            else notify('No se pudo crear el slide', 'error');
+            await loadElements();
+        }
+
+        function showEditorState(title, message) {
+            $('boardTitle').textContent = 'Editor de Pantalla';
+            $('canvasFrame').innerHTML = `<div class="editor-state"><i class="fas fa-lock"></i><strong>${esc(title)}</strong><span>${esc(message)}</span><button type="button" id="stateBack">Volver a Pantallas Digitales</button></div>`;
+            document.querySelector('.editor-tools').style.pointerEvents = 'none';
+            document.querySelector('.editor-tools').style.opacity = '0.55';
+            $('editorProps').innerHTML = '<h3>Propiedades</h3><div class="empty-props">Selecciona una pantalla disponible desde la lista.</div>';
+            $('btnSave').disabled = true;
+            $('canvasOrientation').disabled = true;
+            $('stateBack')?.addEventListener('click', () => window.location.href = 'digital-signage.html');
         }
 
         async function loadElements() {

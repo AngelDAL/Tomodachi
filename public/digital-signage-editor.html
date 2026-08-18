@@ -573,6 +573,7 @@
                 frame.appendChild(div);
             });
             attachInteract();
+            bindDirectResize();
         }
 
         function buildElementDiv(el) {
@@ -680,6 +681,61 @@
                         end: () => { renderProps(); }
                     }
                 });
+        }
+
+        // Resize directo basado en Pointer Events: funciona con mouse, touch y stylus.
+        function bindDirectResize() {
+            document.querySelectorAll('#canvasFrame .resizer').forEach(handle => {
+                handle.addEventListener('pointerdown', (startEvent) => {
+                    startEvent.preventDefault();
+                    startEvent.stopPropagation();
+                    const target = handle.closest('.ppt-el');
+                    const element = elements.find(item => item.tempId === target.dataset.id);
+                    if (!element) return;
+                    const frame = $('canvasFrame');
+                    const frameBox = frame.getBoundingClientRect();
+                    const start = { ...element.rect };
+                    const direction = handle.dataset.dir;
+                    handle.setPointerCapture?.(startEvent.pointerId);
+
+                    const move = (event) => {
+                        event.preventDefault();
+                        const dx = ((event.clientX - startEvent.clientX) / frameBox.width) * 100;
+                        const dy = ((event.clientY - startEvent.clientY) / frameBox.height) * 100;
+                        let x = start.x_pct;
+                        let y = start.y_pct;
+                        let w = start.w_pct;
+                        let h = start.h_pct;
+
+                        if (direction.includes('e')) w = start.w_pct + dx;
+                        if (direction.includes('s')) h = start.h_pct + dy;
+                        if (direction.includes('w')) { x = start.x_pct + dx; w = start.w_pct - dx; }
+                        if (direction.includes('n')) { y = start.y_pct + dy; h = start.h_pct - dy; }
+
+                        if (w < 4) { if (direction.includes('w')) x = start.x_pct + start.w_pct - 4; w = 4; }
+                        if (h < 4) { if (direction.includes('n')) y = start.y_pct + start.h_pct - 4; h = 4; }
+                        x = clamp(x, 0, 100 - w);
+                        y = clamp(y, 0, 100 - h);
+                        w = clamp(w, 4, 100 - x);
+                        h = clamp(h, 4, 100 - y);
+
+                        element.rect = { x_pct: x, y_pct: y, w_pct: w, h_pct: h };
+                        target.style.left = x + '%';
+                        target.style.top = y + '%';
+                        target.style.width = w + '%';
+                        target.style.height = h + '%';
+                    };
+                    const end = () => {
+                        window.removeEventListener('pointermove', move);
+                        window.removeEventListener('pointerup', end);
+                        window.removeEventListener('pointercancel', end);
+                        renderProps();
+                    };
+                    window.addEventListener('pointermove', move, { passive: false });
+                    window.addEventListener('pointerup', end, { once: true });
+                    window.addEventListener('pointercancel', end, { once: true });
+                });
+            });
         }
 
         // ===== Selección =====

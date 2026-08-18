@@ -801,15 +801,23 @@
         }
 
         // ===== Selección =====
+        // Actualiza SOLO la clase 'selected' de los nodos ya existentes en el
+        // lienzo, sin reconstruir el DOM. Reconstruir en pointerdown destruía
+        // el elemento que interact.js estaba a punto de arrastrar (se recreaba
+        // el nodo con otra referencia) y por eso el drag moría al primer click.
+        function applySelection() {
+            document.querySelectorAll('#canvasFrame .ppt-el').forEach(el => {
+                const isSelected = selectedId === el.dataset.id;
+                el.classList.toggle('selected', isSelected);
+            });
+            renderProps();
+            renderLayers();
+        }
+
         $('canvasFrame').addEventListener('pointerdown', (e) => {
             const ppt = e.target.closest('.ppt-el');
-            if (ppt) {
-                selectedId = ppt.dataset.id;
-                render();
-            } else {
-                selectedId = null;
-                render();
-            }
+            selectedId = ppt ? ppt.dataset.id : null;
+            applySelection();
         });
 
         // ===== Capas =====

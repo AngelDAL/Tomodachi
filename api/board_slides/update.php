@@ -105,6 +105,32 @@ try {
         $params[] = $input['background_image'];
     }
     
+    if (isset($input['orientation'])) {
+        if (!in_array($input['orientation'], ['auto', 'horizontal', 'vertical'])) {
+            Response::validationError(['orientation' => 'Valor inválido']);
+        }
+        $updates[] = 'orientation = ?';
+        $params[] = $input['orientation'];
+    }
+    
+    if (array_key_exists('layout_width', $input)) {
+        $layout_width = !empty($input['layout_width']) ? (int)$input['layout_width'] : null;
+        if ($layout_width !== null && ($layout_width < 300 || $layout_width > 4000)) {
+            Response::validationError(['layout_width' => 'Debe estar entre 300 y 4000']);
+        }
+        $updates[] = 'layout_width = ?';
+        $params[] = $layout_width;
+    }
+    
+    if (array_key_exists('layout_height', $input)) {
+        $layout_height = !empty($input['layout_height']) ? (int)$input['layout_height'] : null;
+        if ($layout_height !== null && ($layout_height < 300 || $layout_height > 4000)) {
+            Response::validationError(['layout_height' => 'Debe estar entre 300 y 4000']);
+        }
+        $updates[] = 'layout_height = ?';
+        $params[] = $layout_height;
+    }
+    
     if (empty($updates)) {
         Response::validationError(['fields' => 'No hay campos para actualizar']);
     }

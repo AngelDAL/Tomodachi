@@ -35,7 +35,7 @@ try {
     }
     
     $slides = $db->select(
-        'SELECT slide_id, position, title, grid_cols, grid_rows, 
+        'SELECT slide_id, position, orientation, layout_width, layout_height, title, grid_cols, grid_rows, 
                 enter_animation, exit_animation, custom_duration, 
                 background_color, background_image, created_at
          FROM board_slides 

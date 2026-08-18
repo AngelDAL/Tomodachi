@@ -128,6 +128,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 `admin/admin123`, 4 categorías, 6 productos. `SEED_DEMO=true` (default) añade
 datos demo adicionales al primer arranque (ver docker/entrypoint.sh).
 
+## Verificación y pruebas — OBLIGATORIO
+
+Una implementación no está terminada hasta que pase pruebas reales.
+
+1. Ejecuta la suite base: `bash docker/test_suite.sh http://localhost:8091`.
+2. Para cada módulo nuevo o modificado, crea/actualiza una prueba compuesta que cubra:
+   - Camino exitoso y errores de validación.
+   - Aislamiento multi-tienda (actor propio vs recurso de otra tienda).
+   - Persistencia: crear → leer → actualizar → volver a leer → limpiar.
+   - Permisos: sesión, roles y scopes de token aplicables.
+3. Para UI interactiva, prueba con navegador headless al menos:
+   - Desktop (mouse/teclado).
+   - Móvil/touch cuando el flujo lo soporte.
+   - Captura visual cuando cambie un layout relevante.
+4. Si alguna prueba falla, itera hasta corregirla. No declares la tarea terminada con fallos conocidos.
+5. Las pruebas que creen datos deben limpiar todo con `trap` o teardown, incluso ante error.
+
 ## Lineamientos de UI/UX — OBLIGATORIO
 
 **NUNCA uses esto en el frontend:**

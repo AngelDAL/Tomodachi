@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pantallas Multi - Tomodachi</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; overflow:hidden; background:#111; }
+        .loading { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#000; color:#fff; font-size:1.2rem; z-index:50; }
+        .spinner { width:44px; height:44px; border:4px solid rgba(255,255,255,.2); border-top-color:#fff; border-radius:50%; animation:spin 1s linear infinite; margin-bottom:1rem; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+
+        /* Contenedor del grid de pantallas */
+        .group-stage { position:fixed; inset:0; display:block; }
+        .group-screen {
+            position:absolute;
+            border:2px solid rgba(255,255,255,.12);
+            overflow:hidden;
+            background:#000;
+        }
+        .screen-label {
+            position:absolute; top:6px; left:8px; z-index:20;
+            font-size:11px; font-weight:700; color:rgba(255,255,255,.55);
+            text-transform:uppercase; letter-spacing:.04em; pointer-events:none;
+            text-shadow:0 1px 3px rgba(0,0,0,.8);
+        }
+        .group-slide { position:absolute; inset:0; }
+
+        /* Reutiliza el render de presentacion del editor */
+        .presentation-canvas { position:absolute; inset:0; }
+        .presentation-element { position:absolute; }
+        .presentation-bg { position:absolute; inset:0; width:100%; height:100%; }
+        .presentation-bg.fit-fill { background-size:100% 100%; }
+        .presentation-bg.fit-cover { background-size:cover; background-position:center; }
+        .presentation-bg.fit-contain { background-size:contain; background-repeat:no-repeat; background-position:center; }
+        .presentation-content { position:absolute; inset:0; display:flex; overflow:hidden; }
+        .presentation-text { max-width:100%; overflow-wrap:anywhere; word-break:break-word; font-weight:700; line-height:1.2; text-shadow:0 2px 8px rgba(0,0,0,.6); }
+
+        /* Animaciones */
+        @keyframes fadeIn { from{opacity:0;transform:translateY(0);} to{opacity:1;transform:translateY(0);} }
+        @keyframes slideUp { from{opacity:0;transform:translateY(50px);} to{opacity:1;transform:translateY(0);} }
+        @keyframes scaleIn { from{opacity:0;transform:scale(.8);} to{opacity:1;transform:scale(1);} }
+        @keyframes slideLeft { from{opacity:0;transform:translateX(60px);} to{opacity:1;transform:translateX(0);} }
+        .anim-fade, .anim-fade-in { animation:fadeIn .8s ease-out; }
+        .anim-slide-up { animation:slideUp .8s ease-out; }
+        .anim-scale-in { animation:scaleIn .8s ease-out; }
+        .anim-slide-left { animation:slideLeft .8s ease-out; }
+
+        .error-box { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#000; color:#fff; text-align:center; padding:2rem; z-index:60; }
+        .error-box h1 { font-size:3rem; margin-bottom:1rem; }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading"><div class="spinner"></div><div>Cargando pantallas...</div></div>
+    <div class="group-stage" id="stage" style="display:none;"></div>
+    <script src="/public/lib/qrcodejs/qrcode.min.js"></script>
+    <script>
+        const API = '/api';
+        const groupId = new URLSearchParams(location.search).get('group');
+        let group = null;
+        let currentStep = 0;
+        let stepTimer = null;
+        let animating = false;
+
+        function esc(t){ const d=document.createElement('div'); d.textContent=t==null?'':t; return d.innerHTML; }
+        function escapeHtml(t){ if(!t) return ''; const d=document.createElement('div'); d.textContent=t; return d.innerHTML; }
+
+        function showError(msg){
+            document.getElementById('loading').style.display='none';
+            const el=document.createElement('div'); el.className='error-box';
+            el.innerHTML=`<div style="font-size:3rem;margin-bottom:1rem;">⚠️</div><div style="font-size:1.4rem;">${escapeHtml(msg)}</div>`;
+            document.body.appendChild(el);
+        }
+
+        // Renderiza un slide del editor de presentación (elementos con content.rect)
+        function renderSlide(slide){
+            const holder=document.createElement('div');
+            holder.className='group-slide';
+            const els=slide.elements||[];
+            const hasPres=els.some(e=>e.content && e.content.rect);
+            if(!hasPres){
+                // fondo simple del slide
+                if(slide.background_color) holder.style.background=slide.background_color;
+                else if(slide.background_image) holder.style.background=`url(${slide.background_image}) center/cover`;
+                else holder.style.background='linear-gradient(135deg,#334,#112)';
+                return holder;
+            }
+            // Presentación
+            if(slide.background_color) holder.style.background=slide.background_color;
+            else if(slide.background_image) holder.style.background=`url(${slide.background_image}) center/cover`;
+            const canvas=document.createElement('div'); canvas.className='presentation-canvas';
+            [...els].sort((a,b)=>(a.z_index||1)-(b.z_index||1)).forEach(element=>{
+                const c=element.content||{}; const r=c.rect; if(!r) return;
+                const item=document.createElement('div');
+                item.className='presentation-element';
+                item.style.left=`${r.x_pct||0}%`; item.style.top=`${r.y_pct||0}%`;
+                item.style.width=`${r.w_pct||10}%`; item.style.height=`${r.h_pct||10}%`;
+                item.style.zIndex=element.z_index||c.z_index||1;
+                if(c.background_image){
+                    const bg=document.createElement('div');
+                    bg.className=`presentation-bg fit-${c.background_fit||'fill'}`;
+                    bg.style.backgroundImage=`url('${c.background_image}')`;
+                    item.appendChild(bg);
+                } else if(c.background_color){
+                    const bg=document.createElement('div'); bg.className='presentation-bg'; bg.style.background=c.background_color; item.appendChild(bg);
+                }
+                if(c.text){
+                    const content=document.createElement('div');
+                    content.className='presentation-content';
+                    content.style.justifyContent={left:'flex-start',center:'center',right:'flex-end'}[c.text_pos_h]||'center';
+                    content.style.alignItems={top:'flex-start',middle:'center',bottom:'flex-end'}[c.text_pos_v]||'center';
+                    const text=document.createElement('div');
+                    text.className='presentation-text';
+                    text.textContent=c.text;
+                    // tamaño en funcion del lado menor de la pantalla
+                    const base=Math.min(holder.clientWidth, holder.clientHeight)||400;
+                    text.style.fontSize=`${(c.text_size_pct||4)/100*Math.min(base,400)}px`;
+                    if(!(c.text_size_pct&&false)) text.style.fontSize=`${c.text_size_pct||4}%`;
+                    text.style.color=c.text_color||'#fff';
+                    text.style.textAlign=c.text_pos_h||'center';
+                    text.style.transform=`translate(${c.text_offset_x||0}px, ${c.text_offset_y||0}px)`;
+                    content.appendChild(text);
+                    item.appendChild(content);
+                }
+                canvas.appendChild(item);
+            });
+            holder.appendChild(canvas);
+            return holder;
+        }
+
+        // Aplica las animaciones de entrada (re-iniciar) a los elementos del paso
+        function applyAnimations(container){
+            container.querySelectorAll('.presentation-element').forEach(el=>{
+                // reiniciar animacion limpiando y re-aniadiendo clase
+                el.classList.remove('anim-fade','anim-fade-in','anim-slide-up','anim-scale-in','anim-slide-left');
+                // forzar reflow
+                void el.offsetWidth;
+            });
+        }
+
+        // Muestra un paso (una pasada coordinada): cada pantalla muestra su slide
+        function renderStep(stepIndex){
+            if(animating) return;
+            const stage=document.getElementById('stage');
+            stage.innerHTML='';
+            const stepRows=(group.steps||[]).filter(s=>s.step_order===stepIndex);
+            if(stepRows.length===0){ stop(); showError('No hay diapositivas para este paso'); return; }
+            // Asegurar duplicados: una pantalla puede no tener step en esta pasada => queda en blanco
+            (group.screens||[]).forEach(screen=>{
+                const shell=document.createElement('div');
+                shell.className='group-screen';
+                shell.style.left=screen.pos_x+'%';
+                shell.style.top=screen.pos_y+'%';
+                shell.style.width=screen.w_pct+'%';
+                shell.style.height=screen.h_pct+'%';
+                shell.style.background=group.bg_color || '#000';
+                if(screen.label) shell.innerHTML+=`<div class="screen-label">${esc(screen.label)}</div>`;
+                const row=stepRows.find(r=>r.screen_id===screen.id);
+                const slideId=row?row.source_slide_id:null;
+                if(slideId && group.slides[slideId]){
+                    const slideEl=renderSlide(group.slides[slideId]);
+                    shell.appendChild(slideEl);
+                }
+                stage.appendChild(shell);
+            });
+            // animar entrada de los elementos
+            applyAnimations(stage);
+            // programar el siguiente paso (loop)
+            clearTimeout(stepTimer);
+            const baseDur=(row=(group.steps||[]).find(s=>s.step_order===stepIndex))? (row.custom_duration||8):8;
+            stepTimer=setTimeout(()=>{
+                currentStep=(stepIndex+1)%(group.total_steps||1);
+                renderStep(currentStep);
+            }, baseDur*1000);
+        }
+
+        function start(){
+            const t=document.getElementById('loading'); t.style.display='none';
+            document.getElementById('stage').style.display='block';
+            if(!group.total_steps){ document.getElementById('stage').innerHTML='<div class="error-box">El grupo no tiene pasadas configuradas.</div>'; return; }
+            currentStep=0;
+            renderStep(0);
+        }
+
+        async function init(){
+            if(!groupId){ showError('Falta el identificador del grupo (parametro ?group=)'); return; }
+            try{
+                const res=await fetch(`${API}/display_groups/get_group.php?group_id=${groupId}`);
+                const data=await res.json();
+                if(!data.success){ showError(data.message||'No se pudo cargar el grupo'); return; }
+                group=data.data;
+                start();
+            }catch(e){ console.error(e); showError('Error de conexión'); }
+        }
+
+        function stop(){ clearTimeout(stepTimer); }
+        document.addEventListener('visibilitychange',()=>{ if(document.hidden) stop(); else if(group) renderStep(currentStep); });
+        // fullscreen doble clic
+        document.addEventListener('dblclick',()=>{
+            if(!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen();
+        });
+
+        init();
+    </script>
+</body>
+</html>

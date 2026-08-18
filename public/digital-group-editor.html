@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Editor de Grupo de Pantallas - Tomodachi</title>
+<link rel="stylesheet" href="css/fonts.css"><link rel="stylesheet" href="lib/fontawesome/css/all.min.css"><link rel="stylesheet" href="css/main.css"><script src="js/theme-init.js"></script>
+<style>
+body{margin:0;font-family:inherit}
+.topbar{height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 1.1rem;background:var(--card-bg,#fff);border-bottom:1px solid var(--border-color,#e2e8f0);gap:.75rem}
+.topbar .tt{display:flex;align-items:center;gap:.6rem;font-weight:700;min-width:0}
+.topbar .ta{display:flex;gap:.5rem;align-items:center}
+.btn{border:0;border-radius:8px;padding:.5rem .85rem;font:inherit;font-size:.83rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:.4rem}
+.btn-primary{background:var(--primary-color);color:#fff}
+.btn-secondary{background:var(--bg-secondary,#eef2f7);color:var(--text-primary,#333);border:1px solid var(--border-color,#d5dfe8)}
+.btn-danger{background:#fee2e2;color:#b91c1c}
+.back{width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;background:var(--bg-secondary,#eef2f7);border:1px solid var(--border-color,#d5dfe8);cursor:pointer;color:var(--text-primary)}
+
+.editor{display:grid;grid-template-columns:1fr 340px;height:calc(100vh - 52px)}
+.editor-canvas{position:relative;background:#1b2531;overflow:hidden}
+.layout-hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.5);font-size:.9rem;pointer-events:none;z-index:0}
+.lock{position:absolute;bottom:.6rem;right:.8rem;color:rgba(255,255,255,.4);font-size:.7rem;z-index:5}
+.group-screen-box{position:absolute;background:rgba(50,70,90,.55);border:2px solid #7fb3e0;border-radius:4px;cursor:move;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.25rem;color:#fff;font-size:.72rem;z-index:2}
+.group-screen-box.selected{border-color:#ffd54a;background:rgba(90,120,160,.6)}
+.group-screen-box .s-num{font-size:1.2rem;font-weight:800}
+.group-screen-box .s-title{font-weight:600}
+.group-screen-box .handle{position:absolute;right:3px;bottom:3px;width:14px;height:14px;background:#ffd54a;border-radius:2px;cursor:se-resize;z-index:3}
+
+.sidebar{background:var(--bg-primary,#fff);border-left:1px solid var(--border-color,#e2e8f0);overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:.9rem}
+.sidebar h3{margin:0 0 .4rem;font-size:.9rem;color:var(--text-muted,#64748b);text-transform:uppercase;letter-spacing:.04em}
+.ginfo input{width:100%;padding:.55rem;border:1px solid var(--border-color,#d5dfe8);border-radius:8px;font:inherit;font-size:.85rem;margin-top:.3rem}
+
+.screens-list{display:flex;flex-direction:column;gap:.45rem;max-height:180px;overflow-y:auto}
+.screen-row{display:flex;align-items:center;gap:.4rem;padding:.4rem .5rem;border:1px solid var(--border-color,#d5dfe8);border-radius:7px;font-size:.78rem;background:var(--card-bg,#fff)}
+.screen-row.active{border-color:var(--primary-color);background:color-mix(in srgb,var(--primary-color,#3a6ea5) 10%,transparent)}
+.screen-row .lbl{flex:1;font-weight:600;cursor:pointer}
+.screen-row .sz{font-size:.7rem;color:var(--text-muted,#64748b)}
+.screen-row button{background:none;border:0;cursor:pointer;color:var(--text-muted,#64748b);font-size:.8rem}
+.screen-row button:hover{color:#ef4444}
+.addscreen{display:flex;gap:.4rem}
+.addscreen input{flex:1;padding:.45rem;border:1px solid var(--border-color,#d5dfe8);border-radius:7px;font:inherit;font-size:.8rem}
+
+.steps-list{display:flex;flex-direction:column;gap:.8rem;max-height:270px;overflow-y:auto}
+.step-card{border:1px solid var(--border-color,#d5dfe8);border-radius:8px;padding:.6rem;background:var(--card-bg,#fff)}
+.step-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem;font-size:.78rem;font-weight:700}
+.step-card .assign{display:flex;flex-direction:column;gap:.35rem}
+.assign-row{display:flex;align-items:center;gap:.35rem;font-size:.75rem}
+.assign-row .albl{width:70px;flex:0 0 auto;font-weight:600;color:var(--text-muted,#64748b)}
+.assign-row select{flex:1;padding:.3rem;border:1px solid var(--border-color,#d5dfe8);border-radius:6px;font:inherit;font-size:.75rem;max-width:150px}
+
+.toast{position:fixed;bottom:1.5rem;right:1.5rem;background:#1e293b;color:#fff;padding:.85rem 1.25rem;border-radius:8px;z-index:100;transform:translateY(100px);opacity:0;transition:all .3s}.toast.show{transform:none;opacity:1}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="tt">
+    <button class="back" id="btnBack" title="Volver"><i class="fas fa-arrow-left"></i></button>
+    <span id="groupTitle">Editor de Grupo</span>
+  </div>
+  <div class="ta">
+    <button class="btn btn-secondary" id="btnPreview"><i class="fas fa-eye"></i> Ver</button>
+    <button class="btn btn-secondary" id="btnDuplicate"><i class="fas fa-copy"></i> Plantilla</button>
+    <button class="btn btn-primary" id="btnSave"><i class="fas fa-save"></i> Guardar</button>
+  </div>
+</div>
+
+<div class="editor">
+  <div class="editor-canvas" id="drawArea">
+    <div class="layout-hint">Arrastra las cajas para acomodar las pantallas · usa la esquina para redimensionar</div>
+    <div class="lock" id="lockInfo"></div>
+  </div>
+  <div class="sidebar">
+    <div class="ginfo">
+      <h3>Nombre</h3>
+      <input type="text" id="grpName" placeholder="Nombre del grupo">
+    </div>
+
+    <div>
+      <h3>Pantallas del layout</h3>
+      <div class="screens-list" id="screensList"></div>
+      <div class="addscreen" style="margin-top:.5rem">
+        <input type="text" id="newScreenLabel" placeholder="Nombre (ej. Bebidas)">
+        <button class="btn btn-secondary" id="btnAddScreen" title="Agregar pantalla"><i class="fas fa-plus"></i></button>
+      </div>
+    </div>
+
+    <div>
+      <h3>Secuencia (pasadas coordinadas)</h3>
+      <div class="steps-list" id="stepsList"></div>
+      <button class="btn btn-secondary" id="btnAddStep" style="width:100%;margin-top:.5rem"><i class="fas fa-plus"></i> Agregar pasada</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const API='../api';
+const gid=parseInt(new URLSearchParams(location.search).get('group')||'0',10);
+let group=null;
+let screens=[];      // [{id?, label, pos_x, pos_y, w_pct, h_pct, orientation}]
+let steps=[];        // [{step_order, screen_id, source_slide_id, custom_duration}]
+let slideLibrary=[]; // slides disponibles de la tienda
+let selected=null;
+let pasadas=0;       // número de pasadas coordinadas (pasos)
+let tt;
+const $=x=>document.getElementById(x);
+function toast(m,t=''){const e=$('toast');e.textContent=m;e.className='toast '+t+' show';clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('show'),2500)}
+async function call(u,o={}){const r=await fetch(`${API}/${u}`,{credentials:'include',...o});return r.json().catch(()=>({success:false,message:'inválido'}))}
+function esc(s){const d=document.createElement('div');d.textContent=s==null?'':s;return d.innerHTML}
+function orientLabel(o){return o==='vertical'?'V':'H'}
+
+async function init(){
+  if(!gid){toast('Falta grupo','error');return}
+  $('groupTitle').textContent='Cargando...';
+  const r=await call(`display_groups/read_full.php?group_id=${gid}`);
+  if(!r.success){toast(r.message||'No se pudo cargar','error');return}
+  group=r.data;
+  $('groupTitle').textContent=group.name||'Editor de Grupo';
+  $('grpName').value=group.name||'';
+  screens=(group.screens||[]).map(s=>({id:s.id,label:s.label,pos_x:s.pos_x,pos_y:s.pos_y,w_pct:s.w_pct,h_pct:s.h_pct,orientation:s.orientation}));
+  // Cargar steps; derivar _idx (indice de pantalla) desde el id real
+  const screenIdxOf={}; screens.forEach((s,i)=>{ screenIdxOf[s.id]=i; });
+  steps=(group.steps||[]).map(s=>({
+    step_order:s.step_order, screen_id:s.screen_id,
+    _idx: screenIdxOf[s.screen_id],
+    source_slide_id:s.source_slide_id, custom_duration:s.custom_duration
+  }));
+  // número de pasadas = máximo step_order + 1; 0 si no hay pasadas aún
+  pasadas=steps.length ? (steps.reduce((mx,s)=>Math.max(mx,s.step_order),0)+1) : 0;
+  const lib=await call('slide_library/read.php');
+  slideLibrary=(lib.success?lib.data:[])||[];
+  renderAll();
+}
+
+function renderAll(){
+  renderCanvas();
+  renderScreensList();
+  renderSteps();
+  $('lockInfo').textContent=`${screens.length} pantallas · ${stepCount()} pasadas`;
+}
+function stepCount(){ return pasadas; }
+
+// --- Canvas layout ---
+function renderCanvas(){
+  const area=$('drawArea');
+  // limpiar cajas viejas (conservar hint y lock)
+  area.querySelectorAll('.group-screen-box').forEach(e=>e.remove());
+  screens.forEach((s,i)=>{
+    const box=document.createElement('div');
+    box.className='group-screen-box'+(selected===i?' selected':'');
+    box.style.left=s.pos_x+'%'; box.style.top=s.pos_y+'%';
+    box.style.width=s.w_pct+'%'; box.style.height=s.h_pct+'%';
+    box.innerHTML=`<div class="s-num">${i+1}</div><div class="s-title">${esc(s.label||'Pantalla')}</div><div style="font-size:.65rem;opacity:.7">${orientLabel(s.orientation)} · ${Math.round(s.w_pct)}x${Math.round(s.h_pct)}%</div><div class="handle"></div>`;
+    bindScreenDrag(box,i);
+    box.addEventListener('mousedown',(e)=>{ if(e.target.classList.contains('handle'))return; selected=i; renderAll(); });
+    area.appendChild(box);
+  });
+}
+
+function bindScreenDrag(box,i){
+  // mover
+  box.addEventListener('mousedown',(e)=>{
+    if(e.target.classList.contains('handle'))return;
+    e.preventDefault();
+    const area=$('drawArea'); const r=area.getBoundingClientRect();
+    selected=i; renderAll();
+    const startX=e.clientX,startY=e.clientY;
+    const ox=screens[i].pos_x,oy=screens[i].pos_y;
+    const move=(ev)=>{
+      const dx=(ev.clientX-startX)/r.width*100, dy=(ev.clientY-startY)/r.height*100;
+      screens[i].pos_x=Math.max(0,Math.min(100-screens[i].w_pct,ox+dx));
+      screens[i].pos_y=Math.max(0,Math.min(100-screens[i].h_pct,oy+dy));
+      box.style.left=screens[i].pos_x+'%'; box.style.top=screens[i].pos_y+'%';
+    };
+    const up=()=>{window.removeEventListener('mousemove',move);window.removeEventListener('mouseup',up);renderAll()};
+    window.addEventListener('mousemove',move);window.addEventListener('mouseup',up);
+  });
+  // redimensionar (handle esquina)
+  const handle=box.querySelector('.handle');
+  handle.addEventListener('mousedown',(e)=>{
+    e.preventDefault();e.stopPropagation();
+    const area=$('drawArea'); const r=area.getBoundingClientRect();
+    selected=i; renderAll();
+    const startX=e.clientX,startY=e.clientY;
+    const ow=screens[i].w_pct,oh=screens[i].h_pct;
+    const move=(ev)=>{
+      const dw=(ev.clientX-startX)/r.width*100, dh=(ev.clientY-startY)/r.height*100;
+      screens[i].w_pct=Math.max(5,Math.min(100-screens[i].pos_x,ow+dw));
+      screens[i].h_pct=Math.max(5,Math.min(100-screens[i].pos_y,oh+dh));
+      box.style.width=screens[i].w_pct+'%'; box.style.height=screens[i].h_pct+'%';
+      box.querySelector('.s-title').textContent=screens[i].label||'Pantalla';
+    };
+    const up=()=>{window.removeEventListener('mousemove',move);window.removeEventListener('mouseup',up);renderAll()};
+    window.addEventListener('mousemove',move);window.addEventListener('mouseup',up);
+  });
+}
+
+// --- Screens list ---
+function renderScreensList(){
+  const l=$('screensList');
+  l.innerHTML=screens.map((s,i)=>`
+    <div class="screen-row ${selected===i?'active':''}">
+      <span class="lbl" onclick="selectScreen(${i})">${esc(s.label||'Pantalla '+(i+1))}</span>
+      <select style="font-size:.72rem;padding:.2rem;border:1px solid var(--border-color);border-radius:5px" onchange="setOrient(${i},this.value)" title="Orientación">
+        <option value="horizontal" ${s.orientation==='horizontal'?'selected':''}>H</option>
+        <option value="vertical" ${s.orientation==='vertical'?'selected':''}>V</option>
+      </select>
+      <button title="Eliminar pantalla" onclick="removeScreen(${i})"><i class="fas fa-times"></i></button>
+    </div>`).join('');
+}
+function selectScreen(i){selected=i;renderAll()}
+function setOrient(i,v){screens[i].orientation=v;renderAll()}
+function removeScreen(i){
+  if(!confirm('Eliminar esta pantalla del layout?'))return;
+  screens.splice(i,1);
+  // quitar steps de esa pantalla
+  steps=steps.filter(s=>s.screen_id!==(screens[i]?.id));
+  selected=null; renderAll();
+}
+$('btnAddScreen').onclick=()=>{
+  const label=$('newScreenLabel').value.trim()||('Pantalla '+(screens.length+1));
+  screens.push({label,pos_x:0,pos_y:0,w_pct:100/Math.max(1,screens.length+1),h_pct:100,orientation:'horizontal'});
+  selected=screens.length-1; renderAll();
+};
+
+// --- Steps ---
+function renderSteps(){
+  const l=$('stepsList');
+  if(!screens.length){l.innerHTML='<div style="font-size:.75rem;color:var(--text-muted)">Agrega pantallas primero.</div>';return}
+  const n=stepCount();
+  let html='';
+  for(let j=0;j<n;j++){
+    html+=`<div class="step-card">
+      <div class="step-head"><span>Pasada ${j+1}</span>
+        <button class="btn btn-danger" style="padding:.2rem .5rem;font-size:.7rem" onclick="removeStep(${j})"><i class="fas fa-trash"></i></button>
+      </div>
+      <div class="assign">${renderStepAssigns(j)}</div>
+    </div>`;
+  }
+  l.innerHTML=html;
+}
+function renderStepAssigns(step){
+  if(!screens.length)return'';
+  return screens.map((s,i)=>{
+    const existing=steps.find(x=>x.step_order===step && x._idx===i);
+    const val=existing?existing.source_slide_id:'';
+    const opts=['<option value="">— sin diapositiva —</option>',
+      ...slideLibrary.map(sl=>`<option value="${sl.slide_id}" ${String(sl.slide_id)===String(val)?'selected':''}>${esc(sl.title||'Slide '+sl.slide_id)}</option>`)].join('');
+    return `<div class="assign-row"><span class="albl">${esc(s.label||'Pantalla '+(i+1))}</span>
+      <select onchange="setStep(${step},${i},this.value)">${opts}</select></div>`;
+  }).join('');
+}
+function setStep(step,idx,slideVal){
+  const stVal=parseInt(slideVal,10)||0;
+  // limpiar asignacion previa para esta pantalla (por indice) en este paso
+  steps=steps.filter(x=>!(x.step_order===step && x._idx===idx));
+  if(stVal>0) steps.push({step_order:step,_idx:idx,source_slide_id:stVal,custom_duration:null});
+  renderSteps();
+}
+function removeStep(step){
+  steps=steps.filter(x=>x.step_order!==step);
+  // reindizar pasadas posteriores
+  steps=steps.map(x=> x.step_order>step ? {...x, step_order:x.step_order-1} : x);
+  pasadas=Math.max(0,pasadas-1);
+  renderAll();
+}
+$('btnAddStep').onclick=()=>{
+  if(!screens.length){toast('Agrega pantallas primero','error');return}
+  pasadas++;
+  renderAll();
+  toast('Pasada agregada');
+};
+
+// --- Guardar ---
+async function save(){
+  if(!gid)return;
+  const name=$('grpName').value.trim()||'Sin nombre';
+  await call('display_groups/update.php',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({group_id:gid,name})});
+
+  // 1) Guardar layout (pantallas) con sus ids si ya existen
+  const layout=screens.map(s=>({id:s.id,label:s.label,pos_x:s.pos_x,pos_y:s.pos_y,w_pct:s.w_pct,h_pct:s.h_pct,orientation:s.orientation}));
+  const lr=await call('display_groups/save_layout.php',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({group_id:gid,screens:layout})});
+  if(!lr.success){toast(lr.message||'Error guardando layout','error');return}
+
+  // 2) Refrescar para obtener los ids reales de las pantallas (orden = el del array)
+  const fresh=await call(`display_groups/read_full.php?group_id=${gid}`);
+  if(!fresh.success){toast('No se pudo refrescar','error');return}
+  const freshScreens=fresh.data.screens||[];
+
+  // 3) Reconstruir steps: cada step guarda (step_order, _idx de pantalla, slide).
+  //    Resolvemos _idx -> freshScreens[_idx].id
+  const normalizedSteps=steps.map(st=>{
+    const realId = (st._idx !== undefined && freshScreens[st._idx]) ? freshScreens[st._idx].id : (st.screen_id||null);
+    return { step_order:st.step_order, screen_id:realId, source_slide_id:st.source_slide_id, custom_duration:st.custom_duration||null };
+  }).filter(st=>st.screen_id && st.source_slide_id);
+
+  const sr=await call('display_groups/save_steps.php',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({group_id:gid,steps:normalizedSteps})});
+
+  // actualizar estado local con ids reales
+  screens=freshScreens.map(s=>({id:s.id,label:s.label,pos_x:s.pos_x,pos_y:s.pos_y,w_pct:s.w_pct,h_pct:s.h_pct,orientation:s.orientation}));
+  group.name=name;
+  $('groupTitle').textContent=name;
+  toast('Grupo guardado');
+  renderAll();
+}
+$('btnSave').onclick=save;
+$('btnBack').onclick=()=>location.href='digital-signage-groups.html';
+$('btnPreview').onclick=()=>window.open(`${location.origin}/public/digital-group-display.html?group=${gid}`,'_blank');
+$('btnDuplicate').onclick=async()=>{
+  const r=await call('display_groups/duplicate.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({group_id:gid})});
+  toast(r.success?'Duplicado como plantilla':(r.message||'Error'),r.success?'':'error');
+  if(r.success){ location.href=`digital-group-editor.html?group=${r.data.group_id}`; }
+};
+
+init();
+</script>
+</body>
+</html>

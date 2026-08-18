@@ -390,6 +390,14 @@
                     </button>
                 </div>
                 
+                <h2 style="display:flex;align-items:center;gap:.5rem;font-size:1.1rem;margin:0 0 .9rem;color:var(--text-primary,#333)">
+                    <i class="fas fa-columns" style="color:var(--primary-color)"></i> Escenarios (pantallas simultáneas)
+                </h2>
+                <div id="scenesGrid" class="ds-boards-grid" style="margin-bottom:2rem"></div>
+                
+                <h2 style="display:flex;align-items:center;gap:.5rem;font-size:1.1rem;margin:0 0 .9rem;color:var(--text-primary,#333)">
+                    <i class="fas fa-layer-group" style="color:var(--primary-color)"></i> Pantallas individuales
+                </h2>
                 <div id="boardsGrid" class="ds-boards-grid"></div>
                 
                 <div id="emptyState" class="ds-empty" style="display: none;">
@@ -472,6 +480,43 @@
                 console.error('Error:', error);
                 notify('Error de conexión', 'error');
             }
+        }
+
+        // ===== Escenarios (grupos de pantallas simultáneas) =====
+        async function loadScenes() {
+            const grid = document.getElementById('scenesGrid');
+            try {
+                const r = await fetch(`${API_BASE}/display_groups/read.php`, { credentials: 'include' });
+                const data = await r.json();
+                if (!data.success) { grid.innerHTML = ''; return; }
+                const gs = data.data || [];
+                grid.innerHTML = gs.length ? gs.map(g => `
+                    <div class="ds-board-card">
+                        <div class="ds-board-header">
+                            <div>
+                                <div class="ds-board-title"><i class="fas fa-columns" style="color:var(--primary-color)"></i> ${escapeHtml(g.name)}</div>
+                            </div>
+                            <span class="ds-status-badge ${g.is_active == 1 ? 'ds-status-active' : 'ds-status-inactive'}">${g.is_active == 1 ? 'Activo' : 'Inactivo'}</span>
+                        </div>
+                        <div class="ds-board-meta">
+                            <div class="ds-meta-item"><span class="ds-meta-label">Pantallas</span><span class="ds-meta-value">${g.screen_count}</span></div>
+                            <div class="ds-meta-item"><span class="ds-meta-label">Diapositivas</span><span class="ds-meta-value">${g.step_count || 0}</span></div>
+                        </div>
+                        <div class="ds-board-actions">
+                            <button class="btn-edit" onclick="editScene(${g.group_id})"><i class="fas fa-paint-brush"></i> Diseñar escenario</button>
+                            <button class="btn-preview" onclick="playScene(${g.group_id})"><i class="fas fa-eye"></i> Ver</button>
+                            <button class="btn-toggle" onclick="toggleScene(${g.group_id}, ${g.is_active == 1 ? 0 : 1})"><i class="fas fa-${g.is_active == 1 ? 'pause' : 'play'}"></i></button>
+                        </div>
+                    </div>`).join('') : '<div class="ds-empty" style="grid-column:1/-1"><i class="fas fa-columns"></i><h2>Sin escenarios</h2><p>Crea uno para mostrar varias pantallas a la vez</p></div>';
+            } catch(e) { grid.innerHTML = ''; console.error(e); }
+        }
+        function editScene(id){ window.location.href = `digital-scene.html?group=${id}`; }
+        function playScene(id){ window.open(`${location.origin}/public/digital-group-display.html?group=${id}`, '_blank'); }
+        async function toggleScene(id, act){
+            const r = await fetch(`${API_BASE}/display_groups/update.php`, { method:'PUT', credentials:'include', headers:{'Content-Type':'application/json'}, body: JSON.stringify({group_id:id, is_active:act}) });
+            const d = await r.json();
+            notify(d.success ? 'Escenario actualizado' : (d.message||'Error'), d.success?'':'error');
+            if (d.success) loadScenes();
         }
         
         function renderBoards() {
@@ -579,7 +624,8 @@
         }
         
         function composeBoard(boardId) {
-            window.location.href = `digital-screen-sequence.html?board=${boardId}`;
+            // Unificado: el editor de pantallas ya maneja slides + diseño juntos
+            window.location.href = `digital-signage-editor.html?board=${boardId}`;
         }
 
         function editBoard(boardId) {
@@ -685,11 +731,24 @@
             }
         });
         
-        document.getElementById('btnCreateBoard').addEventListener('click', openModal);
+        document.getElementById('btnCreateBoard').addEventListener('click', async () => {
+            // Crea un Escenario y lo abre en el entorno Illustrator
+            try {
+                const r = await fetch(`${API_BASE}/display_groups/create.php`, {
+                    method: 'POST', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: 'Nuevo Escenario' })
+                });
+                const d = await r.json();
+                if (d.success) window.location.href = `digital-scene.html?group=${d.data.group_id}`;
+                else notify('No se pudo crear el escenario: ' + d.message, 'error');
+            } catch(e) { notify('Error de conexión', 'error'); }
+        });
         document.getElementById('closeDeleteModal').addEventListener('click', closeDeleteModal);
         document.getElementById('cancelDelete').addEventListener('click', closeDeleteModal);
         document.getElementById('confirmDelete').addEventListener('click', confirmDeleteBoard);
         
+        loadScenes();
         loadBoards();
     </script>
 </body>

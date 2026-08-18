@@ -27,6 +27,10 @@ body{margin:0;background:#e8ecf1;font-family:inherit;color:#1c2a3a;height:100vh;
 #stageWrap::-webkit-scrollbar-thumb{background:#4a5a6e;border-radius:6px;border:2px solid #2a3645}
 
 .stage{position:relative;background:#111;transform-origin:0 0;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+#zoomBar{position:absolute;top:.6rem;right:.6rem;z-index:70;display:flex;align-items:center;gap:.3rem;background:rgba(30,41,59,.85);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:.25rem .35rem;backdrop-filter:blur(4px)}
+#zoomBar button{width:30px;height:30px;border:0;border-radius:6px;background:rgba(255,255,255,.12);color:#fff;cursor:pointer;font-size:.8rem;display:flex;align-items:center;justify-content:center}
+#zoomBar button:hover{background:rgba(255,255,255,.25)}
+#zoomBar span{color:#fff;font-size:.72rem;font-weight:600;padding:0 .2rem;min-width:44px;text-align:center}
 .scene-screen{position:absolute;overflow:hidden;background:#222;border:2px solid rgba(255,255,255,.2);display:flex;flex-direction:column}
 .scene-screen.selected{border-color:#ffd54a;box-shadow:0 0 0 2px rgba(255,213,74,.35)}
 .scene-screen .screen-tag{flex:0 0 auto;font-size:11px;font-weight:700;color:rgba(255,255,255,.85);text-transform:uppercase;background:rgba(0,0,0,.55);padding:2px 8px;display:flex;align-items:center;justify-content:space-between;gap:.4rem;pointer-events:none}
@@ -105,24 +109,31 @@ body{margin:0;background:#e8ecf1;font-family:inherit;color:#1c2a3a;height:100vh;
 </div>
 
 <div class="layout">
-  <!-- Izquierda: añadir elemento + árbol de pantallas colapsables con diapositivas -->
+  <!-- Izquierda: árbol de pantallas (jerárquico) + añadir elemento solo al seleccionar -->
   <div class="panel left" id="panelLeft">
-    <h3><i class="fas fa-plus-circle"></i> Añadir elemento</h3>
-    <div class="add-btns">
-      <button data-add="rect"><i class="fas fa-square"></i> Rectángulo</button>
-      <button data-add="text"><i class="fas fa-font"></i> Texto</button>
-      <button data-add="image"><i class="fas fa-image"></i> Imagen</button>
-    </div>
-    <h3 style="margin-top:.6rem;display:flex;align-items:center;justify-content:space-between">
+    <h3 style="display:flex;align-items:center;justify-content:space-between">
       <span><i class="fas fa-columns"></i> Pantallas del escenario</span>
       <button class="btn btn-secondary" id="btnAddScreen" style="padding:.2rem .5rem;font-size:.72rem"><i class="fas fa-plus"></i></button>
     </h3>
     <div class="scene-tree" id="screensTree"></div>
+    <div id="addSubmenu">
+      <h3 style="margin-top:.4rem"><i class="fas fa-plus-circle"></i> Añadir a la pantalla</h3>
+      <div class="add-btns">
+        <button data-add="text"><i class="fas fa-font"></i> Texto</button>
+        <button data-add="image"><i class="fas fa-image"></i> Imagen</button>
+      </div>
+    </div>
   </div>
 
-  <!-- Centro: lienzo con panorámica -->
+  <!-- Centro: lienzo con panorámica y controles de zoom -->
   <div class="stage-wrap" id="stageWrap">
     <div class="stage" id="stage"></div>
+    <div id="zoomBar">
+      <button id="zOut" title="Alejar"><i class="fas fa-minus"></i></button>
+      <button id="zReset" title="Ajustar a la vista"><i class="fas fa-expand"></i></button>
+      <button id="zIn" title="Acercar"><i class="fas fa-plus"></i></button>
+      <span id="zPct">100%</span>
+    </div>
   </div>
 
   <!-- Derecha: propiedades del elemento seleccionado -->
@@ -148,6 +159,7 @@ let selEl=null;          // elemento seleccionado (tempId)
 let playing=false;
 let timers={};
 let expanded={};         // pantallas expandidas (colapsables)
+let zoom=1;              // factor de zoom de la escena
 let tt;
 const $=x=>document.getElementById(x);
 function toast(m,t=''){const e=$('toast');e.textContent=m;e.className='toast '+t+' show';clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('show'),2500)}
@@ -174,21 +186,70 @@ async function init(){
   fitStage();
 }
 
-// ===== Lienzo + panorámica =====
+// ===== Lienzo + panorámica + zoom =====
 function fitStage(){
   const wrap=$('stageWrap'); const stage=$('stage');
   const w=wrap.clientWidth, h=wrap.clientHeight;
   stage.style.width='1600px'; stage.style.height='900px';
   stage.style.transform='none';
   stage.style.left='0px'; stage.style.top='0px';
-  // tamaño lógico fijo: stage 1600x900 escalado para caber en el viewport si cabe
-  const scale=1;
-  stage.style.transform=`scale(${scale})`;
+  stage.style.transform=`scale(${zoom})`;
+  stage.style.transformOrigin='0 0';
   wrap.scrollLeft=0; wrap.scrollTop=0;
+}
+function setZoom(z, center){
+  z=Math.max(0.2, Math.min(4, z));
+  const wrap=$('stageWrap'); const stage=$('stage');
+  const r=stage.getBoundingClientRect();
+  const wrapR=wrap.getBoundingClientRect();
+  // anclar el zoom al punto bajo el cursor/centro para que no se escape
+  const cx = center? (center.x - wrapR.left) : wrapR.width/2;
+  const cy = center? (center.y - wrapR.top) : wrapR.height/2;
+  const scrollXRatio=(wrap.scrollLeft+cx)/ (r.width||1);
+  const scrollYRatio=(wrap.scrollTop+cy)/ (r.height||1);
+  zoom=z;
+  stage.style.transform=`scale(${zoom})`;
+  stage.style.transformOrigin='0 0';
+  wrap.scrollLeft=(scrollXRatio*(1600*zoom))-cx;
+  wrap.scrollTop=(scrollYRatio*(900*zoom))-cy;
+  const pct=$('zPct'); if(pct) pct.textContent=Math.round(zoom*100)+'%';
+}
+function resetZoom(){
+  // ajustar al tamaño de la vista
+  const wrap=$('stageWrap');
+  const sx=wrap.clientWidth/1600, sy=wrap.clientHeight/900;
+  zoom=Math.min(sx, sy); if(zoom>1)zoom=1;
+  setZoom(zoom);
+}
+function initZoom(){
+  const wrap=$('stageWrap');
+  $('zIn').onclick=()=>{ setZoom((Math.round(zoom*100)+20)/100); };
+  $('zOut').onclick=()=>{ setZoom((Math.round(zoom*100)-20)/100); };
+  $('zReset').onclick=resetZoom;
+  // rueda del mouse para zoom (sin ctrl) — más natural en editores
+  wrap.addEventListener('wheel',(e)=>{
+    e.preventDefault();
+    const dir = e.deltaY<0 ? 1.1 : 0.9;
+    setZoom(zoom*dir, {x:e.clientX,y:e.clientY});
+  },{passive:false});
+  // pinch táctil en móvil
+  let pinchDist=0, pinchZoom=zoom;
+  wrap.addEventListener('touchstart',(e)=>{
+    if(e.touches.length===2){
+      pinchDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+      pinchZoom=zoom;
+    }
+  },{passive:true});
+  wrap.addEventListener('touchmove',(e)=>{
+    if(e.touches.length===2){
+      const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+      if(pinchDist>0) setZoom(pinchZoom*(d/pinchDist));
+    }
+  },{passive:false});
 }
 function setupPan(){
   const wrap=$('stageWrap');
-  let px=0,py=0,active=null;
+  let active=null;
   function setCursor(){ wrap.classList.add('panning'); }
   function clearCursor(){ wrap.classList.remove('panning'); }
   wrap.addEventListener('mousedown',(e)=>{
@@ -202,7 +263,6 @@ function setupPan(){
       window.addEventListener('mousemove',move); window.addEventListener('mouseup',up);
     }
   });
-  // impedir menú contextual en el lienzo
   wrap.addEventListener('contextmenu',e=>e.preventDefault());
 }
 // al hacer clic en el lienzo (vacío) se deselecciona el elemento
@@ -210,7 +270,11 @@ $('stageWrap').addEventListener('mousedown',(e)=>{
   if(e.target.classList && e.target.classList.contains('stage-wrap')){ }
 });
 
-function renderAll(){ renderTree(); renderStage(); renderProps(); }
+function renderAll(){ renderTree(); renderStage(); renderProps(); refreshAddMenu(); }
+function refreshAddMenu(){
+  const m=$('addSubmenu'); if(!m)return;
+  m.style.display = (screens.length>0) ? '' : 'none';
+}
 
 // ===== Árbol de pantallas colapsables con diapositivas anidadas =====
 function renderTree(){
@@ -434,6 +498,42 @@ document.querySelectorAll('[data-add]').forEach(b=>{
   });
 });
 
+// ===== Biblioteca de imágenes y subida (para el fondo de la imagen) =====
+function openImagePick(){
+  const div=document.createElement('div');
+  div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:400;display:flex;align-items:center;justify-content:center;padding:1rem';
+  div.innerHTML='<div style="background:#fff;border-radius:12px;padding:1.2rem;max-width:420px;width:100%;max-height:80vh;overflow:auto;color:#1c2a3a">'
+    +'<h3 style="margin:0 0 .8rem;font-size:1rem">Imágenes de tu tienda</h3>'
+    +'<div id="libGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem"></div>'
+    +'<div style="margin-top:.8rem;text-align:right"><button id="libClose" class="btn btn-secondary">Cerrar</button></div></div>';
+  document.body.appendChild(div);
+  div.querySelector('#libClose').onclick=()=>div.remove();
+  div.onclick=e=>{if(e.target===div)div.remove()};
+  fetch(`${API}/digital_boards/list_media.php`,{credentials:'include'}).then(r=>r.json()).then(d=>{
+    const grid=div.querySelector('#libGrid');
+    if(!d.success||!d.data||!d.data.length){grid.innerHTML='<div style="grid-column:1/-1;color:#64748b;font-size:.8rem;text-align:center">No hay imágenes subidas. Usa "Subir" para subir una.</div>';return;}
+    grid.innerHTML=d.data.map(m=>`<div title="${esc(m.filename)}" style="cursor:pointer;border:1px solid #d5dfe8;border-radius:6px;overflow:hidden;aspect-ratio:1"><img src="${esc(m.url)}" style="width:100%;height:100%;object-fit:cover"></div>`).join('');
+    grid.querySelectorAll('img').forEach((img,i)=>{
+      img.onclick=()=>{ selectImage(d.data[i].url); div.remove(); };
+    });
+  }).catch(()=>{ div.querySelector('#libGrid').innerHTML='<div style="color:#b91c1c;font-size:.8rem">No se pudo cargar la biblioteca</div>'; });
+}
+function selectImage(url){
+  const el= selEl? (currentSlide()?.elements||[]).find(e=>e.tempId===selEl) : null;
+  if(!el)return;
+  el.content.background_image=url; renderAll();
+  toast('Imagen aplicada');
+}
+function uploadImage(ev){
+  const file=ev.target.files&&ev.target.files[0]; if(!file)return;
+  const fd=new FormData(); fd.append('file',file); fd.append('type','image');
+  const xhr=new XMLHttpRequest();
+  xhr.open('POST',`${API}/digital_boards/upload_media.php`);
+  xhr.withCredentials=true;
+  xhr.onload=()=>{ try{const r=JSON.parse(xhr.responseText); if(r.success&&r.data&&r.data.url){selectImage(r.data.url);}else{toast((r.message)||'Error', 'error');} }catch(e){toast('Error','error');} ev.target.value=''; };
+  xhr.send(fd);
+}
+
 // ===== Propiedades =====
 function renderProps(){
   const box=$('propsBox');
@@ -441,18 +541,40 @@ function renderProps(){
   const el= selEl? (currentSlide()?.elements||[]).find(e=>e.tempId===selEl) : null;
   if(!el){box.innerHTML='<div class="empty">Selecciona un elemento dentro de la pantalla para editarlo. También puedes añadir uno con el botón "Añadir elemento".</div>';return}
   const r=el.content.rect, c=el.content;
+  const T=el.type||c.type||'rect';
   const h=[];
-  h.push('<label>X (%)</label><input type="text" class="drag-num" id="pX" value="'+Math.round(r.x_pct)+'">');
-  h.push('<label>Y (%)</label><input type="text" class="drag-num" id="pY" value="'+Math.round(r.y_pct)+'">');
-  h.push('<div class="row"><div><label>Ancho</label><input type="text" class="drag-num" id="pW" value="'+Math.round(r.w_pct)+'"></div><div><label>Alto</label><input type="text" class="drag-num" id="pH" value="'+Math.round(r.h_pct)+'"></div></div>');
-  if(c.type==='text'||c.type==='rect') h.push('<label>Texto</label><textarea id="pT" rows="2">'+esc(c.text||'')+'</textarea>');
-  h.push('<div class="row">');
-  if(c.type==='rect'||c.type==='image') h.push('<div><label>Color fondo</label><input type="color" id="pColor" value="'+(/^#[0-9a-f]{6}$/i.test(c.background_color||'')?c.background_color:'#ccc')+'"></div>');
-  if(c.type==='text') h.push('<div><label>Color texto</label><input type="color" id="pTextColor" value="'+(/^#[0-9a-f]{6}$/i.test(c.text_color||'')?c.text_color:'#fff')+'"></div>');
-  h.push('</div>');
-  if(c.type==='text') h.push('<label>Tamaño texto (%)</label><input type="text" class="drag-num" id="pTSize" value="'+(c.text_size_pct||4)+'">');
+  // --- Geometría ---
+  h.push('<label>Posición y tamaño</label>');
+  h.push('<div class="row"><div><label>X (%)</label><input type="text" class="drag-num" id="pX" value="'+Math.round(r.x_pct)+'"></div><div><label>Y (%)</label><input type="text" class="drag-num" id="pY" value="'+Math.round(r.y_pct)+'"></div></div>');
+  h.push('<div class="row"><div><label>Ancho (%)</label><input type="text" class="drag-num" id="pW" value="'+Math.round(r.w_pct)+'"></div><div><label>Alto (%)</label><input type="text" class="drag-num" id="pH" value="'+Math.round(r.h_pct)+'"></div></div>');
+  // --- Texto ---
+  if(T==='text'||T==='rect'){
+    h.push('<label>Texto</label><textarea id="pT" rows="3">'+esc(c.text||'')+'</textarea>');
+    h.push('<label>Tamaño de letra (%)</label><input type="text" class="drag-num" id="pTSize" value="'+(c.text_size_pct||4)+'">');
+    h.push('<div class="row">');
+    h.push('<div><label>Color texto</label><input type="color" id="pTextColor" value="'+(/^#[0-9a-f]{6}$/i.test(c.text_color||'')?c.text_color:'#fff')+'"></div>');
+    h.push('<div><label>Alineación H</label><select id="pTH"><option value="left" '+(c.text_pos_h==='left'?'selected':'')+'>Izq</option><option value="center" '+(c.text_pos_h==='center'?'selected':'')+'>Centro</option><option value="right" '+(c.text_pos_h==='right'?'selected':'')+'>Der</option></select></div>');
+    h.push('</div>');
+    h.push('<div class="row">');
+    h.push('<div><label>Vertical</label><select id="pTV"><option value="top" '+(c.text_pos_v==='top'?'selected':'')+'>Arriba</option><option value="middle" '+(c.text_pos_v==='middle'?'selected':'')+'>Medio</option><option value="bottom" '+(c.text_pos_v==='bottom'?'selected':'')+'>Abajo</option></select></div>');
+    h.push('<div><label>Offset X (px)</label><input type="text" class="drag-num" id="pTOX" value="'+(c.text_offset_x||0)+'"></div>');
+    h.push('</div>');
+    h.push('<label>Offset Y (px)</label><input type="text" class="drag-num" id="pTOY" value="'+(c.text_offset_y||0)+'">');
+  }
+  // --- Fondo / Imagen ---
+  if(T==='rect'||T==='image'){
+    h.push('<label>Imagen de fondo (URL o de la biblioteca)</label><input type="text" id="pImg" value="'+esc(c.background_image||'')+'" placeholder="https://..., o elige de biblioteca">');
+    h.push('<div style="display:flex;gap:.35rem;margin-top:.25rem"><button class="btn btn-secondary" id="pLib" style="flex:1"><i class="fas fa-images"></i> Biblioteca</button>'
+      +'<button class="btn btn-secondary" id="pUpload" style="flex:1"><i class="fas fa-upload"></i> Subir</button>'
+      +'<input type="file" id="pImportFile" accept="image/*" style="display:none"></div>');
+    h.push('<label>Color de fondo</label><input type="color" id="pColor" value="'+(/^#[0-9a-f]{6}$/i.test(c.background_color||'')?c.background_color:'#ccc')+'">');
+    h.push('<label>Tipo de fill</label><select id="pFit"><option value="fill" '+(c.background_fit==='fill'?'selected':'')+'>Rellenar</option><option value="cover" '+(c.background_fit==='cover'?'selected':'')+'>Cubrir</option><option value="contain" '+(c.background_fit==='contain'?'selected':'')+'>Contener</option></select>');
+  }
+  // --- Animación ---
+  h.push('<label>Animación de entrada</label><select id="pAnim"><option value="none" '+(c.animation==='none'||!c.animation?'selected':'')+'>Ninguna</option><option value="fade_in" '+(c.animation==='fade_in'?'selected':'')+'>Fundido</option><option value="slide_up" '+(c.animation==='slide_up'?'selected':'')+'>Subir</option><option value="slide_left" '+(c.animation==='slide_left'?'selected':'')+'>Deslizar izq</option><option value="scale_in" '+(c.animation==='scale_in'?'selected':'')+'>Zoom</option></select>');
+  // --- Capas ---
   h.push('<div class="row" style="margin-top:.5rem"><button class="btn btn-secondary" id="pFront"><i class="fas fa-arrow-up"></i> Arriba</button><button class="btn btn-secondary" id="pBack"><i class="fas fa-arrow-down"></i> Abajo</button></div>');
-  h.push('<button class="btn btn-danger" id="pDel" style="width:100%;margin-top:.4rem"><i class="fas fa-trash"></i> Eliminar</button>');
+  h.push('<button class="btn btn-danger" id="pDel" style="width:100%;margin-top:.4rem"><i class="fas fa-trash"></i> Eliminar elemento</button>');
   box.innerHTML=h.join('');
   const bind=(id,fn)=>{const n=$(id);if(n)n.addEventListener('input',fn)};
   bind('pX',e=>{r.x_pct=parseFloat(e.target.value)||0;renderStage()});
@@ -460,12 +582,22 @@ function renderProps(){
   bind('pW',e=>{r.w_pct=parseFloat(e.target.value)||4;renderStage()});
   bind('pH',e=>{r.h_pct=parseFloat(e.target.value)||4;renderStage()});
   bind('pT',e=>{c.text=e.target.value;renderStage()});
-  bind('pColor',e=>{c.background_color=e.target.value;renderStage()});
-  bind('pTextColor',e=>{c.text_color=e.target.value;renderStage()});
   bind('pTSize',e=>{c.text_size_pct=parseFloat(e.target.value)||4;renderStage()});
+  bind('pTextColor',e=>{c.text_color=e.target.value;renderStage()});
+  bind('pTH',e=>{c.text_pos_h=e.target.value;renderStage()});
+  bind('pTV',e=>{c.text_pos_v=e.target.value;renderStage()});
+  bind('pTOX',e=>{c.text_offset_x=parseFloat(e.target.value)||0;renderStage()});
+  bind('pTOY',e=>{c.text_offset_y=parseFloat(e.target.value)||0;renderStage()});
+  bind('pImg',e=>{c.background_image=e.target.value;renderStage()});
+  bind('pColor',e=>{c.background_color=e.target.value;renderStage()});
+  bind('pFit',e=>{c.background_fit=e.target.value;renderStage()});
+  bind('pAnim',e=>{c.animation=e.target.value;renderStage()});
   const pf=$('pFront'); if(pf)pf.addEventListener('click',()=>{const s=currentSlide();const el2=s&&s.elements.find(x=>x.tempId===selEl);if(el2){let m=0;(s.elements||[]).forEach(e=>{if((e.z_index||1)>m)m=e.z_index});el2.z_index=m+1}renderStage()});
   const pb=$('pBack'); if(pb)pb.addEventListener('click',()=>{const el2=currentSlide()&&currentSlide().elements.find(x=>x.tempId===selEl);if(el2){el2.z_index=Math.max(1,el2.z_index-1)}renderStage()});
   const pd=$('pDel'); if(pd)pd.addEventListener('click',()=>{const s=currentSlide();if(s){s.elements=s.elements.filter(x=>x.tempId!==selEl)}selEl=null;renderAll()});
+  const pl=$('pLib'); if(pl)pl.addEventListener('click',openImagePick);
+  const pu=$('pUpload'); if(pu)pu.addEventListener('click',()=>$('pImportFile').click());
+  const pif=$('pImportFile'); if(pif)pif.addEventListener('change',uploadImage);
 }
 
 // ===== Previsualización (rotación independiente por pantalla) =====
@@ -516,6 +648,7 @@ $('btnPanels').onclick=()=>{
 };
 
 setupPan();
+initZoom();
 window.addEventListener('resize',fitStage);
 init();
 </script>

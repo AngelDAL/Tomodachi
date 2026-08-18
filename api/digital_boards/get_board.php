@@ -1,48 +1,67 @@
 <?php
 /**
- * Obtener board completo con slides y elementos (ENDPOINT PÚBLICO PARA TV)
+ * Obtener board completo con slides y elementos
  * GET /api/digital_boards/get_board.php?board_id=X
- * NO REQUIERE AUTENTICACIÓN
+ *
+ * PÚBLICO (para pantallas/TVs): solo muestra boards ACTIVOS.
+ * AUTENTICADO (editor/vista previa): si el usuario logueado pertenece a la
+ * misma tienda que el board, puede previsualizarlo aunque esté INACTIVO
+ * (algo que aún no se ha publicado pero se está diseñando).
  */
 require_once '../../config/database.php';
+require_once '../../config/constants.php';
 require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
+require_once '../../includes/Auth.class.php';
 
 header('Access-Control-Allow-Origin: *');
 header('Content-Type: application/json; charset=utf-8');
 
 try {
     $db = new Database();
+    $auth = new Auth($db);
     
     $board_id = isset($_GET['board_id']) ? (int)$_GET['board_id'] : 0;
     if ($board_id <= 0) {
         Response::validationError(['board_id' => 'Requerido']);
     }
     
-    // Obtener board (debe estar activo y verificar store_id para seguridad)
+    // ¿El usuario logueado pertenece a la tienda del board?
+    // Si hay sesión y coincide la tienda, se permite previsualizar boards
+    // inactivos; de lo contrario (público/TV) solo boards activos.
+    $current = $auth->isLoggedIn() ? $auth->getCurrentUser() : null;
     $board = $db->selectOne(
         'SELECT board_id, store_id, name, orientation, slide_duration, 
-                transition_animation, theme_config, show_qr
+                transition_animation, theme_config, show_qr, is_active
          FROM digital_boards 
-         WHERE board_id = ? AND is_active = 1',
+         WHERE board_id = ?',
         [$board_id]
     );
     
     if (!$board) {
+        Response::notFound('Board no encontrado');
+    }
+    
+    $canPreviewOwn = $current && (int)$current['store_id'] === (int)$board['store_id'];
+    
+    if ((int)$board['is_active'] !== 1 && !$canPreviewOwn) {
         Response::notFound('Board no encontrado o inactivo');
     }
     
-    // Nota: Este endpoint es público (sin auth) para pantallas/TVs, pero verificamos
-    // que el board pertenezca a una tienda válida para evitar accesos cross-tenant
-    
-    // Verificar activación automática por fecha
+    // Verificar activación automática por fecha (solo para boards activos de TV;
+    // el diseñador puede previsualizar aunque la programación no haya empezado).
     $now = date('Y-m-d H:i:s');
-    if ($board['scheduled_start'] && $now < $board['scheduled_start']) {
-        Response::error('Board aún no activo', 403);
+    if ((int)$board['is_active'] === 1) {
+        if ($board['scheduled_start'] && $now < $board['scheduled_start']) {
+            Response::error('Board aún no activo', 403);
+        }
+        if ($board['scheduled_end'] && $now > $board['scheduled_end']) {
+            Response::error('Board ya expiró', 403);
+        }
     }
-    if ($board['scheduled_end'] && $now > $board['scheduled_end']) {
-        Response::error('Board ya expiró', 403);
-    }
+    
+    // Nota: El endpoint es público para TV (sin auth), pero verificamos que el
+    // board pertenezca a una tienda válida para evitar accesos cross-tenant.
     
     // Si hay asignaciones reutilizables, la pantalla se compone exclusivamente de esa secuencia.
     // Si no las hay, mantiene compatibilidad con las slides legacy propias del board.

@@ -47,6 +47,19 @@
         .anim-scale-in { animation:scaleIn .8s ease-out; }
         .anim-slide-left { animation:slideLeft .8s ease-out; }
 
+        /* Transiciones entre diapositivas (por pantalla) */
+        @keyframes tFade { from{opacity:0} to{opacity:1} }
+        @keyframes tLeft { from{opacity:0;transform:translateX(60px)} to{opacity:1;transform:translateX(0)} }
+        @keyframes tRight { from{opacity:0;transform:translateX(-60px)} to{opacity:1;transform:translateX(0)} }
+        @keyframes tUp { from{opacity:0;transform:translateY(60px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes tZoom { from{opacity:0;transform:scale(.7)} to{opacity:1;transform:scale(1)} }
+        .trans-fade { animation:tFade .6s ease-out; }
+        .trans-slide_left { animation:tLeft .6s ease-out; }
+        .trans-slide_right { animation:tRight .6s ease-out; }
+        .trans-slide_up { animation:tUp .6s ease-out; }
+        .trans-zoom { animation:tZoom .6s ease-out; }
+        .trans-none { animation:none; }
+
         .error-box { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#000; color:#fff; text-align:center; padding:2rem; z-index:60; }
         .error-box h1 { font-size:3rem; margin-bottom:1rem; }
     </style>
@@ -130,10 +143,15 @@
             if(!slides.length){ shell.innerHTML = '<div class="screen-label">'+esc(screen.label||'')+'</div>'; return; }
             const current = idx % slides.length;
             const entry = slides[current];
+            const trans = entry.transition || (slides[(current+slides.length-1)%slides.length]?.transition) || 'fade';
             shell.innerHTML = '';
             const label = document.createElement('div'); label.className='screen-label'; label.textContent=screen.label||''; shell.appendChild(label);
             if(entry && entry.slide){
-                shell.appendChild(renderSlide(entry.slide));
+                const holder = document.createElement('div');
+                holder.style.position='absolute'; holder.style.inset='0';
+                holder.classList.add('trans-'+trans);
+                holder.appendChild(renderSlide(entry.slide));
+                shell.appendChild(holder);
             }
             // programar siguiente para ESTA pantalla (rotación independiente + loop)
             clearTimeout(screenTimers[screen.id]);

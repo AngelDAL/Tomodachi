@@ -40,6 +40,7 @@ try {
     $slides = $input['slides'];
     $count = 0;
     $pos = 0;
+    $validTrans = ['fade','slide_left','slide_up','slide_right','zoom','none'];
     foreach ($slides as $sl) {
         $sid = (int)($sl['source_slide_id'] ?? 0);
         if ($sid <= 0) continue;
@@ -50,8 +51,9 @@ try {
         );
         if (!$ok) continue;
         $dur = isset($sl['custom_duration']) && !empty($sl['custom_duration']) ? (int)$sl['custom_duration'] : null;
-        $db->insert('INSERT INTO display_group_screen_slides (screen_id, position, source_slide_id, custom_duration) VALUES (?,?,?,?)',
-            [$screen_id, $pos, $sid, $dur]);
+        $trans = (isset($sl['transition']) && in_array($sl['transition'], $validTrans)) ? $sl['transition'] : 'fade';
+        $db->insert('INSERT INTO display_group_screen_slides (screen_id, position, source_slide_id, custom_duration, transition) VALUES (?,?,?,?,?)',
+            [$screen_id, $pos, $sid, $dur, $trans]);
         $pos++;
         $count++;
     }

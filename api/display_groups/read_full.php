@@ -35,7 +35,7 @@ try {
     $slideCache = [];
     foreach ($screens as &$screen) {
         $srows = $db->select(
-            'SELECT id, position, source_slide_id, custom_duration
+            'SELECT id, position, source_slide_id, custom_duration, transition
              FROM display_group_screen_slides WHERE screen_id = ?
              ORDER BY position ASC, id ASC',
             [$screen['id']]
@@ -63,6 +63,7 @@ try {
                 'position' => (int)$r['position'],
                 'source_slide_id' => $sid,
                 'custom_duration' => $r['custom_duration'],
+                'transition' => $r['transition'] ?? 'fade',
                 'slide' => $slideCache[$sid],
             ];
         }

@@ -384,6 +384,60 @@
         .toast.success { background: #10b981; }
         .toast.error { background: #ef4444; }
 
+        /* ===== Modal de biblioteca de imágenes ===== */
+        .modal-overlay {
+            position: fixed; inset: 0; z-index: 20000;
+            background: rgba(0,0,0,0.55);
+            display: none; align-items: center; justify-content: center;
+            padding: 1rem;
+        }
+        .modal-box {
+            background: var(--bg-card, #fff); color: var(--text-primary, #1c2a3a);
+            border-radius: 12px; width: 100%; max-width: 720px; max-height: 82vh;
+            display: flex; flex-direction: column;
+            box-shadow: 0 24px 60px rgba(0,0,0,0.4);
+            overflow: hidden;
+        }
+        .modal-head {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0.85rem 1.1rem; border-bottom: 1px solid var(--border-color, #d5dfe8);
+        }
+        .modal-head h3 { margin: 0; font-size: 1rem; }
+        .modal-close {
+            background: none; border: 0; font-size: 1.6rem; line-height: 1;
+            cursor: pointer; color: var(--text-muted, #64748b); padding: 0 0.25rem;
+        }
+        .modal-close:hover { color: #ef4444; }
+        .modal-body { padding: 1rem; overflow-y: auto; }
+        .lib-empty {
+            text-align: center; color: var(--text-muted, #64748b);
+            padding: 2rem 1rem; font-size: 0.9rem; line-height: 1.5;
+        }
+        .lib-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: 0.6rem;
+        }
+        .lib-item {
+            border: 1.5px solid var(--border-color, #d5dfe8); border-radius: 8px;
+            padding: 0.35rem; background: var(--bg-primary, #fff); cursor: pointer;
+            display: flex; flex-direction: column; align-items: center; gap: 0.3rem;
+            transition: border-color 0.15s, box-shadow 0.15s; font: inherit;
+        }
+        .lib-item:hover {
+            border-color: var(--primary-color, #3a6ea5);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        }
+        .lib-item img {
+            width: 100%; height: 74px; object-fit: cover; border-radius: 5px;
+            background: var(--bg-secondary, #eef2f7);
+        }
+        .lib-name {
+            font-size: 0.68rem; color: var(--text-muted, #64748b);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;
+            text-align: center;
+        }
+
         @media (max-width: 900px) {
             .editor-topbar { height: auto; min-height: 56px; padding: 0.55rem 0.75rem; }
             .br-title { max-width: 52vw; }
@@ -480,6 +534,19 @@
     </div>
 
     <div class="toast" id="toast"></div>
+
+    <!-- Modal de biblioteca de imágenes de la tienda -->
+    <div class="modal-overlay" id="libModal" style="display:none;">
+        <div class="modal-box">
+            <div class="modal-head">
+                <h3><i class="fas fa-images"></i> Biblioteca de imágenes</h3>
+                <button type="button" class="modal-close" id="libModalClose" title="Cerrar">&times;</button>
+            </div>
+            <div class="modal-body" id="libModalBody">
+                <div class="lib-empty">Cargando imágenes...</div>
+            </div>
+        </div>
+    </div>
 
     <script src="lib/interactjs/interact.min.js"></script>
     <script src="js/sidebar-loader.js?v=4"></script>
@@ -991,10 +1058,11 @@
         // ===== Capas (reordenar por arrastre con Pointer Events) =====
         // Se usa arrastre manual (pointerdown/move/up) en lugar del DnD HTML5
         // nativo porque funciona en mouse Y touch, y es simulable en pruebas.
-        // La lista se ordena de atrás (primero, z menor) hacia adelante (último).
+        // La lista se ordena de arriba (primero, mayor z) hacia atrás (último,
+        // menor z): lo más profundo queda al final de la lista.
         function renderLayers() {
             const list = $('layerList');
-            const sorted = [...elements].sort((a, b) => a.z_index - b.z_index);
+            const sorted = [...elements].sort((a, b) => b.z_index - a.z_index);
             list.innerHTML = sorted.map(el => `
                 <li class="layer-item ${selectedId === el.tempId ? 'active' : ''}" data-id="${el.tempId}">
                     <i class="fas fa-grip-vertical layer-grip" title="Arrastra para reordenar"></i>
@@ -1026,9 +1094,11 @@
                 if (fromIdx < 0 || toIdx < 0) { cleanup(); return; }
                 order.splice(fromIdx, 1);
                 order.splice(toIdx, 0, drag.id);
+                // En la lista el PRIMERO es el más ARRIBA (mayor z) y el ÚLTIMO
+                // el más profundo (menor z). Reasignamos z en ese sentido.
                 elements.forEach(el => {
-                    const newZ = order.indexOf(el.tempId) + 1;
-                    if (newZ > 0) el.z_index = newZ;
+                    const pos = order.indexOf(el.tempId);
+                    if (pos >= 0) el.z_index = order.length - pos;
                 });
                 selectedId = drag.id;
                 render();
@@ -1142,9 +1212,9 @@
                         <div class="media-upload-row">
                             <input type="file" id="pf-upload" accept="image/*" hidden>
                             <button type="button" class="media-upload-btn" id="pf-upload-btn"><i class="fas fa-upload"></i> Subir desde equipo</button>
+                            <button type="button" class="media-upload-btn" id="pf-library-btn"><i class="fas fa-images"></i> Biblioteca</button>
                             <span class="media-upload-status" id="pf-upload-status"></span>
                         </div>
-                        <div class="media-upload-note" id="pf-upload-note"><i class="fas fa-compress-arrows-alt"></i> Se optimizará la imagen (hasta 100 MB); los PNG/GIF con transparencia se convierten a WebP.</div>
                         <div class="img-preview" id="pf-bgprev" style="${el.background_image ? `background-image:url('${esc(el.background_image)}')` : 'display:none;'}"></div>
                     </div>
                     <div class="tool-group"><label>Ajuste de imagen</label>
@@ -1209,6 +1279,45 @@
             bindPropNum('pf-h', el, (v, e) => { e.rect.h_pct = v; renderCanvas(); });
             bindProp('pf-bgimg', el, (v, e) => { e.background_image = v; const p=$('pf-bgprev'); if(v){p.style.backgroundImage=`url('${v}')`;p.style.display='';}else{p.style.display='none';} renderCanvas(); });
             $('pf-upload-btn') && $('pf-upload-btn').addEventListener('click', () => $('pf-upload').click());
+            // Botón Biblioteca: abre el modal con las imágenes ya subidas de la tienda.
+            $('pf-library-btn') && $('pf-library-btn').addEventListener('click', async () => {
+                const modal = $('libModal');
+                const body = $('libModalBody');
+                if (!modal || !body) return;
+                modal.style.display = 'flex';
+                body.innerHTML = '<div class="lib-empty">Cargando imágenes...</div>';
+                try {
+                    const res = await api('digital_boards/list_media.php');
+                    const items = (res.success && res.data) ? res.data : [];
+                    if (items.length === 0) {
+                        body.innerHTML = '<div class="lib-empty"><i class="fas fa-images" style="font-size:2rem;opacity:.3;margin-bottom:.5rem;display:block;"></i>Aún no hay imágenes en tu biblioteca.<br>Sube una desde "Subir desde equipo".</div>';
+                        return;
+                    }
+                    body.innerHTML = '<div class="lib-grid">' + items.map(m => `
+                        <button type="button" class="lib-item" data-url="${esc(m.url)}" title="${esc(m.original_name || m.filename)}">
+                            <img src="${esc(m.url)}" alt="${esc(m.original_name || 'imagen')}" loading="lazy">
+                            <span class="lib-name">${esc(m.original_name || m.filename)}</span>
+                        </button>
+                    `).join('') + '</div>';
+                    body.querySelectorAll('.lib-item').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const url = btn.dataset.url;
+                            el.background_image = url;
+                            if ($('pf-bgimg')) $('pf-bgimg').value = url;
+                            const preview = $('pf-bgprev');
+                            if (preview) { preview.style.backgroundImage = `url('${url}')`; preview.style.display = ''; }
+                            modal.style.display = 'none';
+                            renderCanvas();
+                            notify('Imagen aplicada de la biblioteca');
+                        });
+                    });
+                } catch (e) {
+                    body.innerHTML = '<div class="lib-empty">Error al cargar la biblioteca.</div>';
+                    notify('Error al cargar la biblioteca', 'error');
+                }
+            });
+            $('libModalClose') && $('libModalClose').addEventListener('click', () => { const m=$('libModal'); if(m) m.style.display='none'; });
+            $('libModal') && $('libModal').addEventListener('click', (e) => { if (e.target === e.currentTarget) { e.currentTarget.style.display='none'; } });
             $('pf-upload') && $('pf-upload').addEventListener('change', (event) => {
                 const file = event.target.files && event.target.files[0];
                 const input = event.target;

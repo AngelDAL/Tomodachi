@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Escenario de Pantallas - Tomodachi</title>
+<link rel="stylesheet" href="css/fonts.css"><link rel="stylesheet" href="lib/fontawesome/css/all.min.css"><script src="js/theme-init.js"></script>
+<script src="lib/interactjs/interact.min.js"></script>
+<style>
+body{margin:0;background:#e8ecf1;font-family:inherit;color:#1c2a3a;overflow:hidden}
+.topbar{height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 1rem;background:#fff;border-bottom:1px solid #d5dfe8;gap:.75rem}
+.topbar .tt{display:flex;align-items:center;gap:.6rem;font-weight:700;min-width:0}
+.topbar .ta{display:flex;gap:.45rem;align-items:center}
+.btn{border:0;border-radius:8px;padding:.5rem .85rem;font:inherit;font-size:.82rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:.4rem}
+.btn-primary{background:#3a6ea5;color:#fff}.btn-secondary{background:#eef2f7;color:#333;border:1px solid #d5dfe8}.btn-danger{background:#fee2e2;color:#b91c1c}
+.back{width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;background:#eef2f7;border:1px solid #d5dfe8;cursor:pointer}
+
+.layout{display:grid;grid-template-columns:220px 1fr 300px;height:calc(100vh - 52px)}
+.panel{background:#fff;border-right:1px solid #d5dfe8;overflow-y:auto;padding:.9rem;display:flex;flex-direction:column;gap:.8rem}
+.panel h3{margin:0 0 .35rem;font-size:.78rem;color:#64748b;text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;gap:.35rem}
+
+.pantry button{width:100%;padding:.55rem;margin:.2rem 0;border:1px solid #d5dfe8;border-radius:7px;background:#fff;font:inherit;font-size:.82rem;cursor:pointer;display:flex;align-items:center;gap:.5rem}
+.pantry button:hover{border-color:#3a6ea5;color:#3a6ea5}
+
+.scenes-list{display:flex;flex-direction:column;gap:.4rem}
+.scene-item{display:flex;align-items:center;gap:.4rem;padding:.4rem .5rem;border:1px solid #d5dfe8;border-radius:7px;font-size:.78rem;cursor:pointer}
+.scene-item.active{border-color:#3a6ea5;background:#e8f1fa}
+.scene-item .nm{flex:1;font-weight:600}
+.scene-item button{background:none;border:0;color:#64748b;cursor:pointer}
+
+.stage-wrap{position:relative;background:#202a37;overflow:hidden}
+.stage{position:absolute;left:0;top:0;bottom:0;margin:0 auto;background:#111;box-shadow:0 10px 40px rgba(0,0,0,.4)}
+/* retícula de pantallas */
+.scene-screen{position:absolute;overflow:hidden;background:#222;border:2px solid rgba(255,255,255,.15)}
+.scene-screen.selected{border-color:#ffd54a;box-shadow:0 0 0 2px rgba(255,213,74,.4)}
+.scene-screen .screen-tag{position:absolute;top:4px;left:6px;z-index:50;font-size:11px;font-weight:700;color:rgba(255,255,255,.6);text-transform:uppercase;background:rgba(0,0,0,.4);padding:1px 6px;border-radius:4px;pointer-events:none}
+/* elementos dentro de cada pantalla */
+.slide-holder{position:absolute;inset:0}
+.pres-el{position:absolute;border:1px solid transparent}
+.scene-screen.selected .pres-el{border-color:rgba(56,189,248,.5)}
+.pres-el.selected{border:2px solid #38bdf8;outline:1px solid rgba(56,189,248,.6)}
+.pres-el .resizer{position:absolute;width:12px;height:12px;background:#fff;border:2px solid #38bdf8;border-radius:50%;z-index:20;display:none}
+.pres-el.selected .resizer{display:block}
+.pres-el .resizer.se{bottom:-6px;right:-6px;cursor:se-resize}
+.pres-bg{position:absolute;inset:0}
+.pres-bg.fit-fill{background-size:100% 100%}.pres-bg.fit-cover{background-size:cover;background-position:center}.pres-bg.fit-contain{background-size:contain;background-repeat:no-repeat;background-position:center}
+.pres-content{position:absolute;inset:0;display:flex;overflow:hidden}
+.pres-text{max-width:100%;overflow-wrap:anywhere;word-break:break-word;font-weight:700;line-height:1.2;text-shadow:0 2px 8px rgba(0,0,0,.6)}
+
+.props input[type=text],.props select{width:100%;padding:.4rem;border:1px solid #d5dfe8;border-radius:6px;font:inherit;font-size:.78rem;margin-top:.15rem}
+.props input[type=color]{width:100%;height:32px;padding:2px;border:1px solid #d5dfe8;border-radius:6px;cursor:pointer}
+.props .row{display:grid;grid-template-columns:1fr 1fr;gap:.4rem}
+.props label{font-size:.7rem;color:#64748b;font-weight:600;display:block;margin-top:.35rem}
+.drag-num{cursor:ew-resize;text-align:center}
+.empty{color:#64748b;font-size:.78rem;text-align:center;padding:1rem}
+
+.toast{position:fixed;bottom:1.5rem;right:1.5rem;background:#1e293b;color:#fff;padding:.85rem 1.25rem;border-radius:8px;z-index:200;transform:translateY(100px);opacity:0;transition:all .3s}.toast.show{transform:none;opacity:1}
+.slides-thumbs{display:flex;flex-direction:column;gap:.35rem}
+.slide-thumb{display:flex;align-items:center;gap:.4rem;padding:.35rem .45rem;border:1px solid #d5dfe8;border-radius:6px;font-size:.74rem;cursor:pointer;background:#fff}
+.slide-thumb.active{border-color:#3a6ea5;background:#e8f1fa}
+.slide-thumb .t{flex:1;font-weight:600;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.slide-thumb input{width:52px;padding:.2rem;border:1px solid #d5dfe8;border-radius:5px;font:inherit;font-size:.7rem}
+.slide-thumb button{background:none;border:0;color:#b91c1c;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="tt">
+    <button class="back" id="btnBack"><i class="fas fa-arrow-left"></i></button>
+    <span id="sceneTitle">Escenario de Pantallas</span>
+  </div>
+  <div class="ta">
+    <button class="btn btn-secondary" id="btnPlay"><i class="fas fa-play"></i> <span id="playLbl">Previsualizar</span></button>
+    <button class="btn btn-primary" id="btnSave"><i class="fas fa-save"></i> Guardar</button>
+  </div>
+</div>
+
+<div class="layout">
+  <!-- Izquierda: pantallas del escenario + añadir -->
+  <div class="panel">
+    <h3><i class="fas fa-columns"></i> Pantallas del escenario</h3>
+    <div class="scenes-list" id="screensList"></div>
+    <div style="display:flex;gap:.35rem">
+      <input id="newScreenLabel" placeholder="Nombre" style="flex:1;padding:.45rem;border:1px solid #d5dfe8;border-radius:7px;font:inherit;font-size:.78rem">
+      <button class="btn btn-secondary" id="btnAddScreen" title="Agregar pantalla"><i class="fas fa-plus"></i></button>
+    </div>
+    <div style="display:flex;gap:.35rem;margin-top:.3rem">
+      <button class="btn btn-secondary" id="btnDelScreen" style="flex:1"><i class="fas fa-trash"></i> Quitar</button>
+    </div>
+    <div class="pantry">
+      <h3 style="margin-top:.6rem"><i class="fas fa-plus"></i> Añadir elemento</h3>
+      <button data-add="rect"><i class="fas fa-square"></i> Rectángulo</button>
+      <button data-add="text"><i class="fas fa-font"></i> Texto</button>
+      <button data-add="image"><i class="fas fa-image"></i> Imagen</button>
+    </div>
+  </div>
+
+  <!-- Centro: el lienzo del escenario (todas las pantallas a la vez) -->
+  <div class="stage-wrap" id="stageWrap">
+    <div class="stage" id="stage"></div>
+  </div>
+
+  <!-- Derecha: diapositivas de la pantalla seleccionada + propiedades -->
+  <div class="panel" style="border-right:0;border-left:1px solid #d5dfe8">
+    <h3><i class="fas fa-images"></i> Diapositivas de la pantalla</h3>
+    <div class="slides-thumbs" id="slidesList"></div>
+    <div style="display:flex;gap:.35rem">
+      <select id="addSlideSel" style="flex:1;padding:.4rem;border:1px solid #d5dfe8;border-radius:6px;font:inherit;font-size:.75rem"></select>
+      <button class="btn btn-secondary" id="btnAddSlide"><i class="fas fa-plus"></i></button>
+    </div>
+    <div id="propsBox" class="props">
+      <div class="empty">Selecciona una pantalla para editarla</div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const API='../api';
+const gid=parseInt(new URLSearchParams(location.search).get('group')||'0',10);
+let group=null;
+let screens=[];          // [{id,label,pos_x,pos_y,w_pct,h_pct,orientation}]
+let screenSlides=[];     // [{screen_id, slides:[{source_slide_id,custom_duration,slide?}]}]
+let slideLibrary=[];
+let selScreen=0;         // indice de pantalla seleccionada
+let selSlide=0;          // indice de diapositiva seleccionada en esa pantalla
+let selEl=null;          // elemento seleccionado (tempId)
+let playing=false;
+let timers={};
+let tt;
+const $=x=>document.getElementById(x);
+function toast(m,t=''){const e=$('toast');e.textContent=m;e.className='toast '+t+' show';clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('show'),2500)}
+async function call(u,o={}){const r=await fetch(`${API}/${u}`,{credentials:'include',...o});return r.json().catch(()=>({success:false,message:'inválido'}))}
+function esc(s){const d=document.createElement('div');d.textContent=s==null?'':s;return d.innerHTML}
+function currentScreen(){return screens[selScreen]}
+function currentSlides(){const e=screenSlides.find(x=>x.screen_id===currentScreen().id);return e?e.slides:[]}
+function currentSlide(){const s=currentSlides();const sl=s[selSlide];return sl?sl.slide:null}
+
+// ---------- Carga ----------
+async function init(){
+  if(!gid){toast('Falta el escenario (parametro group)','error');return}
+  $('sceneTitle').textContent='Cargando...';
+  const r=await call(`display_groups/read_full.php?group_id=${gid}`);
+  if(!r.success){toast(r.message||'No se pudo cargar','error');return}
+  group=r.data;
+  $('sceneTitle').textContent=group.name||'Escenario';
+  screens=(group.screens||[]).map(s=>({id:s.id,label:s.label,pos_x:s.pos_x,pos_y:s.pos_y,w_pct:s.w_pct,h_pct:s.h_pct,orientation:s.orientation}));
+  // cargar slides por pantalla
+  screenSlides=(group.screens||[]).map(s=>({screen_id:s.id,slides:(s.slides||[]).map(sl=>({source_slide_id:sl.source_slide_id,custom_duration:sl.custom_duration,slide:sl.slide}))}));
+  const lib=await call('slide_library/read.php');
+  slideLibrary=(lib.success?lib.data:[])||[];
+  fillSlideSelect();
+  renderAll();
+  fitStage();
+}
+function fillSlideSelect(){
+  const sel=$('addSlideSel');
+  sel.innerHTML=`<option value="">Agregar diapositiva...</option>`+slideLibrary.map(s=>`<option value="${s.slide_id}">${esc(s.title||'Slide '+s.slide_id)}</option>`).join('');
+}
+
+// ---------- Render del lienzo ----------
+function fitStage(){
+  const wrap=$('stageWrap'); const stage=$('stage');
+  const w=wrap.clientWidth, h=wrap.clientHeight;
+  // el escenario usa un ancho lógico de 1600 (suma de 3 pantallas de 100%) y alto 900
+  stage.style.width='1600px'; stage.style.height='900px';
+  const sx=w/stage.offsetWidth, sy=h/stage.offsetHeight;
+  const scale=Math.min(sx,sy,1.0);
+  stage.style.transform=`scale(${scale}) translateX(0)`;
+  stage.style.transformOrigin='top left';
+  // centrar horizontalmente
+  const sw=stage.offsetWidth*scale, sh=stage.offsetHeight*scale;
+  stage.style.left=((w-sw)/2)+'px';
+}
+function renderAll(){ renderScreensList(); renderStage(); renderSlidesList(); renderProps(); }
+
+function renderScreensList(){
+  const l=$('screensList');
+  l.innerHTML=screens.map((s,i)=>`
+    <div class="scene-item ${i===selScreen?'active':''}" onclick="selectScreen(${i})">
+      <span class="nm">${esc(s.label||'Pantalla '+(i+1))}</span>
+      <span style="font-size:.66rem;color:#64748b">${s.orientation==='vertical'?'V':'H'}</span>
+    </div>`).join('');
+}
+
+// índice de diapositiva que muestra cada pantalla (edición/preview)
+const curIdx={};
+function screenCurrentIdx(i){
+  // en edición: la pantalla seleccionada muestra su selSlide; en preview rota
+  if(playing) return curIdx[i]||0;
+  return (i===selScreen)?selSlide:0;
+}
+function renderStage(){
+  const stage=$('stage');
+  stage.style.background=group.bg_color||'#fff';
+  stage.innerHTML='';
+  screens.forEach((s,i)=>{
+    const sc=document.createElement('div');
+    sc.className='scene-screen'+(i===selScreen?' selected':'');
+    sc.style.left=s.pos_x+'%'; sc.style.top=s.pos_y+'%';
+    sc.style.width=s.w_pct+'%'; sc.style.height=s.h_pct+'%';
+    sc.dataset.i=i;
+    const sSlides=screenSlides.find(x=>x.screen_id===s.id)||{slides:[]};
+    const slides=sSlides.slides||[];
+    const cIdx=screenCurrentIdx(i);
+    const slide= slides.length?slides[cIdx%slides.length].slide : null;
+    sc.innerHTML=`<div class="screen-tag">${esc(s.label||'Pantalla '+(i+1))} ${slides.length?('· D'+(cIdx%slides.length+1)+'/'+slides.length):'· sin diapositivas'}</div>`;
+    if(slide){
+      const holder=document.createElement('div'); holder.className='slide-holder';
+      if(slide.background_color) holder.style.background=slide.background_color;
+      else if(slide.background_image) holder.style.background=`url(${slide.background_image}) center/cover`;
+      else holder.style.background='#fff';
+      sc.appendChild(holder);
+      renderPres(holder, slide, i);
+    }
+    if(!playing){
+      sc.addEventListener('mousedown',(e)=>{
+        if(e.target.closest('.pres-el'))return;
+        selectScreen(i);
+      });
+    }
+    if(!playing) bindScreenSelectBox(sc, i);
+    stage.appendChild(sc);
+  });
+}
+// redimensiona la caja de la pantalla en el lienzo
+function bindScreenSelectBox(sc, i){
+  sc.addEventListener('dblclick',(e)=>{ if(e.target.closest('.pres-el'))return; prompt('editar?'); });
+}
+
+
+// renderiza elementos de presentación dentro de un holder
+function renderPres(holder, slide, scIdx){
+  (slide.elements||[]).sort((a,b)=>(a.z_index||1)-(b.z_index||1)).forEach(el=>{
+    const c=el.content||{}; const r=c.rect; if(!r)return;
+    const item=document.createElement('div');
+    item.className='pres-el'+(selScreen===scIdx && selEl===el.tempId?' selected':'');
+    item.dataset.tid=el.tempId;
+    item.style.left=r.x_pct+'%'; item.style.top=r.y_pct+'%'; item.style.width=r.w_pct+'%'; item.style.height=r.h_pct+'%'; item.style.zIndex=el.z_index||c.z_index||1;
+    if(c.background_image){const bg=document.createElement('div');bg.className='pres-bg fit-'+c.background_fit;bg.style.backgroundImage=`url('${c.background_image}')`;item.appendChild(bg);}
+    else if(c.background_color){const bg=document.createElement('div');bg.className='pres-bg';bg.style.background=c.background_color;item.appendChild(bg);}
+    if(c.text){
+      const ct=document.createElement('div');ct.className='pres-content';
+      ct.style.justifyContent={left:'flex-start',center:'center',right:'flex-end'}[c.text_pos_h]||'center';
+      ct.style.alignItems={top:'flex-start',middle:'center',bottom:'flex-end'}[c.text_pos_v]||'center';
+      const tx=document.createElement('div');tx.className='pres-text';tx.textContent=c.text;
+      tx.style.fontSize=c.text_size_pct+'%';tx.style.color=c.text_color||'#fff';tx.style.textAlign=c.text_pos_h||'center';
+      tx.style.transform=`translate(${c.text_offset_x||0}px, ${c.text_offset_y||0}px)`;
+      ct.appendChild(tx);item.appendChild(ct);
+    }
+    const rz=document.createElement('div');rz.className='resizer se';item.appendChild(rz);
+    if(selScreen===scIdx) bindElDrag(item, el, scIdx);
+    item.addEventListener('mousedown',(e)=>{if(e.target.classList.contains('resizer'))return;e.stopPropagation();selEl=el.tempId;renderStage();renderProps();});
+    holder.appendChild(item);
+  });
+}
+
+// drag/redimension de elementos dentro de la pantalla
+function bindElDrag(item, el, scIdx){
+  const move=(downEv)=>{
+    downEv.preventDefault();downEv.stopPropagation();
+    selEl=el.tempId;renderStage();
+    const wrap=$('stage'); const wr=wrap.getBoundingClientRect();
+    const scale=1; // el stage ya está escalado via CSS transform
+    const startX=downEv.clientX, startY=downEv.clientY;
+    const a=el.rect.x_pct,b=el.rect.y_pct,c=el.rect.w_pct,d=el.rect.h_pct;
+    const m=(ev)=>{
+      // convertir delta de pantalla (px) a % del stage
+      const dx=(ev.clientX-startX)/wr.width*100;
+      const dy=(ev.clientY-startY)/wr.height*100;
+      const box=currentScreen();
+      el.rect.x_pct=Math.max(0,Math.min(100-el.rect.w_pct,a+dx));
+      el.rect.y_pct=Math.max(0,Math.min(100-el.rect.h_pct,b+dy));
+      applyRect(item,el);
+    };
+    const u=()=>{window.removeEventListener('mousemove',m);window.removeEventListener('mouseup',u);};
+    window.addEventListener('mousemove',m);window.addEventListener('mouseup',u);
+  };
+  const rs=(downEv)=>{
+    downEv.preventDefault();downEv.stopPropagation();
+    selEl=el.tempId;renderStage();
+    const wrap=$('stage');const wr=wrap.getBoundingClientRect();
+    const startX=downEv.clientX,startY=downEv.clientY;
+    const a=el.rect.w_pct,b=el.rect.h_pct;
+    const m=(ev)=>{
+      el.rect.w_pct=Math.max(4,Math.min(100-el.rect.x_pct,a+(ev.clientX-startX)/wr.width*100));
+      el.rect.h_pct=Math.max(4,Math.min(100-el.rect.y_pct,b+(ev.clientY-startY)/wr.height*100));
+      applyRect(item,el);
+    };
+    const u=()=>{window.removeEventListener('mousemove',m);window.removeEventListener('mouseup',u);};
+    window.addEventListener('mousemove',m);window.addEventListener('mouseup',u);
+  };
+  item.addEventListener('mousedown',(e)=>{ if(e.target.classList.contains('resizer'))return; move(e); });
+  item.querySelector('.resizer').addEventListener('mousedown',rs);
+}
+function applyRect(item,el){
+  const r=el.rect;
+  item.style.left=r.x_pct+'%';item.style.top=r.y_pct+'%';item.style.width=r.w_pct+'%';item.style.height=r.h_pct+'%';
+}
+
+// ---------- Diapositivas por pantalla ----------
+function selectScreen(i){ selScreen=i; selSlide=0; selEl=null; renderAll(); }
+function renderSlidesList(){
+  const l=$('slidesList');
+  if(!currentScreen()){l.innerHTML='';return}
+  const s=currentSlides();
+  l.innerHTML=(s.length?s.map((sl,j)=>`
+    <div class="slide-thumb ${j===selSlide?'active':''}" onclick="selectSlide(${j})">
+      <span class="t">${esc(sl.slide?.title||'Slide '+(j+1))}</span>
+      <input value="${sl.custom_duration||''}" placeholder="s" title="Duración (seg)" onchange="setSlideDur(${j},this.value)" onclick="event.stopPropagation()">
+      <button onclick="event.stopPropagation();delSlide(${j})"><i class="fas fa-times"></i></button>
+    </div>`).join(''):'<div class="empty">Esta pantalla no tiene diapositivas</div>');
+}
+function selectSlide(j){ selSlide=j; selEl=null; renderStage(); renderSlidesList(); renderProps(); }
+function setSlideDur(j,v){ const s=currentSlides()[j]; if(s){s.custom_duration=parseInt(v,10)||null;} }
+function delSlide(j){ const s=currentSlides(); s.splice(j,1); if(selSlide>=s.length)selSlide=Math.max(0,s.length-1); renderAll(); }
+$('btnAddSlide').onclick=()=>{
+  const sel=$('addSlideSel'); const sid=parseInt(sel.value,10); if(!sid){toast('Elige una diapositiva','error');return}
+  const s=currentSlides(); s.push({source_slide_id:sid,custom_duration:null,slide:slideLibrary.find(x=>x.slide_id===sid)});
+  selSlide=s.length-1; renderAll(); toast('Diapositiva agregada');
+};
+
+// ---------- Propiedades ----------
+function renderProps(){
+  const box=$('propsBox');
+  if(!currentScreen()){box.innerHTML='<div class="empty">Selecciona una pantalla</div>';return}
+  const el = selEl? (currentSlide()?.elements||[]).find(e=>e.tempId===selEl) : null;
+  if(!el){box.innerHTML='<div class="empty">Selecciona un elemento dentro de la pantalla</div>';return}
+  const r=el.rect,c=el;
+  // construir HTML sin template literal gigante anidado (evita errores de parseo)
+  const h=[];
+  h.push('<label>X (%)</label><input type="text" class="drag-num" id="pX" value="'+Math.round(r.x_pct)+'">');
+  h.push('<label>Y (%)</label><input type="text" class="drag-num" id="pY" value="'+Math.round(r.y_pct)+'">');
+  h.push('<div class="row"><div><label>Ancho</label><input type="text" class="drag-num" id="pW" value="'+Math.round(r.w_pct)+'"></div><div><label>Alto</label><input type="text" class="drag-num" id="pH" value="'+Math.round(r.h_pct)+'"></div></div>');
+  if(c.type==='text'||c.type==='rect') h.push('<label>Texto</label><textarea id="pT" style="width:100%;padding:.4rem;border:1px solid #d5dfe8;border-radius:6px;font:inherit;font-size:.78rem">'+esc(c.text||'')+'</textarea>');
+  h.push('<div class="row">');
+  if(c.type==='rect'||c.type==='image') h.push('<div><label>Color</label><input type="color" id="pColor" value="'+(/^#[0-9a-f]{6}$/i.test(c.background_color||'')?c.background_color:'#ccc')+'"></div>');
+  if(c.type==='text') h.push('<div><label>Color texto</label><input type="color" id="pTextColor" value="'+(/^#[0-9a-f]{6}$/i.test(c.text_color||'')?c.text_color:'#fff')+'"></div>');
+  h.push('</div>');
+  if(c.type==='text') h.push('<label>Tamaño texto (%)</label><input type="text" class="drag-num" id="pTSize" value="'+(c.text_size_pct||4)+'">');
+  h.push('<div class="row" style="margin-top:.5rem"><button class="btn btn-secondary" id="pFront"><i class="fas fa-arrow-up"></i> Arriba</button><button class="btn btn-secondary" id="pBack"><i class="fas fa-arrow-down"></i> Abajo</button></div>');
+  h.push('<button class="btn btn-danger" id="pDel" style="width:100%;margin-top:.4rem"><i class="fas fa-trash"></i> Eliminar</button>');
+  box.innerHTML=h.join('');
+  const bind=(id,fn)=>{const n=$(id);n&&n.addEventListener('input',fn)};
+  bind('pX',e=>{r.x_pct=parseFloat(e.target.value)||0;renderStage();renderProps()});
+  bind('pY',e=>{r.y_pct=parseFloat(e.target.value)||0;renderStage();renderProps()});
+  bind('pW',e=>{r.w_pct=parseFloat(e.target.value)||4;renderStage();});
+  bind('pH',e=>{r.h_pct=parseFloat(e.target.value)||4;renderStage();});
+  bind('pT',e=>{c.text=e.target.value;renderStage();});
+  bind('pColor',e=>{c.background_color=e.target.value;renderStage();});
+  bind('pTextColor',e=>{c.text_color=e.target.value;renderStage();});
+  bind('pTSize',e=>{c.text_size_pct=parseFloat(e.target.value)||4;renderStage();});
+  $('pFront')&&$('pFront').addEventListener('click',()=>{const s=currentSlide();const el2=s&&s.elements.find(x=>x.tempId===selEl);if(el2){let m=0;(s.elements||[]).forEach(e=>{if((e.z_index||1)>m)m=e.z_index});el2.z_index=m+1}renderStage()});
+  $('pBack')&&$('pBack').addEventListener('click',()=>{const el2=currentSlide()&&currentSlide().elements.find(x=>x.tempId===selEl);if(el2){el2.z_index=Math.max(1,el2.z_index-1)}renderStage()});
+  const pd=$('pDel'); if(pd){ pd.addEventListener('click',()=>{const s=currentSlide();if(s){s.elements=s.elements.filter(x=>x.tempId!==selEl)}selEl=null;renderAll()}); }
+}
+
+// ---------- Agregar elemento ----------
+document.querySelectorAll('[data-add]').forEach(b=>{
+  b.addEventListener('click',()=>{
+    const s=currentSlide(); if(!s){toast('Selecciona una pantalla con diapositiva','error');return}
+    const type=b.dataset.add;
+    let seq=(s.elements||[]).length*10+1;
+    const el={tempId:'e'+Date.now(),type,background_image:'',background_fit:'fill',background_color:type==='rect'?'#3a6ea5':'',text:type==='text'?'Texto': '',text_size_pct:4,text_color:'#fff',text_pos_h:'center',text_pos_v:'middle',text_offset_x:0,text_offset_y:0,animation:'none',z_index:(s.elements||[]).reduce((m,e)=>Math.max(m,e.z_index||1),0)+1,rect:{x_pct:30,y_pct:30,w_pct:25,h_pct:20}};
+    s.elements=s.elements||[]; s.elements.push(el); selEl=el.tempId; renderAll(); toast('Elemento agregado');
+  });
+});
+
+// ---------- Guardar (persistir slides por pantalla) ----------
+async function save(){
+  if(!gid)return;
+  const name=$('sceneTitle').textContent;
+  await call('display_groups/update.php',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({group_id:gid,name})});
+  // guardar layout
+  const layout=screens.map(s=>({id:s.id,label:s.label,pos_x:s.pos_x,pos_y:s.pos_y,w_pct:s.w_pct,h_pct:s.h_pct,orientation:s.orientation}));
+  await call('display_groups/save_layout.php',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({group_id:gid,screens:layout})});
+  // refresh para ids
+  const fresh=await call(`display_groups/read_full.php?group_id=${gid}`);
+  if(fresh.success){screens=(fresh.data.screens||[]).map(s=>({id:s.id,label:s.label,pos_x:s.pos_x,pos_y:s.pos_y,w_pct:s.w_pct,h_pct:s.h_pct,orientation:s.orientation}));}
+  // guardar slides de cada pantalla y persistir el slide (elementos editados) si existe
+  for(let i=0;i<screens.length;i++){
+    const s=screens[i];
+    const sSlides=screenSlides.find(x=>x.screen_id===s.id)||{screen_id:s.id,slides:[]};
+    // guardar elementos editados del slide actual (si es un slide local nuevo, no tiene id)
+    // persistimos la lista de slides de la pantalla
+    const slList=(sSlides.slides||[]).map(sl=>({source_slide_id:sl.source_slide_id,custom_duration:sl.custom_duration}));
+    await call('display_groups/save_screen_slides.php',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({screen_id:s.id,slides:slList})});
+  }
+  toast('Escenario guardado');
+}
+$('btnSave').onclick=save;
+$('btnBack').onclick=()=>location.href='digital-signage-groups.html';
+$('btnAddScreen').onclick=()=>{const lab=$('newScreenLabel').value.trim()||('Pantalla '+(screens.length+1));screens.push({id:null,label:lab,pos_x:0,pos_y:0,w_pct:100/Math.max(1,screens.length),h_pct:100,orientation:'horizontal'});screenSlides.push({screen_id:null,slides:[]});selScreen=screens.length-1;selSlide=0;renderAll()};
+$('btnDelScreen').onclick=()=>{if(!screens.length)return;screens.splice(selScreen,1);screenSlides.splice(selScreen,1);if(selScreen>=screens.length)selScreen=Math.max(0,screens.length-1);selSlide=0;renderAll()};
+$('btnPlay').onclick=()=>{ if(playing){playing=false;$('playLbl').textContent='Previsualizar';Object.values(timers).forEach(clearTimeout);timers={};}else{playing=true;$('playLbl').textContent='Detener';playAll()} };
+
+// Previsualización: cada pantalla rota sus propias diapositivas con loop
+function playAll(){
+  screens.forEach((s,i)=>{
+    const sSlides=screenSlides.find(x=>x.screen_id===s.id)||{slides:[]};
+    const slides=sSlides.slides||[];
+    if(!slides.length){timers[i]=setTimeout(()=>playScreen(i,0,slides),500);}
+    else playScreen(i,0,slides);
+  });
+}
+function playScreen(scIdx, idx, slides){
+  if(!playing)return;
+  curIdx[scIdx]=idx%slides.length;
+  renderStage();
+  const s=slides[idx%slides.length];
+  const dur=(s.custom_duration||8000);
+  timers[scIdx]=setTimeout(()=>{ if(playing) playScreen(scIdx,idx+1,slides); },dur*1000);
+}
+
+window.addEventListener('resize',fitStage);
+init();
+</script>
+</body>
+</html>

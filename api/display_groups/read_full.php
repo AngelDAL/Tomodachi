@@ -1,7 +1,7 @@
 <?php
 /**
- * Obtener un grupo de pantallas completo (screens + secuencia de pasadas)
- * GET /api/display_groups/read_full.php?group_id=X  (autenticado)
+ * Obtener un grupo/escenario de pantallas completo (screens + sus diapositivas)
+ * GET /api/display_groups/read_full.php?group_id=X  (autenticado, para el editor)
  */
 require_once '../../config/database.php';
 require_once '../../config/constants.php';
@@ -31,21 +31,48 @@ try {
         [$group_id]
     );
 
-    // Secuencia: todas las pasadas. Se agrupan por step_order en el cliente.
-    $steps = $db->select(
-        'SELECT st.id, st.step_order, st.screen_id, st.source_slide_id, st.custom_duration,
-                bs.title AS slide_title, bs.orientation AS slide_orientation
-         FROM display_group_steps st
-         LEFT JOIN board_slides bs ON bs.slide_id = st.source_slide_id
-         WHERE st.group_id = ?
-         ORDER BY st.step_order ASC, st.screen_id ASC',
-        [$group_id]
-    );
+    // Por cada pantalla, su lista de diapositivas (con slide completo)
+    $slideCache = [];
+    foreach ($screens as &$screen) {
+        $srows = $db->select(
+            'SELECT id, position, source_slide_id, custom_duration
+             FROM display_group_screen_slides WHERE screen_id = ?
+             ORDER BY position ASC, id ASC',
+            [$screen['id']]
+        );
+        $slidesOut = [];
+        foreach ($srows as $r) {
+            $sid = (int)$r['source_slide_id'];
+            if (!isset($slideCache[$sid])) {
+                $slide = $db->selectOne(
+                    'SELECT slide_id, title, orientation, layout_width, layout_height, background_color, background_image
+                     FROM board_slides WHERE slide_id = ?',
+                    [$sid]
+                );
+                if (!$slide) { continue; }
+                $elements = $db->select(
+                    'SELECT element_id, element_type, z_index, content, animation, animation_delay
+                     FROM slide_elements WHERE slide_id = ? ORDER BY z_index ASC',
+                    [$sid]
+                );
+                foreach ($elements as &$el) { $el['content'] = json_decode($el['content'], true); }
+                $slide['elements'] = $elements;
+                $slideCache[$sid] = $slide;
+            }
+            $slidesOut[] = [
+                'position' => (int)$r['position'],
+                'source_slide_id' => $sid,
+                'custom_duration' => $r['custom_duration'],
+                'slide' => $slideCache[$sid],
+            ];
+        }
+        $screen['slides'] = $slidesOut;
+    }
+    unset($screen);
 
     $group['screens'] = $screens;
-    $group['steps'] = $steps;
 
-    Response::success($group, 'Grupo obtenido');
+    Response::success($group, 'Escenario obtenido');
 } catch (Exception $e) {
     Response::error('Error del servidor: ' . $e->getMessage(), 500);
 }

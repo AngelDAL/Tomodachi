@@ -59,9 +59,6 @@
         const API = '/api';
         const groupId = new URLSearchParams(location.search).get('group');
         let group = null;
-        let currentStep = 0;
-        let stepTimer = null;
-        let animating = false;
 
         function esc(t){ const d=document.createElement('div'); d.textContent=t==null?'':t; return d.innerHTML; }
         function escapeHtml(t){ if(!t) return ''; const d=document.createElement('div'); d.textContent=t; return d.innerHTML; }
@@ -79,16 +76,10 @@
             holder.className='group-slide';
             const els=slide.elements||[];
             const hasPres=els.some(e=>e.content && e.content.rect);
-            if(!hasPres){
-                // fondo simple del slide
-                if(slide.background_color) holder.style.background=slide.background_color;
-                else if(slide.background_image) holder.style.background=`url(${slide.background_image}) center/cover`;
-                else holder.style.background='linear-gradient(135deg,#334,#112)';
-                return holder;
-            }
-            // Presentación
             if(slide.background_color) holder.style.background=slide.background_color;
             else if(slide.background_image) holder.style.background=`url(${slide.background_image}) center/cover`;
+            else if(!hasPres) holder.style.background='linear-gradient(135deg,#334,#112)';
+            if(!hasPres) return holder;
             const canvas=document.createElement('div'); canvas.className='presentation-canvas';
             [...els].sort((a,b)=>(a.z_index||1)-(b.z_index||1)).forEach(element=>{
                 const c=element.content||{}; const r=c.rect; if(!r) return;
@@ -113,74 +104,59 @@
                     const text=document.createElement('div');
                     text.className='presentation-text';
                     text.textContent=c.text;
-                    // tamaño en funcion del lado menor de la pantalla
-                    const base=Math.min(holder.clientWidth, holder.clientHeight)||400;
-                    text.style.fontSize=`${(c.text_size_pct||4)/100*Math.min(base,400)}px`;
-                    if(!(c.text_size_pct&&false)) text.style.fontSize=`${c.text_size_pct||4}%`;
+                    text.style.fontSize=`${c.text_size_pct||4}%`;
                     text.style.color=c.text_color||'#fff';
                     text.style.textAlign=c.text_pos_h||'center';
                     text.style.transform=`translate(${c.text_offset_x||0}px, ${c.text_offset_y||0}px)`;
                     content.appendChild(text);
                     item.appendChild(content);
                 }
+                // animación de entrada
+                if(c.animation && c.animation!=='none') item.classList.add('anim-'+c.animation.replace('_','-'));
                 canvas.appendChild(item);
             });
             holder.appendChild(canvas);
             return holder;
         }
 
-        // Aplica las animaciones de entrada (re-iniciar) a los elementos del paso
-        function applyAnimations(container){
-            container.querySelectorAll('.presentation-element').forEach(el=>{
-                // reiniciar animacion limpiando y re-aniadiendo clase
-                el.classList.remove('anim-fade','anim-fade-in','anim-slide-up','anim-scale-in','anim-slide-left');
-                // forzar reflow
-                void el.offsetWidth;
-            });
+        // Estado de rotación por pantalla
+        let screenTimers = {};
+
+        // Muestra la diapositiva `idx` de la pantalla `screen`
+        function showScreenSlide(screen, idx){
+            const shell = document.querySelector(`.group-screen[data-id="${screen.id}"]`);
+            if(!shell) return;
+            const slides = screen.slides || [];
+            if(!slides.length){ shell.innerHTML = '<div class="screen-label">'+esc(screen.label||'')+'</div>'; return; }
+            const current = idx % slides.length;
+            const entry = slides[current];
+            shell.innerHTML = '';
+            const label = document.createElement('div'); label.className='screen-label'; label.textContent=screen.label||''; shell.appendChild(label);
+            if(entry && entry.slide){
+                shell.appendChild(renderSlide(entry.slide));
+            }
+            // programar siguiente para ESTA pantalla (rotación independiente + loop)
+            clearTimeout(screenTimers[screen.id]);
+            const dur = entry && entry.custom_duration ? entry.custom_duration : 8;
+            screenTimers[screen.id] = setTimeout(()=>{ showScreenSlide(screen, current+1); }, dur*1000);
         }
 
-        // Muestra un paso (una pasada coordinada): cada pantalla muestra su slide
-        function renderStep(stepIndex){
-            if(animating) return;
+        function start(){
+            document.getElementById('loading').style.display='none';
+            document.getElementById('stage').style.display='block';
             const stage=document.getElementById('stage');
-            stage.innerHTML='';
-            const stepRows=(group.steps||[]).filter(s=>s.step_order===stepIndex);
-            if(stepRows.length===0){ stop(); showError('No hay diapositivas para este paso'); return; }
-            // Asegurar duplicados: una pantalla puede no tener step en esta pasada => queda en blanco
+            stage.style.background = group.bg_color || '#111';
             (group.screens||[]).forEach(screen=>{
                 const shell=document.createElement('div');
                 shell.className='group-screen';
+                shell.dataset.id=screen.id;
                 shell.style.left=screen.pos_x+'%';
                 shell.style.top=screen.pos_y+'%';
                 shell.style.width=screen.w_pct+'%';
                 shell.style.height=screen.h_pct+'%';
-                shell.style.background=group.bg_color || '#000';
-                if(screen.label) shell.innerHTML+=`<div class="screen-label">${esc(screen.label)}</div>`;
-                const row=stepRows.find(r=>r.screen_id===screen.id);
-                const slideId=row?row.source_slide_id:null;
-                if(slideId && group.slides[slideId]){
-                    const slideEl=renderSlide(group.slides[slideId]);
-                    shell.appendChild(slideEl);
-                }
                 stage.appendChild(shell);
+                showScreenSlide(screen, 0);
             });
-            // animar entrada de los elementos
-            applyAnimations(stage);
-            // programar el siguiente paso (loop)
-            clearTimeout(stepTimer);
-            const baseDur=(row=(group.steps||[]).find(s=>s.step_order===stepIndex))? (row.custom_duration||8):8;
-            stepTimer=setTimeout(()=>{
-                currentStep=(stepIndex+1)%(group.total_steps||1);
-                renderStep(currentStep);
-            }, baseDur*1000);
-        }
-
-        function start(){
-            const t=document.getElementById('loading'); t.style.display='none';
-            document.getElementById('stage').style.display='block';
-            if(!group.total_steps){ document.getElementById('stage').innerHTML='<div class="error-box">El grupo no tiene pasadas configuradas.</div>'; return; }
-            currentStep=0;
-            renderStep(0);
         }
 
         async function init(){
@@ -194,8 +170,6 @@
             }catch(e){ console.error(e); showError('Error de conexión'); }
         }
 
-        function stop(){ clearTimeout(stepTimer); }
-        document.addEventListener('visibilitychange',()=>{ if(document.hidden) stop(); else if(group) renderStep(currentStep); });
         // fullscreen doble clic
         document.addEventListener('dblclick',()=>{
             if(!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen();

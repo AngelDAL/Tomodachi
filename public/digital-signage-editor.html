@@ -284,6 +284,18 @@
         .media-upload-btn:hover { border-color: var(--primary-color); color: var(--primary-color); }
         .media-upload-btn:disabled { opacity: 0.6; cursor: wait; }
         .media-upload-status { font-size: 0.72rem; color: var(--text-muted, #64748b); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .media-upload-note {
+            display: block;
+            margin-top: 0.4rem;
+            font-size: 0.7rem;
+            line-height: 1.35;
+            color: var(--text-muted, #64748b);
+            background: var(--bg-secondary, #f1f5f9);
+            border: 1px dashed var(--border-color, #d5dfe8);
+            border-radius: 6px;
+            padding: 0.35rem 0.5rem;
+        }
+        .media-upload-note i { margin-right: 0.25rem; }
         .empty-props {
             color: var(--text-muted, #666); font-size: 0.85rem; text-align: center;
             padding: 1.5rem 0;
@@ -858,6 +870,78 @@
             applySelection();
         });
 
+        // ===== Edición inline (doble clic) =====
+        // Doble clic sobre un elemento con texto abre un editor superpuesto
+        // para modificar el texto directamente en el lienzo, sin ir al panel.
+        function startInlineEdit(target) {
+            const id = target ? target.dataset.id : selectedId;
+            const el = elements.find(e => e.tempId === id);
+            if (!el || (el.type !== 'text' && el.type !== 'rect')) return;
+
+            // Cerrar cualquier editor activo
+            document.querySelector('.inline-text-editor')?.remove();
+
+            selectedId = id;
+            applySelection();
+
+            // Crear el textarea posicionado sobre el elemento
+            const frame = $('canvasFrame');
+            const editor = document.createElement('textarea');
+            editor.className = 'inline-text-editor';
+            editor.value = el.text || '';
+            editor.dataset.id = id;
+            editor.style.left = (el.rect.x_pct || 0) + '%';
+            editor.style.top = (el.rect.y_pct || 0) + '%';
+            editor.style.width = (el.rect.w_pct || 20) + '%';
+            editor.style.height = (el.rect.h_pct || 15) + '%';
+            editor.style.color = el.text_color || '#fff';
+            editor.style.fontSize = (el.text_size_pct || 4) + '%';
+            editor.style.textAlign = el.text_pos_h || 'center';
+            editor.style.padding = '4px';
+            editor.style.boxSizing = 'border-box';
+            editor.style.background = 'rgba(255,255,255,0.92)';
+            editor.style.color = '#111';
+            editor.style.border = '2px solid var(--primary-color, #3a6ea5)';
+            editor.style.borderRadius = '4px';
+            editor.style.fontFamily = 'inherit';
+            editor.style.lineHeight = '1.2';
+            editor.style.zIndex = 9999;
+            frame.appendChild(editor);
+            editor.focus();
+            editor.select();
+
+            let done = false;
+            const commit = () => {
+                if (done) return;
+                done = true;
+                el.text = editor.value;
+                renderCanvas();
+                renderLayers();
+                renderProps();
+            };
+            const cancel = () => {
+                if (done) return;
+                done = true;
+                editor.remove();
+            };
+
+            editor.addEventListener('blur', commit);
+            editor.addEventListener('keydown', (ev) => {
+                if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); editor.blur(); }
+                if (ev.key === 'Escape') { editor.remove(); cancel(); }
+            });
+            // El pointerdown sobre el editor no debe abrir otro select
+            editor.addEventListener('pointerdown', (ev) => ev.stopPropagation());
+        }
+
+        $('canvasFrame').addEventListener('dblclick', (e) => {
+            const ppt = e.target.closest('.ppt-el');
+            if (ppt) {
+                e.preventDefault();
+                startInlineEdit(ppt);
+            }
+        });
+
         // ===== Capas =====
         function renderLayers() {
             const list = $('layerList');
@@ -940,10 +1024,11 @@
                     <div class="tool-group"><label>Imagen de fondo (URL)</label>
                         <input type="text" id="pf-bgimg" value="${esc(el.background_image)}" placeholder="https://...">
                         <div class="media-upload-row">
-                            <input type="file" id="pf-upload" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
+                            <input type="file" id="pf-upload" accept="image/*" hidden>
                             <button type="button" class="media-upload-btn" id="pf-upload-btn"><i class="fas fa-upload"></i> Subir desde equipo</button>
                             <span class="media-upload-status" id="pf-upload-status"></span>
                         </div>
+                        <div class="media-upload-note" id="pf-upload-note"><i class="fas fa-compress-arrows-alt"></i> Se optimizará la imagen (hasta 100 MB); los PNG/GIF con transparencia se convierten a WebP.</div>
                         <div class="img-preview" id="pf-bgprev" style="${el.background_image ? `background-image:url('${esc(el.background_image)}')` : 'display:none;'}"></div>
                     </div>
                     <div class="tool-group"><label>Ajuste de imagen</label>
@@ -1008,42 +1093,80 @@
             bindPropNum('pf-h', el, (v, e) => { e.rect.h_pct = v; renderCanvas(); });
             bindProp('pf-bgimg', el, (v, e) => { e.background_image = v; const p=$('pf-bgprev'); if(v){p.style.backgroundImage=`url('${v}')`;p.style.display='';}else{p.style.display='none';} renderCanvas(); });
             $('pf-upload-btn') && $('pf-upload-btn').addEventListener('click', () => $('pf-upload').click());
-            $('pf-upload') && $('pf-upload').addEventListener('change', async (event) => {
+            $('pf-upload') && $('pf-upload').addEventListener('change', (event) => {
                 const file = event.target.files && event.target.files[0];
+                const input = event.target;
                 if (!file) return;
                 const status = $('pf-upload-status');
                 const button = $('pf-upload-btn');
-                if (file.size > 5 * 1024 * 1024) {
-                    status.textContent = 'Máximo 5 MB';
-                    notify('La imagen supera el tamaño permitido', 'error');
+
+                // Validar que sea una imagen (por tipo MIME del navegador)
+                if (!file.type || !file.type.startsWith('image/')) {
+                    status.textContent = 'Solo se permiten imágenes';
+                    notify('El archivo no es una imagen', 'error');
+                    input.value = '';
                     return;
                 }
-                button.disabled = true;
-                status.textContent = 'Subiendo...';
-                try {
-                    const body = new FormData();
-                    body.append('file', file);
-                    const response = await fetch(`${API_BASE}/digital_boards/upload_media.php`, {
-                        method: 'POST', credentials: 'include', body
-                    });
-                    const result = await response.json();
-                    if (!result.success) throw new Error(result.message || 'No se pudo subir la imagen');
-                    const url = result.data.url;
-                    el.background_image = url;
-                    $('pf-bgimg').value = url;
-                    const preview = $('pf-bgprev');
-                    preview.style.backgroundImage = `url('${url}')`;
-                    preview.style.display = '';
-                    status.textContent = 'Imagen lista';
-                    renderCanvas();
-                    notify('Imagen subida');
-                } catch (error) {
-                    status.textContent = 'No se pudo subir';
-                    notify(error.message || 'No se pudo subir la imagen', 'error');
-                } finally {
-                    button.disabled = false;
-                    event.target.value = '';
+                // Validar tamaño (máx 100MB)
+                if (file.size > 100 * 1024 * 1024) {
+                    status.textContent = 'Máximo 100 MB';
+                    notify('La imagen supera el tamaño permitido (100 MB)', 'error');
+                    input.value = '';
+                    return;
                 }
+
+                button.disabled = true;
+                // Nota de optimización (se reemplaza al terminar)
+                if ($('pf-upload-note')) $('pf-upload-note').style.display = 'none';
+                status.textContent = 'Subiendo y optimizando... 0%';
+
+                // XMLHttpRequest para mostrar progreso real de subida
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', `${API_BASE}/digital_boards/upload_media.php`);
+                xhr.withCredentials = true;
+
+                xhr.upload.onprogress = (e) => {
+                    if (e.lengthComputable) {
+                        const pct = Math.round((e.loaded / e.total) * 100);
+                        status.textContent = `Subiendo y optimizando... ${pct}%`;
+                    }
+                };
+
+                xhr.onload = () => {
+                    let result = null;
+                    try { result = JSON.parse(xhr.responseText); } catch (_) {}
+                    button.disabled = false;
+                    if (xhr.status >= 200 && result && result.success) {
+                        const url = result.data.url;
+                        el.background_image = url;
+                        if ($('pf-bgimg')) $('pf-bgimg').value = url;
+                        const preview = $('pf-bgprev');
+                        if (preview) {
+                            preview.style.backgroundImage = `url('${url}')`;
+                            preview.style.display = '';
+                        }
+                        const saved = result.data.file_size;
+                        const savedMB = (saved / (1024 * 1024)).toFixed(1);
+                        status.textContent = `Lista (${savedMB} MB optimizado)`;
+                        renderCanvas();
+                        notify('Imagen subida y optimizada');
+                    } else {
+                        const msg = (result && result.message) || 'No se pudo subir la imagen';
+                        status.textContent = 'No se pudo subir';
+                        notify(msg, 'error');
+                    }
+                    input.value = '';
+                };
+                xhr.onerror = () => {
+                    button.disabled = false;
+                    status.textContent = 'Error de conexión';
+                    notify('Error de conexión al subir', 'error');
+                    input.value = '';
+                };
+
+                const fd = new FormData();
+                fd.append('file', file);
+                xhr.send(fd);
             });
             $('pf-bgfit') && $('pf-bgfit').addEventListener('change', (ev) => { el.background_fit = ev.target.value; renderCanvas(); });
             bindProp('pf-bgcolor', el, (v, e) => { e.background_color = v; if(!e.background_image) renderCanvas(); });

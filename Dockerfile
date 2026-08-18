@@ -7,13 +7,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libpng-dev \
         libjpeg-dev \
         libfreetype6-dev \
+        libwebp-dev \
         libzip-dev \
         libonig-dev \
         default-mysql-client \
         curl \
         unzip \
         git \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install -j$(nproc) \
         pdo_mysql \
         mysqli \
@@ -43,6 +44,9 @@ RUN a2enmod rewrite
 RUN mkdir -p /opt/tomodachi-assets/products
 COPY public/assets/images/default-logo.png /opt/tomodachi-assets/default-logo.png
 COPY public/assets/images/products/default-product.svg /opt/tomodachi-assets/products/default-product.svg
+
+# Límites PHP (upload 100MB + compresión GD): se aplica como .ini de conf.d
+COPY docker/php.ini /usr/local/etc/php/conf.d/98-tomodachi.ini
 
 # Sesiones persistentes: guardar las sesiones PHP en un directorio propio
 # montado como volumen Docker (sobreviven a rebuilds/recreación del contenedor).

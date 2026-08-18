@@ -407,6 +407,8 @@
         <div class="qr-text">Escanea para ver en tu celular</div>
     </div>
     
+    <!-- QR local (generado en el navegador; no depende de servicios externos) -->
+    <script src="/public/lib/qrcodejs/qrcode.min.js"></script>
     <script>
         const API_BASE = '/api';
         let currentSlide = 0;
@@ -446,7 +448,16 @@
                 document.getElementById('displayContainer').style.display = 'block';
                 
                 renderSlides();
-                showSlide(0);
+                // Precargar las imágenes de fondo de todos los slides para que
+                // ningún elemento aparezca "incompleto" (sin fondo) al mostrarse.
+                // Se fuerza mostrarlas tras un timeout si alguna tarda (nunca
+                // se queda colgado).
+                preloadSlideImages().then(() => {
+                    showSlide(0);
+                }).catch(() => {
+                    showSlide(0);
+                });
+                setTimeout(() => showSlide(0), 6000);
                 
                 if (boardConfig.show_qr == 1) {
                     showQRCode(boardId);
@@ -459,6 +470,35 @@
             }
         }
         
+        // Precarga todas las imágenes de fondo de los slides (y sus elementos)
+        // para que ningún slide aparezca "incompleto" al mostrarse por primera vez.
+        // Resuelve cuando todas las imágenes carguen o fallen; nunca tarda infinito.
+        function preloadSlideImages() {
+            const urls = new Set();
+            slides.forEach(slide => {
+                if (slide.background_image) urls.add(slide.background_image);
+                (slide.elements || []).forEach(el => {
+                    const c = (typeof el.content === 'object') ? el.content : {};
+                    if (c.background_image) urls.add(c.background_image);
+                    if (c.image_url) urls.add(c.image_url);
+                    if (c.url) urls.add(c.url);
+                });
+            });
+
+            if (urls.size === 0) return Promise.resolve();
+
+            const tasks = [];
+            urls.forEach(url => {
+                tasks.push(new Promise((resolve) => {
+                    const img = new Image();
+                    img.onload = () => resolve();
+                    img.onerror = () => resolve(); // no bloquear si una falla
+                    img.src = url;
+                }));
+            });
+            return Promise.all(tasks);
+        }
+
         function renderSlides() {
             const container = document.getElementById('displayContainer');
             
@@ -753,15 +793,30 @@
         
         function showQRCode(boardId) {
             const qrContainer = document.getElementById('qrContainer');
+            const qrEl = document.getElementById('qrCode');
+            if (!qrContainer) return;
             const url = `${window.location.origin}/public/digital-signage-display.html?board=${boardId}`;
             
-            // Generar QR con API pública
-            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(url)}`;
+            // Generar QR LOCAL (qrcodejs) sin depender de servicios externos.
+            // Antes se usaba api.qrserver.com, que fallaba/tardaba de forma
+            // intermitente y dejaba el QR sin mostrar.
+            if (qrEl && typeof QRCode === 'function') {
+                qrEl.innerHTML = '';
+                try {
+                    new QRCode(qrEl, {
+                        text: url,
+                        width: 150,
+                        height: 150,
+                        correctLevel: QRCode.CorrectLevel.M
+                    });
+                } catch (e) {
+                    console.error('No se pudo generar el QR', e);
+                }
+            } else {
+                // Fallback: enlace directo sin imagen QR (nunca deja vacío)
+                qrEl.innerHTML = `<a href="${escapeHtml(url)}" style="color:#fff;font-size:0.9rem;text-decoration:underline;">Ver menú</a>`;
+            }
             
-            qrContainer.innerHTML = `
-                <img src="${qrUrl}" alt="QR Code">
-                <div class="qr-text">Escanea para ver en tu celular</div>
-            `;
             qrContainer.style.display = 'block';
         }
         

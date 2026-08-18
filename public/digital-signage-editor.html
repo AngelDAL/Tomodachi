@@ -117,6 +117,9 @@
         .layer-item.active { background: var(--primary-color); color: #fff; }
         .layer-item i { width: 14px; text-align: center; font-size: 0.75rem; }
         .layer-item .layer-name { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+        .layer-item .layer-grip { color: var(--text-muted, #94a3b8); cursor: grab; width: 12px; flex: 0 0 auto; }
+        .layer-item.layer-dragging { opacity: 0.5; }
+        .layer-item.layer-drag-over { border: 1px dashed var(--primary-color, #3a6ea5); background: var(--bg-secondary, #f0f5fa); }
 
         /* ===== Canvas ===== */
         .editor-canvas-wrap {
@@ -296,6 +299,49 @@
             padding: 0.35rem 0.5rem;
         }
         .media-upload-note i { margin-right: 0.25rem; }
+
+        /* Inputs con arrastre horizontal (tipo Photoshop) */
+        .drag-num {
+            width: 100%;
+            padding: 0.45rem 0.5rem;
+            border: 1px solid var(--border-color, #d5dfe8);
+            border-radius: 6px;
+            background: var(--bg-primary, #fff);
+            color: var(--text-primary, #1c2a3a);
+            font: inherit;
+            font-size: 0.82rem;
+            cursor: ew-resize;
+            text-align: center;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .drag-num:hover, .drag-num:focus {
+            border-color: var(--primary-color, #3a6ea5);
+            outline: none;
+            box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color, #3a6ea5) 22%, transparent);
+        }
+        .drag-num.num-single { text-align: center; }
+        .drag-num-wrap { position: relative; }
+        .drag-num-hint {
+            margin-top: 0.4rem;
+            font-size: 0.7rem;
+            color: var(--text-muted, #64748b);
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        .drag-num-hint i { color: var(--primary-color, #3a6ea5); }
+        body.dragging-num { cursor: ew-resize; user-select: none; }
+
+        /* Inputs de color nativos (color picker) en una sola línea */
+        .tool-group input[type="color"] {
+            width: 100%;
+            height: 36px;
+            padding: 2px;
+            border: 1px solid var(--border-color, #d5dfe8);
+            border-radius: 6px;
+            background: var(--bg-primary, #fff);
+            cursor: pointer;
+        }
         .empty-props {
             color: var(--text-muted, #666); font-size: 0.85rem; text-align: center;
             padding: 1.5rem 0;
@@ -942,18 +988,86 @@
             }
         });
 
-        // ===== Capas =====
+        // ===== Capas (reordenar por arrastre con Pointer Events) =====
+        // Se usa arrastre manual (pointerdown/move/up) en lugar del DnD HTML5
+        // nativo porque funciona en mouse Y touch, y es simulable en pruebas.
+        // La lista se ordena de atrás (primero, z menor) hacia adelante (último).
         function renderLayers() {
             const list = $('layerList');
             const sorted = [...elements].sort((a, b) => a.z_index - b.z_index);
             list.innerHTML = sorted.map(el => `
                 <li class="layer-item ${selectedId === el.tempId ? 'active' : ''}" data-id="${el.tempId}">
+                    <i class="fas fa-grip-vertical layer-grip" title="Arrastra para reordenar"></i>
                     <i class="fas ${elTypeIcon(el.type)}"></i>
                     <span class="layer-name">${esc(el.text.split('\n')[0] || elTypeLabel(el.type))}</span>
                 </li>
             `).join('');
+
             list.querySelectorAll('.layer-item').forEach(li => {
-                li.addEventListener('click', () => { selectedId = li.dataset.id; renderCanvas(); renderProps(); renderLayers(); });
+                li.addEventListener('click', (e) => {
+                    if (e.target.closest('.layer-grip')) return;
+                    selectedId = li.dataset.id; renderCanvas(); renderProps(); renderLayers();
+                });
+            });
+
+            // --- Arrastre manual para reordenar (mouse + touch) ---
+            let drag = { el: null, id: null, startY: 0, over: null };
+
+            const cleanup = () => {
+                list.querySelectorAll('.layer-item').forEach(l => l.classList.remove('layer-drag-over', 'layer-dragging'));
+                drag.el = null; drag.id = null; drag.over = null;
+            };
+
+            const drop = () => {
+                if (!drag.el || !drag.over || drag.over === drag.el) { cleanup(); return; }
+                const order = Array.from(list.querySelectorAll('.layer-item')).map(l => l.dataset.id);
+                const fromIdx = order.indexOf(drag.id);
+                const toIdx = order.indexOf(drag.over.dataset.id);
+                if (fromIdx < 0 || toIdx < 0) { cleanup(); return; }
+                order.splice(fromIdx, 1);
+                order.splice(toIdx, 0, drag.id);
+                elements.forEach(el => {
+                    const newZ = order.indexOf(el.tempId) + 1;
+                    if (newZ > 0) el.z_index = newZ;
+                });
+                selectedId = drag.id;
+                render();
+                notify('Capas reordenadas');
+                cleanup();
+            };
+
+            document.querySelectorAll('#layerList .layer-grip').forEach(grip => {
+                grip.addEventListener('pointerdown', (e) => {
+                    e.preventDefault();
+                    const li = grip.closest('.layer-item');
+                    if (!li) return;
+                    drag.el = li; drag.id = li.dataset.id; drag.startY = e.clientY;
+                    li.classList.add('layer-dragging');
+                    li.setPointerCapture?.(e.pointerId);
+
+                    const onMove = (ev) => {
+                        ev.preventDefault();
+                        // Determinar sobre qué item está el puntero (hit test por Y)
+                        const items = Array.from(list.querySelectorAll('.layer-item'));
+                        let target = null;
+                        for (const it of items) {
+                            const r = it.getBoundingClientRect();
+                            if (ev.clientY >= r.top && ev.clientY <= r.bottom) { target = it; break; }
+                        }
+                        if (target) {
+                            drag.over = target;
+                            items.forEach(it => it.classList.remove('layer-drag-over'));
+                            target.classList.add('layer-drag-over');
+                        }
+                    };
+                    const onUp = () => {
+                        window.removeEventListener('pointermove', onMove);
+                        window.removeEventListener('pointerup', onUp);
+                        drop();
+                    };
+                    window.addEventListener('pointermove', onMove, { passive: false });
+                    window.addEventListener('pointerup', onUp);
+                });
             });
         }
 
@@ -1006,16 +1120,18 @@
                 </div>
             </div>`;
 
-            // Tamaño y posición
+            // Tamaño y posición — inputs con ARRASTRE HORIZONTAL (tipo Photoshop):
+            // arrastra hacia la derecha para aumentar, hacia la izquierda para reducir.
             html += `<div class="prop-section">
                 <div class="tool-row">
-                    <div class="tool-group"><label>X (%)</label><input type="number" id="pf-x" value="${Math.round(el.rect.x_pct)}" min="0" step="0.5"></div>
-                    <div class="tool-group"><label>Y (%)</label><input type="number" id="pf-y" value="${Math.round(el.rect.y_pct)}" min="0" step="0.5"></div>
+                    <div class="tool-group"><label>X (%)</label><input type="text" class="drag-num num-single" id="pf-x" value="${Math.round(el.rect.x_pct)}" data-drag-min="0" data-drag-max="100" data-drag-step="0.5" inputmode="decimal"></div>
+                    <div class="tool-group"><label>Y (%)</label><input type="text" class="drag-num num-single" id="pf-y" value="${Math.round(el.rect.y_pct)}" data-drag-min="0" data-drag-max="100" data-drag-step="0.5" inputmode="decimal"></div>
                 </div>
                 <div class="tool-row">
-                    <div class="tool-group"><label>Ancho (%)</label><input type="number" id="pf-w" value="${Math.round(el.rect.w_pct)}" min="2" step="0.5"></div>
-                    <div class="tool-group"><label>Alto (%)</label><input type="number" id="pf-h" value="${Math.round(el.rect.h_pct)}" min="2" step="0.5"></div>
+                    <div class="tool-group"><label>Ancho (%)</label><input type="text" class="drag-num num-single" id="pf-w" value="${Math.round(el.rect.w_pct)}" data-drag-min="2" data-drag-max="100" data-drag-step="0.5" inputmode="decimal"></div>
+                    <div class="tool-group"><label>Alto (%)</label><input type="text" class="drag-num num-single" id="pf-h" value="${Math.round(el.rect.h_pct)}" data-drag-min="2" data-drag-max="100" data-drag-step="0.5" inputmode="decimal"></div>
                 </div>
+                <div class="drag-num-hint"><i class="fas fa-arrows-alt-h"></i> Arrastra horizontalmente para ajustar</div>
             </div>`;
 
             // Fondo
@@ -1038,9 +1154,7 @@
                             <option value="contain" ${el.background_fit==='contain'?'selected':''}>Contener (contain)</option>
                         </select>
                     </div>
-                    <div class="tool-group"><label>Color de fondo</label>
-                        <input type="text" id="pf-bgcolor" value="${el.background_color}" placeholder="#000000">
-                    </div>
+                    <div class="tool-group"><label>Color de fondo</label><input type="color" id="pf-bgcolor" value="${el.background_color && el.background_color.startsWith('#') ? el.background_color : '#2563eb'}"></div>
                 </div>`;
             }
 
@@ -1051,10 +1165,12 @@
                         <textarea id="pf-text">${esc(el.text)}</textarea>
                     </div>
                     <div class="tool-group"><label>Tamaño de texto (%) <span id="pf-sizeval" style="color:var(--text-muted);">${el.text_size_pct}</span></label>
-                        <input type="range" id="pf-textsize" min="1" max="20" step="0.5" value="${el.text_size_pct}">
+                        <div class="drag-num-wrap">
+                            <input type="text" class="drag-num num-textsize" id="pf-textsize" value="${el.text_size_pct}" data-drag-min="1" data-drag-max="30" data-drag-step="0.5" inputmode="decimal" title="Arrastra para ajustar o escribe el valor">
+                        </div>
                     </div>
                     <div class="tool-row">
-                        <div class="tool-group"><label>Color</label><input type="text" id="pf-textcolor" value="${esc(el.text_color)}" placeholder="#ffffff"></div>
+                        <div class="tool-group"><label>Color</label><input type="color" id="pf-textcolor" value="${el.text_color && el.text_color.startsWith('#') ? el.text_color : '#ffffff'}"></div>
                     </div>
                     <div class="tool-group"><label>Posición del texto</label>
                         <div class="pos-hint">
@@ -1064,8 +1180,8 @@
                         </div>
                     </div>
                     <div class="tool-row">
-                        <div class="tool-group"><label>Offset X</label><input type="number" id="pf-texoffx" value="${el.text_offset_x}"></div>
-                        <div class="tool-group"><label>Offset Y</label><input type="number" id="pf-texoffy" value="${el.text_offset_y}"></div>
+                        <div class="tool-group"><label>Offset X (px)</label><input type="text" class="drag-num" id="pf-texoffx" value="${el.text_offset_x}" data-drag-min="-500" data-drag-max="500" data-drag-step="1" inputmode="decimal"></div>
+                        <div class="tool-group"><label>Offset Y (px)</label><input type="text" class="drag-num" id="pf-texoffy" value="${el.text_offset_y}" data-drag-min="-500" data-drag-max="500" data-drag-step="1" inputmode="decimal"></div>
                     </div>
                 </div>`;
             }
@@ -1209,6 +1325,68 @@
                     renderCanvas();
                     renderProps();
                 });
+            });
+
+            // Activar arrastre horizontal tipo Photoshop sobre los inputs numéricos
+            makeDraggableNums(container);
+        }
+
+        // ===== Inputs con arrastre horizontal (tipo Photoshop) =====
+        // Un input .drag-num se ajusta arrastrando el mouse hacia la derecha
+        // (aumenta) o hacia la izquierda (reduce), además de poder escribirle
+        // directamente un valor. No usa controles de inicio/fin tediosos.
+        function makeDraggableNums(container) {
+            const dragState = { active: null, startX: 0, startVal: 0, input: null };
+
+            function updateValue(input, val) {
+                const min = parseFloat(input.dataset.dragMin);
+                const max = parseFloat(input.dataset.dragMax);
+                let v = val;
+                if (!isNaN(min)) v = Math.max(v, min);
+                if (!isNaN(max)) v = Math.min(v, max);
+                const step = parseFloat(input.dataset.dragStep) || 1;
+                v = Math.round(v / step) * step;
+                // Redondear a 1 decimal para evitar ruido de float
+                v = Math.round(v * 10) / 10;
+                input.value = String(v);
+                // Dispara los binders existentes (bindPropNum escucha 'change')
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+
+            container.querySelectorAll('.drag-num').forEach(input => {
+                input.addEventListener('mousedown', (e) => {
+                    if (e.button !== 0) return;
+                    const cur = parseFloat(input.value);
+                    if (isNaN(cur)) return;
+                    dragState.active = input;
+                    dragState.startX = e.clientX;
+                    dragState.startVal = cur;
+                    e.preventDefault(); // evitar foco/selección de texto al arrastrar
+                    document.body.classList.add('dragging-num');
+                    // Marcamos el input como "en drag" para no disparar el click de selección
+                    input.__dragging = false;
+                });
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!dragState.active) return;
+                const dx = e.clientX - dragState.startX;
+                // 1px de arrastre horizontal ≈ 0.2 de paso (escala sensible)
+                const step = parseFloat(dragState.active.dataset.dragStep) || 1;
+                updateValue(dragState.active, dragState.startVal + dx * step * 0.2);
+                dragState.active.__dragging = true;
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (dragState.active) {
+                    // Si no hubo arrastre (solo click), permitir editar escribiendo
+                    if (!dragState.active.__dragging) {
+                        dragState.active.focus();
+                    }
+                    dragState.active = null;
+                }
+                document.body.classList.remove('dragging-num');
             });
         }
 

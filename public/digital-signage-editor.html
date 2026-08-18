@@ -430,6 +430,7 @@
 
         const urlParams = new URLSearchParams(window.location.search);
         const boardId = urlParams.get('board');
+        const requestedSlideId = parseInt(urlParams.get('slide') || '0', 10);
 
         // Estado
         let board = null;
@@ -501,6 +502,10 @@
                     return;
                 }
                 slides = refresh.data;
+            }
+            if (requestedSlideId) {
+                const index = slides.findIndex(slide => slide.slide_id === requestedSlideId);
+                if (index >= 0) currentSlide = index;
             }
             await loadElements();
         }

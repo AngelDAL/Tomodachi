@@ -520,6 +520,9 @@
                         </div>
                         
                         <div class="ds-board-actions">
+                            <button class="btn-edit" onclick="composeBoard(${board.board_id})">
+                                <i class="fas fa-layer-group"></i> Slides
+                            </button>
                             <button class="btn-edit" onclick="editBoard(${board.board_id})">
                                 <i class="fas fa-paint-brush"></i> Diseñar
                             </button>
@@ -575,6 +578,10 @@
             document.getElementById('boardModal').classList.remove('active');
         }
         
+        function composeBoard(boardId) {
+            window.location.href = `digital-screen-sequence.html?board=${boardId}`;
+        }
+
         function editBoard(boardId) {
             window.location.href = `digital-signage-editor.html?board=${boardId}`;
         }

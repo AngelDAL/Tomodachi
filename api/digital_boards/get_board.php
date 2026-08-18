@@ -44,16 +44,32 @@ try {
         Response::error('Board ya expiró', 403);
     }
     
-    // Obtener slides del board
-    $slides = $db->select(
-        'SELECT slide_id, position, title, grid_cols, grid_rows, 
-                enter_animation, exit_animation, custom_duration, 
-                background_color, background_image
-         FROM board_slides 
-         WHERE board_id = ? 
-         ORDER BY position ASC',
-        [$board_id]
-    );
+    // Si hay asignaciones reutilizables, la pantalla se compone exclusivamente de esa secuencia.
+    // Si no las hay, mantiene compatibilidad con las slides legacy propias del board.
+    $assignmentCount = $db->selectOne('SELECT COUNT(*) AS total FROM digital_board_slide_assignments WHERE board_id = ?', [$board_id]);
+    if ((int)($assignmentCount['total'] ?? 0) > 0) {
+        $slides = $db->select(
+            'SELECT bs.slide_id, a.position, bs.title, bs.grid_cols, bs.grid_rows,
+                    bs.enter_animation, bs.exit_animation,
+                    COALESCE(a.custom_duration, bs.custom_duration) AS custom_duration,
+                    bs.background_color, bs.background_image
+             FROM digital_board_slide_assignments a
+             INNER JOIN board_slides bs ON bs.slide_id = a.source_slide_id
+             WHERE a.board_id = ?
+             ORDER BY a.position ASC, a.assignment_id ASC',
+            [$board_id]
+        );
+    } else {
+        $slides = $db->select(
+            'SELECT slide_id, position, title, grid_cols, grid_rows, 
+                    enter_animation, exit_animation, custom_duration, 
+                    background_color, background_image
+             FROM board_slides 
+             WHERE board_id = ? 
+             ORDER BY position ASC',
+            [$board_id]
+        );
+    }
     
     // Obtener elementos de cada slide
     foreach ($slides as &$slide) {

@@ -194,7 +194,7 @@ h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.10'%3E%3Cpath d='M0 30 30 0 60 30 30 60Z'/%3E%3C/g%3E%3C/svg%3E");
   opacity: .6;
 }
-.modal-overlay.show { display: flex; animation: fadeIn .25s var(--dur) both; }
+.modal-overlay.show { display: flex; animation: fadeIn .18s var(--dur) both; }
 @keyframes fadeIn { from { opacity: 0; } }
 /* Tres tamaños de modal */
 .modal { width: 100%; max-width: 480px; background: var(--bg-card); border-radius: 20px; box-shadow: 0 25px 60px -15px rgba(0,0,0,.4); overflow: hidden; position: relative; }
@@ -757,11 +757,14 @@ function openModal(a){
 
   // 3) Forzar reflow para que el estado inicial quede pintado antes de animar
   void mbox.offsetWidth;
-  anime.set(mbox, Object.assign({ opacity:0 }, start));
+  anime.set(mbox, Object.assign({ opacity: 0 }, start));
 
-  // 4) Animar desde el estado inicial hacia el normal (entrada visible)
-  anime({ targets: mbox, ...endProps, opacity: 1, duration: fx.dur, easing: fx.ease, delay: 10,
-    begin: () => { /* entrada en curso */ } });
+  // 4) SEQUENCIA: esperar a que el fondo se hayan oscurecido (fade .18s)
+  //    y SOLO ENTONCES animar el modal. Así la transformación se lee sobre
+  //    fondo estable y no queda enmascarada por el fade simultáneo.
+  setTimeout(() => {
+    anime({ targets: mbox, ...endProps, opacity: 1, duration: fx.dur, easing: fx.ease });
+  }, 150);
 }
 function closeModal(){
   if (!ov.classList.contains('show')) return;

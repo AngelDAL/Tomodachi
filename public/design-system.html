@@ -51,8 +51,11 @@ h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
 .main-tab.active { background: var(--primary-color); color: #fff; box-shadow: var(--shadow-primary); }
 
 .view-pane { display: none; }
-.view-pane.active { display: block; animation: paneIn .4s var(--dur-soft); }
-@keyframes paneIn { from { opacity: 0; transform: translateY(14px); } }
+.view-pane.active { display: block; animation: paneIn .45s cubic-bezier(.16,1,.3,1); }
+@keyframes paneIn {
+  from { opacity: 0; transform: translateY(22px); filter: blur(2px); }
+  to { opacity: 1; transform: none; filter: blur(0); }
+}
 
 /* ===== Secciones / grid / stage ===== */
 .section { margin-top: 48px; }
@@ -194,19 +197,23 @@ h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
 .modal-body { padding: 18px 24px; }
 .modal-foot { padding: 18px 24px 22px; display: flex; gap: 10px; justify-content: flex-end; }
 
-/* El modal entra con su animación de aparición AL MISMO TIEMPO que el fondo.
-   Se dispara con la clase .enter (no con estilos inline, que romperían CSS). */
-[data-anim="zoom"] .modal.enter { animation: animZoom .32s var(--dur-soft) forwards; }
-[data-anim="slide-up"] .modal.enter { animation: animSlideUp .34s var(--dur-soft) forwards; }
-[data-anim="drop"] .modal.enter { animation: animDrop .34s var(--dur-soft) forwards; }
-[data-anim="flip"] .modal.enter { animation: animFlip .38s var(--dur-soft) forwards; }
-[data-anim="grow"] .modal.enter { animation: animGrow .36s var(--dur-soft) forwards; }
+/* El modal parte OCULTO (opacidad 0 + transform de entrada) y, al activarse,
+   transiciona hacia su estado final con un efecto de entrada real (no "pega").
+   La clase .in dispara la transición; se reinicia quitando/poniendo .show/.in. */
+[data-anim="zoom"] .modal { opacity: 0; transform: scale(.86); transition: transform .32s cubic-bezier(.16,1,.3,1), opacity .32s; }
+[data-anim="zoom"] .modal.in { opacity: 1; transform: none; }
 
-@keyframes animZoom { from { opacity: 0; transform: scale(.9); } to { opacity: 1; transform: none; } }
-@keyframes animSlideUp { from { opacity: 0; transform: translateY(46px); } to { opacity: 1; transform: none; } }
-@keyframes animDrop { from { opacity: 0; transform: translateY(-40px) scale(.96); } to { opacity: 1; transform: none; } }
-@keyframes animFlip { from { opacity: 0; transform: perspective(1000px) rotateX(-12deg); } to { opacity: 1; transform: perspective(1000px) rotateX(0); } }
-@keyframes animGrow { from { opacity: 0; transform: scale(.72); } to { opacity: 1; transform: scale(1); } }
+[data-anim="slide-up"] .modal { opacity: 0; transform: translateY(56px); transition: transform .36s cubic-bezier(.16,1,.3,1), opacity .36s; }
+[data-anim="slide-up"] .modal.in { opacity: 1; transform: none; }
+
+[data-anim="drop"] .modal { opacity: 0; transform: translateY(-46px) scale(.95); transition: transform .38s cubic-bezier(.16,1,.3,1), opacity .34s; }
+[data-anim="drop"] .modal.in { opacity: 1; transform: none; }
+
+[data-anim="flip"] .modal { opacity: 0; transform: perspective(1000px) rotateX(-12deg); transition: transform .42s cubic-bezier(.16,1,.3,1), opacity .36s; }
+[data-anim="flip"] .modal.in { opacity: 1; transform: perspective(1000px) rotateX(0); }
+
+[data-anim="grow"] .modal { opacity: 0; transform: scale(.72); transition: transform .38s cubic-bezier(.16,1,.3,1), opacity .34s; }
+[data-anim="grow"] .modal.in { opacity: 1; transform: scale(1); }
 
 /* ===== DRAWER — con rebote orgánico y más ancho ===== */
 .drawer-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,.5); display: flex; justify-content: flex-end; opacity: 0; visibility: hidden; transition: opacity .3s, visibility .3s; }
@@ -250,6 +257,40 @@ h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
 .anim-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
 .anim-row .btn { padding: 10px 18px; font-size: .82rem; }
 .demo-zone { background: var(--bg-light); border: 1px dashed var(--border-color); border-radius: 16px; padding: 22px; margin-top: 8px; }
+
+/* ===== ANIMACIONES DE CONTENIDO Y DATOS ===== */
+/* Contador / odómetro */
+.odometer { font-family: var(--font-heading); font-size: 3rem; font-weight: 800; line-height: 1; color: var(--primary-color); font-variant-numeric: tabular-nums; display: inline-block; }
+.total-label { color: var(--text-muted); font-size: .8rem; margin-top: 4px; }
+.ds-hud { display: inline-flex; flex-direction: column; align-items: center; gap: 6px; padding: 22px 30px; background: var(--bg-card); border: 1px solid var(--border-lighter); border-radius: 18px; box-shadow: var(--shadow-sm); }
+
+/* Número que crece (pulse) al sumar al carrito */
+.cart-total { display: inline-flex; align-items: center; gap: 12px; }
+.cart-total.bump .val { animation: bump .4s cubic-bezier(.34,1.56,.64,1); }
+@keyframes bump { 0%{transform:scale(1)} 40%{transform:scale(1.22)} 100%{transform:scale(1)} }
+.cart-amount { font-family: var(--font-heading); font-size: 2rem; font-weight: 700; color: var(--text-color); font-variant-numeric: tabular-nums; }
+
+/* Entrada de texto (palabras escalonadas) */
+.word-in { display: inline-block; transform: translateY(24px); opacity: 0; }
+.word-in.run { animation: wordUp .5s cubic-bezier(.16,1,.3,1) forwards; }
+@keyframes wordUp { to { transform: none; opacity: 1; } }
+
+/* Elementos internos de tarjeta escalonados */
+.card-in { opacity: 0; transform: translateY(16px); }
+.card-in.run { animation: cardIn .5s cubic-bezier(.16,1,.3,1) forwards; }
+@keyframes cardIn { to { opacity: 1; transform: none; } }
+
+/* Carrusel */
+.carousel { position: relative; overflow: hidden; border-radius: 16px; }
+.carousel-track { display: flex; transition: transform .5s cubic-bezier(.22,1,.36,1); }
+.carousel-slide { flex: 0 0 100%; min-height: 150px; display: grid; place-content: center; color: #fff; font-family: var(--font-heading); font-size: 1.5rem; font-weight: 700; text-align: center; padding: 20px; }
+.carousel-nav { display: flex; gap: 8px; justify-content: center; margin-top: 14px; }
+.carousel-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--border-color); border: none; cursor: pointer; transition: all .3s; }
+.carousel-dot.active { width: 26px; border-radius: 100px; background: var(--primary-color); }
+.carousel-arrow { position: absolute; top: 50%; transform: translateY(-50%); width: 38px; height: 38px; border-radius: 50%; border: none; background: rgba(255,255,255,.25); color: #fff; cursor: pointer; display: grid; place-content: center; backdrop-filter: blur(4px); transition: background .2s; z-index: 2; }
+.carousel-arrow:hover { background: rgba(255,255,255,.45); }
+.carousel-arrow.prev { left: 12px; }
+.carousel-arrow.next { right: 12px; }
 
 @media (max-width: 700px) { .grid { grid-template-columns: 1fr 1fr; } .anime-grid { grid-template-columns: repeat(4,1fr); } .anime-cards { grid-template-columns: repeat(2,1fr); } .hero { padding: 44px 16px 34px; } }
 </style>
@@ -488,6 +529,56 @@ h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
       <div class="demo-zone" id="cardsZone"><div class="anime-cards" id="cardsDemo"></div></div>
     </div>
   </section>
+
+  <section class="section">
+    <div class="section-head"><h2><i class="fas fa-chart-simple"></i> Animaciones de contenido y datos</h2><p>Números que se llenan, totales que crecen, entrada de texto, elementos internos de tarjeta y carruseles.</p></div>
+
+    <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr))">
+      <div class="stage">
+        <div class="cap"><span>Contador / odómetro</span></div>
+        <div class="body">
+          <div class="ds-hud"><span class="odometer" id="odo">$0</span><span class="total-label">Total vendido hoy</span></div>
+          <button class="btn btn-soft" id="odoGo"><i class="fas fa-play"></i> Animar</button>
+        </div>
+      </div>
+
+      <div class="stage">
+        <div class="cap"><span>Total que crece (carrito)</span></div>
+        <div class="body">
+          <div class="cart-total" id="cartTotal"><i class="fas fa-cart-shopping" style="color:var(--primary-color);font-size:1.4rem"></i><span class="cart-amount val" id="cartAmount">$0</span></div>
+          <div class="anim-row" style="margin-top:8px">
+            <button class="btn btn-soft btn-sm" id="cartAdd"><i class="fas fa-plus"></i> Agregar $25</button>
+            <button class="btn btn-soft btn-sm" id="cartReset"><i class="fas fa-rotate-left"></i> Reiniciar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="stage">
+        <div class="cap"><span>Entrada de texto</span></div>
+        <div class="body">
+          <h3 id="wordAnim" style="font-size:1.3rem;font-weight:700;line-height:1.4">Actualizado</h3>
+          <button class="btn btn-soft" id="wordGo"><i class="fas fa-play"></i> Animar texto</button>
+        </div>
+      </div>
+
+      <div class="stage" style="grid-column:1 / -1">
+        <div class="cap"><span>Carrusel</span></div>
+        <div class="body">
+          <div class="carousel" id="carousel">
+            <div class="carousel-track" id="carTrack">
+              <div class="carousel-slide" style="background:linear-gradient(135deg,var(--primary-color),var(--primary-dark))">Ofertas del día</div>
+              <div class="carousel-slide" style="background:linear-gradient(135deg,var(--secondary-color),var(--secondary-dark))">Nuevos productos</div>
+              <div class="carousel-slide" style="background:linear-gradient(135deg,var(--success-color),var(--success-dark))">Despacho ahora</div>
+              <div class="carousel-slide" style="background:linear-gradient(135deg,var(--warning-color),var(--warning-dark))">Promociones</div>
+            </div>
+            <button class="carousel-arrow prev" id="carPrev"><i class="fas fa-chevron-left"></i></button>
+            <button class="carousel-arrow next" id="carNext"><i class="fas fa-chevron-right"></i></button>
+          </div>
+          <div class="carousel-nav" id="carDots"></div>
+        </div>
+      </div>
+    </div>
+  </section>
 </div>
 
 </main>
@@ -597,14 +688,15 @@ const animName = document.getElementById('modalAnimName');
 const anims = { zoom:'Zoom', 'slide-up':'Slide up', drop:'Drop', flip:'Flip', grow:'Grow' };
 function openModal(a) {
   ov.dataset.anim = a; animName.textContent = anims[a] || a;
-  // relanzar la animación: quitar .enter -> reflow -> añadir (evita estilos inline rotos)
-  mbox.classList.remove('enter'); void mbox.offsetWidth;
+  // reinicio: quitar .show/.in, reflow, luego mostrar y disparar .in
+  ov.classList.remove('show'); mbox.classList.remove('in');
+  void ov.offsetWidth;
   ov.classList.add('show');
-  requestAnimationFrame(() => mbox.classList.add('enter'));
+  requestAnimationFrame(() => mbox.classList.add('in'));
 }
 function closeModal(){
-  ov.classList.remove('show');
-  mbox.classList.remove('enter');
+  mbox.classList.remove('in');
+  setTimeout(()=>ov.classList.remove('show'), 240);
 }
 document.querySelectorAll('[data-modal-open]').forEach(b=>b.addEventListener('click',()=>openModal(b.dataset.modalOpen)));
 document.getElementById('modalClose').addEventListener('click', closeModal);
@@ -711,6 +803,61 @@ function runCards(anim) {
 document.querySelectorAll('[data-grid]').forEach(b=>b.addEventListener('click',()=>{ buildGrid(); runGrid(b.dataset.grid); }));
 document.querySelectorAll('[data-table]').forEach(b=>b.addEventListener('click',()=>{ buildTable(); runTable(b.dataset.table); }));
 document.querySelectorAll('[data-cards]').forEach(b=>b.addEventListener('click',()=>{ buildCards(); runCards(b.dataset.cards); }));
+
+/* ===== Contador / odómetro ===== */
+const odoEl = document.getElementById('odo');
+document.getElementById('odoGo').addEventListener('click', ()=>{
+  odoEl.textContent = '$0';
+  anime({ targets: {v:0}, v:1240, round:1, duration:1200, easing:'easeOutCubic',
+    update: a => { odoEl.textContent = '$' + Math.round(a.animations[0].currentValue).toLocaleString('es-MX'); } });
+});
+
+/* ===== Total que crece (carrito) ===== */
+const cartBox = document.getElementById('cartTotal');
+const cartAmount = document.getElementById('cartAmount');
+let cartVal = 0;
+function fmtCart(v){ return '$' + v.toLocaleString('es-MX'); }
+document.getElementById('cartAdd').addEventListener('click', ()=>{
+  cartVal += 25;
+  cartAmount.textContent = fmtCart(cartVal);
+  cartBox.classList.remove('bump'); void cartBox.offsetWidth; cartBox.classList.add('bump');
+});
+document.getElementById('cartReset').addEventListener('click', ()=>{
+  cartVal = 0; cartAmount.textContent = '$0';
+  cartBox.classList.remove('bump');
+});
+
+/* ===== Entrada de texto (palabras escalonadas) ===== */
+const wordH = document.getElementById('wordAnim');
+const wordMsgs = ['Actualizado', '¡Venta registrada!', 'Total: $1,240', 'Listo para entregar'];
+let wi = 0;
+function wordRun(){
+  wi = (wi+1) % wordMsgs.length;
+  const t = wordMsgs[wi]; t.split(' ').length;
+  wordH.innerHTML = '';
+  const words = t.split(' ');
+  words.forEach((w, i) => { const s = document.createElement('span'); s.className='word-in'; s.style.marginRight='8px'; s.textContent=w; wordH.appendChild(s); });
+  const spans = wordH.querySelectorAll('.word-in');
+  anime({ targets: spans, opacity:[0,1], translateY:[26,0], delay: anime.stagger(90), duration:500, easing:'easeOutCubic' });
+}
+document.getElementById('wordGo').addEventListener('click', wordRun);
+wordRun();
+
+/* ===== Carrusel ===== */
+const track = document.getElementById('carTrack');
+const slides = track.children.length;
+const dotsHost = document.getElementById('carDots');
+let cur = 0;
+for (let i=0;i<slides;i++){ const d=document.createElement('button'); d.className='carousel-dot'+(i===0?' active':''); d.addEventListener('click',()=>goTo(i)); dotsHost.appendChild(d); }
+const dots = dotsHost.querySelectorAll('.carousel-dot');
+function goTo(i){
+  cur = (i + slides) % slides;
+  track.style.transform = `translateX(-${cur*100}%)`;
+  dots.forEach((d,k)=>d.classList.toggle('active', k===cur));
+}
+document.getElementById('carNext').addEventListener('click', ()=>goTo(cur+1));
+document.getElementById('carPrev').addEventListener('click', ()=>goTo(cur-1));
+setInterval(()=>goTo(cur+1), 3500);
 
 /* animar al entrar a la pestaña de animaciones */
 new MutationObserver(()=>{}).observe ? 0 : 0;

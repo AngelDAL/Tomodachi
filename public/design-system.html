@@ -3,412 +3,631 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tomodachi — Catálogo de Estilos (Producción)</title>
-
-<!-- ============================================================
-  CSS REALES DE PRODUCCIÓN de Tomodachi.
-  Este catálogo CARGA los mismos .css que sirven las páginas reales
-  (main.css + variables.css + inventory.css + promotions.css + sales.css)
-  y modela los componentes con LAS MISMAS CLASES que ya existen.
-  Así lo que ves aquí es EXACTAMENTE lo que hay en producción;
-  el objetivo es catalogarlo y luego unificarlo.
-  ============================================================ -->
+<title>Tomodachi — Perfil de Estilos</title>
 <link rel="stylesheet" href="css/variables.css">
-<link rel="stylesheet" href="css/main.css?v=4">
-<link rel="stylesheet" href="css/inventory.css?v=4">
-<link rel="stylesheet" href="css/promotions.css?v=4">
-<link rel="stylesheet" href="css/sales.css?v=4">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-
-<!-- ============================================================
-  CSS SOLO PARA LA ORGANIZACIÓN DE ESTA PÁGINA (layout del catálogo).
-  No redefine componentes: usa las clases reales de producción.
-  ============================================================ -->
+<!-- Tipografías: Sora (encabezados) + Inter (contenido) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-.cat-wrap { max-width: 1200px; margin: 0 auto; padding: 40px 24px 140px; }
-.cat-hero { text-align: center; padding: 48px 20px 24px; border-bottom: 1px solid var(--border-lighter); }
-.cat-hero h1 { font-size: 2.2rem; font-weight: 800; margin: 12px 0 8px; }
-.cat-hero h1 span { color: var(--primary-color); }
-.cat-hero p { max-width: 680px; margin: 0 auto; color: var(--text-medium); }
-.cat-hero .badge { font-size: .75rem; }
-.theme-toggle { margin: 20px auto 0; display: inline-flex; gap: 6px; padding: 4px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 20px; }
-.theme-toggle .seg { padding: 8px 18px; border-radius: 20px; transition: all .2s; }
-.theme-toggle .seg.active { background: var(--primary-color); color: #fff; }
+/* ============================================================
+   PERFIL DE ESTILOS — Tomodachi
+   Tipografías, botones cápsula, separador diagonal, selector
+   animado, inputs refinados, toggles, tabs, badges y cards.
+   Solo elementos visuales; sin estructura de código.
+   ============================================================ */
 
-.cat-nav { position: sticky; top: 0; z-index: 50; display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; padding: 10px 12px; background: rgba(255,255,255,.92); backdrop-filter: blur(8px); border-bottom: 1px solid var(--border-lighter); }
-[data-theme="dark"] .cat-nav { background: rgba(18,18,18,.9); }
-.cat-nav a { text-decoration: none; color: var(--text-medium); font-size: .82rem; font-weight: 600; padding: 7px 13px; border-radius: 8px; transition: all .2s; }
-.cat-nav a:hover, .cat-nav a.active { color: var(--primary-color); background: var(--primary-light); }
+:root {
+  --font-heading: 'Sora', 'Inter', sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --dur: .28s cubic-bezier(.4, 0, .2, 1);
+  --dur-spring: .38s cubic-bezier(.34, 1.56, .64, 1);
+  --dur-soft: .5s cubic-bezier(.16, 1, .3, 1);
+}
 
-.cat-section { margin-top: 56px; }
-.cat-section > h2 { font-size: 1.4rem; font-weight: 700; display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
-.cat-section > h2 i { color: var(--primary-color); }
-.cat-section > .sub { color: var(--text-muted); font-size: .9rem; margin-bottom: 20px; }
-.cat-section > .sub code { background: var(--bg-light); padding: 2px 6px; border-radius: 4px; font-size: .8rem; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font-body);
+  background: var(--bg-body);
+  color: var(--text-color);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+h1, h2, h3, h4 { font-family: var(--font-heading); line-height: 1.2; }
 
-.cat-row { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; margin-bottom: 18px; }
-.cat-block { flex: 1; min-width: 260px; background: var(--bg-card); border: 1px solid var(--border-lighter); border-radius: 12px; padding: 18px; box-shadow: var(--shadow-sm); }
-.cat-block h4 { font-size: .78rem; text-transform: uppercase; letter-spacing: .03em; color: var(--text-muted); margin-bottom: 14px; }
-.cat-demo { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
-.cat-demo.column { flex-direction: column; align-items: stretch; }
-.code-note { font-size: .76rem; color: var(--text-muted); background: var(--bg-light); border-left: 3px solid var(--primary-color); border-radius: 6px; padding: 8px 12px; margin-top: 14px; font-family: ui-monospace,Menlo,monospace; }
-.obs { scroll-margin-top: 80px; }
-.demo-fill { padding: 16px; border: 1px dashed var(--border-color); border-radius: 8px; color: var(--text-muted); font-size: .85rem; text-align: center; background: var(--bg-lightest); }
+.page-wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px 160px; }
+
+/* ---------- Hero ---------- */
+.hero {
+  padding: 72px 24px 52px; text-align: center; position: relative; overflow: hidden;
+  border-bottom: 1px solid var(--border-lighter);
+  background:
+    radial-gradient(1100px 380px at 50% -10%, color-mix(in srgb, var(--primary-color) 18%, transparent), transparent 60%),
+    var(--bg-body);
+}
+.hero .eyebrow {
+  display: inline-block; padding: 5px 14px; border-radius: 100px;
+  font-family: var(--font-heading); font-size: .72rem; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--primary-color); background: var(--primary-light); border: 1px solid color-mix(in srgb, var(--primary-color) 25%, transparent);
+}
+.hero h1 { font-size: clamp(2.1rem, 5vw, 3.4rem); font-weight: 800; letter-spacing: -.02em; margin: 16px 0 10px; }
+.hero h1 span { color: var(--primary-color); }
+.hero p { max-width: 660px; margin: 0 auto; color: var(--text-medium); font-size: 1.04rem; }
+.theme-toggle { margin: 22px auto 0; display: inline-flex; gap: 4px; padding: 4px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 100px; box-shadow: var(--shadow-sm); }
+.theme-toggle .seg { padding: 8px 20px; border-radius: 100px; color: var(--text-muted); transition: all var(--dur-spring); }
+.theme-toggle .seg.active { background: var(--primary-color); color: #fff; box-shadow: var(--shadow-primary); }
+
+/* ---------- Nav ---------- */
+.page-nav { position: sticky; top: 0; z-index: 60; display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; padding: 12px; background: color-mix(in srgb, var(--bg-body) 86%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--border-lighter); }
+.page-nav a { font-family: var(--font-heading); text-decoration: none; color: var(--text-medium); font-size: .82rem; font-weight: 600; padding: 8px 14px; border-radius: 100px; transition: all var(--dur); }
+.page-nav a:hover, .page-nav a.active { color: var(--primary-color); background: var(--primary-light); }
+
+/* ---------- Secciones ---------- */
+.section { margin-top: 60px; }
+.section-head { margin-bottom: 22px; }
+.section-head h2 { font-size: 1.45rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+.section-head h2 i { color: var(--primary-color); }
+.section-head p { color: var(--text-muted); font-size: .92rem; max-width: 760px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 18px; }
+.stage { position: relative; background: var(--bg-card); border: 1px solid var(--border-lighter); border-radius: 18px; padding: 22px; box-shadow: var(--shadow-sm); overflow: hidden; }
+.stage .cap { width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.stage .cap span { font-family: var(--font-heading); font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); }
+.stage .cap i { color: var(--text-muted); }
+.stage .body { display: flex; flex-direction: column; gap: 14px; }
+
+.obs { scroll-margin-top: 84px; }
+
+/* ============================================================
+   SEPARADOR DIAGONAL — entre botones de un grupo
+   ============================================================ */
+.segment {
+  display: inline-flex; align-items: center; gap: 0;
+  background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 100px;
+  padding: 5px; box-shadow: var(--shadow-sm);
+}
+/* cada control es una cápsula; el separador diagonal va entre ellos */
+.segment .cap-btn {
+  font-family: var(--font-heading); font-size: .82rem; font-weight: 600;
+  color: var(--text-medium); background: transparent; border: none; cursor: pointer;
+  padding: 9px 16px; border-radius: 100px; white-space: nowrap;
+  transition: all var(--dur);
+  position: relative; z-index: 1;
+}
+.segment .cap-btn:hover { color: var(--primary-color); }
+.segment .cap-btn.active { background: var(--primary-color); color: #fff; box-shadow: var(--shadow-primary); }
+/* separador diagonal "/" sutil entre controles */
+.segment .vslash {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 10px; color: var(--border-color); font-size: .95rem; user-select: none;
+}
+.segment .vslash::before { content: "\002F"; font-weight: 300; transform: rotate(-8deg); display: inline-block; }
+.segment .cap-btn.active + .vslash { color: var(--border-color); }
+
+/* ============================================================
+   BOTONES — forma cápsula
+   ============================================================ */
+.btn {
+  position: relative; overflow: hidden; font-family: var(--font-heading);
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  font-size: .9rem; font-weight: 600; padding: 12px 26px; border-radius: 100px;
+  border: 1.5px solid transparent; cursor: pointer; text-decoration: none; white-space: nowrap;
+  transform: translateZ(0); -webkit-tap-highlight-color: transparent;
+  transition: transform var(--dur), box-shadow var(--dur-spring), background var(--dur), color var(--dur), border-color var(--dur);
+}
+.btn:active { transform: scale(.95); }
+.btn i { font-size: .95em; }
+
+.btn-solid { background: var(--primary-color); color: #fff; box-shadow: var(--shadow-primary); }
+.btn-solid:hover { background: var(--primary-hover); box-shadow: var(--elevation-3, var(--shadow-lg)); }
+.btn-dark { background: var(--secondary-color); color: var(--secondary-contrast); }
+.btn-outline { background: transparent; color: var(--primary-color); border-color: var(--primary-color); }
+.btn-outline:hover { background: var(--primary-light); }
+.btn-soft { background: var(--primary-light); color: var(--primary-dark); }
+.btn-soft:hover { background: color-mix(in srgb, var(--primary-light) 80%, var(--primary-color)); }
+.btn-ghost { background: transparent; color: var(--text-medium); }
+.btn-ghost:hover { background: var(--bg-hover); color: var(--text-color); }
+.btn-danger-soft { background: color-mix(in srgb, var(--danger-color) 12%, transparent); color: var(--danger-dark); }
+.btn-danger-soft:hover { background: color-mix(in srgb, var(--danger-color) 20%, transparent); }
+.btn-success-soft { background: color-mix(in srgb, var(--success-color) 12%, transparent); color: var(--success-dark); }
+
+.btn-icon { padding: 12px; width: 46px; height: 46px; }
+.btn-lg { padding: 15px 34px; font-size: 1.02rem; }
+.btn-sm { padding: 9px 18px; font-size: .8rem; }
+.btn-block { width: 100%; }
+
+/* brillo deslizante */
+.btn .shine { position: absolute; top: 0; left: -70%; width: 55%; height: 100%; background: linear-gradient(110deg, transparent, rgba(255,255,255,.4), transparent); transform: skewX(-20deg); opacity: 0; transition: left .55s var(--dur-soft), opacity .3s; }
+.btn:hover .shine { left: 130%; opacity: 1; }
+.btn .ripple { position: absolute; border-radius: 50%; transform: scale(0); pointer-events: none; background: rgba(255,255,255,.4); animation: rip .4s var(--duration, .4s) cubic-bezier(.4,0,.2,1) forwards; }
+[data-theme="dark"] .btn .ripple { background: rgba(255,255,255,.16); }
+@keyframes rip { to { transform: scale(3.2); opacity: 0; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+.btn.loading { pointer-events: none; opacity: .72; }
+.btn.loading i { animation: spin 1s linear infinite; }
+
+/* ============================================================
+   SELECTOR — redondeado y suave, opciones aparecen una a una
+   ============================================================ */
+.ds-select { position: relative; width: 100%; }
+.ds-select .trigger {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  font-family: var(--font-heading); font-size: .9rem; font-weight: 500; color: var(--text-color);
+  background: var(--bg-input); border: 1.5px solid var(--border-color); border-radius: 14px;
+  padding: 13px 16px; cursor: pointer; text-align: left;
+  transition: all var(--dur);
+}
+.ds-select .trigger:hover { border-color: color-mix(in srgb, var(--primary-color) 45%, var(--border-color)); }
+.ds-select.open .trigger { border-color: var(--primary-color); box-shadow: var(--primary-focus-ring); }
+.ds-select .trigger .arrow { color: var(--text-muted); transition: transform var(--dur-spring); }
+.ds-select.open .trigger .arrow { transform: rotate(180deg); }
+.ds-select .menu {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 30;
+  background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px;
+  box-shadow: var(--shadow-lg); padding: 6px; overflow: hidden;
+  opacity: 0; transform: translateY(-8px) scale(.98); pointer-events: none;
+  transition: opacity var(--dur), transform var(--dur-spring);
+}
+.ds-select.open .menu { opacity: 1; transform: none; pointer-events: auto; }
+.ds-select .opt {
+  display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-radius: 11px;
+  font-size: .9rem; color: var(--text-medium); cursor: pointer;
+  opacity: 0; transform: translateY(-6px);
+  transition: background var(--dur-soft), color var(--dur), opacity .3s var(--dur-spring), transform .3s var(--dur-spring);
+}
+.ds-select.open .opt { opacity: 1; transform: none; }
+.ds-select .opt:hover { background: var(--bg-hover); color: var(--text-color); }
+.ds-select .opt.selected { background: var(--primary-light); color: var(--primary-dark); font-weight: 600; }
+.ds-select .opt .d { margin-left: auto; color: var(--text-muted); font-size: .8rem; }
+
+/* ============================================================
+   INPUTS — refinados
+   ============================================================ */
+.field { display: flex; flex-direction: column; gap: 7px; width: 100%; }
+.field .flabel { font-family: var(--font-heading); font-size: .8rem; font-weight: 600; color: var(--text-medium); }
+.ds-input {
+  width: 100%; font-family: var(--font-body); font-size: .95rem; color: var(--text-color);
+  background: var(--bg-input); border: 1.5px solid var(--border-color); border-radius: 14px;
+  padding: 13px 15px; transition: all var(--dur);
+}
+.ds-input::placeholder { color: var(--text-muted); font-weight: 400; }
+.ds-input:hover { border-color: color-mix(in srgb, var(--primary-color) 40%, var(--border-color)); }
+.ds-input:focus { outline: none; border-color: var(--primary-color); box-shadow: var(--primary-focus-ring); }
+.input-wrap { position: relative; width: 100%; display: flex; align-items: center; }
+.input-wrap > i { position: absolute; left: 14px; color: var(--text-muted); font-size: .9rem; pointer-events: none; }
+.input-wrap .ds-input.with-icon { padding-left: 42px; }
+
+/* ============================================================
+   TOGGLE — pill funcional
+   ============================================================ */
+.toggle-group { display: inline-flex; gap: 5px; background: var(--bg-light); padding: 5px; border-radius: 100px; border: 1px solid var(--border-lighter); }
+.toggle-opt {
+  display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-heading);
+  font-size: .84rem; font-weight: 600; color: var(--text-medium); cursor: pointer;
+  padding: 10px 18px; border-radius: 100px; border: none; background: transparent;
+  transition: all var(--dur-spring);
+}
+.toggle-opt:hover { color: var(--text-color); }
+.toggle-opt.active { background: var(--bg-card); color: var(--primary-color); box-shadow: var(--shadow-md); }
+
+/* switch */
+.switch { position: relative; display: inline-flex; align-items: center; gap: 12px; font-family: var(--font-heading); font-size: .88rem; font-weight: 500; cursor: pointer; }
+.switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+.switch .track { width: 52px; height: 30px; border-radius: 100px; background: var(--border-color); position: relative; transition: background var(--dur); flex-shrink: 0; }
+.switch .track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: var(--shadow-sm); transition: transform var(--dur-spring); }
+.switch input:checked + .track { background: var(--primary-color); }
+.switch input:checked + .track::after { transform: translateX(22px); }
+
+/* ============================================================
+   TABS — animación de entrada y de cambio de foco
+   ============================================================ */
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.tab {
+  position: relative; font-family: var(--font-heading); font-size: .88rem; font-weight: 600;
+  color: var(--text-medium); background: transparent; border: none; cursor: pointer;
+  padding: 11px 20px; border-radius: 100px; transition: all var(--dur);
+  opacity: 0; transform: translateY(10px); animation: tabIn .45s var(--dur-spring) forwards;
+}
+@keyframes tabIn { to { opacity: 1; transform: none; } }
+.tab:hover { color: var(--primary-color); background: var(--primary-light); }
+.tab::after { content: ""; position: absolute; left: 50%; bottom: -3px; height: 3px; width: 0; background: var(--primary-color); border-radius: 3px; transform: translateX(-50%); transition: width var(--dur-spring), left var(--dur-spring); }
+.tab.active { color: var(--primary-color); }
+.tab.active::after { width: 60%; }
+/* panel con animación de entrada */
+.tab-panel { display: none; animation: panelIn .45s var(--dur-soft); }
+.tab-panel.active { display: block; }
+@keyframes panelIn { from { opacity: 0; transform: translateY(12px); } }
+
+/* ============================================================
+   BADGES — borde llamativo con colores primarios
+   ============================================================ */
+.badge-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.badge {
+  display: inline-flex; align-items: center; gap: 7px; font-family: var(--font-heading);
+  font-size: .78rem; font-weight: 600; padding: 7px 14px; border-radius: 100px;
+  border: 1.5px solid; transition: transform var(--dur-spring), box-shadow var(--dur);
+}
+.badge i { font-size: .85em; }
+.badge-primary { color: var(--primary-dark); background: var(--primary-light); border-color: color-mix(in srgb, var(--primary-color) 45%, transparent); }
+.badge-primary .dot { color: var(--primary-color); }
+.badge-outline { color: var(--primary-color); background: transparent; border-color: var(--primary-color); }
+.badge-success { color: var(--success-dark); background: color-mix(in srgb, var(--success-color) 14%, transparent); border-color: color-mix(in srgb, var(--success-color) 55%, transparent); }
+.badge-warning { color: var(--warning-dark); background: color-mix(in srgb, var(--warning-color) 16%, transparent); border-color: color-mix(in srgb, var(--warning-color) 55%, transparent); }
+.badge-danger { color: var(--danger-dark); background: color-mix(in srgb, var(--danger-color) 12%, transparent); border-color: color-mix(in srgb, var(--danger-color) 50%, transparent); }
+.badge:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+
+/* ============================================================
+   CARDS — sombra ligera, esquinas, encabezado más claro
+   ============================================================ */
+.card {
+  background: var(--bg-card); border: 1px solid var(--border-lighter); border-radius: 20px;
+  box-shadow: 0 10px 30px -12px color-mix(in srgb, var(--text-color) 18%, transparent);
+  overflow: hidden; transition: transform var(--dur-soft), box-shadow var(--dur-soft);
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 18px 40px -14px color-mix(in srgb, var(--text-color) 26%, transparent); }
+.card .cb-order { padding: 20px 0 0 0; border-top: 1px solid var(--border-color); margin-top: 20px; display: flex; justify-content: space-between; align-items: center; }
+.card-head { padding: 20px 24px; background: var(--bg-lightest); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.card-head h4 { font-size: 1.02rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+.card-head h4 i { color: var(--primary-color); }
+.card-head .hint { color: var(--text-muted); font-size: .78rem; }
+.card-body-x { padding: 20px 24px; }
+.card-body-x .kpis { display: flex; gap: 14px; flex-wrap: wrap; }
+.kpi { flex: 1; min-width: 90px; }
+.kpi .v { font-family: var(--font-heading); font-size: 1.5rem; font-weight: 700; color: var(--text-color); }
+.kpi .v.small { font-size: 1.1rem; }
+.kpi .l { font-size: .76rem; color: var(--text-muted); }
+.accent-strip { height: 4px; background: linear-gradient(90deg, var(--primary-color), var(--secondary-color)); }
+
+/* reveal on scroll */
+.reveal { opacity: 0; transform: translateY(26px); transition: opacity .6s var(--dur-soft), transform .6s var(--dur-soft); }
+.reveal.visible { opacity: 1; transform: none; }
+
+@media (max-width: 640px) { .grid { grid-template-columns: 1fr 1fr; } .hero { padding: 48px 18px 38px; } }
 </style>
 </head>
 <body>
 
-<div class="cat-hero">
-  <span class="badge" style="background:var(--primary-color)">Tomodachi · Catálogo de Estilos</span>
-  <h1>Estilos reales de <span>producción</span></h1>
-  <p>Catálogo de los componentes y clases que usa el sistema tal como están hoy en producción. Carga los mismos CSS (main, variables, inventory, promotions, sales) y modela cada elemento con sus clases reales, para unificar la interfaz en todas las páginas y futuras implementaciones.</p>
+<header class="hero">
+  <span class="eyebrow">Perfil de estilos · v1.2</span>
+  <h1>Interfaz unificada <span>Tomodachi</span></h1>
+  <p>Botones cápsula, separación diagonal entre controles, selector y inputs suaves, toggles funcionales, tabs con foco animado, badges con borde y cards elegantes. Una base visual profesional, rápida y directa.</p>
   <div class="theme-toggle" role="group" aria-label="Tema">
-    <span class="seg active" data-theme-set="light"><i class="fas fa-sun"></i> Claro</span>
-    <span class="seg" data-theme-set="dark"><i class="fas fa-moon"></i> Oscuro</span>
+    <span class="seg active" data-theme-set="light">Claro</span>
+    <span class="seg" data-theme-set="dark">Oscuro</span>
   </div>
-</div>
+</header>
 
-<nav class="cat-nav" id="catNav">
+<nav class="page-nav">
   <a href="#botones" class="active">Botones</a>
+  <a href="#selector">Selector</a>
   <a href="#inputs">Inputs</a>
   <a href="#toggles">Toggles</a>
   <a href="#tabs">Tabs</a>
   <a href="#badges">Badges</a>
   <a href="#cards">Cards</a>
-  <a href="#drawer">Drawer</a>
-  <a href="#modales">Modales</a>
-  <a href="#tabla">Tabla</a>
 </nav>
 
-<main class="cat-wrap">
+<main class="page-wrap">
 
-  <!-- ============ BOTONES ============ -->
-  <section class="cat-section obs" id="botones">
-    <h2><i class="fas fa-mouse-pointer"></i> Botones</h2>
-    <p class="sub">Botones reales del sistema: <code>.btn</code> base + variantes <code>.btn-primary .btn-secondary .btn-danger .btn-block</code>, el botón de caja <code>.btn-checkout-primary</code> y acciones <code>.action-btn</code>.</p>
+  <!-- ================= BOTONES ================= -->
+  <section class="section obs" id="botones">
+    <div class="section-head">
+      <h2><i class="fas fa-mouse-pointer"></i> Botones cápsula</h2>
+      <p>Forma redondeada, resonancia al pulsar y separación diagonal cuando varios controles van en fila.</p>
+    </div>
 
-    <div class="cat-row">
-      <div class="cat-block">
-        <h4>Botones base (main.css)</h4>
-        <div class="cat-demo">
-          <button class="btn btn-primary">Primario</button>
-          <button class="btn btn-secondary">Secundario</button>
-          <button class="btn btn-danger">Peligro</button>
-          <button class="btn">Neutro</button>
-        </div>
-        <p class="code-note">&lt;button class="btn btn-primary"&gt;Primario&lt;/button&gt;</p>
+    <div class="grid">
+      <div class="stage">
+        <div class="cap"><span>Sólido</span></div>
+        <div class="body"><button class="btn btn-solid"><i class="fas fa-plus"></i> Nuevo</button></div>
       </div>
-      <div class="cat-block">
-        <h4>Botón de checkout (sales.css)</h4>
-        <div class="cat-demo column">
-          <button class="btn-checkout-primary"><span class="btn-label">Cobrar ahora</span><i class="fas fa-arrow-right"></i></button>
-        </div>
-        <p class="code-note">&lt;button class="btn-checkout-primary"&gt;&lt;span class="btn-label"&gt;...&lt;/span&gt;&lt;/button&gt;</p>
+      <div class="stage">
+        <div class="cap"><span>Oscuro</span></div>
+        <div class="body"><button class="btn btn-dark">Guardar</button></div>
+      </div>
+      <div class="stage">
+        <div class="cap"><span>Contorno</span></div>
+        <div class="body"><button class="btn btn-outline">Cancelar</button></div>
+      </div>
+      <div class="stage">
+        <div class="cap"><span>Suave</span></div>
+        <div class="body"><button class="btn btn-soft"><i class="fas fa-tag"></i> Promoción</button></div>
+      </div>
+      <div class="stage">
+        <div class="cap"><span>Efecto / éxito</span></div>
+        <div class="body"><button class="btn btn-success-soft"><i class="fas fa-check"></i> Pagado</button></div>
+      </div>
+      <div class="stage">
+        <div class="cap"><span>Peligro suave</span></div>
+        <div class="body"><button class="btn btn-danger-soft"><i class="fas fa-trash"></i> Eliminar</button></div>
       </div>
     </div>
 
-    <div class="cat-row">
-      <div class="cat-block">
-        <h4>Botón de acción (sales.css)</h4>
-        <div class="cat-demo">
-          <button class="action-btn" title="Escáner"><i class="fas fa-barcode"></i></button>
-          <button class="action-btn" title="Historial"><i class="fas fa-history"></i></button>
-          <button class="action-btn" title="Balanza"><i class="fas fa-weight-hanging"></i></button>
+    <div class="stage" style="margin-top:18px">
+      <div class="cap"><span>Cápsulas con separador diagonal</span><span>/ /</span></div>
+      <div style="display:flex;flex-wrap:wrap;gap:22px">
+        <div class="segment">
+          <button class="cap-btn active">Hoy</button><span class="vslash"></span>
+          <button class="cap-btn">Semana</button><span class="vslash"></span>
+          <button class="cap-btn">Mes</button>
         </div>
-        <p class="code-note">&lt;button class="action-btn"&gt;&lt;i class="fas fa-..."&gt;&lt;/i&gt;&lt;/button&gt;</p>
-      </div>
-      <div class="cat-block">
-        <h4>Bloque</h4>
-        <div class="cat-demo column">
-          <button class="btn btn-primary btn-block">Bloque completo</button>
+        <div class="segment">
+          <button class="cap-btn active"><i class="fas fa-th-large"></i> Grilla</button><span class="vslash"></span>
+          <button class="cap-btn"><i class="fas fa-list"></i> Lista</button>
         </div>
-        <p class="code-note">&lt;button class="btn btn-primary btn-block"&gt;...&lt;/button&gt;</p>
       </div>
     </div>
   </section>
 
-  <!-- ============ INPUTS ============ -->
-  <section class="cat-section obs" id="inputs">
-    <h2><i class="fas fa-edit"></i> Inputs y formularios</h2>
-    <p class="sub">Controles reales: <code>.form-group</code> + <code>label</code>, <code>.form-control</code>, y el patrón <code>.input-icon-wrapper</code> con icono.</p>
-    <div class="cat-row">
-      <div class="cat-block">
-        <h4>Form group + control (form-control)</h4>
-        <div class="form-group">
-          <label>Nombre del producto</label>
-          <input type="text" class="form-control" placeholder="Ej. Café Americano">
-        </div>
-        <p class="code-note">&lt;div class="form-group"&gt;&lt;label&gt;...&lt;/label&gt;&lt;input class="form-control"&gt;&lt;/div&gt;</p>
-      </div>
-      <div class="cat-block">
-        <h4>Input con icono (input-icon-wrapper)</h4>
-        <div class="form-group">
-          <label>Buscar</label>
-          <div class="input-icon-wrapper">
-            <i class="fas fa-search"></i>
-            <input type="text" class="form-control" placeholder="Buscar producto...">
-          </div>
-        </div>
-        <p class="code-note">&lt;div class="input-icon-wrapper"&gt;&lt;i class="fas fa-..."&gt;&lt;/i&gt;&lt;input class="form-control"&gt;&lt;/div&gt;</p>
-      </div>
+  <!-- ================= SELECTOR ================= -->
+  <section class="section obs" id="selector">
+    <div class="section-head">
+      <h2><i class="fas fa-caret-down"></i> Selector</h2>
+      <p>Redondeado y sutil; al abrir, las opciones se despliegan apareciendo una a una.</p>
     </div>
-    <div class="cat-row">
-      <div class="cat-block">
-        <h4>Select con icono</h4>
-        <div class="form-group">
-          <label>Tipo de promoción</label>
-          <div class="input-icon-wrapper">
-            <i class="fas fa-list-ul"></i>
-            <select class="form-control">
-              <option>Descuento Simple</option>
-              <option>Descuento por Volumen</option>
-              <option>Paquete (Bundle)</option>
-            </select>
+    <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr))">
+      <div class="stage">
+        <div class="cap"><span>Selector animado</span></div>
+        <div class="body">
+          <div class="ds-select" id="selDemo">
+            <button class="trigger" type="button"><span id="selLabel">Bebidas</span><i class="fas fa-chevron-down arrow"></i></button>
+            <div class="menu">
+              <div class="opt selected" data-v="Bebidas"><i class="fas fa-mug-hot"></i> Bebidas<span class="d">12</span></div>
+              <div class="opt" data-v="Snacks"><i class="fas fa-cookie-bite"></i> Snacks<span class="d">8</span></div>
+              <div class="opt" data-v="Despensa"><i class="fas fa-basket-shopping"></i> Despensa<span class="d">6</span></div>
+              <div class="opt" data-v="Lácteos"><i class="fas fa-cheese"></i> Lácteos<span class="d">4</span></div>
+            </div>
           </div>
         </div>
       </div>
-      <div class="cat-block">
-        <h4>Campos en fila (form-row)</h4>
-        <div class="form-row" style="display:flex;gap:14px;flex-wrap:wrap">
-          <div class="form-group" style="flex:1;min-width:120px">
-            <label>Fecha inicio</label>
-            <div class="input-icon-wrapper"><i class="fas fa-calendar-alt"></i><input type="date" class="form-control"></div>
-          </div>
-          <div class="form-group" style="flex:1;min-width:120px">
-            <label>Precio</label>
-            <div class="input-icon-wrapper"><span class="currency-icon">$</span><input type="number" class="form-control" value="25.00"></div>
+      <div class="stage">
+        <div class="cap"><span>Estado cerrado</span></div>
+        <div class="body">
+          <div class="ds-select">
+            <button class="trigger" type="button"><span>Efectivo</span><i class="fas fa-chevron-down arrow"></i></button>
+            <div class="menu"><div class="opt">Efectivo</div><div class="opt">Tarjeta</div><div class="opt">Transferencia</div></div>
           </div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ============ TOGGLES ============ -->
-  <section class="cat-section obs" id="toggles">
-    <h2><i class="fas fa-toggle-on"></i> Toggle de vista / interruptores</h2>
-    <p class="sub">Toggle real del sistema para alternar vistas (grilla/tabla de clientes): <code>.customer-view-toggle</code> + <code>.view-toggle-btn</code>.</p>
-    <div class="cat-row">
-      <div class="cat-block">
-        <h4>Toggle de vista (clientes)</h4>
-        <div class="cat-demo">
-          <div class="customer-view-toggle">
-            <button class="view-toggle-btn active" title="Cuadrícula"><i class="fas fa-th-large"></i></button>
-            <button class="view-toggle-btn" title="Tabla"><i class="fas fa-list"></i></button>
+  <!-- ================= INPUTS ================= -->
+  <section class="section obs" id="inputs">
+    <div class="section-head">
+      <h2><i class="fas fa-edit"></i> Inputs</h2>
+      <p>Contenido bien presentado, foco con anillo de marca y iconografía integrada.</p>
+    </div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr))">
+      <div class="stage">
+        <div class="cap"><span>Texto</span></div>
+        <div class="body">
+          <div class="field"><label class="flabel">Nombre del producto</label><input class="ds-input" placeholder="Ej. Café Americano"></div>
+        </div>
+      </div>
+      <div class="stage">
+        <div class="cap"><span>Con icono</span></div>
+        <div class="body">
+          <div class="field"><label class="flabel">Buscar</label>
+            <div class="input-wrap"><i class="fas fa-search"></i><input class="ds-input with-icon" placeholder="Buscar producto..."></div>
           </div>
         </div>
-        <p class="code-note">&lt;div class="customer-view-toggle"&gt;&lt;button class="view-toggle-btn active"&gt;&lt;i class="fas fa-th-large"&gt;&lt;/i&gt;&lt;/button&gt;...&lt;/div&gt;</p>
       </div>
-      <div class="cat-block">
-        <h4>Comportamiento</h4>
-        <div class="cat-demo" style="flex-direction:column;align-items:flex-start;gap:6px">
-          <button class="view-toggle-btn active" type="button"><i class="fas fa-th-large"></i> Grilla</button>
-        </div>
-        <p class="code-note">El activo se pinta del color de marca con sombra (main.css:2142).</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ TABS ============ -->
-  <section class="cat-section obs" id="tabs">
-    <h2><i class="fas fa-layer-group"></i> Tabs del drawer</h2>
-    <p class="sub">Pestañas reales de los paneles: <code>.drawer-tabs</code> + <code>.drawer-tab</code> con <code>.tab-panel</code>.</p>
-    <div class="cat-block">
-      <div class="drawer-tabs">
-        <button type="button" class="drawer-tab active" data-dtab="ctab1"><i class="fas fa-info-circle"></i><span>Información</span></button>
-        <button type="button" class="drawer-tab" data-dtab="ctab2"><i class="fas fa-box"></i><span>Productos</span></button>
-        <button type="button" class="drawer-tab" data-dtab="ctab3"><i class="fas fa-cog"></i><span>Opciones</span></button>
-      </div>
-      <div class="tab-panel active" id="ctab1" style="padding:16px 0"><span class="demo-fill" style="display:block">Panel Información</span></div>
-      <div class="tab-panel" id="ctab2" style="padding:16px 0"><span class="demo-fill" style="display:block">Panel Productos</span></div>
-      <div class="tab-panel" id="ctab3" style="padding:16px 0"><span class="demo-fill" style="display:block">Panel Opciones</span></div>
-      <p class="code-note">&lt;button class="drawer-tab active"&gt;&lt;i&gt;&lt;/i&gt;&lt;span&gt;...&lt;/span&gt;&lt;/button&gt; + &lt;div class="tab-panel"&gt;</p>
-    </div>
-  </section>
-
-  <!-- ============ BADGES ============ -->
-  <section class="cat-section obs" id="badges">
-    <h2><i class="fas fa-tag"></i> Badges y estados</h2>
-    <p class="sub">Badges del sistema (<code>.badge</code>, <code>.status-badge</code>) y chips con estados.</p>
-    <div class="cat-row">
-      <div class="cat-block">
-        <h4>Badge base (main.css)</h4>
-        <div class="cat-demo">
-          <span class="badge">Nuevo</span>
-          <span class="badge badge-success">OK</span>
-          <span class="badge badge-danger">Bajo</span>
-          <span class="badge badge-warning">Aviso</span>
-        </div>
-      </div>
-      <div class="cat-block">
-        <h4>Status badge (inventory.css)</h4>
-        <div class="cat-demo">
-          <span class="status-badge status-success">Activo</span>
-          <span class="status-badge status-warning">Pendiente</span>
-          <span class="status-badge status-error">Error</span>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ CARDS ============ -->
-  <section class="cat-section obs" id="cards">
-    <h2><i class="fas fa-id-card"></i> Cards</h2>
-    <p class="sub">Tarjetas de producto del inventario (<code>.product-card</code> / grid del sistema).</p>
-    <div class="cat-row">
-      <div class="cat-block">
-        <h4>Región de cards del inventario</h4>
-        <div class="demo-fill">Los productos se muestran en tarjetas con imagen, nombre y precio (grid del inventario: ver inventory.css).</div>
-      </div>
-      <div class="cat-block">
-        <h4>Card genérica</h4>
-        <div class="card">
-          <div class="card-body">
-            <h4 style="margin-bottom:6px">Resumen del día</h4>
-            <p style="color:var(--text-muted);font-size:.85rem">Ventas: $1,240 · Transacciones: 12</p>
+      <div class="stage">
+        <div class="cap"><span>Número (moneda)</span></div>
+        <div class="body">
+          <div class="field"><label class="flabel">Precio</label>
+            <div class="input-wrap"><i class="fas fa-dollar-sign"></i><input class="ds-input with-icon" type="number" value="25.00" placeholder="0.00"></div>
           </div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ============ DRAWER REAL ============ -->
-  <section class="cat-section obs" id="drawer">
-    <h2><i class="fas fa-outdent"></i> Drawer real del sistema</h2>
-    <p class="sub">El panel lateral tal como se usa en Inventario y Promociones: <code>.drawer-overlay</code> → <code>.drawer-content</code> → header + tabs + body. Ancho 550px, desliza desde la derecha.</p>
-    <div class="cat-block">
-      <div class="cat-demo">
-        <button class="btn btn-primary" id="openDrawer">Abrir drawer real</button>
-        <span class="code-note" style="margin:0">Estructura idéntica a inventory.css / promotions.css</span>
+  <!-- ================= TOGGLES ================= -->
+  <section class="section obs" id="toggles">
+    <div class="section-head">
+      <h2><i class="fas fa-toggle-on"></i> Toggles</h2>
+      <p>Interruptores y pastillas de selección funcionales con animación de resorte.</p>
+    </div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr))">
+      <div class="stage">
+        <div class="cap"><span>Pastilla de opciones</span></div>
+        <div class="body">
+          <div class="toggle-group" data-toggle-group>
+            <button class="toggle-opt active"><i class="fas fa-th-large"></i> Grilla</button>
+            <button class="toggle-opt"><i class="fas fa-list"></i> Lista</button>
+          </div>
+        </div>
+      </div>
+      <div class="stage">
+        <div class="cap"><span>Switch</span></div>
+        <div class="body" style="gap:16px">
+          <label class="switch"><input type="checkbox" checked><span class="track"></span> Notificaciones</label>
+          <label class="switch"><input type="checkbox"><span class="track"></span> Ticket automático</label>
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- ============ MODALES ============ -->
-  <section class="cat-section obs" id="modales">
-    <h2><i class="fas fa-window-maximize"></i> Modales</h2>
-    <p class="sub">Modal real del sistema: <code>.modal.show</code> → <code>.modal-content</code> → <code>.modal-header</code> + <code>.modal-body</code> + <code>.modal-footer</code> con <code>.modal-close</code>.</p>
-    <div class="cat-block">
-      <div class="cat-demo">
-        <button class="btn btn-primary" id="openModal">Abrir modal real</button>
+  <!-- ================= TABS ================= -->
+  <section class="section obs" id="tabs">
+    <div class="section-head">
+      <h2><i class="fas fa-layer-group"></i> Tabs</h2>
+      <p>Entran con animación y el foco activo resalta con un indicador que se extiende.</p>
+    </div>
+    <div class="stage">
+      <div class="tabs" id="tabsDemo">
+        <button class="tab active" data-panel="tabp1">Productos</button>
+        <button class="tab" data-panel="tabp2">Carrito</button>
+        <button class="tab" data-panel="tabp3">Historial</button>
+      </div>
+      <div class="tab-panel active" id="tabp1"><p style="padding:18px 4px 4px;color:var(--text-medium)">Panel de productos con entrada animada.</p></div>
+      <div class="tab-panel" id="tabp2"><p style="padding:18px 4px 4px;color:var(--text-medium)">Panel del carrito con entrada animada.</p></div>
+      <div class="tab-panel" id="tabp3"><p style="padding:18px 4px 4px;color:var(--text-medium)">Panel del historial con entrada animada.</p></div>
+    </div>
+  </section>
+
+  <!-- ================= BADGES ================= -->
+  <section class="section obs" id="badges">
+    <div class="section-head">
+      <h2><i class="fas fa-tag"></i> Badges</h2>
+      <p>Borde llamativo en colores primarios, con punto de estado e icono.</p>
+    </div>
+    <div class="stage">
+      <div class="badge-row">
+        <span class="badge badge-primary"><i class="fas fa-circle dot"></i> En stock</span>
+        <span class="badge badge-success"><i class="fas fa-check"></i> Pagado</span>
+        <span class="badge badge-warning"><i class="fas fa-clock"></i> Pendiente</span>
+        <span class="badge badge-danger"><i class="fas fa-xmark"></i> Cancelado</span>
+        <span class="badge badge-outline"><i class="fas fa-circle"></i> Borrador</span>
       </div>
     </div>
   </section>
 
-  <!-- ============ TABLA ============ -->
-  <section class="cat-section obs" id="tabla">
-    <h2><i class="fas fa-table"></i> Tabla</h2>
-    <p class="sub">Estilo de tabla de listados (ventas, productos, movimientos).</p>
-    <div class="cat-block" style="padding:0;overflow:auto">
-      <table class="ds-table" style="width:100%;border-collapse:collapse;font-size:.88rem;min-width:560px">
-        <thead><tr><th style="text-align:left;padding:12px 16px;border-bottom:1px solid var(--border-lighter);text-transform:uppercase;font-size:.72rem;color:var(--text-muted)">Producto</th><th style="text-align:left;padding:12px 16px;border-bottom:1px solid var(--border-lighter)">Precio</th><th style="text-align:left;padding:12px 16px;border-bottom:1px solid var(--border-lighter)">Stock</th><th style="text-align:left;padding:12px 16px;border-bottom:1px solid var(--border-lighter)">Estado</th></tr></thead>
-        <tbody>
-          <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border-lighter)">Café Americano</td><td style="padding:12px 16px">$25.00</td><td style="padding:12px 16px">48</td><td style="padding:12px 16px"><span class="status-badge status-success">Activo</span></td></tr>
-          <tr><td style="padding:12px 16px;border-bottom:1px solid var(--border-lighter)">Capuchino</td><td style="padding:12px 16px">$38.00</td><td style="padding:12px 16px">12</td><td style="padding:12px 16px"><span class="status-badge status-warning">Bajo</span></td></tr>
-          <tr><td style="padding:12px 16px">Brownie</td><td style="padding:12px 16px">$30.00</td><td style="padding:12px 16px">0</td><td style="padding:12px 16px"><span class="status-badge status-error">Agotado</span></td></tr>
-        </tbody>
-      </table>
+  <!-- ================= CARDS ================= -->
+  <section class="section obs" id="cards">
+    <div class="section-head">
+      <h2><i class="fas fa-id-card"></i> Cards</h2>
+      <p>Sombra ligera de fondo, esquinas redondeadas, encabezado más claro y separación marcada entre encabezado y contenido.</p>
+    </div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr))">
+      <div class="card reveal">
+        <div class="accent-strip"></div>
+        <div class="card-head">
+          <h4><i class="fas fa-chart-line"></i> Ventas del día</h4>
+          <span class="hint"><i class="fas fa-arrow-right"></i></span>
+        </div>
+        <div class="card-body-x">
+          <div class="kpis">
+            <div class="kpi"><div class="v">$1,240</div><div class="l">Total</div></div>
+            <div class="kpi"><div class="v small">12</div><div class="l">Ventas</div></div>
+            <div class="kpi"><div class="v small">$103</div><div class="l">Promedio</div></div>
+          </div>
+          <div class="cb-order"><span class="option-badge badge badge-success"><i class="fas fa-arrow-up"></i> +18%</span></div>
+        </div>
+      </div>
+
+      <div class="card reveal">
+        <div class="accent-strip"></div>
+        <div class="card-head">
+          <h4><i class="fas fa-box"></i> Productos más vendidos</h4>
+          <span class="hint"><i class="fas fa-arrow-right"></i></span>
+        </div>
+        <div class="card-body-x">
+          <div class="kpis">
+            <div class="kpi"><div class="v small">Café</div><div class="l">48 u.</div></div>
+            <div class="kpi"><div class="v small">Capuchino</div><div class="l">32 u.</div></div>
+            <div class="kpi"><div class="v small">Brownie</div><div class="l">21 u.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card reveal">
+        <div class="accent-strip"></div>
+        <div class="card-head">
+          <h4><i class="fas fa-wallet"></i> Estado de caja</h4>
+          <span class="hint"><i class="fas fa-arrow-right"></i></span>
+        </div>
+        <div class="card-body-x">
+          <div class="kpis">
+            <div class="kpi"><div class="v">$860</div><div class="l">En caja</div></div>
+            <div class="kpi"><div class="v small">$120</div><div class="l">Esperado</div></div>
+          </div>
+          <div class="cb-order"><span class="badge badge-primary"><i class="fas fa-circle dot"></i> Abierta</span></div>
+        </div>
+      </div>
     </div>
   </section>
 
 </main>
 
-<!-- ============ DRAWER REAL (estructura de producción) ============ -->
-<div id="demoDrawer" class="drawer-overlay">
-  <div class="drawer-content">
-    <div class="drawer-header">
-      <h2><i class="fas fa-box"></i> Detalle de Producto</h2>
-      <button type="button" class="drawer-close" id="closeDrawer" aria-label="Cerrar"><i class="fas fa-times"></i></button>
-    </div>
-    <div class="drawer-tabs">
-      <button type="button" class="drawer-tab active" data-dtab="d1"><i class="fas fa-info-circle"></i><span>Información</span></button>
-      <button type="button" class="drawer-tab" data-dtab="d2"><i class="fas fa-box"></i><span>Inventario</span></button>
-    </div>
-    <div class="drawer-body">
-      <div class="tab-panel active" id="d1">
-        <div class="form-group">
-          <label>Nombre</label>
-          <div class="input-icon-wrapper"><i class="fas fa-box"></i><input type="text" class="form-control" value="Café Americano"></div>
-        </div>
-        <div class="form-row" style="display:flex;gap:14px;flex-wrap:wrap">
-          <div class="form-group" style="flex:1;min-width:120px">
-            <label>Precio</label>
-            <div class="input-icon-wrapper"><span class="currency-icon">$</span><input type="number" class="form-control" value="25.00"></div>
-          </div>
-          <div class="form-group" style="flex:1;min-width:120px">
-            <label>Stock</label>
-            <div class="input-icon-wrapper"><i class="fas fa-boxes"></i><input type="number" class="form-control" value="48"></div>
-          </div>
-        </div>
-      </div>
-      <div class="tab-panel" id="d2">
-        <div class="demo-fill">Aquí iría el historial de movimientos de inventario.</div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ============ MODAL REAL (estructura de producción) ============ -->
-<div class="modal" id="demoModal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2><i class="fas fa-info-circle"></i> Confirmar acción</h2>
-      <button class="modal-close" id="closeModal" aria-label="Cerrar"><i class="fas fa-times"></i></button>
-    </div>
-    <div class="modal-body">
-      <p style="color:var(--text-medium)">Este es el modal real del sistema (main.css). Con el mismo fade de entrada, header con icono y botón de cierre que pone X en rojo al hover.</p>
-    </div>
-    <div class="modal-footer" style="padding:16px 0 0;border-top:1px solid var(--border-color);margin-top:12px;display:flex;justify-content:flex-end;gap:12px">
-      <button class="btn" id="cancelModal">Cancelar</button>
-      <button class="btn btn-primary">Confirmar</button>
-    </div>
-  </div>
-</div>
 
 <script>
-/* Tema */
+/* --- Tema claro/oscuro --- */
 document.querySelectorAll('[data-theme-set]').forEach(seg => seg.addEventListener('click', () => {
   document.documentElement.setAttribute('data-theme', seg.dataset.themeSet);
   document.querySelectorAll('[data-theme-set]').forEach(s => s.classList.toggle('active', s === seg));
 }));
 
-/* Tabs del catálogo (drawer-tabs) */
-document.querySelectorAll('.drawer-tabs').forEach(group => {
-  group.querySelectorAll('.drawer-tab').forEach(tab => tab.addEventListener('click', () => {
-    const f = group.parentElement;
-    group.querySelectorAll('.drawer-tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    // paneles del mismo contenedor
-    const panels = f.querySelectorAll(':scope > .tab-panel');
-    if (panels.length) panels.forEach(p => p.classList.toggle('active', p.id === tab.dataset.dtab));
-    // para el drawer real: alternar dentro de drawer-body
-    const bodyPanels = document.querySelectorAll('.drawer-body .tab-panel');
-    if (bodyPanels.length) bodyPanels.forEach(p => p.classList.toggle('active', p.id === tab.dataset.dtab));
+/* --- Ripple + shine en botones --- */
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.btn');
+  if (!btn) return;
+  const r = btn.getBoundingClientRect(), d = Math.max(r.width, r.height) * 2;
+  const rip = document.createElement('span');
+  rip.className = 'ripple';
+  rip.style.cssText = `width:${d}px;height:${d}px;left:${e.clientX - r.left - d/2}px;top:${e.clientY - r.top - d/2}px;`;
+  btn.appendChild(rip); setTimeout(() => rip.remove(), 420);
+  if (!btn.querySelector('.shine')) { const s = document.createElement('span'); s.className = 'shine'; btn.prepend(s); }
+});
+
+/* --- Cápsulas con separador diagonal (segment) --- */
+document.querySelectorAll('.segment').forEach(seg => {
+  seg.querySelectorAll('.cap-btn').forEach(b => b.addEventListener('click', () => {
+    seg.querySelectorAll('.cap-btn').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
   }));
 });
 
-/* Drawer real */
-const drawerOverlay = document.getElementById('demoDrawer');
-document.getElementById('openDrawer').addEventListener('click', () => drawerOverlay.classList.add('show'));
-document.getElementById('closeDrawer').addEventListener('click', () => drawerOverlay.classList.remove('show'));
-drawerOverlay.addEventListener('click', (e) => { if (e.target === drawerOverlay) drawerOverlay.classList.remove('show'); });
+/* --- Selector animado --- */
+document.querySelectorAll('.ds-select').forEach(sel => {
+  const trigger = sel.querySelector('.trigger');
+  const opts = sel.querySelectorAll('.opt');
+  const labelEl = sel.querySelector('#selLabel, .trigger span');
+  trigger.addEventListener('click', e => {
+    e.stopPropagation();
+    const wasOpen = sel.classList.contains('open');
+    document.querySelectorAll('.ds-select.open').forEach(o => o.classList.remove('open'));
+    if (!wasOpen) {
+      sel.classList.add('open');
+      // animación escalonada: cada opción aparece una a una
+      opts.forEach((o, i) => {
+        o.style.transitionDelay = (60 + i * 45) + 'ms';
+        o.style.opacity = 0; o.style.transform = 'translateY(-6px)';
+      });
+      requestAnimationFrame(() => { sel.classList.add('open'); opts.forEach(o => { o.style.opacity = 1; o.style.transform = 'none'; }); });
+    } else {
+      sel.classList.remove('open');
+    }
+  });
+  opts.forEach(o => o.addEventListener('click', () => {
+    opts.forEach(x => x.classList.remove('selected'));
+    o.classList.add('selected');
+    if (labelEl) labelEl.textContent = o.dataset.v || o.textContent.trim();
+    sel.classList.remove('open');
+  }));
+});
+document.addEventListener('click', () => document.querySelectorAll('.ds-select.open').forEach(s => s.classList.remove('open')));
 
-/* Modal real */
-const modal = document.getElementById('demoModal');
-document.getElementById('openModal').addEventListener('click', () => modal.classList.add('show'));
-document.getElementById('closeModal').addEventListener('click', () => modal.classList.remove('show'));
-document.getElementById('cancelModal').addEventListener('click', () => modal.classList.remove('show'));
-modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('show'); });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { modal.classList.remove('show'); drawerOverlay.classList.remove('show'); } });
+/* --- Pastillas toggle --- */
+document.querySelectorAll('[data-toggle-group]').forEach(grp => {
+  grp.querySelectorAll('.toggle-opt').forEach(b => b.addEventListener('click', () => {
+    grp.querySelectorAll('.toggle-opt').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+  }));
+});
 
-/* Scrollspy */
-const secs = document.querySelectorAll('.cat-section'); const links = document.querySelectorAll('.cat-nav a');
-new IntersectionObserver(entries => entries.forEach(en => {
-  if (en.isIntersecting) links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + en.target.id));
-}), { rootMargin: '-40% 0px -55% 0px' }).observe ? 0 : 0;
+/* --- Tabs --- */
+const tabBar = document.getElementById('tabsDemo');
+document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  tab.classList.add('active');
+  const panel = document.getElementById(tab.dataset.panel);
+  if (panel) { panel.classList.remove('active'); void panel.offsetWidth; panel.classList.add('active'); }
+}));
+
+/* --- Scrollspy + reveal --- */
+const secs = document.querySelectorAll('.section'); const links = document.querySelectorAll('.page-nav a');
 const spy = new IntersectionObserver(entries => entries.forEach(en => {
   if (en.isIntersecting) links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + en.target.id));
 }), { rootMargin: '-40% 0px -55% 0px' });
 secs.forEach(s => spy.observe(s));
+const rev = new IntersectionObserver(entries => entries.forEach(en => en.isIntersecting && en.target.classList.add('visible')), { threshold: .12 });
+document.querySelectorAll('.reveal').forEach(el => rev.observe(el));
 </script>
 </body>
 </html>

@@ -66,3 +66,9 @@ define('APP_MODE', in_array($envAppMode, ['OPEN_SOURCE', 'SAAS'], true) ? $envAp
 define('VAPID_PUBLIC_KEY', getenv('VAPID_PUBLIC_KEY') ?: '');
 define('VAPID_PRIVATE_KEY', getenv('VAPID_PRIVATE_KEY') ?: '');
 define('VAPID_SUBJECT', getenv('VAPID_SUBJECT') ?: 'mailto:admin@tomodachi.local');
+
+// Rate limiter de login (anti fuerza bruta) — ver includes/LoginRateLimiter.class.php
+define('LOGIN_MAX_ATTEMPTS',      (int)(getenv('LOGIN_MAX_ATTEMPTS') ?: 5));       // fallos consecutivos antes de bloquear la IP
+define('LOGIN_LOCK_BASE_SECONDS', (int)(getenv('LOGIN_LOCK_BASE_SECONDS') ?: 60)); // duración del 1er bloqueo (seg)
+define('LOGIN_LOCK_MAX_SECONDS',  (int)(getenv('LOGIN_LOCK_MAX_SECONDS') ?: 7200));// tope de duración de bloqueo (seg)
+define('LOGIN_LOCK_MULTIPLIER',   (int)(getenv('LOGIN_LOCK_MULTIPLIER') ?: 5));    // factor de escalamiento por bloqueo

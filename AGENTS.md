@@ -49,6 +49,11 @@ docker/        Dockerfile, docker-compose.yml, entrypoint.sh
 - Constantes en `config/constants.php` (roles, estados, planes).
 - Validación con `Validator.class.php`; sanitiza strings con
   `Validator::sanitizeString`.
+- Login con rate limiter anti fuerza bruta: `includes/LoginRateLimiter.class.php`
+  (tabla `login_attempts`). Bloquea la IP tras N fallos consecutivos con timeout
+  escalonado. Configurable vía env LOGIN_MAX_ATTEMPTS / LOGIN_LOCK_BASE_SECONDS /
+  LOGIN_LOCK_MAX_SECONDS / LOGIN_LOCK_MULTIPLIER. Responde 429 con header
+  `Retry-After` cuando la IP está bloqueada.
 - SQL: tablas en español/inglés mixto, prefijo consistente (`store_id`,
   `product_id`, `sale_id`...).
 

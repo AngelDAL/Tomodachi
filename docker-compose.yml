@@ -34,7 +34,7 @@ services:
       SEED_DEMO: ${SEED_DEMO:-true}
       TZ: ${TZ:-America/Mexico_City}
     ports:
-      - "${PORT:-8080}:80"
+      - "127.0.0.1:${PORT:-8091}:80"
     volumes:
       # Persistir imágenes subidas (logos, productos, fondos)
       - app_uploads:/var/www/html/public/assets/images

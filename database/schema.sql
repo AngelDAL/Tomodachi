@@ -137,6 +137,42 @@ CREATE TABLE cash_registers (
     INDEX idx_opening_date (opening_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Tabla: customers (Clientes / fiado)
+CREATE TABLE customers (
+    customer_id INT AUTO_INCREMENT PRIMARY KEY,
+    store_id INT NOT NULL,
+    full_name VARCHAR(150) NOT NULL,
+    phone VARCHAR(30) NULL,
+    email VARCHAR(150) NULL,
+    address VARCHAR(255) NULL,
+    balance DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT 'Saldo pendiente (fiado)',
+    credit_limit DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT '0 = sin límite',
+    notes VARCHAR(255) NULL,
+    status ENUM('active', 'inactive') DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE,
+    INDEX idx_store (store_id),
+    INDEX idx_phone (phone)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: customer_payments (Abonos al fiado)
+CREATE TABLE customer_payments (
+    payment_id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT NOT NULL,
+    store_id INT NOT NULL,
+    user_id INT NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    payment_method ENUM('cash', 'card', 'transfer') DEFAULT 'cash',
+    notes VARCHAR(255) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE,
+    FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE RESTRICT,
+    INDEX idx_customer (customer_id),
+    INDEX idx_store_date (store_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Tabla: sales (Ventas)
 CREATE TABLE sales (
     sale_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -228,42 +264,6 @@ CREATE TABLE cash_movements (
     INDEX idx_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Tabla: customers (Clientes / fiado)
-CREATE TABLE customers (
-    customer_id INT AUTO_INCREMENT PRIMARY KEY,
-    store_id INT NOT NULL,
-    full_name VARCHAR(150) NOT NULL,
-    phone VARCHAR(30) NULL,
-    email VARCHAR(150) NULL,
-    address VARCHAR(255) NULL,
-    balance DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT 'Saldo pendiente (fiado)',
-    credit_limit DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT '0 = sin límite',
-    notes VARCHAR(255) NULL,
-    status ENUM('active', 'inactive') DEFAULT 'active',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE,
-    INDEX idx_store (store_id),
-    INDEX idx_phone (phone)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Tabla: customer_payments (Abonos al fiado)
-CREATE TABLE customer_payments (
-    payment_id INT AUTO_INCREMENT PRIMARY KEY,
-    customer_id INT NOT NULL,
-    store_id INT NOT NULL,
-    user_id INT NOT NULL,
-    amount DECIMAL(10,2) NOT NULL,
-    payment_method ENUM('cash', 'card', 'transfer') DEFAULT 'cash',
-    notes VARCHAR(255) NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE,
-    FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE RESTRICT,
-    INDEX idx_customer (customer_id),
-    INDEX idx_store_date (store_id, created_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 -- Tabla: push_subscriptions (Notificaciones FCM)
 CREATE TABLE push_subscriptions (
     sub_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -299,6 +299,22 @@ CREATE TABLE api_tokens (
     INDEX idx_revoked (revoked)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Tabla: login_attempts (Rate limiter de login / anti fuerza bruta)
+-- Registra intentos de login fallidos por IP para bloquearla temporalmente.
+-- La gestiona includes/LoginRateLimiter.class.php.
+CREATE TABLE login_attempts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    ip_address VARCHAR(45) NOT NULL,
+    failed_attempts INT NOT NULL DEFAULT 0 COMMENT 'Contador de fallos consecutivos actuales',
+    lock_count INT NOT NULL DEFAULT 0 COMMENT 'Número de veces que la IP ha sido bloqueada (para escalar el timeout)',
+    locked_until DATETIME NULL COMMENT 'NULL = sin bloqueo; fecha-hora hasta la que está bloqueada',
+    last_attempt_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+    last_username VARCHAR(100) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_login_ip (ip_address),
+    INDEX idx_locked (locked_until)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Tabla: promotions (Promociones)
 CREATE TABLE promotions (
     promotion_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -326,6 +342,161 @@ CREATE TABLE promotion_targets (
     FOREIGN KEY (promotion_id) REFERENCES promotions(promotion_id) ON DELETE CASCADE,
     FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE CASCADE,
     FOREIGN KEY (category_id) REFERENCES categories(category_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- Pantallas Digitales (contenido consolidad de migraciones 019-024)
+-- Tabla: digital_boards (Boards / tableros de pantallas)
+CREATE TABLE digital_boards (
+    board_id INT AUTO_INCREMENT PRIMARY KEY,
+    store_id INT NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    description TEXT NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 0,
+    orientation ENUM('horizontal', 'vertical', 'auto') NOT NULL DEFAULT 'auto',
+    slide_duration INT NOT NULL DEFAULT 10 COMMENT 'Segundos por slide',
+    transition_animation ENUM('fade', 'slide_left', 'slide_up', 'zoom', 'none') NOT NULL DEFAULT 'fade',
+    theme_config JSON NULL COMMENT 'Colores, fuentes, fondo',
+    template VARCHAR(50) NULL COMMENT 'restaurant, retail, pharmacy, etc.',
+    scheduled_start DATETIME NULL COMMENT 'Activación automática (null = manual)',
+    scheduled_end DATETIME NULL COMMENT 'Desactivación automática (null = indefinido)',
+    show_qr TINYINT(1) NOT NULL DEFAULT 1 COMMENT 'Mostrar QR en pantalla pública',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_store_active (store_id, is_active),
+    INDEX idx_scheduled (scheduled_start, scheduled_end),
+    FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: board_slides (Diapositivas)
+CREATE TABLE board_slides (
+    slide_id INT AUTO_INCREMENT PRIMARY KEY,
+    board_id INT NOT NULL,
+    orientation ENUM('auto','horizontal','vertical') NOT NULL DEFAULT 'auto',
+    layout_width INT NULL,
+    layout_height INT NULL,
+    position INT NOT NULL DEFAULT 0 COMMENT 'Orden de aparición',
+    title VARCHAR(100) NULL,
+    grid_cols INT NOT NULL DEFAULT 3,
+    grid_rows INT NOT NULL DEFAULT 2,
+    enter_animation ENUM('fade', 'slide_up', 'scale_in', 'none') NOT NULL DEFAULT 'fade',
+    exit_animation ENUM('fade', 'slide_up', 'scale_out', 'none') NOT NULL DEFAULT 'fade',
+    custom_duration INT NULL COMMENT 'Override de slide_duration (segundos)',
+    background_color VARCHAR(20) NULL,
+    background_image VARCHAR(500) NULL COMMENT 'URL de imagen de fondo',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_board_position (board_id, position),
+    FOREIGN KEY (board_id) REFERENCES digital_boards(board_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: slide_elements (Elementos de cada diapositiva)
+CREATE TABLE slide_elements (
+    element_id INT AUTO_INCREMENT PRIMARY KEY,
+    slide_id INT NOT NULL,
+    element_type ENUM('product_card', 'image', 'text', 'category_grid', 'banner', 'clock') NOT NULL,
+    grid_col INT NOT NULL DEFAULT 1,
+    grid_row INT NOT NULL DEFAULT 1,
+    col_span INT NOT NULL DEFAULT 1,
+    row_span INT NOT NULL DEFAULT 1,
+    z_index INT NOT NULL DEFAULT 1,
+    content JSON NOT NULL COMMENT 'Datos del elemento según tipo',
+    animation ENUM('fade_in', 'slide_up', 'scale_in', 'stagger', 'none') NOT NULL DEFAULT 'fade_in',
+    animation_delay FLOAT NOT NULL DEFAULT 0 COMMENT 'Segundos de delay antes de animar',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_slide_position (slide_id, grid_col, grid_row),
+    FOREIGN KEY (slide_id) REFERENCES board_slides(slide_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: digital_signage_media (Medios subidos)
+CREATE TABLE digital_signage_media (
+    media_id INT AUTO_INCREMENT PRIMARY KEY,
+    store_id INT NOT NULL,
+    filename VARCHAR(255) NOT NULL,
+    original_name VARCHAR(255) NOT NULL,
+    mime_type VARCHAR(50) NOT NULL,
+    file_size INT NOT NULL,
+    width INT NULL,
+    height INT NULL,
+    tags VARCHAR(255) NULL COMMENT 'Tags para organizar: navidad, halloween, etc.',
+    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_store (store_id),
+    INDEX idx_tags (tags),
+    FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: digital_board_slide_assignments (Slides reutilizadas entre boards)
+CREATE TABLE digital_board_slide_assignments (
+    assignment_id INT AUTO_INCREMENT PRIMARY KEY,
+    board_id INT NOT NULL,
+    source_slide_id INT NOT NULL,
+    position INT NOT NULL DEFAULT 0,
+    custom_duration INT NULL COMMENT 'Override opcional para este uso de la slide',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_board_source_slide (board_id, source_slide_id),
+    KEY idx_board_position (board_id, position),
+    KEY idx_source_slide (source_slide_id),
+    CONSTRAINT fk_assignment_board FOREIGN KEY (board_id) REFERENCES digital_boards(board_id) ON DELETE CASCADE,
+    CONSTRAINT fk_assignment_source_slide FOREIGN KEY (source_slide_id) REFERENCES board_slides(slide_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: display_groups (Escenas multi-pantalla sincronizadas)
+CREATE TABLE display_groups (
+    group_id INT AUTO_INCREMENT PRIMARY KEY,
+    store_id INT NOT NULL,
+    name VARCHAR(120) NOT NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 0,
+    bg_color VARCHAR(20) NULL COMMENT 'color de fondo del lienzo del grupo',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_store_group (store_id, is_active),
+    FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: display_group_screens (Pantallas de cada grupo/escena)
+CREATE TABLE display_group_screens (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    group_id INT NOT NULL,
+    label VARCHAR(100) NULL,
+    pos_x FLOAT NOT NULL DEFAULT 0,
+    pos_y FLOAT NOT NULL DEFAULT 0,
+    w_pct FLOAT NOT NULL DEFAULT 33.33,
+    h_pct FLOAT NOT NULL DEFAULT 100,
+    orientation ENUM('horizontal','vertical') NOT NULL DEFAULT 'horizontal',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (group_id) REFERENCES display_groups(group_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: display_group_screen_slides (Rotación independiente por pantalla)
+CREATE TABLE display_group_screen_slides (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    screen_id INT NOT NULL,
+    position INT NOT NULL DEFAULT 0 COMMENT 'orden de la diapositiva en esa pantalla',
+    source_slide_id INT NOT NULL COMMENT 'diapositiva maestra (board_slides) que se muestra en esa pantalla',
+    custom_duration INT NULL COMMENT 'duracion en segundos (null = usar default del escenario)',
+    transition VARCHAR(20) NOT NULL DEFAULT 'fade'
+        COMMENT 'transición al mostrar esta diapositiva (fade, slide_left, slide_up, slide_right, zoom, none)',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_screen_pos (screen_id, position),
+    FOREIGN KEY (screen_id) REFERENCES display_group_screens(id) ON DELETE CASCADE,
+    FOREIGN KEY (source_slide_id) REFERENCES board_slides(slide_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: display_group_steps (Secuencia coordinada global; legado de migración 022)
+CREATE TABLE display_group_steps (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    group_id INT NOT NULL,
+    step_order INT NOT NULL DEFAULT 0 COMMENT 'indice de la pasada coordinada',
+    screen_id INT NOT NULL,
+    source_slide_id INT NOT NULL COMMENT 'diapositiva maestra que muestra esta pantalla en este paso',
+    custom_duration INT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_group_step_screen (group_id, step_order, screen_id),
+    FOREIGN KEY (group_id) REFERENCES display_groups(group_id) ON DELETE CASCADE,
+    FOREIGN KEY (screen_id) REFERENCES display_group_screens(id) ON DELETE CASCADE,
+    FOREIGN KEY (source_slide_id) REFERENCES board_slides(slide_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Datos iniciales

@@ -345,8 +345,22 @@ h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
 .badge-shine { position: relative; overflow: hidden; }
 .badge-shine::after { content: ""; position: absolute; top: 0; left: -60%; width: 45%; height: 100%; background: linear-gradient(110deg, transparent, rgba(255,255,255,.5), transparent); transform: skewX(-20deg); }
 
-/* numero con pulse suave */
+/* número con pulse suave */
 .big-num { font-family: var(--font-heading); font-size: 2.6rem; font-weight: 800; color: var(--primary-color); font-variant-numeric: tabular-nums; }
+
+/* ===== Ejemplos chill extra (barra de resumen y resumen de compra) ===== */
+.kpi-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.kpi-box { text-align: center; padding: 18px 10px; background: var(--bg-card); border: 1px solid var(--border-lighter); border-radius: 16px; opacity: 0; transform: translateY(16px); }
+.kpi-box .sv { font-family: var(--font-heading); font-size: 1.7rem; font-weight: 700; }
+.kpi-box .sl { font-size: .75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; }
+.kpi-box .ico { display: inline-block; font-size: 1rem; color: var(--primary-color); margin-bottom: 6px; opacity: 0; }
+
+.summary-table { width: 100%; border-collapse: collapse; }
+.summary-table td { padding: 9px 6px; border-bottom: 1px solid var(--border-lighter); font-size: .88rem; opacity: 0; }
+.summary-table td:last-child { text-align: right; font-weight: 600; }
+.summary-total { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 14px; border-top: 2px solid var(--border-color); opacity: 0; }
+.summary-total .lbl { font-family: var(--font-heading); font-weight: 700; font-size: 1rem; }
+.summary-total .amt { font-family: var(--font-heading); font-size: 1.6rem; font-weight: 800; color: var(--primary-color); }
 
 @media (max-width: 700px) { .grid { grid-template-columns: 1fr 1fr; } .anime-grid { grid-template-columns: repeat(4,1fr); } .anime-cards { grid-template-columns: repeat(2,1fr); } .hero { padding: 44px 16px 34px; } }
 </style>
@@ -748,6 +762,31 @@ h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
       </div>
     </div>
   </section>
+
+  <section class="section">
+    <div class="section-head"><h2><i class="fas fa-chart-column"></i> Resumen del día (KPIs)</h2><p>Cada indicador entra suave, los números suben con calma y respiran al llegar.</p></div>
+    <div class="stage">
+      <div class="kpi-strip" id="kpiStrip">
+        <div class="kpi-box"><span class="ico"><i class="fas fa-coins"></i></span><div class="sv" data-count="1240" data-prefix="$">$0</div><div class="sl">Ingresos</div></div>
+        <div class="kpi-box"><span class="ico"><i class="fas fa-basket-shopping"></i></span><div class="sv" data-count="18">0</div><div class="sl">Ventas</div></div>
+        <div class="kpi-box"><span class="ico"><i class="fas fa-users"></i></span><div class="sv" data-count="34">0</div><div class="sl">Clientes</div></div>
+      </div>
+      <button class="btn btn-soft" id="kpiGo" style="margin-top:16px"><i class="fas fa-play"></i> Iniciar resumen</button>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><h2><i class="fas fa-receipt"></i> Resumen de compra</h2><p>Los renglones se despliegan y el total se llena al final con un toque suave.</p></div>
+    <div class="stage">
+      <table class="summary-table" id="summaryTable">
+        <tr><td>Café Americano</td><td>$25.00</td></tr>
+        <tr><td>Capuchino</td><td>$38.00</td></tr>
+        <tr><td>Brownie</td><td>$30.00</td></tr>
+      </table>
+      <div class="summary-total" id="summaryTotal"><span class="lbl">Total</span><span class="amt" data-total="93">$0</span></div>
+      <button class="btn btn-soft" id="summaryGo" style="margin-top:16px"><i class="fas fa-play"></i> Mostrar resumen</button>
+    </div>
+  </section>
 </div>
 
 </main>
@@ -1119,21 +1158,21 @@ function runFlipTitle(){
   splitFlipLetters(el);
   const lets = el.querySelectorAll('.lt');
   el.querySelectorAll('.sp').forEach(s => { s.style.opacity = 1; });
-  anime({ targets: lets, rotateX: { value: [180, 0] }, opacity: [0,1], translateY: [6,0],
-    delay: anime.stagger(55), duration: 700, easing: 'easeOutCubic' });
+  anime({ targets: lets, rotateX: { value: [150, 0] }, opacity: [0,1], translateY: [5,0],
+    delay: anime.stagger(70), duration: 850, easing: 'easeOutCubic' });
 }
 document.getElementById('flipTitleGo').addEventListener('click', runFlipTitle);
 runFlipTitle();
 
-/* ===== Lista de compras que se despliega (anime.js) ===== */
+/* ===== Lista de compras que se despliega (anime.js) — relajada ===== */
 function runBuyList(){
   const items = document.querySelectorAll('#buyList li');
   items.forEach(it => { it.style.opacity = 0; it.style.transform = 'translateX(-18px)'; });
   anime({ targets: items, opacity: [0,1], translateX: [-18,0],
-    delay: anime.stagger(120, {start: 80}), duration: 550, easing: 'easeOutBack' });
-  // el ícono aparece con un pequeño pop dentro de cada fila
+    delay: anime.stagger(160, {start: 60}), duration: 650, easing: 'easeOutCubic' });
+  // el ícono aparece con un pequeño pop suave dentro de cada fila
   const ics = document.querySelectorAll('#buyList .ic');
-  anime({ targets: ics, scale: [0,1], delay: anime.stagger(160, {start: 200}), duration: 400, easing: 'easeOutBack' });
+  anime({ targets: ics, scale: [0.7,1], delay: anime.stagger(210, {start: 260}), duration: 550, easing: 'easeOutQuad' });
 }
 document.getElementById('buyListGo').addEventListener('click', runBuyList);
 runBuyList();
@@ -1160,39 +1199,42 @@ document.getElementById('buyGo').addEventListener('click', runBuy);
 
 /* ===== Micro-animaciones chill (anime.js) ===== */
 
-/* Tarjetas chill en cascada (estilo lista de compras) */
+/* Tarjetas chill en cascada (estilo lista de compras) — curvas calmadas */
 function runChillGrid(){
   const items = document.querySelectorAll('#chillGrid .chill-item');
   items.forEach(it => { it.style.opacity = 0; it.style.transform = 'translateY(14px)'; });
   anime({ targets: items, translateY: [14,0], opacity: [0,1],
-    delay: anime.stagger(90, {start: 60}), duration: 600, easing: 'easeOutBack' });
+    delay: anime.stagger(110, {start: 40}), duration: 800, easing: 'easeOutCubic' });
   const ics = document.querySelectorAll('#chillGrid .ci');
-  anime({ targets: ics, scale: [0.6,1], rotate: [-6,0], delay: anime.stagger(130, {start: 200}), duration: 500, easing: 'easeOutBack' });
+  anime({ targets: ics, scale: [0.8,1], delay: anime.stagger(160, {start: 200}), duration: 700, easing: 'easeOutQuad' });
 }
 document.getElementById('chillGridGo').addEventListener('click', runChillGrid);
 runChillGrid();
 
-/* Iconos con pop */
+/* Iconos con pop suave */
 function runIconChips(){
   const chips = document.querySelectorAll('#iconChips .icon-chip');
   chips.forEach(c => { c.style.opacity = 0; });
-  anime({ targets: chips, scale: [0,1], opacity: [0,1], translateY: [10,0],
-    delay: anime.stagger(60, {start: 80}), duration: 500, easing: 'easeOutElastic(1,.6)' });
+  anime({ targets: chips, scale: [0.7,1], opacity: [0,1], translateY: [8,0],
+    delay: anime.stagger(80, {start: 40}), duration: 700, easing: 'easeOutQuad' });
 }
 document.getElementById('iconChipsGo').addEventListener('click', runIconChips);
 runIconChips();
 
-/* Número con pulse y contador */
+/* Número con pulse lento y contador relajado */
 const bigNumEl = document.getElementById('bigNum');
 document.getElementById('bigNumGo').addEventListener('click', () => {
-  anime({ targets: bigNumEl, scale: [1, 1.12, 1], duration: 700, easing: 'easeOutElastic(1,.5)' });
+  // pulse lento y suave: sube despacio y vuelve sin rebote brusco
+  anime({ targets: bigNumEl, scale: [1, 1.06, 1], duration: 1400, easing: 'easeInOutSine' });
 });
 let bigVal = 1240;
 document.getElementById('bigNumCount').addEventListener('click', () => {
   bigVal += 25;
-  anime({ targets: {v: bigVal-25}, v: bigVal, round: 1, duration: 800, easing: 'easeOutQuad',
+  // contador lento y relajado
+  anime({ targets: {v: bigVal-25}, v: bigVal, round: 1, duration: 1500, easing: 'easeInOutQuad',
     update: a => { bigNumEl.textContent = Math.round(a.animations[0].currentValue).toLocaleString('es-MX'); } });
-  anime({ targets: bigNumEl, scale: [1, 1.1, 1], duration: 700, easing: 'easeOutBack' });
+  // el número respira suave al llegar
+  anime({ targets: bigNumEl, scale: [1, 1.05, 1], duration: 1200, easing: 'easeInOutSine' });
 });
 
 /* Texto suave (palabras que se desvanecen tranquilo) */
@@ -1213,6 +1255,49 @@ function runSoftLine(){
 }
 document.getElementById('softLineGo').addEventListener('click', runSoftLine);
 runSoftLine();
+
+/* ===== Resumen del día (KPIs) — entrada suave + contadores calmados ===== */
+function runKpis(){
+  const boxes = document.querySelectorAll('#kpiStrip .kpi-box');
+  boxes.forEach(b => { b.style.opacity = 0; b.style.transform = 'translateY(16px)'; });
+  // 1) las cajas entran suave en cascada
+  anime({ targets: boxes, translateY: [16,0], opacity: [0,1],
+    delay: anime.stagger(180, {start: 60}), duration: 700, easing: 'easeOutCubic' });
+  // 2) los iconos aparecen tranquilos
+  const ics = document.querySelectorAll('#kpiStrip .ico');
+  anime({ targets: ics, scale: [0.7,1], opacity: [0,1], delay: anime.stagger(240, {start: 300}), duration: 600, easing: 'easeOutQuad' });
+  // 3) los números suben lento y con calma
+  const sv = document.querySelectorAll('#kpiStrip .sv');
+  sv.forEach((el, i) => {
+    const target = parseFloat(el.dataset.count), prefix = el.dataset.prefix || '';
+    anime({ targets: {v:0}, v: target, round: 1, duration: 1500, delay: 400 + i*140, easing: 'easeInOutQuad',
+      update: a => { el.textContent = prefix + Math.round(a.animations[0].currentValue).toLocaleString('es-MX'); } });
+    // 4) el KPI respira suave al terminar
+    anime({ targets: el, scale: [1, 1.06, 1], duration: 1100, delay: 1900 + i*140, easing: 'easeInOutSine' });
+  });
+}
+document.getElementById('kpiGo').addEventListener('click', runKpis);
+runKpis();
+
+/* ===== Resumen de compra — renglones chill + total que se llena ===== */
+function runSummary(){
+  const rows = document.querySelectorAll('#summaryTable tr td');
+  rows.forEach(td => { td.style.opacity = 0; });
+  anime({ targets: rows, translateY: [8,0], opacity: [0,1],
+    delay: anime.stagger(140, {start: 80}), duration: 600, easing: 'easeOutQuad' });
+  const total = document.getElementById('summaryTotal');
+  total.style.opacity = 0;
+  const amt = total.querySelector('.amt');
+  const finalv = parseInt(amt.dataset.total, 10);
+  setTimeout(() => {
+    total.style.opacity = 1;
+    anime({ targets: {v:0}, v: finalv, round: 2, duration: 1300, easing: 'easeInOutQuad',
+      update: a => { amt.textContent = '$' + a.animations[0].currentValue.toFixed(2); } });
+    anime({ targets: amt, scale: [1, 1.05, 1], duration: 1000, delay: 1200, easing: 'easeInOutSine' });
+  }, rows.length * 140 + 300);
+}
+document.getElementById('summaryGo').addEventListener('click', runSummary);
+runSummary();
 
 new MutationObserver(()=>{}).observe ? 0 : 0;
 </script>

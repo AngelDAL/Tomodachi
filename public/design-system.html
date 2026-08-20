@@ -724,7 +724,7 @@ const modalFx = {
   zoom:      { enter:{ scale:[0.92,1] },           ease:'easeOutQuad', dur:300 },
   'slide-up':{ enter:{ translateY:[40,0] },        ease:'easeOutQuad', dur:320 },
   drop:      { enter:{ translateY:[-22,0], scale:[0.97,1] }, ease:'easeOutCubic', dur:320 },
-  flip:      { enter:{ translateY:[12,0], rotateX:[24,0] },  ease:'easeOutQuad', dur:340 },
+  flip:      { enter:{ rotateX:[24,0], translateZ:[0,0] },  ease:'easeOutQuad', dur:340 },
   grow:      { enter:{ scale:[0.9,1] },            ease:'easeOutQuad', dur:300 },
 };
 let modalSize = 'md';
@@ -733,7 +733,7 @@ function setModalSize(s){
   modalSize = s;
   mbox.classList.remove('sm','md','lg');
   mbox.classList.add(s);
-  // abre el modal con el tamaño elegido (si aún no está abierto)
+  // abre (o re-abre) el modal con el tamaño elegido
   openModal(ov.dataset.anim || 'zoom');
 }
 
@@ -742,21 +742,45 @@ function openModal(a){
   if (animName) animName.textContent = anims[a] || a;
   if (animLabel) animLabel.textContent = '· ' + (anims[a] || a);
   const fx = modalFx[a] || modalFx.zoom;
-  // estado inicial: oculta mediante transform/opacidad iniciales inline
-  mbox.style.opacity = '0';
+
   ov.classList.add('show');
-  // entrada: animar desde el estado inicial hasta el normal
-  const props = Object.assign({ opacity:[0,1] }, fx.enter);
-  anime({ targets: mbox, ...props, duration: fx.dur, easing: fx.ease, delay: 10 });
+
+  // 1) Llevar el modal a neutro absoluto (limpia cualquier flip/estado previo)
+  mbox.style.transition = 'none';
+  mbox.style.transform = 'none';
+  mbox.style.opacity = '1';
+
+  // 2) Fijar el ESTADO INICIAL de la variante de forma explícita (visible)
+  const start = {}; // primeras teclas (estado de entrada)
+  const endProps = {};
+  Object.keys(fx.enter).forEach(k => { start[k] = fx.enter[k][0]; endProps[k] = fx.enter[k][1]; });
+
+  // 3) Forzar reflow para que el estado inicial quede pintado antes de animar
+  void mbox.offsetWidth;
+  anime.set(mbox, Object.assign({ opacity:0 }, start));
+
+  // 4) Animar desde el estado inicial hacia el normal (entrada visible)
+  anime({ targets: mbox, ...endProps, opacity: 1, duration: fx.dur, easing: fx.ease, delay: 10,
+    begin: () => { /* entrada en curso */ } });
 }
 function closeModal(){
   if (!ov.classList.contains('show')) return;
   const fx = modalFx[ov.dataset.anim] || modalFx.zoom;
-  // salida: espejo exacto (invertir cada par de la entrada) + opacity 1->0
-  const rev = {};
-  Object.keys(fx.enter).forEach(k => { const p = fx.enter[k]; rev[k] = [p[1], p[0]]; });
-  anime({ targets: mbox, ...rev, opacity:[1,0], duration: Math.min(fx.dur, 260), easing: fx.ease,
-    complete: () => { ov.classList.remove('show'); } });
+  // salida: espejo exacto, del estado normal (fin) de vuelta al inicial (inicio)
+  const to = {};
+  Object.keys(fx.enter).forEach(k => {
+    const a = fx.enter[k][0], b = fx.enter[k][1];
+    to[k] = [b, a];  // de b(fin) a a(inicio)
+  });
+  anime({ targets: mbox, ...to, opacity:[1,0], duration: Math.min(fx.dur, 260), easing: fx.ease,
+    complete: () => {
+      ov.classList.remove('show');
+      // Al terminar, limpiar TODOS los estilos inline para que el próximo
+      // modal no herede ni transformaciones (flip) ni opacidad.
+      mbox.style.transform = 'none';
+      mbox.style.opacity = '';
+      mbox.style.transition = '';
+    } });
 }
 document.querySelectorAll('[data-modal-open]').forEach(b=>b.addEventListener('click',()=>openModal(b.dataset.modalOpen)));
 document.querySelectorAll('[data-modal-size]').forEach(b=>b.addEventListener('click',()=>setModalSize(b.dataset.modalSize)));

@@ -195,14 +195,26 @@ h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
 }
 .modal-overlay.show { display: flex; animation: fadeIn .25s var(--dur) both; }
 @keyframes fadeIn { from { opacity: 0; } }
-.modal { width: 100%; max-width: 480px; background: var(--bg-card); border-radius: 22px; box-shadow: 0 25px 60px -15px rgba(0,0,0,.4); overflow: hidden; position: relative; }
-.modal-head { padding: 20px 24px 0; display: flex; align-items: center; justify-content: space-between; }
-.modal-head h3 { font-size: 1.12rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+/* Tres tamaños de modal */
+.modal { width: 100%; max-width: 480px; background: var(--bg-card); border-radius: 20px; box-shadow: 0 25px 60px -15px rgba(0,0,0,.4); overflow: hidden; position: relative; }
+.modal.sm { max-width: 360px; }
+.modal.md { max-width: 480px; }
+.modal.lg { max-width: 640px; }
+
+/* Titular con estructura marcada y separación */
+.modal-head {
+  padding: 22px 24px 16px; display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--border-lighter);
+}
+.modal-head h3 { font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
 .modal-head h3 i { color: var(--primary-color); }
-.icon-btn { background: transparent; border: none; color: var(--text-muted); width: 40px; height: 40px; border-radius: 50%; display: grid; place-content: center; font-size: 1.1rem; cursor: pointer; transition: all var(--dur); }
-.icon-btn:hover { background: var(--bg-hover); color: var(--danger-color); transform: rotate(90deg); }
-.modal-body { padding: 18px 24px; }
-.modal-foot { padding: 18px 24px 22px; display: flex; gap: 10px; justify-content: flex-end; }
+.icon-btn { background: var(--bg-lightest); border: 1px solid var(--border-lighter); color: var(--text-muted); width: 38px; height: 38px; border-radius: 50%; display: grid; place-content: center; font-size: 1rem; cursor: pointer; transition: all var(--dur); }
+.icon-btn:hover { background: var(--bg-hover); border-color: var(--danger-color); color: var(--danger-color); transform: rotate(90deg); }
+.modal-body { padding: 22px 24px; }
+.modal-foot {
+  padding: 18px 24px 22px; display: flex; gap: 10px; justify-content: flex-end;
+  border-top: 1px solid var(--border-lighter); background: var(--bg-lightest);
+}
 
 /* La animación de ENTRADA y SALIDA del modal la maneja anime.js (ver JS),
    con efecto propio por variante. El CSS base solo define apariencia. */
@@ -455,7 +467,7 @@ h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
      ================================================================ -->
 <div class="view-pane" id="pane-modales">
   <section class="section">
-    <div class="section-head"><h2><i class="fas fa-window-maximize"></i> Modales</h2><p>Seis variantes de animación de entrada.</p></div>
+    <div class="section-head"><h2><i class="fas fa-window-maximize"></i> Modales</h2><p>Cinco variantes de animación (entrada y salida espejadas). Elige también el tamaño: pequeño, mediano o grande.</p></div>
     <div class="stage">
       <div class="anim-row">
         <button class="btn btn-soft" data-modal-open="zoom"><i class="fas fa-eye"></i> Zoom</button>
@@ -464,6 +476,18 @@ h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
         <button class="btn btn-soft" data-modal-open="flip"><i class="fas fa-rotate"></i> Flip</button>
         <button class="btn btn-soft" data-modal-open="grow"><i class="fas fa-expand"></i> Grow</button>
       </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><h2><i class="fas fa-expand-arrows-alt"></i> Tamaño del modal</h2></div>
+    <div class="stage">
+      <div class="anim-row">
+        <button class="btn btn-dark" data-modal-size="sm"><i class="fas fa-compress"></i> Pequeño</button>
+        <button class="btn btn-dark" data-modal-size="md"><i class="fas fa-expand"></i> Mediano</button>
+        <button class="btn btn-dark" data-modal-size="lg"><i class="fas fa-up-right-and-down-left-from-center"></i> Grande</button>
+      </div>
+      <p class="code-note" style="margin:14px 0 0">Haz clic en una variante (Zoom, Slide up…) con el que quieras abrir · los tamaños se aplican al modal</p>
     </div>
   </section>
 
@@ -576,9 +600,9 @@ h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
 
 <!-- ===== MODAL ===== -->
 <div class="modal-overlay" id="modalOverlay" data-anim="zoom">
-  <div class="modal" id="modalBox">
+  <div class="modal md" id="modalBox">
     <div class="modal-head">
-      <h3><i class="fas fa-info-circle"></i> Modal</h3>
+      <h3><i class="fas fa-info-circle"></i> Modal <span id="modalAnimLabel" style="font-size:.8rem;font-weight:500;color:var(--text-muted)">· Zoom</span></h3>
       <button class="icon-btn" id="modalClose"><i class="fas fa-xmark"></i></button>
     </div>
     <div class="modal-body"><p style="color:var(--text-medium)">Este modal usa la animación <b id="modalAnimName">zoom</b>.</p></div>
@@ -691,52 +715,37 @@ const ov = document.getElementById('modalOverlay'), mbox = document.getElementBy
 const animName = document.getElementById('modalAnimName');
 const anims = { zoom:'Zoom', 'slide-up':'Slide up', drop:'Drop', flip:'Flip', grow:'Grow' };
 /* config de ENTRADA y SALIDA por variante.
-   Cada variante define su transformación como pares [estadoA, estadoB].
-   Entrada: de A a B. Salida: espejo, de B a A. Misma easing en ambas. */
+   Cada variante define el estado inicial (from) y final (to) como string CSS.
+   Entrada: de from a to. Salida: espejo, de to a from. Misma easing. */
 const modalFx = {
-  zoom:      { k:['scale'], a:[.78,1], easing:'easeOutBack', dur:360 },
-  'slide-up':{ k:['translateY'], a:[70,0], easing:'easeOutBack', dur:360 },
-  drop:      { k:['translateY','scale'], a:[[-56,0],[.94,1]], easing:'easeOutCubic', dur:380 },
-  flip:      { k:['rotateX'], a:[-55,0], easing:'easeOutCubic', dur:400 },
-  grow:      { k:['scale'], a:[.4,1], easing:'easeOutElastic(1,.6)', dur:520 },
+  zoom:      { from:'scale(0.92)', to:'scale(1)', easing:'easeOutQuad', dur:300 },
+  'slide-up':{ from:'translateY(40px)', to:'translateY(0)', easing:'easeOutQuad', dur:320 },
+  drop:      { from:'translateY(-24px) scale(0.97)', to:'translateY(0) scale(1)', easing:'easeOutCubic', dur:300 },
+  flip:      { from:'perspective(900px) rotateX(18deg)', to:'perspective(900px) rotateX(0deg)', easing:'easeOutQuad', dur:340 },
+  grow:      { from:'scale(0.88)', to:'scale(1)', easing:'easeOutQuad', dur:300 },
 };
 let modalTimeline = null;
+let modalSize = 'md';
 
-function buildTargets(fx, rev) {
-  // devuelve { props: {}, opacity:[0,1] } donde props parte de rev?A:B
-  const props = {};
-  fx.k.forEach((k, i) => {
-    const pair = Array.isArray(fx.a[i]) ? fx.a[i] : fx.a;          // valores para esta key
-    if (Array.isArray(pair) && pair.length===2 && Array.isArray(pair[0])) {
-      props[k] = rev ? pair.map(v=>v[0]) : pair.map(v=>v[1]);      // pair de sub-valores
-    } else if (Array.isArray(pair) && pair.length===2 && typeof pair[0]==='number') {
-      // 'a' es un solo par [x,y] compartido por todas las keys (caso simple)
-      props[k] = rev ? [pair[1], pair[0]] : [pair[0], pair[1]];
-    } else {
-      props[k] = pair;
-    }
-  });
-  return { props, opacity: rev ? [1,0] : [0,1] };
-}
+function setModalSize(s){ modalSize = s; mbox.classList.remove('sm','md','lg'); mbox.classList.add(s); }
 
 function openModal(a) {
   ov.dataset.anim = a; animName.textContent = anims[a] || a;
   const fx = modalFx[a] || modalFx.zoom;
-  mbox.style.transform = 'none'; mbox.style.opacity = 0;
+  // estado inicial via transform inline, con opacidad 1 (para que se vea el giro)
+  mbox.style.transform = fx.from; mbox.style.opacity = 1;
   ov.classList.add('show');
-  // entrada: aplicar props (de A a B) + opacity 0->1
-  const { props, opacity } = buildTargets(fx, false);
-  anime({ targets: mbox, ...props, opacity, duration: fx.dur, easing: fx.easing, delay: 20 });
+  anime({ targets: mbox, transform: [fx.from, fx.to], duration: fx.dur, easing: fx.easing, delay: 10 });
+  // el fondo mantiene su fade propio vía CSS
 }
 function closeModal(){
   if (!ov.classList.contains('show')) return;
   const fx = modalFx[ov.dataset.anim] || modalFx.zoom;
-  // salida: espejo (de B a A) + opacity 1->0
-  const { props, opacity } = buildTargets(fx, true);
-  anime({ targets: mbox, ...props, opacity, duration: Math.min(fx.dur, 300), easing: fx.easing,
+  anime({ targets: mbox, transform: [fx.to, fx.from], opacity: [1,0], duration: Math.min(fx.dur, 280), easing: fx.easing,
     complete: () => { ov.classList.remove('show'); } });
 }
 document.querySelectorAll('[data-modal-open]').forEach(b=>b.addEventListener('click',()=>openModal(b.dataset.modalOpen)));
+document.querySelectorAll('[data-modal-size]').forEach(b=>b.addEventListener('click',()=>setModalSize(b.dataset.modalSize)));
 document.getElementById('modalClose').addEventListener('click', closeModal);
 document.getElementById('modalCancel').addEventListener('click', closeModal);
 ov.addEventListener('click', e=>{ if(e.target===ov) closeModal(); });

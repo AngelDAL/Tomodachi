@@ -51,11 +51,7 @@ h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
 .main-tab.active { background: var(--primary-color); color: #fff; box-shadow: var(--shadow-primary); }
 
 .view-pane { display: none; }
-.view-pane.active { display: block; animation: paneIn .45s cubic-bezier(.16,1,.3,1); }
-@keyframes paneIn {
-  from { opacity: 0; transform: translateY(22px); filter: blur(2px); }
-  to { opacity: 1; transform: none; filter: blur(0); }
-}
+.view-pane.active { display: block; }
 
 /* ===== Secciones / grid / stage ===== */
 .section { margin-top: 48px; }
@@ -72,7 +68,7 @@ h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
 
 /* ===== BOTONES CÁPSULA ===== */
 .btn { position: relative; overflow: hidden; font-family: var(--font-heading); display: inline-flex; align-items: center; justify-content: center; gap: 9px; font-size: .9rem; font-weight: 600; padding: 12px 26px; border-radius: 100px; border: 1.5px solid transparent; cursor: pointer; text-decoration: none; white-space: nowrap; transform: translateZ(0); -webkit-tap-highlight-color: transparent; transition: transform var(--dur), box-shadow var(--dur-spring), background var(--dur), color var(--dur), border-color var(--dur); }
-.btn:active { transform: scale(.95); }
+.btn:active { transform: translateY(1px) scale(.97); box-shadow: none; }
 .btn i { font-size: .95em; }
 .btn-solid { background: var(--primary-color); color: #fff; box-shadow: var(--shadow-primary); }
 .btn-solid:hover { background: var(--primary-hover); box-shadow: var(--shadow-lg); }
@@ -88,11 +84,9 @@ h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
 .btn-lg { padding: 15px 34px; font-size: 1.02rem; }
 .btn-sm { padding: 9px 18px; font-size: .8rem; }
 .btn-block { width: 100%; }
-.btn .shine { position: absolute; top: 0; left: -70%; width: 55%; height: 100%; background: linear-gradient(110deg, transparent, rgba(255,255,255,.4), transparent); transform: skewX(-20deg); opacity: 0; transition: left .55s var(--dur-soft), opacity .3s; }
-.btn:hover .shine { left: 130%; opacity: 1; }
-.btn .ripple { position: absolute; border-radius: 50%; transform: scale(0); pointer-events: none; background: rgba(255,255,255,.4); animation: rip .4s cubic-bezier(.4,0,.2,1) forwards; }
-[data-theme="dark"] .btn .ripple { background: rgba(255,255,255,.16); }
-@keyframes rip { to { transform: scale(3.2); opacity: 0; } }
+.btn .shine { display: none; }
+.btn .ripple { display: none; }
+@keyframes rip66 { to { transform: scale(3.2); opacity: 0; } }
 @keyframes spin { to { transform: rotate(360deg); } }
 .btn.loading { pointer-events: none; opacity: .72; }
 .btn.loading i { animation: spin 1s linear infinite; }
@@ -183,12 +177,25 @@ h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
 .kpi .l { font-size: .76rem; color: var(--text-muted); }
 .card-divider { height: 1px; background: var(--border-lighter); margin: 0 24px; }
 .card-foot { padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
+/* Titular con textura SVG sutil */
+.card-head.textured { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Ccircle cx='20' cy='20' r='7' fill='none' stroke='%23ffffff' stroke-opacity='0.28'/%3E%3Cpath d='M20 6v28M6 20h28' stroke='%23ffffff' stroke-opacity='0.12'/%3E%3C/svg%3E"), var(--bg-lightest); }
+[data-theme="dark"] .card-head.textured { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Ccircle cx='20' cy='20' r='7' fill='none' stroke='%23000000' stroke-opacity='0.35'/%3E%3Cpath d='M20 6v28M6 20h28' stroke='%23000000' stroke-opacity='0.18'/%3E%3C/svg%3E"), var(--bg-lightest); }
 
 /* ===== MODAL ===== */
-.modal-overlay { position: fixed; inset: 0; z-index: 1000; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(0,0,0,.5); }
+/* Backdrop con patrón SVG sutil (textura monocromática) además del velo */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 1000; display: none; align-items: center; justify-content: center; padding: 20px;
+  background-color: rgba(0,0,0,.5);
+}
+[data-theme="dark"] .modal-overlay { background-color: rgba(0,0,0,.6); }
+.modal-overlay::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.10'%3E%3Cpath d='M0 30 30 0 60 30 30 60Z'/%3E%3C/g%3E%3C/svg%3E");
+  opacity: .6;
+}
 .modal-overlay.show { display: flex; animation: fadeIn .25s var(--dur) both; }
 @keyframes fadeIn { from { opacity: 0; } }
-.modal { width: 100%; max-width: 480px; background: var(--bg-card); border-radius: 22px; box-shadow: 0 25px 60px -15px rgba(0,0,0,.4); overflow: hidden; }
+.modal { width: 100%; max-width: 480px; background: var(--bg-card); border-radius: 22px; box-shadow: 0 25px 60px -15px rgba(0,0,0,.4); overflow: hidden; position: relative; }
 .modal-head { padding: 20px 24px 0; display: flex; align-items: center; justify-content: space-between; }
 .modal-head h3 { font-size: 1.12rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
 .modal-head h3 i { color: var(--primary-color); }
@@ -197,24 +204,8 @@ h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
 .modal-body { padding: 18px 24px; }
 .modal-foot { padding: 18px 24px 22px; display: flex; gap: 10px; justify-content: flex-end; }
 
-/* El modal parte OCULTO (opacidad 0 + transform de entrada) y, al activarse,
-   transiciona hacia su estado final con un efecto de entrada real (no "pega").
-   La clase .in dispara la transición; se reinicia quitando/poniendo .show/.in. */
-[data-anim="zoom"] .modal { opacity: 0; transform: scale(.86); transition: transform .32s cubic-bezier(.16,1,.3,1), opacity .32s; }
-[data-anim="zoom"] .modal.in { opacity: 1; transform: none; }
-
-[data-anim="slide-up"] .modal { opacity: 0; transform: translateY(56px); transition: transform .36s cubic-bezier(.16,1,.3,1), opacity .36s; }
-[data-anim="slide-up"] .modal.in { opacity: 1; transform: none; }
-
-[data-anim="drop"] .modal { opacity: 0; transform: translateY(-46px) scale(.95); transition: transform .38s cubic-bezier(.16,1,.3,1), opacity .34s; }
-[data-anim="drop"] .modal.in { opacity: 1; transform: none; }
-
-[data-anim="flip"] .modal { opacity: 0; transform: perspective(1000px) rotateX(-12deg); transition: transform .42s cubic-bezier(.16,1,.3,1), opacity .36s; }
-[data-anim="flip"] .modal.in { opacity: 1; transform: perspective(1000px) rotateX(0); }
-
-[data-anim="grow"] .modal { opacity: 0; transform: scale(.72); transition: transform .38s cubic-bezier(.16,1,.3,1), opacity .34s; }
-[data-anim="grow"] .modal.in { opacity: 1; transform: scale(1); }
-
+/* La animación de ENTRADA y SALIDA del modal la maneja anime.js (ver JS),
+   con efecto propio por variante. El CSS base solo define apariencia. */
 /* ===== DRAWER — con rebote orgánico y más ancho ===== */
 .drawer-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,.5); display: flex; justify-content: flex-end; opacity: 0; visibility: hidden; transition: opacity .3s, visibility .3s; }
 .drawer-overlay.show { opacity: 1; visibility: visible; }
@@ -440,7 +431,7 @@ h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
     <div class="section-head"><h2><i class="fas fa-id-card"></i> Cards</h2><p>Sombra ligera, esquinas redondeadas, encabezado más claro y separación marcada. Sin degradado superior.</p></div>
     <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr))">
       <div class="card">
-        <div class="card-head"><h4><i class="fas fa-chart-line"></i> Ventas del día</h4><span class="hint"><i class="fas fa-arrow-right"></i></span></div>
+        <div class="card-head textured"><h4><i class="fas fa-chart-line"></i> Ventas del día</h4><span class="hint"><i class="fas fa-arrow-right"></i></span></div>
         <div class="card-body-x"><div class="kpis"><div class="kpi"><div class="v">$1,240</div><div class="l">Total</div></div><div class="kpi"><div class="v small">12</div><div class="l">Ventas</div></div><div class="kpi"><div class="v small">$103</div><div class="l">Promedio</div></div></div></div>
         <div class="card-divider"></div>
         <div class="card-foot"><span class="badge badge-success"><i class="fas fa-arrow-up"></i> +18%</span></div>
@@ -621,25 +612,38 @@ document.querySelectorAll('[data-theme-set]').forEach(seg => seg.addEventListene
   document.querySelectorAll('[data-theme-set]').forEach(s => s.classList.toggle('active', s === seg));
 }));
 
-/* ===== Pestañas principales ===== */
+/* ===== Pestañas principales (transición con anime.js: dissolve + zoom) ===== */
+let paneBusy = false;
 document.querySelectorAll('.main-tab').forEach(tab => tab.addEventListener('click', () => {
+  if (paneBusy) return;
+  const targetId = tab.dataset.pane;
+  const current = document.querySelector('.view-pane.active');
+  if (current && current.id === targetId) return;
   document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.view-pane').forEach(p => p.classList.remove('active'));
   tab.classList.add('active');
-  document.getElementById(tab.dataset.pane).classList.add('active');
-  window.dispatchEvent(new Event('resize'));
+  const target = document.getElementById(targetId);
+  if (!target) return;
+
+  paneBusy = true;
+  const finishSwitch = () => {
+    if (current) current.classList.remove('active');
+    target.classList.add('active');
+    target.style.opacity = '0'; target.style.transform = 'scale(1.03)';
+    anime({ targets: target, opacity:[0,1], scale:[1.03,1], duration: 400, easing:'easeOutCubic', begin: ()=>{ target.style.display='block'; } });
+    window.dispatchEvent(new Event('resize'));
+    paneBusy = false;
+  };
+  if (current) {
+    anime({ targets: current, opacity:[1,0], scale:[1,.97], duration: 200, easing:'easeInQuad', complete: () => {
+      current.style.display='none'; finishSwitch();
+    }});
+  } else {
+    finishSwitch();
+  }
 }));
 
-/* ===== Ripple + shine botones ===== */
-document.addEventListener('click', e => {
-  const btn = e.target.closest('.btn');
-  if (!btn) return;
-  const r = btn.getBoundingClientRect(), d = Math.max(r.width,r.height)*2;
-  const rip = document.createElement('span'); rip.className='ripple';
-  rip.style.cssText = `width:${d}px;height:${d}px;left:${e.clientX-r.left-d/2}px;top:${e.clientY-r.top-d/2}px;`;
-  btn.appendChild(rip); setTimeout(()=>rip.remove(),420);
-  if (!btn.querySelector('.shine')) { const s=document.createElement('span'); s.className='shine'; btn.prepend(s); }
-});
+/* ===== Botones: presión limpia (sin ripple/shine) ===== */
+/* La reacción al clic es una compresión sutil vía :active (CSS) */
 
 /* ===== Segment (cápsulas diagonal) ===== */
 document.querySelectorAll('.segment').forEach(seg => seg.querySelectorAll('.cap-btn').forEach(b => b.addEventListener('click', () => {
@@ -682,21 +686,34 @@ document.querySelectorAll('.tab[data-panel]').forEach(tab => tab.addEventListene
   if (p) { p.classList.remove('active'); void p.offsetWidth; p.classList.add('active'); }
 }));
 
-/* ===== Modal ===== */
+/* ===== Modal: entrada y salida personalizadas por variante (anime.js) ===== */
 const ov = document.getElementById('modalOverlay'), mbox = document.getElementById('modalBox');
 const animName = document.getElementById('modalAnimName');
 const anims = { zoom:'Zoom', 'slide-up':'Slide up', drop:'Drop', flip:'Flip', grow:'Grow' };
+/* config de ENTRADA y SALIDA por variante */
+const modalFx = {
+  zoom:      { in:{ scale:[.78,1], opacity:[0,1], easing:'easeOutBack' },        out:{ scale:[1,.9], opacity:[1,0], easing:'easeInCubic' } },
+  'slide-up':{ in:{ translateY:[80,0], opacity:[0,1], easing:'easeOutBack' },     out:{ translateY:[0,60], opacity:[1,0], easing:'easeInBack' } },
+  drop:      { in:{ translateY:[-60,0], scale:[.9,1], opacity:[0,1], easing:'easeOutCubic' }, out:{ translateY:[0,40], opacity:[1,0], easing:'easeInCubic' } },
+  flip:      { in:{ rotateX:[-60,0], opacity:[0,1], easing:'easeOutCubic' },      out:{ rotateX:[0,30], opacity:[1,0], easing:'easeInCubic' } },
+  grow:      { in:{ scale:[.4,1], opacity:[0,1], easing:'easeOutElastic(1,.6)' }, out:{ scale:[1,.6], opacity:[1,0], easing:'easeInCubic' } },
+};
+let modalTimeline = null;
+
 function openModal(a) {
   ov.dataset.anim = a; animName.textContent = anims[a] || a;
-  // reinicio: quitar .show/.in, reflow, luego mostrar y disparar .in
-  ov.classList.remove('show'); mbox.classList.remove('in');
-  void ov.offsetWidth;
+  const fx = modalFx[a] || modalFx.zoom;
+  // reset de transform para que anime.js parta de estado limpio
+  mbox.style.transform = 'none'; mbox.style.opacity = 0;
   ov.classList.add('show');
-  requestAnimationFrame(() => mbox.classList.add('in'));
+  const D = 380;
+  modalTimeline = anime({ targets: mbox, ...fx.in, duration: D, easing: fx.in.easing, delay: 20 });
 }
 function closeModal(){
-  mbox.classList.remove('in');
-  setTimeout(()=>ov.classList.remove('show'), 240);
+  if (!ov.classList.contains('show')) return;
+  const fx = modalFx[ov.dataset.anim] || modalFx.zoom;
+  anime({ targets: mbox, ...fx.out, duration: 240, easing: fx.out.easing,
+    complete: () => { ov.classList.remove('show'); } });
 }
 document.querySelectorAll('[data-modal-open]').forEach(b=>b.addEventListener('click',()=>openModal(b.dataset.modalOpen)));
 document.getElementById('modalClose').addEventListener('click', closeModal);

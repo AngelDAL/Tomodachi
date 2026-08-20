@@ -1833,12 +1833,10 @@ table tr:hover {
     width: 100%;
     max-width: none;
     box-shadow: var(--shadow-lg);
-    animation: saleDialogIn 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .client-dialog::backdrop {
     background: rgba(0, 0, 0, 0.55);
     backdrop-filter: blur(3px);
-    animation: saleBackdropIn 0.4s ease forwards;
 }
 .client-dialog .modal-close {
     color: var(--primary-color);

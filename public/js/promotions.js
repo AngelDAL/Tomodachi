@@ -212,6 +212,15 @@ function openPromoModal(promoId = null, isReadOnly = false) {
     if (promoModal) {
         if (typeof promoModal.showModal === 'function') { promoModal.showModal(); }
         document.body.classList.add("modal-open");
+        // Animación de ENTRADA del modal (espejo: escala .92 -> 1) con anime.js
+        const mc = promoModal.querySelector('.modal-content');
+        if (mc) {
+            if (typeof anime !== 'undefined') {
+                mc.style.transform = 'scale(0.92)';
+                mc.style.opacity = '0';
+                anime({ targets: mc, scale: [0.92, 1], opacity: [0, 1], duration: 320, easing: 'easeOutQuad' });
+            }
+        }
         // Ensure products are loaded (sometimes loadedPromotions happens before loadProductsForGrid is ready)
         if (allProducts.length === 0) {
              loadProductsForGrid().then(() => {
@@ -230,13 +239,22 @@ function openPromoModal(promoId = null, isReadOnly = false) {
 }
 
 function closePromoModal() {
-    if (promoModal) {
+    if (!promoModal) return;
+    // Animación de SALIDA (espejo de la entrada: escala 1 -> .92) antes de cerrar
+    const mc = promoModal.querySelector('.modal-content');
+    const doClose = () => {
         if (typeof promoModal.close === 'function') { promoModal.close(); }
+        document.body.classList.remove("modal-open");
+        const form = document.getElementById("promoForm");
+        if (form) form.reset();
+        selectedTargets = [];
+    };
+    if (mc && typeof anime !== 'undefined') {
+        anime({ targets: mc, scale: [1, 0.92], opacity: [1, 0], duration: 220, easing: 'easeInQuad',
+            complete: doClose });
+    } else {
+        doClose();
     }
-    document.body.classList.remove("modal-open");
-    const form = document.getElementById("promoForm");
-    if (form) form.reset();
-    selectedTargets = [];
 }
 
 document.addEventListener("DOMContentLoaded", () => {

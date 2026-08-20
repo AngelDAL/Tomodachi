@@ -174,8 +174,8 @@ h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
 .card-foot { padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
 
 /* ===== MODAL ===== */
-.modal-overlay { position: fixed; inset: 0; z-index: 1000; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(0,0,0,.5); backdrop-filter: blur(5px); }
-.modal-overlay.show { display: flex; animation: fadeIn .2s var(--dur) both; }
+.modal-overlay { position: fixed; inset: 0; z-index: 1000; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(0,0,0,.5); }
+.modal-overlay.show { display: flex; animation: fadeIn .25s var(--dur) both; }
 @keyframes fadeIn { from { opacity: 0; } }
 .modal { width: 100%; max-width: 480px; background: var(--bg-card); border-radius: 22px; box-shadow: 0 25px 60px -15px rgba(0,0,0,.4); overflow: hidden; }
 .modal-head { padding: 20px 24px 0; display: flex; align-items: center; justify-content: space-between; }
@@ -185,32 +185,53 @@ h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
 .icon-btn:hover { background: var(--bg-hover); color: var(--danger-color); transform: rotate(90deg); }
 .modal-body { padding: 18px 24px; }
 .modal-foot { padding: 18px 24px 22px; display: flex; gap: 10px; justify-content: flex-end; }
-/* animaciones de modal */
-[data-anim="zoom"] .modal { transform: scale(.86); opacity: 0; transition: transform .32s var(--dur-spring), opacity .32s; }
-[data-anim="zoom"] .modal.in { transform: none; opacity: 1; }
-[data-anim="slide-up"] .modal { transform: translateY(60px); opacity: 0; transition: transform .34s var(--dur-soft), opacity .34s; }
-[data-anim="slide-up"] .modal.in { transform: none; opacity: 1; }
-[data-anim="drop"] .modal { transform: translateY(-50px) scale(.95); opacity: 0; transition: transform .34s var(--dur-spring), opacity .34s; }
-[data-anim="drop"] .modal.in { transform: none; opacity: 1; }
-[data-anim="flip"] .modal { transform: perspective(1000px) rotateX(-16deg); opacity: 0; transition: transform .38s var(--dur-soft), opacity .34s; }
-[data-anim="flip"] .modal.in { transform: perspective(1000px) rotateX(0); opacity: 1; }
-[data-anim="grow"] .modal { transform: scale(.7); opacity: 0; transition: transform .36s var(--dur-spring), opacity .32s; }
-[data-anim="grow"] .modal.in { transform: scale(1); opacity: 1; }
 
-/* ===== DRAWER (real de tomodachi) ===== */
+/* El modal entra con su animación de aparición AL MISMO TIEMPO que el fondo:
+   se desvanece hacia adentro (fade) + efecto propio de cada variante.
+   No espera a "mostrarse": la animación ocurre desde el primer frame visible. */
+[data-anim="zoom"] .modal { animation: animZoom .32s var(--dur-soft) forwards; }
+[data-anim="slide-up"] .modal { animation: animSlideUp .34s var(--dur-soft) forwards; }
+[data-anim="drop"] .modal { animation: animDrop .34s var(--dur-soft) forwards; }
+[data-anim="flip"] .modal { animation: animFlip .38s var(--dur-soft) forwards; }
+[data-anim="grow"] .modal { animation: animGrow .36s var(--dur-soft) forwards; }
+
+@keyframes animZoom { from { opacity: 0; transform: scale(.9); } to { opacity: 1; transform: none; } }
+@keyframes animSlideUp { from { opacity: 0; transform: translateY(46px); } to { opacity: 1; transform: none; } }
+@keyframes animDrop { from { opacity: 0; transform: translateY(-40px) scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes animFlip { from { opacity: 0; transform: perspective(1000px) rotateX(-12deg); } to { opacity: 1; transform: perspective(1000px) rotateX(0); } }
+@keyframes animGrow { from { opacity: 0; transform: scale(.72); } to { opacity: 1; transform: scale(1); } }
+
+/* ===== DRAWER — con rebote orgánico y más ancho ===== */
 .drawer-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,.5); display: flex; justify-content: flex-end; opacity: 0; visibility: hidden; transition: opacity .3s, visibility .3s; }
 .drawer-overlay.show { opacity: 1; visibility: visible; }
-.drawer { width: 440px; max-width: 92vw; height: 100%; background: var(--bg-card); box-shadow: -8px 0 30px rgba(0,0,0,.18); transform: translateX(100%); transition: transform .4s cubic-bezier(.16,1,.3,1); display: flex; flex-direction: column; overflow: hidden; }
-.drawer-overlay.show .drawer { transform: none; }
-.drawer-head { padding: 18px 22px; border-bottom: 1px solid var(--border-lighter); display: flex; justify-content: space-between; align-items: center; }
-.drawer-head h3 { font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+.drawer { width: 540px; max-width: 96vw; height: 100%; background: var(--bg-card); box-shadow: -12px 0 40px rgba(0,0,0,.18); display: flex; flex-direction: column; overflow: hidden;
+  transform: translateX(110%);
+  /* Animación no lineal de entrada: desliza con overshoot (rebote suave) */
+  animation-name: none;
+}
+.drawer-overlay.show .drawer { animation: drawerIn .5s cubic-bezier(.22,1.2,.35,1) forwards; }
+@keyframes drawerIn {
+  0% { transform: translateX(110%); }
+  60% { transform: translateX(-3%); }
+  80% { transform: translateX(0.8%); }
+  100% { transform: translateX(0); }
+}
+/* Cada apertura reinicia la animación */
+.drawer-overlay.show .drawer { animation: drawerIn .5s cubic-bezier(.22,1.2,.35,1) forwards; }
+.drawer-overlay .drawer { animation: none; }
+
+.drawer-head {
+  padding: 16px 24px; display: flex; justify-content: space-between; align-items: center;
+  background: var(--bg-lightest); border-bottom: 1px solid var(--border-lighter);
+}
+.drawer-head h3 { font-size: 1rem; font-weight: 700; display: flex; align-items: center; gap: 10px; font-family: var(--font-heading); }
 .drawer-head h3 i { color: var(--primary-color); }
 .drawer-tabs { display: flex; background: var(--bg-lightest); border-bottom: 1px solid var(--border-light); }
-.drawer-tab { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 13px; border: none; background: transparent; color: var(--text-light); font-family: var(--font-heading); font-size: .84rem; font-weight: 500; cursor: pointer; border-bottom: 3px solid transparent; transition: all .2s; }
+.drawer-tab { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px; border: none; background: transparent; color: var(--text-light); font-family: var(--font-heading); font-size: .84rem; font-weight: 500; cursor: pointer; border-bottom: 3px solid transparent; transition: all .2s; }
 .drawer-tab:hover { color: var(--text-color); }
 .drawer-tab.active { color: var(--primary-color); border-bottom-color: var(--primary-color); background: color-mix(in srgb,var(--primary-color) 4%, transparent); }
-.drawer-body { flex: 1; overflow-y: auto; padding: 20px 22px; }
-.drawer-foot { padding: 16px 22px; border-top: 1px solid var(--border-lighter); display: flex; justify-content: flex-end; gap: 10px; }
+.drawer-body { flex: 1; overflow-y: auto; padding: 22px 28px; }
+.drawer-foot { padding: 16px 28px; border-top: 1px solid var(--border-lighter); display: flex; justify-content: flex-end; gap: 10px; }
 
 /* ===== CONTENEDORES DE ANIMACIÓN ===== */
 .anime-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 10px; }
@@ -403,9 +424,11 @@ h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
         <button class="btn btn-soft" data-grid="fade">Fade</button>
         <button class="btn btn-soft" data-grid="pop">Pop</button>
         <button class="btn btn-soft" data-grid="rise">Rise</button>
-        <button class="btn btn-soft" data-grid="wave">Ola</button>
-        <button class="btn btn-soft" data-grid="spiral">Espiral</button>
-        <button class="btn btn-soft" data-grid="flip">Flip</button>
+        <button class="btn btn-soft" data-grid="from-center">Desde el centro</button>
+        <button class="btn btn-soft" data-grid="cascade">Cascada</button>
+        <button class="btn btn-soft" data-grid="blur">Blur-in</button>
+        <button class="btn btn-soft" data-grid="elastic">Elástico</button>
+        <button class="btn btn-soft" data-grid="ladder">Escalera</button>
       </div>
       <div class="demo-zone" id="gridZone"><div class="anime-grid" id="gridDemo"></div></div>
     </div>
@@ -431,6 +454,8 @@ h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
         <button class="btn btn-soft" data-cards="rise">Rise</button>
         <button class="btn btn-soft" data-cards="scale">Scale</button>
         <button class="btn btn-soft" data-cards="flip">Flip</button>
+        <button class="btn btn-soft" data-cards="blur">Blur</button>
+        <button class="btn btn-soft" data-cards="elastic">Elástico</button>
         <button class="btn btn-soft" data-cards="rotate">Rotate</button>
       </div>
       <div class="demo-zone" id="cardsZone"><div class="anime-cards" id="cardsDemo"></div></div>
@@ -545,19 +570,29 @@ const animName = document.getElementById('modalAnimName');
 const anims = { zoom:'Zoom', 'slide-up':'Slide up', drop:'Drop', flip:'Flip', grow:'Grow' };
 function openModal(a) {
   ov.dataset.anim = a; animName.textContent = anims[a] || a;
-  mbox.classList.remove('in'); ov.classList.add('show');
-  requestAnimationFrame(()=>requestAnimationFrame(()=>mbox.classList.add('in')));
+  // reset de la animación para poder reintentarla en cada apertura
+  mbox.style.animation = 'none'; void mbox.offsetWidth;
+  ov.classList.add('show');
 }
-function closeModal(){ mbox.classList.remove('in'); setTimeout(()=>ov.classList.remove('show'), 200); }
+function closeModal(){
+  ov.classList.remove('show');
+  mbox.style.animation = 'none';
+}
 document.querySelectorAll('[data-modal-open]').forEach(b=>b.addEventListener('click',()=>openModal(b.dataset.modalOpen)));
 document.getElementById('modalClose').addEventListener('click', closeModal);
 document.getElementById('modalCancel').addEventListener('click', closeModal);
 ov.addEventListener('click', e=>{ if(e.target===ov) closeModal(); });
 
-/* ===== Drawer ===== */
+/* ===== Drawer (con rebote) ===== */
 const dOverlay = document.getElementById('drawerOverlay');
-document.getElementById('openDrawer').addEventListener('click', ()=>dOverlay.classList.add('show'));
+const drawerEl = dOverlay.querySelector('.drawer');
+function openDrawer(){
+  // reiniciar animación de rebote en cada apertura
+  drawerEl.style.animation = 'none'; void drawerEl.offsetWidth;
+  dOverlay.classList.add('show');
+}
 function closeDrawer(){ dOverlay.classList.remove('show'); }
+document.getElementById('openDrawer').addEventListener('click', openDrawer);
 document.getElementById('drawerClose').addEventListener('click', closeDrawer);
 document.getElementById('drawerClose2').addEventListener('click', closeDrawer);
 dOverlay.addEventListener('click', e=>{ if(e.target===dOverlay) closeDrawer(); });
@@ -581,20 +616,28 @@ buildGrid();
 
 function runGrid(anim) {
   const cells = document.querySelectorAll('#gridDemo .cell');
-  const col = 8;
-  const h = 0.35;
   if (anim==='fade') {
-    anime({ targets: cells, opacity:[0,1], delay: anime.stagger(20), duration: 600, easing:'easeOutQuad' });
+    anime({ targets: cells, opacity:[0,1], delay: anime.stagger(18), duration: 550, easing:'easeOutQuad' });
   } else if (anim==='pop') {
-    anime({ targets: cells, scale:[0,1], opacity:[0,1], delay: anime.stagger(40,{start:100}), duration:500, easing:'easeOutBack' });
+    anime({ targets: cells, scale:[0,1], opacity:[0,1], delay: anime.stagger(35,{start:80}), duration:500, easing:'easeOutBack' });
   } else if (anim==='rise') {
-    anime({ targets: cells, translateY:[40,0], opacity:[0,1], delay: anime.stagger(15), duration:600, easing:'easeOutCubic' });
-  } else if (anim==='wave') {
-    anime({ targets: cells, translateY:['-20px','6px','0'], opacity:[0,1], delay: anime.stagger(15,{from:'center'}), duration:700, easing:'easeOutSine' });
-  } else if (anim==='spiral') {
-    cells.forEach((c,i)=>{ anime({ targets:c, opacity:[0,1], scale:[.6,1], rotate:[i*18,0], delay:i*14, duration:500, easing:'easeOutQuad' }); });
-  } else if (anim==='flip') {
-    anime({ targets: cells, rotateX:[90,0], opacity:[0,1], delay: anime.stagger(25), duration:500, easing:'easeOutBack' });
+    anime({ targets: cells, translateY:[36,0], opacity:[0,1], delay: anime.stagger(14), duration:600, easing:'easeOutCubic' });
+  } else if (anim==='from-center') {
+    // las celdas aparecen expandiéndose desde el centro hacia afuera
+    anime({ targets: cells, scale:[0,1], opacity:[0,1], delay: anime.stagger(18,{from:'center'}), duration:600, easing:'easeOutCubic' });
+    cells.forEach((c,i)=>{ anime({ targets:c, translateY:[8,0], delay:i*16, duration:550, easing:'easeOutSine' }); });
+  } else if (anim==='cascade') {
+    // cascada diagonal: primero filas cortas, se encadenan
+    anime({ targets: cells, translateY:[-14,0], opacity:[0,1], delay: anime.stagger(12,{grid:[8,4],from:'first'}), duration:500, easing:'easeOutQuad' });
+  } else if (anim==='blur') {
+    // aparece con desenfoque que se aclara (filtro), orgánico
+    anime({ targets: cells, opacity:[0,1], filter:['blur(10px)','blur(0px)'], delay: anime.stagger(20), duration:650, easing:'easeOutQuad' });
+  } else if (anim==='elastic') {
+    // aparece con un rebote elástico en escala + desvanecido
+    anime({ targets: cells, scale:[.5,1.08,1], opacity:[0,1], delay: anime.stagger(30,{start:50}), duration:600, easing:'easeOutElastic(1,.5)' });
+  } else if (anim==='ladder') {
+    // suben de a una como una escalera (diagonal suave, sin rotación)
+    anime({ targets: cells, translateY:[40,0], opacity:[0,1], delay: anime.stagger(20,{grid:[8,4],from:'first'}), duration:550, easing:'easeOutCubic' });
   }
 }
 
@@ -640,7 +683,9 @@ function runCards(anim) {
   if (anim==='rise') anime({ targets: cards, translateY:[80,0], opacity:[0,1], delay: anime.stagger(110), duration:600, easing:'easeOutCubic' });
   else if (anim==='scale') anime({ targets: cards, scale:[.7,1], opacity:[0,1], delay: anime.stagger(90), duration:500, easing:'easeOutBack' });
   else if (anim==='flip') anime({ targets: cards, rotateY:[70,0], opacity:[0,1], delay: anime.stagger(120), duration:600, easing:'easeOutCubic' });
-  else if (anim==='rotate') anime({ targets: cards, rotate:[-8,0], scale:[.85,1], opacity:[0,1], delay: anime.stagger(100), duration:550, easing:'easeOutBack' });
+  else if (anim==='blur') anime({ targets: cards, opacity:[0,1], filter:['blur(8px)','blur(0px)'], translateY:[14,0], delay: anime.stagger(90), duration:600, easing:'easeOutQuad' });
+  else if (anim==='elastic') anime({ targets: cards, scale:[.6,1.05,1], opacity:[0,1], delay: anime.stagger(110,{start:60}), duration:650, easing:'easeOutElastic(1,.5)' });
+  else if (anim==='rotate') anime({ targets: cards, rotate:[-4,0], scale:[.9,1], opacity:[0,1], delay: anime.stagger(100), duration:550, easing:'easeOutBack' });
 }
 
 /* bind anim buttons */

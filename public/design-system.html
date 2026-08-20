@@ -22,7 +22,15 @@
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
-body { font-family: var(--font-body); background: var(--bg-body); color: var(--text-color); line-height: 1.6; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+body {
+  font-family: var(--font-body); background: var(--bg-body); color: var(--text-color);
+  line-height: 1.6; -webkit-font-smoothing: antialiased; overflow-x: hidden;
+  /* Patrón SVG monocromático sutil (inspirado en svgmonster) sobre el fondo */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.35' stroke-width='1.2'%3E%3Cpath d='M0 40h80M40 0v80'/%3E%3Ccircle cx='40' cy='40' r='14'/%3E%3Ccircle cx='40' cy='40' r='6'/%3E%3Cpath d='M28 40h24M40 28v24'/%3E%3C/g%3E%3C/svg%3E");
+}
+[data-theme="dark"] body {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='none' stroke='%23000000' stroke-opacity='0.5' stroke-width='1.2'%3E%3Cpath d='M0 40h80M40 0v80'/%3E%3Ccircle cx='40' cy='40' r='14'/%3E%3Ccircle cx='40' cy='40' r='6'/%3E%3Cpath d='M28 40h24M40 28v24'/%3E%3C/g%3E%3C/svg%3E");
+}
 h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
 .page-wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px 160px; }
 
@@ -186,14 +194,13 @@ h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
 .modal-body { padding: 18px 24px; }
 .modal-foot { padding: 18px 24px 22px; display: flex; gap: 10px; justify-content: flex-end; }
 
-/* El modal entra con su animación de aparición AL MISMO TIEMPO que el fondo:
-   se desvanece hacia adentro (fade) + efecto propio de cada variante.
-   No espera a "mostrarse": la animación ocurre desde el primer frame visible. */
-[data-anim="zoom"] .modal { animation: animZoom .32s var(--dur-soft) forwards; }
-[data-anim="slide-up"] .modal { animation: animSlideUp .34s var(--dur-soft) forwards; }
-[data-anim="drop"] .modal { animation: animDrop .34s var(--dur-soft) forwards; }
-[data-anim="flip"] .modal { animation: animFlip .38s var(--dur-soft) forwards; }
-[data-anim="grow"] .modal { animation: animGrow .36s var(--dur-soft) forwards; }
+/* El modal entra con su animación de aparición AL MISMO TIEMPO que el fondo.
+   Se dispara con la clase .enter (no con estilos inline, que romperían CSS). */
+[data-anim="zoom"] .modal.enter { animation: animZoom .32s var(--dur-soft) forwards; }
+[data-anim="slide-up"] .modal.enter { animation: animSlideUp .34s var(--dur-soft) forwards; }
+[data-anim="drop"] .modal.enter { animation: animDrop .34s var(--dur-soft) forwards; }
+[data-anim="flip"] .modal.enter { animation: animFlip .38s var(--dur-soft) forwards; }
+[data-anim="grow"] .modal.enter { animation: animGrow .36s var(--dur-soft) forwards; }
 
 @keyframes animZoom { from { opacity: 0; transform: scale(.9); } to { opacity: 1; transform: none; } }
 @keyframes animSlideUp { from { opacity: 0; transform: translateY(46px); } to { opacity: 1; transform: none; } }
@@ -206,9 +213,9 @@ h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
 .drawer-overlay.show { opacity: 1; visibility: visible; }
 .drawer { width: 540px; max-width: 96vw; height: 100%; background: var(--bg-card); box-shadow: -12px 0 40px rgba(0,0,0,.18); display: flex; flex-direction: column; overflow: hidden;
   transform: translateX(110%);
-  /* Animación no lineal de entrada: desliza con overshoot (rebote suave) */
-  animation-name: none;
 }
+/* Entrada con rebote (overshoot) no lineal; se dispara con .show
+   (sin estilo inline, para que la animación realmente corra). */
 .drawer-overlay.show .drawer { animation: drawerIn .5s cubic-bezier(.22,1.2,.35,1) forwards; }
 @keyframes drawerIn {
   0% { transform: translateX(110%); }
@@ -216,9 +223,6 @@ h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
   80% { transform: translateX(0.8%); }
   100% { transform: translateX(0); }
 }
-/* Cada apertura reinicia la animación */
-.drawer-overlay.show .drawer { animation: drawerIn .5s cubic-bezier(.22,1.2,.35,1) forwards; }
-.drawer-overlay .drawer { animation: none; }
 
 .drawer-head {
   padding: 16px 24px; display: flex; justify-content: space-between; align-items: center;
@@ -354,6 +358,32 @@ h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
     </div>
   </section>
 
+  <section class="section" id="comp-patterns">
+    <div class="section-head"><h2><i class="fas fa-shapes"></i> Patrones SVG sutiles</h2><p>Texturas monocromáticas de bajo contraste (estilo svgmonster) para fondos, headers y secciones decorativas.</p></div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr))">
+      <div class="stage" style="padding:0;overflow:hidden">
+        <div style="height:110px;background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cg fill='none' stroke='%23c62828' stroke-opacity='0.25'%3E%3Cpath d='M0 40h80M40 0v80'/%3E%3Ccircle cx='40' cy='40' r='12'/%3E%3C/g%3E%3C/svg%3E&quot;);background-color:var(--bg-card)"></div>
+        <div style="padding:10px 14px;font-family:var(--font-heading);font-size:.78rem;font-weight:600;color:var(--text-muted)">Rejilla + círculo</div>
+      </div>
+      <div class="stage" style="padding:0;overflow:hidden">
+        <div style="height:110px;background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Cpath d='M0 30 30 0 60 30 30 60Z' fill='none' stroke='%231a237e' stroke-opacity='0.22'/%3E%3C/g%3E%3C/svg%3E&quot;);background-color:var(--bg-card)"></div>
+        <div style="padding:10px 14px;font-family:var(--font-heading);font-size:.78rem;font-weight:600;color:var(--text-muted)">Rombos</div>
+      </div>
+      <div class="stage" style="padding:0;overflow:hidden">
+        <div style="height:110px;background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='44'%3E%3Ccircle cx='22' cy='22' r='6' fill='none' stroke='%232e7d32' stroke-opacity='0.25'/%3E%3C/g%3E%3C/svg%3E&quot;);background-color:var(--bg-card)"></div>
+        <div style="padding:10px 14px;font-family:var(--font-heading);font-size:.78rem;font-weight:600;color:var(--text-muted)">Puntos</div>
+      </div>
+      <div class="stage" style="padding:0;overflow:hidden">
+        <div style="height:110px;background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='28'%3E%3Cpath d='M28 0 56 28H0Z' fill='none' stroke='%23f57c00' stroke-opacity='0.22'/%3E%3C/g%3E%3C/svg%3E&quot;);background-color:var(--bg-card)"></div>
+        <div style="padding:10px 14px;font-family:var(--font-heading);font-size:.78rem;font-weight:600;color:var(--text-muted)">Chevrones</div>
+      </div>
+      <div class="stage" style="padding:0;overflow:hidden">
+        <div style="height:110px;background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Cg fill='none' stroke='%23808080' stroke-opacity='0.3'%3E%3Crect x='4' y='4' width='16' height='16' rx='3'/%3E%3Crect x='20' y='20' width='16' height='16' rx='3'/%3E%3C/g%3E%3C/svg%3E&quot;);background-color:var(--bg-card)"></div>
+        <div style="padding:10px 14px;font-family:var(--font-heading);font-size:.78rem;font-weight:600;color:var(--text-muted)">Baldosa</div>
+      </div>
+    </div>
+  </section>
+
   <section class="section" id="comp-badges">
     <div class="section-head"><h2><i class="fas fa-tag"></i> Badges</h2><p>Borde llamativo en colores primarios.</p></div>
     <div class="stage"><div class="badge-row">
@@ -424,10 +454,8 @@ h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
         <button class="btn btn-soft" data-grid="fade">Fade</button>
         <button class="btn btn-soft" data-grid="pop">Pop</button>
         <button class="btn btn-soft" data-grid="rise">Rise</button>
-        <button class="btn btn-soft" data-grid="from-center">Desde el centro</button>
         <button class="btn btn-soft" data-grid="cascade">Cascada</button>
         <button class="btn btn-soft" data-grid="blur">Blur-in</button>
-        <button class="btn btn-soft" data-grid="elastic">Elástico</button>
         <button class="btn btn-soft" data-grid="ladder">Escalera</button>
       </div>
       <div class="demo-zone" id="gridZone"><div class="anime-grid" id="gridDemo"></div></div>
@@ -455,7 +483,6 @@ h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
         <button class="btn btn-soft" data-cards="scale">Scale</button>
         <button class="btn btn-soft" data-cards="flip">Flip</button>
         <button class="btn btn-soft" data-cards="blur">Blur</button>
-        <button class="btn btn-soft" data-cards="elastic">Elástico</button>
         <button class="btn btn-soft" data-cards="rotate">Rotate</button>
       </div>
       <div class="demo-zone" id="cardsZone"><div class="anime-cards" id="cardsDemo"></div></div>
@@ -570,13 +597,14 @@ const animName = document.getElementById('modalAnimName');
 const anims = { zoom:'Zoom', 'slide-up':'Slide up', drop:'Drop', flip:'Flip', grow:'Grow' };
 function openModal(a) {
   ov.dataset.anim = a; animName.textContent = anims[a] || a;
-  // reset de la animación para poder reintentarla en cada apertura
-  mbox.style.animation = 'none'; void mbox.offsetWidth;
+  // relanzar la animación: quitar .enter -> reflow -> añadir (evita estilos inline rotos)
+  mbox.classList.remove('enter'); void mbox.offsetWidth;
   ov.classList.add('show');
+  requestAnimationFrame(() => mbox.classList.add('enter'));
 }
 function closeModal(){
   ov.classList.remove('show');
-  mbox.style.animation = 'none';
+  mbox.classList.remove('enter');
 }
 document.querySelectorAll('[data-modal-open]').forEach(b=>b.addEventListener('click',()=>openModal(b.dataset.modalOpen)));
 document.getElementById('modalClose').addEventListener('click', closeModal);
@@ -585,10 +613,9 @@ ov.addEventListener('click', e=>{ if(e.target===ov) closeModal(); });
 
 /* ===== Drawer (con rebote) ===== */
 const dOverlay = document.getElementById('drawerOverlay');
-const drawerEl = dOverlay.querySelector('.drawer');
 function openDrawer(){
-  // reiniciar animación de rebote en cada apertura
-  drawerEl.style.animation = 'none'; void drawerEl.offsetWidth;
+  // reiniciar la animación relanzando .show (sin estilos inline)
+  dOverlay.classList.remove('show'); void dOverlay.offsetWidth;
   dOverlay.classList.add('show');
 }
 function closeDrawer(){ dOverlay.classList.remove('show'); }
@@ -622,19 +649,12 @@ function runGrid(anim) {
     anime({ targets: cells, scale:[0,1], opacity:[0,1], delay: anime.stagger(35,{start:80}), duration:500, easing:'easeOutBack' });
   } else if (anim==='rise') {
     anime({ targets: cells, translateY:[36,0], opacity:[0,1], delay: anime.stagger(14), duration:600, easing:'easeOutCubic' });
-  } else if (anim==='from-center') {
-    // las celdas aparecen expandiéndose desde el centro hacia afuera
-    anime({ targets: cells, scale:[0,1], opacity:[0,1], delay: anime.stagger(18,{from:'center'}), duration:600, easing:'easeOutCubic' });
-    cells.forEach((c,i)=>{ anime({ targets:c, translateY:[8,0], delay:i*16, duration:550, easing:'easeOutSine' }); });
   } else if (anim==='cascade') {
     // cascada diagonal: primero filas cortas, se encadenan
     anime({ targets: cells, translateY:[-14,0], opacity:[0,1], delay: anime.stagger(12,{grid:[8,4],from:'first'}), duration:500, easing:'easeOutQuad' });
   } else if (anim==='blur') {
     // aparece con desenfoque que se aclara (filtro), orgánico
     anime({ targets: cells, opacity:[0,1], filter:['blur(10px)','blur(0px)'], delay: anime.stagger(20), duration:650, easing:'easeOutQuad' });
-  } else if (anim==='elastic') {
-    // aparece con un rebote elástico en escala + desvanecido
-    anime({ targets: cells, scale:[.5,1.08,1], opacity:[0,1], delay: anime.stagger(30,{start:50}), duration:600, easing:'easeOutElastic(1,.5)' });
   } else if (anim==='ladder') {
     // suben de a una como una escalera (diagonal suave, sin rotación)
     anime({ targets: cells, translateY:[40,0], opacity:[0,1], delay: anime.stagger(20,{grid:[8,4],from:'first'}), duration:550, easing:'easeOutCubic' });
@@ -684,7 +704,6 @@ function runCards(anim) {
   else if (anim==='scale') anime({ targets: cards, scale:[.7,1], opacity:[0,1], delay: anime.stagger(90), duration:500, easing:'easeOutBack' });
   else if (anim==='flip') anime({ targets: cards, rotateY:[70,0], opacity:[0,1], delay: anime.stagger(120), duration:600, easing:'easeOutCubic' });
   else if (anim==='blur') anime({ targets: cards, opacity:[0,1], filter:['blur(8px)','blur(0px)'], translateY:[14,0], delay: anime.stagger(90), duration:600, easing:'easeOutQuad' });
-  else if (anim==='elastic') anime({ targets: cards, scale:[.6,1.05,1], opacity:[0,1], delay: anime.stagger(110,{start:60}), duration:650, easing:'easeOutElastic(1,.5)' });
   else if (anim==='rotate') anime({ targets: cards, rotate:[-4,0], scale:[.9,1], opacity:[0,1], delay: anime.stagger(100), duration:550, easing:'easeOutBack' });
 }
 

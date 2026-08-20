@@ -323,8 +323,30 @@ h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
 }
 .success-check .circ { position: absolute; inset: 0; border-radius: 50%; border: 3px solid var(--success-color); opacity: 0; transform: scale(.4); }
 .success-check .tick { font-size: 2.6rem; color: var(--success-dark); opacity: 0; }
-.confetti { position: absolute; width: 8px; height: 12px; border-radius: 2px; pointer-events: none; z-index: 5; }
 .flip-letters .lt { display: inline-block; opacity: 0; }
+
+/* ===== Micro-animaciones chill (reutilizables) ===== */
+/* filas/tarjetas en cascada suave (estilo lista de compras) */
+.chill-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.chill-item {
+  display: flex; align-items: center; gap: 12px; padding: 14px 16px;
+  background: var(--bg-card); border: 1px solid var(--border-lighter); border-radius: 14px;
+  opacity: 0; transform: translateY(14px);
+}
+.chill-item .ci { width: 40px; height: 40px; border-radius: 12px; display: grid; place-content: center; background: var(--primary-light); color: var(--primary-color); font-size: 1rem; }
+.chill-item h5 { font-size: .92rem; font-weight: 600; }
+.chill-item p { font-size: .78rem; color: var(--text-muted); }
+
+/* iconos con pop */
+.icon-chip { width: 52px; height: 52px; border-radius: 16px; display: grid; place-content: center; font-size: 1.2rem; background: var(--bg-card); border: 1px solid var(--border-lighter); color: var(--primary-color); opacity: 0; }
+.icon-chips { display: flex; gap: 12px; flex-wrap: wrap; }
+
+/* badge que brilla */
+.badge-shine { position: relative; overflow: hidden; }
+.badge-shine::after { content: ""; position: absolute; top: 0; left: -60%; width: 45%; height: 100%; background: linear-gradient(110deg, transparent, rgba(255,255,255,.5), transparent); transform: skewX(-20deg); }
+
+/* numero con pulse suave */
+.big-num { font-family: var(--font-heading); font-size: 2.6rem; font-weight: 800; color: var(--primary-color); font-variant-numeric: tabular-nums; }
 
 @media (max-width: 700px) { .grid { grid-template-columns: 1fr 1fr; } .anime-grid { grid-template-columns: repeat(4,1fr); } .anime-cards { grid-template-columns: repeat(2,1fr); } .hero { padding: 44px 16px 34px; } }
 </style>
@@ -665,6 +687,63 @@ h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
             <p id="successMsg" style="color:var(--text-medium);font-size:.92rem">Pulsa para procesar la venta</p>
           </div>
           <button class="btn btn-success-soft" id="buyGo"><i class="fas fa-cash-register"></i> Procesar venta</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><h2><i class="fas fa-heart"></i> Micro-animaciones chill</h2><p>Efectos sutiles y suaves para darle vida a múltiples elementos: tarjetas en cascada, iconos con pop, numeros con pulse y textos suaves.</p></div>
+
+    <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(280px,1fr))">
+      <!-- Tarjetas chill en cascada -->
+      <div class="stage">
+        <div class="cap"><span>Tarjetas chill en cascada</span></div>
+        <div class="body">
+          <div class="chill-grid" id="chillGrid">
+            <div class="chill-item"><span class="ci"><i class="fas fa-cart-shopping"></i></span><div><h5>Carrito</h5><p>3 artículos</p></div></div>
+            <div class="chill-item"><span class="ci"><i class="fas fa-wallet"></i></span><div><h5>Caja</h5><p>$860</p></div></div>
+            <div class="chill-item"><span class="ci"><i class="fas fa-users"></i></span><div><h5>Clientes</h5><p>34 hoy</p></div></div>
+            <div class="chill-item"><span class="ci"><i class="fas fa-star"></i></span><div><h5>Favoritos</h5><p>8</p></div></div>
+          </div>
+          <button class="btn btn-soft" id="chillGridGo" style="margin-top:8px"><i class="fas fa-play"></i> Repro</button>
+        </div>
+      </div>
+
+      <!-- Iconos con pop -->
+      <div class="stage">
+        <div class="cap"><span>Iconos con pop</span></div>
+        <div class="body">
+          <div class="icon-chips" id="iconChips">
+            <span class="icon-chip"><i class="fas fa-bell"></i></span>
+            <span class="icon-chip"><i class="fas fa-bolt"></i></span>
+            <span class="icon-chip"><i class="fas fa-heart"></i></span>
+            <span class="icon-chip"><i class="fas fa-gift"></i></span>
+            <span class="icon-chip"><i class="fas fa-fire"></i></span>
+            <span class="icon-chip"><i class="fas fa-music"></i></span>
+          </div>
+          <button class="btn btn-soft" id="iconChipsGo" style="margin-top:8px"><i class="fas fa-play"></i> Pop</button>
+        </div>
+      </div>
+
+      <!-- Número con pulse -->
+      <div class="stage">
+        <div class="cap"><span>Número con pulse</span></div>
+        <div class="body">
+          <span class="big-num" id="bigNum" style="display:block;text-align:center">1,240</span>
+          <div class="anim-row" style="justify-content:center">
+            <button class="btn btn-soft btn-sm" id="bigNumGo"><i class="fas fa-play"></i> Pulse</button>
+            <button class="btn btn-soft btn-sm" id="bigNumCount"><i class="fas fa-plus"></i> Contar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Texto suave -->
+      <div class="stage">
+        <div class="cap"><span>Texto suave</span></div>
+        <div class="body">
+          <p class="soft-line" id="softLine" style="font-size:.95rem;color:var(--text-medium);min-height:3.2em">Todo en orden, que tengas un excelente día.</p>
+          <button class="btn btn-soft" id="softLineGo" style="margin-top:8px"><i class="fas fa-play"></i> Animar</button>
         </div>
       </div>
     </div>
@@ -1062,20 +1141,6 @@ runBuyList();
 /* ===== Compra exitosa: secuencia orquestada (anime.js) ===== */
 const successEl = document.getElementById('successCheck');
 const successMsg = document.getElementById('successMsg');
-function spawnConfetti(host, n=28){
-  const colors = ['var(--primary-color)','var(--success-color)','var(--warning-color)','#c62828','#1a237e','#2e7d32'];
-  for (let i=0;i<n;i++){
-    const c = document.createElement('span'); c.className = 'confetti';
-    c.style.left = (Math.random()*100)+'%'; c.style.top = '20%';
-    c.style.background = colors[i % colors.length];
-    host.appendChild(c);
-  }
-  anime({ targets: host.querySelectorAll('.confetti'),
-    translateY: () => anime.random(120, 320), translateX: () => anime.random(-140,140),
-    rotate: () => anime.random(-300,300), opacity: { value:[1, 0], duration: 600 },
-    delay: anime.stagger(12), duration: 1200, easing: 'easeOutCubic',
-    complete: () => { host.querySelectorAll('.confetti').forEach(x => x.remove()); } });
-}
 function runBuy(){
   // 1) mostrar el check
   successEl.style.display = 'grid';
@@ -1088,12 +1153,66 @@ function runBuy(){
   // 4) mensaje
   successMsg.textContent = '¡Venta procesada correctamente!';
   anime({ targets: successMsg, opacity: [0,1], translateY: [8,0], duration: 500, delay: 350, easing: 'easeOutQuad' });
-  // 5) confetti
-  setTimeout(() => successEl.style.display === 'grid' && spawnConfetti(successEl.parentElement), 250);
-  // 6) rearmar para la próxima
-  setTimeout(() => { successEl.style.display = 'none'; successMsg.textContent = 'Pulsa para procesar la venta'; }, 4200);
+  // 5) rearmar para la próxima
+  setTimeout(() => { successEl.style.display = 'none'; successMsg.textContent = 'Pulsa para procesar la venta'; }, 3800);
 }
 document.getElementById('buyGo').addEventListener('click', runBuy);
+
+/* ===== Micro-animaciones chill (anime.js) ===== */
+
+/* Tarjetas chill en cascada (estilo lista de compras) */
+function runChillGrid(){
+  const items = document.querySelectorAll('#chillGrid .chill-item');
+  items.forEach(it => { it.style.opacity = 0; it.style.transform = 'translateY(14px)'; });
+  anime({ targets: items, translateY: [14,0], opacity: [0,1],
+    delay: anime.stagger(90, {start: 60}), duration: 600, easing: 'easeOutBack' });
+  const ics = document.querySelectorAll('#chillGrid .ci');
+  anime({ targets: ics, scale: [0.6,1], rotate: [-6,0], delay: anime.stagger(130, {start: 200}), duration: 500, easing: 'easeOutBack' });
+}
+document.getElementById('chillGridGo').addEventListener('click', runChillGrid);
+runChillGrid();
+
+/* Iconos con pop */
+function runIconChips(){
+  const chips = document.querySelectorAll('#iconChips .icon-chip');
+  chips.forEach(c => { c.style.opacity = 0; });
+  anime({ targets: chips, scale: [0,1], opacity: [0,1], translateY: [10,0],
+    delay: anime.stagger(60, {start: 80}), duration: 500, easing: 'easeOutElastic(1,.6)' });
+}
+document.getElementById('iconChipsGo').addEventListener('click', runIconChips);
+runIconChips();
+
+/* Número con pulse y contador */
+const bigNumEl = document.getElementById('bigNum');
+document.getElementById('bigNumGo').addEventListener('click', () => {
+  anime({ targets: bigNumEl, scale: [1, 1.12, 1], duration: 700, easing: 'easeOutElastic(1,.5)' });
+});
+let bigVal = 1240;
+document.getElementById('bigNumCount').addEventListener('click', () => {
+  bigVal += 25;
+  anime({ targets: {v: bigVal-25}, v: bigVal, round: 1, duration: 800, easing: 'easeOutQuad',
+    update: a => { bigNumEl.textContent = Math.round(a.animations[0].currentValue).toLocaleString('es-MX'); } });
+  anime({ targets: bigNumEl, scale: [1, 1.1, 1], duration: 700, easing: 'easeOutBack' });
+});
+
+/* Texto suave (palabras que se desvanecen tranquilo) */
+const softLines = ['Todo en orden, que tengas un excelente día.', 'Gracias por tu compra, vuelve pronto.', 'Buen trabajo, sigue así.'];
+let slIdx = 0;
+function runSoftLine(){
+  slIdx = (slIdx + 1) % softLines.length;
+  const el = document.getElementById('softLine');
+  el.textContent = softLines[slIdx];
+  const words = softLines[slIdx].split(' ');
+  el.innerHTML = '';
+  words.forEach(w => {
+    const s = document.createElement('span'); s.className = 'lt'; s.style.display='inline-block'; s.style.marginRight='6px'; s.textContent = w; el.appendChild(s);
+  });
+  const spans = el.querySelectorAll('.lt');
+  anime({ targets: spans, opacity: [0,1], translateY: [6,0], filter: ['blur(2px)','blur(0px)'],
+    delay: anime.stagger(60), duration: 500, easing: 'easeOutQuad' });
+}
+document.getElementById('softLineGo').addEventListener('click', runSoftLine);
+runSoftLine();
 
 new MutationObserver(()=>{}).observe ? 0 : 0;
 </script>

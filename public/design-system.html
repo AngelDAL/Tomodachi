@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tomodachi — Design System v1.0</title>
+<link rel="stylesheet" href="css/variables.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<!-- Tipografía: sistema suave estilo Material / Google -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   Tomodachi Design System — Página de referencia de estilos
+   Objetivo: unificar TODOS los controles del POS con animaciones
+   suaves y profesionales (estilo Material Motion), sin sacrificar
+   la eficiencia directa de un Punto de Venta.
+   Reutiliza las variables de css/variables.css (tema claro/oscuro).
+   ============================================================ */
+
+:root {
+  /* Migración de tokens para animaciones Motion (estilo Material) */
+  --motion-ease: cubic-bezier(0.2, 0, 0, 1);          /* entrada: decelera */
+  --motion-ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --motion-ease-in: cubic-bezier(0.3, 0, 0.8, 0.15);   /* entrada/hover */
+  --motion-standard: cubic-bezier(0.4, 0, 0.2, 1);     /* estándar Material */
+  --motion-emphasis: cubic-bezier(0.2, 0, 0, 1);       /* destacada */
+  --dur-1: 150ms;  /* micro-interacción */
+  --dur-2: 250ms;  /* transición estándar */
+  --dur-3: 300ms;  /* dialogs */
+  --dur-4: 400ms;  /* aparición destacada */
+  --elevation-0: none;
+  --elevation-1: var(--shadow-sm);
+  --elevation-2: var(--shadow-md);
+  --elevation-3: var(--shadow-lg);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font-main);
+  background: var(--bg-body);
+  color: var(--text-color);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* ---------- Layout general ---------- */
+.ds-wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px 120px; }
+
+/* ---------- Hero ---------- */
+.hero {
+  padding: 72px 24px 56px;
+  text-align: center;
+  background:
+    radial-gradient(1200px 400px at 50% -10%, color-mix(in srgb, var(--primary-color) 18%, transparent), transparent 60%),
+    var(--bg-body);
+  border-bottom: 1px solid var(--border-lighter);
+  position: relative;
+  overflow: hidden;
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 14px; border-radius: 999px;
+  background: var(--primary-light); color: var(--primary-color);
+  font-size: 0.8rem; font-weight: 600; letter-spacing: .03em;
+  animation: dsRise .6s var(--motion-ease) both;
+}
+.hero h1 {
+  font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 800; letter-spacing: -.02em;
+  margin: 18px 0 12px;
+  animation: dsRise .6s var(--motion-ease) .08s both;
+}
+.hero h1 span { color: var(--primary-color); }
+.hero p {
+  max-width: 620px; margin: 0 auto; color: var(--text-medium); font-size: 1.05rem;
+  animation: dsRise .6s var(--motion-ease) .16s both;
+}
+.theme-toggle {
+  margin-top: 22px; display: inline-flex; gap: 8px; padding: 4px;
+  background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 999px;
+  animation: dsRise .6s var(--motion-ease) .24s both;
+}
+.theme-toggle .seg { padding: 8px 16px; border-radius: 999px; transition: all var(--dur-2) var(--motion-standard); }
+.theme-toggle .seg.active { background: var(--primary-color); color: #fff; box-shadow: var(--shadow-primary); }
+
+/* ---------- Navegación por secciones ---------- */
+.ds-nav {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;
+  padding: 10px; background: color-mix(in srgb, var(--bg-body) 88%, transparent);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border-lighter);
+}
+.ds-nav a {
+  text-decoration: none; color: var(--text-medium); font-size: .85rem; font-weight: 600;
+  padding: 8px 14px; border-radius: 8px; transition: all var(--dur-2) var(--motion-standard);
+}
+.ds-nav a:hover { color: var(--primary-color); background: var(--primary-light); }
+.ds-nav a.active { color: var(--primary-color); background: var(--primary-light); }
+
+/* ---------- Secciones ---------- */
+.ds-section {
+  margin-top: 56px;
+  animation: dsFade .5s var(--motion-ease) both;
+}
+.ds-section > h2 {
+  font-size: 1.5rem; font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 10px;
+}
+.ds-section > h2 i { color: var(--primary-color); }
+.ds-section > .sub { color: var(--text-muted); font-size: .92rem; margin-bottom: 22px; }
+.ds-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px;
+}
+.ds-card {
+  background: var(--bg-card); border: 1px solid var(--border-lighter); border-radius: 12px;
+  padding: 20px; box-shadow: var(--elevation-1);
+  transition: transform var(--dur-2) var(--motion-emphasis), box-shadow var(--dur-2) var(--motion-emphasis);
+}
+.ds-card:hover { transform: translateY(-2px); box-shadow: var(--elevation-2); }
+.ds-card .label { font-size: .78rem; color: var(--text-muted); margin-bottom: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+.ds-card .showcase { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: center; min-height: 56px; }
+
+.code-note {
+  font-size: .78rem; color: var(--text-muted); background: var(--bg-light);
+  border: 1px dashed var(--border-color); border-radius: 8px; padding: 8px 12px; margin-top: 14px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* ============================================================
+   BOTONES — unificados con micro-interacción de "pulsación"
+   ============================================================ */
+.btn {
+  position: relative; overflow: hidden;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font-family: inherit; font-size: .9rem; font-weight: 600;
+  padding: 10px 18px; border-radius: 8px; cursor: pointer;
+  border: 1px solid transparent; text-decoration: none;
+  transition: transform var(--dur-1) var(--motion-standard),
+              box-shadow var(--dur-2) var(--motion-standard),
+              background var(--dur-2) var(--motion-standard),
+              color var(--dur-2) var(--motion-standard),
+              border-color var(--dur-2) var(--motion-standard);
+  transform: translateZ(0);
+  -webkit-tap-highlight-color: transparent;
+}
+.btn:active { transform: scale(.96); }
+.btn i { font-size: .95em; }
+
+.btn-primary { background: var(--primary-color); color: #fff; box-shadow: var(--shadow-primary); }
+.btn-primary:hover { background: var(--primary-hover); box-shadow: var(--elevation-3); }
+.btn-primary:focus-visible { outline: none; box-shadow: var(--shadow-primary), var(--primary-focus-ring); }
+
+.btn-secondary { background: var(--secondary-color); color: var(--secondary-contrast); }
+.btn-secondary:hover { background: var(--secondary-dark); }
+
+.btn-outline { background: transparent; color: var(--primary-color); border-color: var(--primary-color); }
+.btn-outline:hover { background: var(--primary-light); }
+
+.btn-ghost { background: transparent; color: var(--text-medium); }
+.btn-ghost:hover { background: var(--bg-hover); color: var(--text-color); }
+
+.btn-danger { background: var(--danger-color); color: #fff; }
+.btn-danger:hover { background: var(--danger-dark); }
+
+.btn-success { background: var(--success-color); color: #fff; }
+.btn-success:hover { background: var(--success-dark); }
+
+.btn-round { border-radius: 999px; }
+.btn-icon { padding: 10px; border-radius: 10px; width: 40px; height: 40px; }
+.btn-lg { padding: 14px 24px; font-size: 1rem; border-radius: 10px; }
+.btn-sm { padding: 7px 12px; font-size: .8rem; }
+.btn-block { width: 100%; }
+.btn-loading { pointer-events: none; opacity: .7; }
+.btn-loading i { animation: dsSpin 1s linear infinite; }
+
+/* Ripple (efecto Material) */
+.btn .ripple {
+  position: absolute; border-radius: 50%; transform: scale(0); pointer-events: none;
+  background: rgba(255,255,255,.35);
+  animation: ripple var(--dur-3) var(--motion-standard) forwards;
+}
+[data-theme="dark"] .btn .ripple { background: rgba(255,255,255,.15); }
+@keyframes ripple { to { transform: scale(3.2); opacity: 0; } }
+
+/* ============================================================
+   INPUTS
+   ============================================================ */
+.field { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.field label { font-size: .82rem; font-weight: 600; color: var(--text-medium); }
+.form-input {
+  font-family: inherit; font-size: .92rem; color: var(--text-color);
+  background: var(--bg-input); border: 1.5px solid var(--border-color); border-radius: 8px;
+  padding: 10px 14px; width: 100%;
+  transition: border-color var(--dur-2) var(--motion-standard),
+              box-shadow var(--dur-2) var(--motion-standard);
+}
+.form-input::placeholder { color: var(--text-muted); }
+.form-input:hover { border-color: color-mix(in srgb, var(--primary-color) 40%, var(--border-color)); }
+.form-input:focus {
+  outline: none; border-color: var(--primary-color);
+  box-shadow: var(--primary-focus-ring);
+}
+.form-input.invalid { border-color: var(--danger-color); }
+.form-input.invalid:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger-color) 30%, transparent); }
+
+.form-input.with-icon { padding-left: 38px; }
+.input-wrap { position: relative; width: 100%; }
+.input-wrap > i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: .9rem; }
+.input-wrap > i.right { left: auto; right: 12px; }
+
+/* ============================================================
+   SWITCH (toggle)
+   ============================================================ */
+.switch { position: relative; display: inline-flex; align-items: center; gap: 10px; cursor: pointer; font-size: .9rem; }
+.switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+.switch .track {
+  width: 44px; height: 24px; border-radius: 999px; background: var(--border-color);
+  position: relative; transition: background var(--dur-2) var(--motion-standard);
+  flex-shrink: 0;
+}
+.switch .track::after {
+  content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px;
+  border-radius: 50%; background: #fff; box-shadow: var(--elevation-1);
+  transition: transform var(--dur-2) var(--motion-emphasis);
+}
+.switch input:checked + .track { background: var(--primary-color); }
+.switch input:checked + .track::after { transform: translateX(20px); }
+.switch input:focus-visible + .track { box-shadow: var(--primary-focus-ring); }
+
+/* ============================================================
+   CHECKBOX / RADIO
+   ============================================================ */
+.check { display: inline-flex; align-items: center; gap: 9px; cursor: pointer; font-size: .9rem; }
+.check input { appearance: none; width: 20px; height: 20px; border-radius: 6px; border: 2px solid var(--border-color);
+  background: var(--bg-input); cursor: pointer; display: grid; place-content: center;
+  transition: all var(--dur-2) var(--motion-standard); }
+.check input:checked { background: var(--primary-color); border-color: var(--primary-color); }
+.check input:checked::after { content: "\f00c"; font-family: "Font Awesome 6 Free"; font-weight: 900; font-size: 11px; color: #fff; }
+.radio { display: inline-flex; align-items: center; gap: 9px; cursor: pointer; font-size: .9rem; }
+.radio input { appearance: none; width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border-color);
+  background: var(--bg-input); cursor: pointer; transition: all var(--dur-2) var(--motion-standard); }
+.radio input:checked { border-color: var(--primary-color); border-width: 6px; }
+
+/* ============================================================
+   SELECT
+   ============================================================ */
+.select {
+  font-family: inherit; font-size: .92rem; color: var(--text-color);
+  background: var(--bg-input); border: 1.5px solid var(--border-color); border-radius: 8px;
+  padding: 10px 36px 10px 14px; appearance: none; cursor: pointer; width: 100%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23999' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center;
+  transition: border-color var(--dur-2) var(--motion-standard), box-shadow var(--dur-2) var(--motion-standard);
+}
+.select:focus { outline: none; border-color: var(--primary-color); box-shadow: var(--primary-focus-ring); }
+
+/* ============================================================
+   TABS — con indicador deslizante (estilo Google)
+   ============================================================ */
+.tabs {
+  display: flex; gap: 4px; border-bottom: 2px solid var(--border-lighter);
+  position: relative; overflow-x: auto; scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar { display: none; }
+.tab {
+  background: none; border: none; padding: 10px 18px; font-family: inherit; font-size: .9rem;
+  font-weight: 600; color: var(--text-muted); cursor: pointer; position: relative;
+  transition: color var(--dur-2) var(--motion-standard); white-space: nowrap;
+}
+.tab:hover { color: var(--text-color); }
+.tab.active { color: var(--primary-color); }
+.tab.active::after {
+  content: ""; position: absolute; bottom: -2px; left: 0; right: 0; height: 2px;
+  background: var(--primary-color); border-radius: 2px;
+  animation: tabInd .3s var(--motion-emphasis) both;
+}
+@keyframes tabInd { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* ============================================================
+   CHIPS / BADGES
+   ============================================================ */
+.chip {
+  display: inline-flex; align-items: center; gap: 7px; font-size: .82rem; font-weight: 600;
+  padding: 6px 12px; border-radius: 999px; background: var(--bg-light); color: var(--text-medium);
+  border: 1px solid var(--border-lighter);
+  transition: all var(--dur-1) var(--motion-standard);
+}
+.chip.primary { background: var(--primary-light); color: var(--primary-dark); }
+.chip.success { background: color-mix(in srgb, var(--success-color) 14%, transparent); color: var(--success-dark); }
+.chip.warning { background: color-mix(in srgb, var(--warning-color) 16%, transparent); color: var(--warning-dark); }
+.chip.danger { background: color-mix(in srgb, var(--danger-color) 12%, transparent); color: var(--danger-dark); }
+.chip i { font-size: .75em; cursor: pointer; }
+.chip:hover { transform: translateY(-1px); box-shadow: var(--elevation-1); }
+
+.badge { display: inline-flex; align-items: center; font-size: .7rem; font-weight: 700; padding: 3px 9px; border-radius: 6px; }
+
+/* ============================================================
+   CARDS / LISTAS
+   ============================================================ */
+.card {
+  background: var(--bg-card); border: 1px solid var(--border-lighter); border-radius: 12px;
+  box-shadow: var(--elevation-1); overflow: hidden;
+  transition: transform var(--dur-2) var(--motion-emphasis), box-shadow var(--dur-2) var(--motion-emphasis);
+}
+.card:hover { box-shadow: var(--elevation-2); }
+.card-header { padding: 16px 20px; border-bottom: 1px solid var(--border-lighter); display: flex; align-items: center; justify-content: space-between; }
+.card-header h3 { font-size: 1rem; font-weight: 700; }
+.card-body { padding: 20px; }
+.list-item {
+  display: flex; align-items: center; gap: 14px; padding: 14px 18px;
+  border-bottom: 1px solid var(--border-lighter); cursor: pointer;
+  transition: background var(--dur-2) var(--motion-standard);
+}
+.list-item:last-child { border-bottom: none; }
+.list-item:hover { background: var(--bg-hover); }
+.list-item .avatar {
+  width: 40px; height: 40px; border-radius: 10px; background: var(--primary-light);
+  color: var(--primary-color); display: grid; place-content: center; font-weight: 700; flex-shrink: 0;
+}
+.list-item .meta-title { font-weight: 600; font-size: .92rem; }
+.list-item .meta-sub { font-size: .8rem; color: var(--text-muted); }
+
+/* ============================================================
+   MODAL / DIALOG — con animación de entrada suave
+   ============================================================ */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 1000; display: none;
+  align-items: center; justify-content: center; padding: 20px;
+  background: rgba(0,0,0,.5); backdrop-filter: blur(4px);
+}
+.modal-overlay.show { display: flex; animation: dsFade .2s var(--motion-standard) both; }
+.modal {
+  background: var(--bg-card); border-radius: 16px; max-width: 480px; width: 100%;
+  box-shadow: var(--elevation-3); overflow: hidden;
+  transform: scale(.92) translateY(12px); opacity: 0;
+  transition: transform var(--dur-3) var(--motion-emphasis), opacity var(--dur-3) var(--motion-emphasis);
+}
+.modal-overlay.show .modal { transform: scale(1) translateY(0); opacity: 1; }
+.modal-header { padding: 20px 24px 0; display: flex; align-items: center; justify-content: space-between; }
+.modal-header h3 { font-size: 1.15rem; font-weight: 700; }
+.modal-close { background: none; border: none; font-size: 1.3rem; color: var(--text-muted); cursor: pointer; width: 36px; height: 36px; border-radius: 8px; transition: all var(--dur-1) var(--motion-standard); }
+.modal-close:hover { background: var(--bg-hover); color: var(--text-color); }
+.modal-body { padding: 18px 24px; }
+.modal-footer { padding: 16px 24px 20px; display: flex; gap: 10px; justify-content: flex-end; }
+
+/* ============================================================
+   TOAST / NOTIFICACIÓN — animación deslizante
+   ============================================================ */
+.toast-host { position: fixed; bottom: 24px; right: 24px; z-index: 1100; display: flex; flex-direction: column; gap: 10px; }
+.toast {
+  min-width: 280px; max-width: 380px; background: var(--bg-card); color: var(--text-color);
+  border-radius: 12px; padding: 14px 16px; box-shadow: var(--elevation-3);
+  border-left: 4px solid var(--primary-color); display: flex; gap: 12px; align-items: flex-start;
+  transform: translateX(120%); opacity: 0;
+  transition: transform var(--dur-3) var(--motion-emphasis), opacity var(--dur-3) var(--motion-emphasis);
+}
+.toast.show { transform: translateX(0); opacity: 1; }
+.toast.success { border-color: var(--success-color); } .toast.success i { color: var(--success-color); }
+.toast.danger { border-color: var(--danger-color); } .toast.danger i { color: var(--danger-color); }
+.toast.warning { border-color: var(--warning-color); } .toast.warning i { color: var(--warning-color); }
+.toast i { font-size: 1.2rem; margin-top: 2px; color: var(--primary-color); }
+.toast .t-message { font-size: .9rem; font-weight: 500; }
+
+/* ============================================================
+   TABLA — filas con hover
+   ============================================================ */
+.table-wrap { border: 1px solid var(--border-lighter); border-radius: 12px; overflow: hidden; background: var(--bg-card); }
+table.ds-table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+.ds-table th { text-align: left; padding: 12px 18px; font-size: .76rem; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); border-bottom: 1px solid var(--border-lighter); background: var(--bg-lightest); }
+.ds-table td { padding: 13px 18px; border-bottom: 1px solid var(--border-lighter); }
+.ds-table tr { transition: background var(--dur-1) var(--motion-standard); }
+.ds-table tbody tr:hover { background: var(--bg-hover); }
+.ds-table tr:last-child td { border-bottom: none; }
+
+/* ---------- Animaciones utilitarias ---------- */
+@keyframes dsFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dsRise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@keyframes dsSpin { to { transform: rotate(360deg); } }
+.reveal { opacity: 0; transform: translateY(24px); transition: opacity .5s var(--motion-emphasis), transform .5s var(--motion-emphasis); }
+.reveal.visible { opacity: 1; transform: none; }
+
+/* Observed section dividers */
+.obs { scroll-margin-top: 70px; }
+
+@media (max-width: 600px) {
+  .ds-grid { grid-template-columns: 1fr 1fr; }
+  .hero { padding: 48px 16px 40px; }
+}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <span class="hero-badge"><i class="fas fa-sparkles"></i> Design System · v1.0</span>
+  <h1>Tomodachi <span>Design System</span></h1>
+  <p>Base unificada de controles y animaciones para el Punto de Venta. Suave, profesional y directo — cada transición tiene un propósito.</p>
+  <div class="theme-toggle" role="group" aria-label="Tema">
+    <span class="seg active" data-theme-set="light"><i class="fas fa-sun"></i> Claro</span>
+    <span class="seg" data-theme-set="dark"><i class="fas fa-moon"></i> Oscuro</span>
+  </div>
+</header>
+
+<nav class="ds-nav" id="dsNav">
+  <a href="#botones" class="active">Botones</a>
+  <a href="#formularios">Formularios</a>
+  <a href="#toggles">Toggles</a>
+  <a href="#tabs">Tabs</a>
+  <a href="#chips">Chips</a>
+  <a href="#cards">Cards</a>
+  <a href="#listas">Listas</a>
+  <a href="#modal">Modal</a>
+  <a href="#toast">Toast</a>
+  <a href="#tabla">Tabla</a>
+</nav>
+
+<main class="ds-wrap">
+
+  <!-- ===== BOTONES ===== -->
+  <section class="ds-section obs" id="botones">
+    <h2><i class="fas fa-mouse-pointer"></i> Botones</h2>
+    <p class="sub">Cada botón tiene micro-interacción de escala y "ripple" al pulsar (estilo Material).</p>
+
+    <div class="ds-grid">
+      <div class="ds-card"><div class="label">Primario</div><div class="showcase"><button class="btn btn-primary"><i class="fas fa-plus"></i> Nuevo</button></div></div>
+      <div class="ds-card"><div class="label">Secundario</div><div class="showcase"><button class="btn btn-secondary">Guardar</button></div></div>
+      <div class="ds-card"><div class="label">Contorno</div><div class="showcase"><button class="btn btn-outline">Cancelar</button></div></div>
+      <div class="ds-card"><div class="label">Fantasma</div><div class="showcase"><button class="btn btn-ghost"><i class="fas fa-ellipsis"></i></button></div></div>
+      <div class="ds-card"><div class="label">Peligro</div><div class="showcase"><button class="btn btn-danger">Eliminar</button></div></div>
+      <div class="ds-card"><div class="label">Éxito</div><div class="showcase"><button class="btn btn-success">Pagar</button></div></div>
+    </div>
+
+    <div class="ds-card" style="margin-top:16px">
+      <div class="label">Variantes de tamaño / icono</div>
+      <div class="showcase" style="justify-content:flex-start">
+        <button class="btn btn-primary btn-sm">Pequeño</button>
+        <button class="btn btn-primary">Mediano</button>
+        <button class="btn btn-primary btn-lg btn-round">Grande</button>
+        <button class="btn btn-outline btn-icon" title="Buscar"><i class="fas fa-search"></i></button>
+        <button class="btn btn-primary btn-loading"><i class="fas fa-circle-notch"></i> Procesando</button>
+      </div>
+    </div>
+    <p class="code-note">clases: .btn .btn-primary/.btn-secondary/.btn-outline/.btn-ghost/.btn-danger/.btn-success · variantes: .btn-lg/.btn-sm/.btn-round/.btn-icon/.btn-block/.btn-loading</p>
+  </section>
+
+  <!-- ===== FORMULARIOS ===== -->
+  <section class="ds-section obs" id="formularios">
+    <h2><i class="fas fa-edit"></i> Formularios</h2>
+    <p class="sub">Inputs con foco resaltado (ring del color de marca) y estados de error.</p>
+    <div class="ds-grid" style="grid-template-columns:repeat(auto-fill,minmax(240px,1fr))">
+      <div class="ds-card">
+        <div class="label">Text</div>
+        <div class="field"><label>Nombre del producto</label><input class="form-input" placeholder="Ej. Café Americano"></div>
+      </div>
+      <div class="ds-card">
+        <div class="label">Con icono</div>
+        <div class="field"><label>Buscar</label>
+          <div class="input-wrap"><i class="fas fa-search"></i><input class="form-input with-icon" placeholder="Buscar producto..."></div>
+        </div>
+      </div>
+      <div class="ds-card">
+        <div class="label">Con error</div>
+        <div class="field"><label>Precio</label><input class="form-input invalid" value="-5"><small style="color:var(--danger-color);font-size:.75rem">El precio no puede ser negativo</small></div>
+      </div>
+      <div class="ds-card">
+        <div class="label">Select</div>
+        <div class="field"><label>Categoría</label>
+          <select class="select"><option>Bebidas</option><option>Snacks</option><option>Abarrotes</option></select>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== TOGGLES / CHECK / RADIO ===== -->
+  <section class="ds-section obs" id="toggles">
+    <h2><i class="fas fa-toggle-on"></i> Toggles, Checkbox y Radio</h2>
+    <p class="sub">Interruptores animados para acciones rápidas del flujo de caja.</p>
+    <div class="ds-grid" style="grid-template-columns:repeat(auto-fill,minmax(200px,1fr))">
+      <div class="ds-card"><div class="label">Switch</div><div class="showcase">
+        <label class="switch"><input type="checkbox" checked><span class="track"></span> Activo</label>
+      </div></div>
+      <div class="ds-card"><div class="label">Switch off</div><div class="showcase">
+        <label class="switch"><input type="checkbox"><span class="track"></span> Enviar ticket</label>
+      </div></div>
+      <div class="ds-card"><div class="label">Checkbox</div><div class="showcase" style="flex-direction:column;align-items:flex-start">
+        <label class="check"><input type="checkbox" checked> Producto a granel</label>
+        <label class="check"><input type="checkbox"> Aplicar impuesto</label>
+      </div></div>
+      <div class="ds-card"><div class="label">Radio</div><div class="showcase" style="flex-direction:column;align-items:flex-start">
+        <label class="radio"><input type="radio" name="pg" checked> Efectivo</label>
+        <label class="radio"><input type="radio" name="pg"> Tarjeta</label>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- ===== TABS ===== -->
+  <section class="ds-section obs" id="tabs">
+    <h2><i class="fas fa-layer-group"></i> Tabs</h2>
+    <p class="sub">Con indicador deslizante animado, estilo Google Material.</p>
+    <div class="ds-card" style="padding:0;overflow:hidden">
+      <div class="tabs">
+        <button class="tab active" data-tab>Productos</button>
+        <button class="tab" data-tab>Carrito</button>
+        <button class="tab" data-tab>Historial</button>
+        <button class="tab" data-tab>Reportes</button>
+      </div>
+      <div class="tab-panel" style="padding:20px">Haz clic en otra pestaña para ver la transición del indicador.</div>
+    </div>
+  </section>
+
+  <!-- ===== CHIPS / BADGES ===== -->
+  <section class="ds-section obs" id="chips">
+    <h2><i class="fas fa-tag"></i> Chips y Badges</h2>
+    <p class="sub">Etiquetas de estado compactas para información rápida.</p>
+    <div class="ds-card">
+      <div class="showcase" style="justify-content:flex-start;min-height:40px">
+        <span class="chip primary"><i class="fas fa-circle"></i> En stock</span>
+        <span class="chip success"><i class="fas fa-check"></i> Pagado</span>
+        <span class="chip warning">Pendiente</span>
+        <span class="chip danger"><i class="fas fa-times"></i> Cancelado</span>
+        <span class="chip">General<i class="fas fa-times"></i></span>
+        <span class="badge badge-success">OK</span>
+        <span class="badge badge-danger">Bajo</span>
+        <span class="badge badge-warning">Aviso</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CARDS ===== -->
+  <section class="ds-section obs" id="cards">
+    <h2><i class="fas fa-id-card"></i> Cards</h2>
+    <p class="sub">Elevación suave al interactuar, ideal para tarjetas de producto.</p>
+    <div class="ds-grid" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr))">
+      <div class="card" style="cursor:pointer">
+        <div style="height:110px;background:linear-gradient(135deg,var(--primary-color),var(--primary-dark));display:grid;place-content:center;color:#fff"><i class="fas fa-cookie-bite" style="font-size:2rem;opacity:.8"></i></div>
+        <div class="card-body"><h3 style="margin-bottom:4px">Producto demo</h3><p style="font-size:.82rem;color:var(--text-muted)">$15.50 · Stock 24</p></div>
+      </div>
+      <div class="card" style="cursor:pointer">
+        <div style="height:110px;background:linear-gradient(135deg,var(--secondary-color),var(--secondary-dark));display:grid;place-content:center;color:#fff"><i class="fas fa-mug-hot" style="font-size:2rem;opacity:.8"></i></div>
+        <div class="card-body"><h3 style="margin-bottom:4px">Bebidas</h3><p style="font-size:.82rem;color:var(--text-muted)">12 artículos</p></div>
+      </div>
+      <div class="card" style="cursor:pointer">
+        <div style="height:110px;background:linear-gradient(135deg,var(--success-color),var(--success-dark));display:grid;place-content:center;color:#fff"><i class="fas fa-basket-shopping" style="font-size:2rem;opacity:.8"></i></div>
+        <div class="card-body"><h3 style="margin-bottom:4px">Despensa</h3><p style="font-size:.82rem;color:var(--text-muted)">8 artículos</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== LISTAS ===== -->
+  <section class="ds-section obs" id="listas">
+    <h2><i class="fas fa-list"></i> Listas</h2>
+    <p class="sub">Filas con hover, ideales para el historial de ventas y clientes.</p>
+    <div class="card" style="max-width:560px">
+      <div class="list-item">
+        <div class="avatar"><i class="fas fa-user"></i></div>
+        <div style="flex:1"><div class="meta-title">Karla Lizzette</div><div class="meta-sub">Última compra hoy · $1,240</div></div>
+        <span class="chip success">Fiado</span>
+      </div>
+      <div class="list-item">
+        <div class="avatar" style="background:var(--secondary-light);color:var(--secondary-color)"><i class="fas fa-receipt"></i></div>
+        <div style="flex:1"><div class="meta-title">Venta #1042</div><div class="meta-sub">Efectivo · 3 items</div></div>
+        <span style="font-weight:700;color:var(--success-dark)">$86.00</span>
+      </div>
+      <div class="list-item">
+        <div class="avatar" style="background:var(--primary-light);color:var(--primary-color)"><i class="fas fa-box"></i></div>
+        <div style="flex:1"><div class="meta-title">Reposición de stock</div><div class="meta-sub">Hace 5 min · +12 unid.</div></div>
+        <span class="chip primary">Hecho</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== MODAL ===== -->
+  <section class="ds-section obs" id="modal">
+    <h2><i class="fas fa-window-maximize"></i> Modal</h2>
+    <p class="sub">Animación de entrada con escala + elevación (estilo Material).</p>
+    <div class="ds-card"><div class="showcase">
+      <button class="btn btn-primary" id="openModal">Abrir modal</button>
+    </div></div>
+  </section>
+
+  <!-- ===== TOAST ===== -->
+  <section class="ds-section obs" id="toast">
+    <h2><i class="fas fa-bell"></i> Toast / Notificación</h2>
+    <p class="sub">Notificaciones no bloqueantes con deslizamiento lateral.</p>
+    <div class="ds-card"><div class="showcase">
+      <button class="btn btn-success" data-toast="success"><i class="fas fa-check"></i> Éxito</button>
+      <button class="btn btn-danger" data-toast="danger"><i class="fas fa-times"></i> Error</button>
+      <button class="btn btn-outline" data-toast="warning"><i class="fas fa-triangle-exclamation"></i> Aviso</button>
+    </div></div>
+  </section>
+
+  <!-- ===== TABLA ===== -->
+  <section class="ds-section obs" id="tabla">
+    <h2><i class="fas fa-table"></i> Tabla</h2>
+    <p class="sub">Filas con hover para listados operativos del POS.</p>
+    <div class="table-wrap">
+      <table class="ds-table">
+        <thead><tr><th>Producto</th><th>Categoría</th><th>Precio</th><th>Stock</th><th>Estado</th></tr></thead>
+        <tbody>
+          <tr><td>Café Americano</td><td>Bebidas</td><td>$25.00</td><td>48</td><td><span class="chip success">Activo</span></td></tr>
+          <tr><td>Capuchino</td><td>Bebidas</td><td>$38.00</td><td>12</td><td><span class="chip warning">Bajo</span></td></tr>
+          <tr><td>Brownie</td><td>Snacks</td><td>$30.00</td><td>0</td><td><span class="chip danger">Agotado</span></td></tr>
+          <tr><td>Té Verde</td><td>Bebidas</td><td>$22.00</td><td>30</td><td><span class="chip success">Activo</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<!-- Modal -->
+<div class="modal-overlay" id="demoModal">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-header">
+      <h3>Confirmar acción</h3>
+      <button class="modal-close" id="closeModal"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--text-medium)">Este es el modal estándar del design system. Se abrirá con una animación suave de escala y elevación, coherente con el resto de la interfaz.</p>
+      <div class="field" style="margin-top:16px">
+        <label>Motivo</label>
+        <select class="select"><option>Venta</option><option>Devolución</option><option>Ajuste</option></select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancelModal">Cancelar</button>
+      <button class="btn btn-primary">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-host" id="toastHost"></div>
+
+<script>
+/* Ripple effect en botones (Material) */
+document.addEventListener('click', function (e) {
+  const btn = e.target.closest('.btn');
+  if (!btn) return;
+  const rect = btn.getBoundingClientRect();
+  const d = Math.max(rect.width, rect.height) * 2;
+  const ripple = document.createElement('span');
+  ripple.className = 'ripple';
+  ripple.style.width = ripple.style.height = d + 'px';
+  ripple.style.left = (e.clientX - rect.left - d / 2) + 'px';
+  ripple.style.top = (e.clientY - rect.top - d / 2) + 'px';
+  btn.appendChild(ripple);
+  setTimeout(() => ripple.remove(), 320);
+});
+
+/* Tema claro/oscuro */
+document.querySelectorAll('[data-theme-set]').forEach(seg => {
+  seg.addEventListener('click', () => {
+    const t = seg.dataset.themeSet;
+    document.documentElement.setAttribute('data-theme', t);
+    document.querySelectorAll('[data-theme-set]').forEach(s => s.classList.toggle('active', s === seg));
+  });
+});
+
+/* Tabs */
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+  });
+});
+
+/* Navegación con scrollspy */
+const secs = document.querySelectorAll('.ds-section');
+const navLinks = document.querySelectorAll('.ds-nav a');
+const spy = new IntersectionObserver((entries) => {
+  entries.forEach(en => {
+    if (en.isIntersecting) {
+      navLinks.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + en.target.id));
+    }
+  });
+}, { rootMargin: '-40% 0px -55% 0px' });
+secs.forEach(s => spy.observe(s));
+
+/* Reveal on scroll */
+const reveal = new IntersectionObserver((entries) => {
+  entries.forEach(en => en.isIntersecting && en.target.classList.add('visible'));
+}, { threshold: .12 });
+document.querySelectorAll('.ds-section, .hero > *').forEach((el, i) => {
+  el.classList.add('reveal');
+  reveal.observe(el);
+});
+setTimeout(() => document.querySelectorAll('.hero > *').forEach(el => el.classList.add('visible')), 100);
+
+/* Modal */
+const ov = document.getElementById('demoModal');
+document.getElementById('openModal').addEventListener('click', () => ov.classList.add('show'));
+document.getElementById('closeModal').addEventListener('click', () => ov.classList.remove('show'));
+document.getElementById('cancelModal').addEventListener('click', () => ov.classList.remove('show'));
+ov.addEventListener('click', (e) => { if (e.target === ov) ov.classList.remove('show'); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') ov.classList.remove('show'); });
+
+/* Toast */
+function showToast(type, message) {
+  const host = document.getElementById('toastHost');
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  const icon = type === 'success' ? 'check-circle' : type === 'danger' ? 'times-circle' : 'triangle-exclamation';
+  t.innerHTML = '<i class="fas fa-' + icon + '"></i><div class="t-message">' + message + '</div>';
+  host.appendChild(t);
+  requestAnimationFrame(() => t.classList.add('show'));
+  setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 320); }, 3000);
+}
+document.querySelectorAll('[data-toast]').forEach(b => {
+  b.addEventListener('click', () => {
+    const m = { success: 'Venta registrada correctamente', danger: 'No se pudo completar la operación', warning: 'Stock bajo en 2 productos' };
+    showToast(b.dataset.toast, m[b.dataset.toast]);
+  });
+});
+</script>
+</body>
+</html>

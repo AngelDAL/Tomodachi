@@ -690,29 +690,50 @@ document.querySelectorAll('.tab[data-panel]').forEach(tab => tab.addEventListene
 const ov = document.getElementById('modalOverlay'), mbox = document.getElementById('modalBox');
 const animName = document.getElementById('modalAnimName');
 const anims = { zoom:'Zoom', 'slide-up':'Slide up', drop:'Drop', flip:'Flip', grow:'Grow' };
-/* config de ENTRADA y SALIDA por variante */
+/* config de ENTRADA y SALIDA por variante.
+   Cada variante define su transformación como pares [estadoA, estadoB].
+   Entrada: de A a B. Salida: espejo, de B a A. Misma easing en ambas. */
 const modalFx = {
-  zoom:      { in:{ scale:[.78,1], opacity:[0,1], easing:'easeOutBack' },        out:{ scale:[1,.9], opacity:[1,0], easing:'easeInCubic' } },
-  'slide-up':{ in:{ translateY:[80,0], opacity:[0,1], easing:'easeOutBack' },     out:{ translateY:[0,60], opacity:[1,0], easing:'easeInBack' } },
-  drop:      { in:{ translateY:[-60,0], scale:[.9,1], opacity:[0,1], easing:'easeOutCubic' }, out:{ translateY:[0,40], opacity:[1,0], easing:'easeInCubic' } },
-  flip:      { in:{ rotateX:[-60,0], opacity:[0,1], easing:'easeOutCubic' },      out:{ rotateX:[0,30], opacity:[1,0], easing:'easeInCubic' } },
-  grow:      { in:{ scale:[.4,1], opacity:[0,1], easing:'easeOutElastic(1,.6)' }, out:{ scale:[1,.6], opacity:[1,0], easing:'easeInCubic' } },
+  zoom:      { k:['scale'], a:[.78,1], easing:'easeOutBack', dur:360 },
+  'slide-up':{ k:['translateY'], a:[70,0], easing:'easeOutBack', dur:360 },
+  drop:      { k:['translateY','scale'], a:[[-56,0],[.94,1]], easing:'easeOutCubic', dur:380 },
+  flip:      { k:['rotateX'], a:[-55,0], easing:'easeOutCubic', dur:400 },
+  grow:      { k:['scale'], a:[.4,1], easing:'easeOutElastic(1,.6)', dur:520 },
 };
 let modalTimeline = null;
+
+function buildTargets(fx, rev) {
+  // devuelve { props: {}, opacity:[0,1] } donde props parte de rev?A:B
+  const props = {};
+  fx.k.forEach((k, i) => {
+    const pair = Array.isArray(fx.a[i]) ? fx.a[i] : fx.a;          // valores para esta key
+    if (Array.isArray(pair) && pair.length===2 && Array.isArray(pair[0])) {
+      props[k] = rev ? pair.map(v=>v[0]) : pair.map(v=>v[1]);      // pair de sub-valores
+    } else if (Array.isArray(pair) && pair.length===2 && typeof pair[0]==='number') {
+      // 'a' es un solo par [x,y] compartido por todas las keys (caso simple)
+      props[k] = rev ? [pair[1], pair[0]] : [pair[0], pair[1]];
+    } else {
+      props[k] = pair;
+    }
+  });
+  return { props, opacity: rev ? [1,0] : [0,1] };
+}
 
 function openModal(a) {
   ov.dataset.anim = a; animName.textContent = anims[a] || a;
   const fx = modalFx[a] || modalFx.zoom;
-  // reset de transform para que anime.js parta de estado limpio
   mbox.style.transform = 'none'; mbox.style.opacity = 0;
   ov.classList.add('show');
-  const D = 380;
-  modalTimeline = anime({ targets: mbox, ...fx.in, duration: D, easing: fx.in.easing, delay: 20 });
+  // entrada: aplicar props (de A a B) + opacity 0->1
+  const { props, opacity } = buildTargets(fx, false);
+  anime({ targets: mbox, ...props, opacity, duration: fx.dur, easing: fx.easing, delay: 20 });
 }
 function closeModal(){
   if (!ov.classList.contains('show')) return;
   const fx = modalFx[ov.dataset.anim] || modalFx.zoom;
-  anime({ targets: mbox, ...fx.out, duration: 240, easing: fx.out.easing,
+  // salida: espejo (de B a A) + opacity 1->0
+  const { props, opacity } = buildTargets(fx, true);
+  anime({ targets: mbox, ...props, opacity, duration: Math.min(fx.dur, 300), easing: fx.easing,
     complete: () => { ov.classList.remove('show'); } });
 }
 document.querySelectorAll('[data-modal-open]').forEach(b=>b.addEventListener('click',()=>openModal(b.dataset.modalOpen)));

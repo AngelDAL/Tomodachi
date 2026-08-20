@@ -296,6 +296,36 @@ h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
 .carousel-arrow.prev { left: 12px; }
 .carousel-arrow.next { right: 12px; }
 
+/* ===== Ejemplos orquestados con anime.js ===== */
+/* Letras con flip (títulos) */
+.flip-letters, .flip-word { display: inline-block; }
+.flip-letters .lt, .flip-word .lt { display: inline-block; opacity: 0; transform-origin: 50% 50%; }
+.flip-letters .sp, .flip-word .sp { display: inline-block; width: .4em; }
+
+/* Lista de compras que se despliega */
+.buy-list, .demo-list { list-style: none; padding: 0; margin: 0; }
+.buy-list li, .demo-list li {
+  display: flex; align-items: center; gap: 12px; padding: 13px 14px;
+  background: var(--bg-card); border: 1px solid var(--border-lighter); border-radius: 12px;
+  margin-bottom: 8px; font-size: .92rem; opacity: 0; transform: translateX(-18px);
+}
+.buy-list li .ic, .demo-list li .ic {
+  width: 34px; height: 34px; border-radius: 10px; display: grid; place-content: center;
+  background: var(--primary-light); color: var(--primary-color); font-size: .9rem;
+}
+.buy-list li .pr, .demo-list li .pr { margin-left: auto; font-family: var(--font-heading); font-weight: 600; color: var(--text-medium); }
+
+/* Compra exitosa */
+.success-check {
+  width: 92px; height: 92px; margin: 6px auto 14px; border-radius: 50%;
+  background: color-mix(in srgb, var(--success-color) 16%, transparent);
+  display: grid; place-content: center; position: relative;
+}
+.success-check .circ { position: absolute; inset: 0; border-radius: 50%; border: 3px solid var(--success-color); opacity: 0; transform: scale(.4); }
+.success-check .tick { font-size: 2.6rem; color: var(--success-dark); opacity: 0; }
+.confetti { position: absolute; width: 8px; height: 12px; border-radius: 2px; pointer-events: none; z-index: 5; }
+.flip-letters .lt { display: inline-block; opacity: 0; }
+
 @media (max-width: 700px) { .grid { grid-template-columns: 1fr 1fr; } .anime-grid { grid-template-columns: repeat(4,1fr); } .anime-cards { grid-template-columns: repeat(2,1fr); } .hero { padding: 44px 16px 34px; } }
 </style>
 </head>
@@ -591,6 +621,50 @@ h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
             <button class="carousel-arrow next" id="carNext"><i class="fas fa-chevron-right"></i></button>
           </div>
           <div class="carousel-nav" id="carDots"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><h2><i class="fas fa-wand-sparkles"></i> Ejemplos orquestados (anime.js)</h2><p>Títulos con letras en flip, listas que se despliegan y la secuencia de una compra exitosa.</p></div>
+
+    <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr))">
+      <!-- Letras con flip -->
+      <div class="stage">
+        <div class="cap"><span>Título con letras flip</span></div>
+        <div class="body">
+          <h3 class="flip-letters" id="flipTitle" style="font-size:1.6rem;font-weight:700;line-height:1.4;min-height:2.4em">Gráfica de ventas</h3>
+          <button class="btn btn-soft" id="flipTitleGo"><i class="fas fa-play"></i> Animar título</button>
+        </div>
+      </div>
+
+      <!-- Lista de compras -->
+      <div class="stage">
+        <div class="cap"><span>Lista de compras</span></div>
+        <div class="body">
+          <ul class="buy-list" id="buyList">
+            <li><span class="ic"><i class="fas fa-mug-hot"></i></span> Café Americano <span class="pr">$25</span></li>
+            <li><span class="ic"><i class="fas fa-cheese"></i></span> Queso Manchego <span class="pr">$60</span></li>
+            <li><span class="ic"><i class="fas fa-cookie-bite"></i></span> Galletas <span class="pr">$30</span></li>
+            <li><span class="ic"><i class="fas fa-bottle-water"></i></span> Agua 1L <span class="pr">$18</span></li>
+          </ul>
+          <button class="btn btn-soft" id="buyListGo" style="margin-top:6px"><i class="fas fa-play"></i> Desplegar</button>
+        </div>
+      </div>
+
+      <!-- Compra exitosa -->
+      <div class="stage">
+        <div class="cap"><span>Compra exitosa</span></div>
+        <div class="body">
+          <div id="successWrap" style="position:relative;text-align:center;padding:6px 0;min-height:150px">
+            <div class="success-check" id="successCheck" style="display:none">
+              <span class="circ"></span>
+              <i class="fas fa-check tick"></i>
+            </div>
+            <p id="successMsg" style="color:var(--text-medium);font-size:.92rem">Pulsa para procesar la venta</p>
+          </div>
+          <button class="btn btn-success-soft" id="buyGo"><i class="fas fa-cash-register"></i> Procesar venta</button>
         </div>
       </div>
     </div>
@@ -948,6 +1022,79 @@ document.getElementById('carPrev').addEventListener('click', ()=>goTo(cur-1));
 setInterval(()=>goTo(cur+1), 3500);
 
 /* animar al entrar a la pestaña de animaciones */
+
+/* ===== Título con letras flip (anime.js) ===== */
+const flipTitles = ['Gráfica de ventas', 'Punto de venta', 'Tomodachi POS'];
+let fIdx = 0;
+function splitFlipLetters(el){
+  const txt = el.textContent; el.innerHTML = '';
+  [...txt].forEach(ch => {
+    const s = document.createElement('span');
+    s.className = ch === ' ' ? 'sp' : 'lt'; s.textContent = ch;
+    el.appendChild(s);
+  });
+}
+function runFlipTitle(){
+  fIdx = (fIdx + 1) % flipTitles.length;
+  const el = document.getElementById('flipTitle');
+  splitFlipLetters(el);
+  const lets = el.querySelectorAll('.lt');
+  el.querySelectorAll('.sp').forEach(s => { s.style.opacity = 1; });
+  anime({ targets: lets, rotateX: { value: [180, 0] }, opacity: [0,1], translateY: [6,0],
+    delay: anime.stagger(55), duration: 700, easing: 'easeOutCubic' });
+}
+document.getElementById('flipTitleGo').addEventListener('click', runFlipTitle);
+runFlipTitle();
+
+/* ===== Lista de compras que se despliega (anime.js) ===== */
+function runBuyList(){
+  const items = document.querySelectorAll('#buyList li');
+  items.forEach(it => { it.style.opacity = 0; it.style.transform = 'translateX(-18px)'; });
+  anime({ targets: items, opacity: [0,1], translateX: [-18,0],
+    delay: anime.stagger(120, {start: 80}), duration: 550, easing: 'easeOutBack' });
+  // el ícono aparece con un pequeño pop dentro de cada fila
+  const ics = document.querySelectorAll('#buyList .ic');
+  anime({ targets: ics, scale: [0,1], delay: anime.stagger(160, {start: 200}), duration: 400, easing: 'easeOutBack' });
+}
+document.getElementById('buyListGo').addEventListener('click', runBuyList);
+runBuyList();
+
+/* ===== Compra exitosa: secuencia orquestada (anime.js) ===== */
+const successEl = document.getElementById('successCheck');
+const successMsg = document.getElementById('successMsg');
+function spawnConfetti(host, n=28){
+  const colors = ['var(--primary-color)','var(--success-color)','var(--warning-color)','#c62828','#1a237e','#2e7d32'];
+  for (let i=0;i<n;i++){
+    const c = document.createElement('span'); c.className = 'confetti';
+    c.style.left = (Math.random()*100)+'%'; c.style.top = '20%';
+    c.style.background = colors[i % colors.length];
+    host.appendChild(c);
+  }
+  anime({ targets: host.querySelectorAll('.confetti'),
+    translateY: () => anime.random(120, 320), translateX: () => anime.random(-140,140),
+    rotate: () => anime.random(-300,300), opacity: { value:[1, 0], duration: 600 },
+    delay: anime.stagger(12), duration: 1200, easing: 'easeOutCubic',
+    complete: () => { host.querySelectorAll('.confetti').forEach(x => x.remove()); } });
+}
+function runBuy(){
+  // 1) mostrar el check
+  successEl.style.display = 'grid';
+  successEl.querySelector('.tick').style.opacity = 0;
+  successEl.querySelector('.circ').style.opacity = 0;
+  // 2) anillo de onda
+  anime({ targets: successEl.querySelector('.circ'), scale: [.4, 1.6], opacity: [.9, 0], duration: 900, easing: 'easeOutQuad' });
+  // 3) el check aparece con pop elástico
+  anime({ targets: successEl.querySelector('.tick'), scale: [0, 1.1, 1], opacity: [0,1], duration: 600, delay: 200, easing: 'easeOutBack' });
+  // 4) mensaje
+  successMsg.textContent = '¡Venta procesada correctamente!';
+  anime({ targets: successMsg, opacity: [0,1], translateY: [8,0], duration: 500, delay: 350, easing: 'easeOutQuad' });
+  // 5) confetti
+  setTimeout(() => successEl.style.display === 'grid' && spawnConfetti(successEl.parentElement), 250);
+  // 6) rearmar para la próxima
+  setTimeout(() => { successEl.style.display = 'none'; successMsg.textContent = 'Pulsa para procesar la venta'; }, 4200);
+}
+document.getElementById('buyGo').addEventListener('click', runBuy);
+
 new MutationObserver(()=>{}).observe ? 0 : 0;
 </script>
 </body>

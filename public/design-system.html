@@ -186,6 +186,7 @@ h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
 .modal-overlay {
   position: fixed; inset: 0; z-index: 1000; display: none; align-items: center; justify-content: center; padding: 20px;
   background-color: rgba(0,0,0,.5);
+  perspective: 1200px;
 }
 [data-theme="dark"] .modal-overlay { background-color: rgba(0,0,0,.6); }
 .modal-overlay::before {
@@ -710,38 +711,51 @@ document.querySelectorAll('.tab[data-panel]').forEach(tab => tab.addEventListene
   if (p) { p.classList.remove('active'); void p.offsetWidth; p.classList.add('active'); }
 }));
 
-/* ===== Modal: entrada y salida personalizadas por variante (anime.js) ===== */
+/* ===== Modal: sistema robusto de animación (anime.js) =====
+   Cada variante define propiedades NUMÉRICAS de anime.js (scale, translateY,
+   rotateX) para entrada y salida. El flip usa la propiedad 'translateY' + una
+   rotación en X sobre un contenedor con perspectiva. */
 const ov = document.getElementById('modalOverlay'), mbox = document.getElementById('modalBox');
 const animName = document.getElementById('modalAnimName');
+const animLabel = document.getElementById('modalAnimLabel');
 const anims = { zoom:'Zoom', 'slide-up':'Slide up', drop:'Drop', flip:'Flip', grow:'Grow' };
-/* config de ENTRADA y SALIDA por variante.
-   Cada variante define el estado inicial (from) y final (to) como string CSS.
-   Entrada: de from a to. Salida: espejo, de to a from. Misma easing. */
+
 const modalFx = {
-  zoom:      { from:'scale(0.92)', to:'scale(1)', easing:'easeOutQuad', dur:300 },
-  'slide-up':{ from:'translateY(40px)', to:'translateY(0)', easing:'easeOutQuad', dur:320 },
-  drop:      { from:'translateY(-24px) scale(0.97)', to:'translateY(0) scale(1)', easing:'easeOutCubic', dur:300 },
-  flip:      { from:'perspective(900px) rotateX(18deg)', to:'perspective(900px) rotateX(0deg)', easing:'easeOutQuad', dur:340 },
-  grow:      { from:'scale(0.88)', to:'scale(1)', easing:'easeOutQuad', dur:300 },
+  zoom:      { enter:{ scale:[0.92,1] },           ease:'easeOutQuad', dur:300 },
+  'slide-up':{ enter:{ translateY:[40,0] },        ease:'easeOutQuad', dur:320 },
+  drop:      { enter:{ translateY:[-22,0], scale:[0.97,1] }, ease:'easeOutCubic', dur:320 },
+  flip:      { enter:{ translateY:[12,0], rotateX:[24,0] },  ease:'easeOutQuad', dur:340 },
+  grow:      { enter:{ scale:[0.9,1] },            ease:'easeOutQuad', dur:300 },
 };
-let modalTimeline = null;
 let modalSize = 'md';
 
-function setModalSize(s){ modalSize = s; mbox.classList.remove('sm','md','lg'); mbox.classList.add(s); }
+function setModalSize(s){
+  modalSize = s;
+  mbox.classList.remove('sm','md','lg');
+  mbox.classList.add(s);
+  // abre el modal con el tamaño elegido (si aún no está abierto)
+  openModal(ov.dataset.anim || 'zoom');
+}
 
-function openModal(a) {
-  ov.dataset.anim = a; animName.textContent = anims[a] || a;
+function openModal(a){
+  ov.dataset.anim = a;
+  if (animName) animName.textContent = anims[a] || a;
+  if (animLabel) animLabel.textContent = '· ' + (anims[a] || a);
   const fx = modalFx[a] || modalFx.zoom;
-  // estado inicial via transform inline, con opacidad 1 (para que se vea el giro)
-  mbox.style.transform = fx.from; mbox.style.opacity = 1;
+  // estado inicial: oculta mediante transform/opacidad iniciales inline
+  mbox.style.opacity = '0';
   ov.classList.add('show');
-  anime({ targets: mbox, transform: [fx.from, fx.to], duration: fx.dur, easing: fx.easing, delay: 10 });
-  // el fondo mantiene su fade propio vía CSS
+  // entrada: animar desde el estado inicial hasta el normal
+  const props = Object.assign({ opacity:[0,1] }, fx.enter);
+  anime({ targets: mbox, ...props, duration: fx.dur, easing: fx.ease, delay: 10 });
 }
 function closeModal(){
   if (!ov.classList.contains('show')) return;
   const fx = modalFx[ov.dataset.anim] || modalFx.zoom;
-  anime({ targets: mbox, transform: [fx.to, fx.from], opacity: [1,0], duration: Math.min(fx.dur, 280), easing: fx.easing,
+  // salida: espejo exacto (invertir cada par de la entrada) + opacity 1->0
+  const rev = {};
+  Object.keys(fx.enter).forEach(k => { const p = fx.enter[k]; rev[k] = [p[1], p[0]]; });
+  anime({ targets: mbox, ...rev, opacity:[1,0], duration: Math.min(fx.dur, 260), easing: fx.ease,
     complete: () => { ov.classList.remove('show'); } });
 }
 document.querySelectorAll('[data-modal-open]').forEach(b=>b.addEventListener('click',()=>openModal(b.dataset.modalOpen)));

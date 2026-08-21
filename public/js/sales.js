@@ -31,6 +31,8 @@ let discountTypeSelect, discPercentInput, discFixedInput, nxnBuyInput, nxnPayInp
 let optPercent, optFixed, optNxn;
 
 let EDITING_PRODUCT_ID = null;
+let stepHoldTimer = null;
+let lastStepPointerAt = 0;
 
 // ===== Vista del grid: 'grid' (por defecto) | 'catalog' (agrupado por catálogo) =====
 let currentViewMode = 'grid';
@@ -823,7 +825,43 @@ function setupCartEventsDelegation() {
         return;
     }
 
-    // Solo un listener para todos los items
+    // Mouse/pen: registrar cada pulsación del stepper de inmediato.
+    // Evita el debounce de 250ms y permite conteo rápido de caja.
+    cartBody.addEventListener('pointerdown', (e) => {
+        const stepBtn = e.target.closest('.step-btn');
+        if (!stepBtn || e.pointerType === 'touch' || e.button !== 0) return;
+        e.preventDefault();
+        e.stopPropagation();
+        clearTimeout(stepHoldTimer);
+        lastStepPointerAt = performance.now();
+        const action = stepBtn.getAttribute('data-action');
+        const id = parseInt(stepBtn.getAttribute('data-id'));
+
+        // Pulsación normal: sumar/restar de inmediato.
+        handleStepBtnClick(stepBtn);
+
+        // Hold en −: tras una retención deliberada, quitar la línea completa.
+        if (action === 'minus') {
+            stepBtn.classList.add('step-holding');
+            stepHoldTimer = setTimeout(() => {
+                const it = CART.find(i => i.product_id === id);
+                if (!it) return;
+                CART = CART.filter(i => i.product_id !== id);
+                playSound('Sound3.mp3');
+                renderCart();
+            }, 520);
+        }
+    });
+
+    const cancelStepHold = () => {
+        clearTimeout(stepHoldTimer);
+        stepHoldTimer = null;
+        cartBody.querySelectorAll('.step-holding').forEach(b => b.classList.remove('step-holding'));
+    };
+    document.addEventListener('pointerup', cancelStepHold);
+    document.addEventListener('pointercancel', cancelStepHold);
+
+    // Solo un listener para acciones que no son pointerdown (touch/teclado).
     cartBody.addEventListener('click', (e) => {
         // Encontrar target relevante
         const target = e.target;
@@ -832,14 +870,10 @@ function setupCartEventsDelegation() {
         const stepBtn = target.closest('.step-btn');
         if (stepBtn) {
             e.stopPropagation();
-            e.preventDefault(); // Prevenir selección o doble trigger
-            
-            // Protección contra clicks rápidos (rebote)
-            if (isCartProcessing) return;
-            isCartProcessing = true;
-            // Liberar bloqueo rápido para permitir interacción fluida pero evitar rebotes mecánicos
-            setTimeout(() => isCartProcessing = false, 250);
-
+            e.preventDefault();
+            // El click del mouse ya se procesó en pointerdown; en touch o
+            // teclado este es el camino directo, sin debounce artificial.
+            if (performance.now() - lastStepPointerAt < 450) return;
             handleStepBtnClick(stepBtn);
             return;
         }

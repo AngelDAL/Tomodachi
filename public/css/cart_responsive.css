@@ -151,6 +151,18 @@
 .step-btn:active {
     transform: scale(0.9);
 }
+/* Hold en −: señal breve de eliminación completa, sin modal ni espera. */
+.step-btn.step-holding {
+    background: var(--danger-color);
+    color: var(--text-on-primary, #fff);
+    transform: scale(.88);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--danger-color) 18%, transparent);
+}
+.step-btn, .qty-display {
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: manipulation;
+}
 
 .qty-display {
     font-weight: 700;

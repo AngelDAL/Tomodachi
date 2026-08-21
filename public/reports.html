@@ -923,6 +923,36 @@
                 }
             } catch (e) { logoDataUrl = null; }
 
+            // Preparar un PNG circular real para el PDF (cover, sin deformar).
+            // jsPDF no recorta <img> con CSS, por eso se hace el clip en canvas.
+            let logoCircleDataUrl = null;
+            if (logoDataUrl) {
+                try {
+                    logoCircleDataUrl = await new Promise((resolve) => {
+                        const image = new Image();
+                        image.onload = () => {
+                            const size = 160;
+                            const canvas = document.createElement('canvas');
+                            canvas.width = size;
+                            canvas.height = size;
+                            const ctx = canvas.getContext('2d');
+                            ctx.beginPath();
+                            ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+                            ctx.closePath();
+                            ctx.clip();
+                            // object-fit: cover: llena el círculo conservando proporción.
+                            const scale = Math.max(size / image.naturalWidth, size / image.naturalHeight);
+                            const w = image.naturalWidth * scale;
+                            const h = image.naturalHeight * scale;
+                            ctx.drawImage(image, (size - w) / 2, (size - h) / 2, w, h);
+                            resolve(canvas.toDataURL('image/png'));
+                        };
+                        image.onerror = () => resolve(null);
+                        image.src = logoDataUrl;
+                    });
+                } catch (e) { logoCircleDataUrl = null; }
+            }
+
             // Periodo del reporte (si aplica)
             let periodStr = '';
             try {
@@ -952,27 +982,15 @@
             // Texto del encabezado: contraste sobre el primario
             const headerTextRGB = getContrastColor(primaryColor) === '#000000' ? [30, 30, 46] : [255, 255, 255];
 
-            // Logo a la izquierda (dentro de un CÍRCULO blanco, imagen contenida sin distorsión)
+            // Logo a la izquierda: PNG circular ya recortado con cover (sin rectángulo ni distorsión)
             let logoX = margin, logoY = 8, logoD = 24; // diámetro del círculo
-            if (logoDataUrl) {
-                // Círculo blanco de fondo
+            if (logoCircleDataUrl) {
+                // Fondo blanco sutil para el borde del avatar circular
                 doc.setFillColor(255, 255, 255);
                 doc.circle(logoX + logoD / 2, logoY + logoD / 2, logoD / 2, 'F');
                 try {
-                    // Obtener dimensiones reales de la imagen para contenerla (object-fit: contain)
-                    let iw = logoD, ih = logoD;
-                    try { const ip = doc.getImageProperties(logoDataUrl); if (ip && ip.width && ip.height) { iw = ip.width; ih = ip.height; } } catch (e2) {}
-                    const r = iw / ih;
-                    let dw = logoD, dh = logoD;
-                    // contain: ajustar al interior del círculo conservando proporción,
-                    // con un pequeño margen para que no toque el borde.
-                    const pad = 0.78;
-                    if (r >= 1) { dw = logoD * pad; dh = dw / r; } else { dh = logoD * pad; dw = dh * r; }
-                    doc.addImage(logoDataUrl, 'PNG', logoX + (logoD - dw) / 2, logoY + (logoD - dh) / 2, dw, dh, undefined, 'FAST');
-                } catch (e) {
-                    try { doc.addImage(logoDataUrl, 'JPEG', logoX + (logoD - logoD * 0.78) / 2, logoY + (logoD - logoD * 0.78) / 2, logoD * 0.78, logoD * 0.78, undefined, 'FAST'); }
-                    catch (e2) { /* sin logo */ }
-                }
+                    doc.addImage(logoCircleDataUrl, 'PNG', logoX, logoY, logoD, logoD, undefined, 'FAST');
+                } catch (e) { /* sin logo */ }
             } else {
                 // Sin logo: icono de tienda (círculo con inicial)
                 doc.setFillColor(255, 255, 255);

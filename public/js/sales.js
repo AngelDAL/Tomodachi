@@ -731,22 +731,18 @@ async function searchProducts(term) {
 }
 
 function addProductToCart(prod) {
-  // Evitar duplicados por clicks rápidos (Debounce de operación)
-  if (isCartProcessing) return;
-  isCartProcessing = true;
+  // Ruta rápida de caja: agregar de inmediato, sin esperar una petición de
+  // promociones ni bloquear los siguientes clics. Esto permite seleccionar
+  // muchos productos consecutivamente a velocidad de cajero.
+  if (prod.is_bulk == 1) {
+    // El producto a granel sí requiere cantidad explícita.
+    promptBulkQuantity(prod);
+    return;
+  }
+  _addToCartInternal(prod);
 
-  // Recargar promociones activas para asegurar tener las últimas reglas
-  loadActivePromotions().then(() => {
-      // Si es producto a granel, solicitar cantidad primero
-      if (prod.is_bulk == 1) {
-        promptBulkQuantity(prod);
-      } else {
-        _addToCartInternal(prod);
-      }
-  }).finally(() => {
-     // Liberar bloqueo después de un breve delay para evitar rebotes
-     setTimeout(() => { isCartProcessing = false; }, 300);
-  });
+  // Las promociones activas se cargan al iniciar la caja; el agregado normal
+  // usa ese estado en memoria y no dispara requests por cada clic.
 }
 
 function _addToCartInternal(prod) {

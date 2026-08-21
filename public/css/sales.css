@@ -510,8 +510,10 @@
     }
 }
 
+/* La entrada inicial del grid la gestiona anime.js una sola vez; no aplicar
+   animaciones CSS a cada re-render/filtro para mantener la caja inmediata. */
 .gallery-item {
-    animation: fadeInUp 0.3s ease-out forwards;
+    animation: none;
 }
 
 /* Ajuste responsive para search-results igual que gallery-main */

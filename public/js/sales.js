@@ -355,18 +355,20 @@ function initPOS() {
 }
 
 function bindEvents() {
-  // Búsqueda con debounce
+  // Búsqueda con debounce — filtra la galería EN SITIO (mismo mecanismo que
+  // el filtro de categoría/orden), sin abrir la segunda vista #searchResults.
   let debounceTimer;
   if (searchInput) {
     searchInput.addEventListener('input', () => {
       clearTimeout(debounceTimer);
-      const term = searchInput.value.trim();
-      if (!term) {
+      const term = searchInput.value.trim().toLowerCase();
+      activeSearchTerm = term;
+      debounceTimer = setTimeout(() => {
+        // Ocultar siempre el panel de resultados separado (para unificar)
         if (searchResults) searchResults.classList.add('hidden');
         if (productGallery) productGallery.style.display = 'grid';
-        return;
-      }
-      debounceTimer = setTimeout(() => searchProducts(term), 300);
+        filterAndRenderProducts();
+      }, 260);
     });
   }
 
@@ -1824,6 +1826,9 @@ function escapeHtml(str) {
 }
 
 // Galería de productos + categorías
+let editProductId = null;
+let activeSearchTerm = ''; // término de búsqueda que filtra la galería en sitio
+
 async function loadCategoriesAndProducts() {
   // Reintento: a veces el SW o la red fallan la primera vez al navegar.
   // Se intenta hasta 3 veces con espera corta antes de rendirse.
@@ -1883,6 +1888,15 @@ function filterAndRenderProducts() {
     // 1. Filtro de Categoría
     if (activeCategoryId && activeCategoryId !== 'all') {
         filtered = filtered.filter(p => String(p.category_id || '') === String(activeCategoryId));
+    }
+
+    // 1b. Filtro por término de búsqueda (mismo mecanismo, en sitio)
+    if (activeSearchTerm) {
+        const t = activeSearchTerm.toLowerCase();
+        filtered = filtered.filter(p =>
+            (p.product_name || '').toLowerCase().includes(t) ||
+            (p.description || '').toLowerCase().includes(t)
+        );
     }
 
     // 2. Ordenamiento

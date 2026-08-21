@@ -41,8 +41,7 @@ async function initSidebar() {
         { href: 'customers.html', icon: 'fa-users', text: 'Clientes' },
         { href: 'promotions.html', icon: 'fa-tags', text: 'Promociones' },
         { href: 'finance.html', icon: 'fa-wallet', text: 'Finanzas', roles: ['admin', 'manager', 'super_admin'] },
-        { href: 'reports.html', icon: 'fa-chart-bar', text: 'Reportes', roles: ['admin', 'manager', 'super_admin'], className: 'desktop-only-nav' },
-        { href: 'digital-signage.html', icon: 'fa-tv', text: 'Pantallas Digitales', roles: ['admin', 'manager', 'super_admin'] }
+        { href: 'reports.html', icon: 'fa-chart-bar', text: 'Reportes', roles: ['admin', 'manager', 'super_admin'], className: 'desktop-only-nav' }
     ];
 
     // Current page detection

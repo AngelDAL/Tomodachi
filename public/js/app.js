@@ -446,8 +446,8 @@ function initSupport() {
     btns.forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.preventDefault();
-            // Simplificación: Abrir cliente de correo directo
-            window.location.href = 'mailto:contacto@baburu.shop?subject=Soporte Tomodachi POS';
+            // Community Edition: abrir el centro de soporte local, sin correo externo preconfigurado.
+            window.location.href = 'support.html';
         });
     });
 }

@@ -262,8 +262,13 @@ class Mail {
 
     public function sendSupportMessage($email, $name, $subject, $message, $type) {
         try {
-            // Send TO support
-            $supportEmail = 'contacto@baburu.shop';
+            // Community Edition: no hay correo externo hardcodeado. El administrador
+            // puede configurar SUPPORT_EMAIL en el entorno de su instalación.
+            $supportEmail = getenv('SUPPORT_EMAIL') ?: '';
+            if ($supportEmail === '') {
+                error_log('Support message not sent: SUPPORT_EMAIL is not configured.');
+                return false;
+            }
             
             $this->mailer->addAddress($supportEmail, 'Soporte Tomodachi');
             $this->mailer->addReplyTo($email, $name);

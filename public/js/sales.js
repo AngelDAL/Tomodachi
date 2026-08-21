@@ -2556,7 +2556,7 @@ function printTicket(data) {
       </div>
       <div class="footer">
         <p>¡Gracias por su compra!</p>
-        <p class="powered-by">Tomodachi powered by Baburu</p>
+        <p class="powered-by">Tomodachi POS</p>
       </div>
       <script>
         window.onload = function() { window.print(); window.close(); }

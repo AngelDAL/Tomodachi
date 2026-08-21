@@ -34,15 +34,44 @@ async function loadDashboardStats() {
             if (result.success) {
                 const data = result.data;
                 
-                // Update cards
-                if (document.getElementById('dailySales')) document.getElementById('dailySales').textContent = formatCurrency(data.dailySales);
-                if (document.getElementById('dailyProfit')) document.getElementById('dailyProfit').textContent = formatCurrency(data.dailyProfit);
-                if (document.getElementById('transactions')) document.getElementById('transactions').textContent = data.transactions;
+                // Update cards — con animación de "llenado" tipo odómetro (anime.js)
+                    const dashSpan = (elId, toText, delay = 0) => {
+                        const el = document.getElementById(elId);
+                        if (!el) return;
+                        if (typeof anime === 'undefined') { el.textContent = toText; return; }
+                        anime({ targets: el, opacity: [0, 1], scale: [0.9, 1], duration: 450, delay, easing: 'easeOutCubic' });
+                    };
+                    const dashNumber = (elId, toVal, opts = {}) => {
+                        const el = document.getElementById(elId);
+                        if (!el) return;
+                        const { isCurrency = false, delay = 0, duration = 900 } = opts;
+                        if (typeof anime === 'undefined') {
+                            el.textContent = isCurrency ? formatCurrency(toVal) : String(toVal);
+                            return;
+                        }
+                        // objeto animable numérico con formato moneda o entero
+                        const obj = { v: 0, scale: 0.9 };
+                        anime({
+                            targets: obj, v: [0, toVal],
+                            duration, delay, easing: 'easeOutQuad',
+                            update: () => {
+                                el.textContent = isCurrency ? formatCurrency(obj.v) : String(Math.round(obj.v));
+                            },
+                            complete: () => {
+                                el.textContent = isCurrency ? formatCurrency(toVal) : String(Math.round(toVal));
+                            }
+                        });
+                        anime({ targets: el, scale: [0.9, 1], opacity: [0, 1], duration: 400, delay, easing: 'easeOutCubic' });
+                    };
 
-                // New cards
-                if (document.getElementById('inventoryValue')) document.getElementById('inventoryValue').textContent = formatCurrency(data.inventoryValue || 0);
-                if (document.getElementById('lowStockCount')) document.getElementById('lowStockCount').textContent = data.lowStockCount || 0;
-                if (document.getElementById('topCategory')) document.getElementById('topCategory').textContent = data.topCategory || '-';
+                    if (document.getElementById('dailySales')) dashNumber('dailySales', parseFloat(data.dailySales || 0), { isCurrency: true, delay: 0 });
+                    if (document.getElementById('dailyProfit')) dashNumber('dailyProfit', parseFloat(data.dailyProfit || 0), { isCurrency: true, delay: 60 });
+                    if (document.getElementById('transactions')) dashNumber('transactions', parseInt(data.transactions || 0, 10), { delay: 120 });
+
+                    // New cards
+                    if (document.getElementById('inventoryValue')) dashNumber('inventoryValue', parseFloat(data.inventoryValue || 0), { isCurrency: true, delay: 180 });
+                    if (document.getElementById('lowStockCount')) dashNumber('lowStockCount', parseInt(data.lowStockCount || 0, 10), { delay: 240 });
+                    if (document.getElementById('topCategory')) dashSpan('topCategory', data.topCategory || '-', 300);
 
                 // Render Lists
                 renderLowStockList(data.lowStockList);
@@ -439,4 +468,25 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && modal.open) closeModal();
     });
+});
+
+/* ===== Botón temporal: alternar tema claro/oscuro ===== */
+document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('tempThemeToggle');
+    const label = document.getElementById('tempThemeLabel');
+    if (!btn) return;
+    const updateLabel = () => {
+        const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+        if (label) label.textContent = dark ? 'Tema oscuro' : 'Tema claro';
+    };
+    btn.addEventListener('click', () => {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        if (window.ThemeSystem && ThemeSystem.setMode) {
+            ThemeSystem.setMode(isDark ? 'light' : 'dark');
+        } else {
+            document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
+        }
+        setTimeout(updateLabel, 30);
+    });
+    updateLabel();
 });

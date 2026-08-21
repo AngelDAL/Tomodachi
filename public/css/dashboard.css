@@ -1032,3 +1032,37 @@ body.plan-free a.premium-locked.btn::after {
     .stat-icon { width: 50px; height: 50px; font-size: 1.35rem; }
     .chart-container { height: 350px; }
 }
+
+/* ============================================================
+   AJUSTE FINAL DASHBOARD (KPI cards): sin opacidad, sin hover,
+   titular con contraste, grid 2 arriba / 3 abajo.
+   ============================================================ */
+.stats-grid-top { grid-template-columns: repeat(2, 1fr); margin-bottom: 20px; }
+.stats-grid-bottom { grid-template-columns: repeat(3, 1fr); margin-bottom: 30px; }
+
+/* Quitar el ::before translúcido que aclaraba/delavaba las cards */
+.stat-card { background-color: var(--bg-card); }
+.stat-card::before { display: none; }
+
+/* Sin hover que eleve/delave las cards KPI */
+.stat-card:hover { transform: none; box-shadow: var(--ds-shadow-md, var(--shadow-md)); }
+.stat-card:hover .stat-icon { transform: none; box-shadow: none; }
+
+/* Titular con contraste real sobre el fondo de la card */
+.stat-info h3 {
+    color: var(--text-color);
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    opacity: 1;
+    font-weight: 700;
+}
+.stat-icon { opacity: 1; }
+
+/* Responsive: las filas colapsan a 1 columna en pantallas chicas */
+@media (max-width: 720px) {
+    .stats-grid-bottom { grid-template-columns: 1fr; }
+    .stats-grid-top { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 520px) {
+    .stats-grid-top { grid-template-columns: 1fr; }
+}

@@ -37,7 +37,15 @@
         <main class="main-content">
             
             <div class="dashboard-content">
-                <div class="stats-grid">
+                <!-- Botón temporal: alternar tema claro/oscuro -->
+                <div style="display:flex; justify-content:flex-end; margin-bottom:18px;">
+                    <button id="tempThemeToggle" class="btn btn-outline-primary" type="button" style="border-radius:100px; padding:9px 20px;">
+                        <i class="fas fa-adjust"></i> <span id="tempThemeLabel">Tema claro</span>
+                    </button>
+                </div>
+
+                <!-- Fila superior: 2 cards (Ventas del Día + Transacciones) -->
+                <div class="stats-grid stats-grid-top">
                     <div class="stat-card">
                         <div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div>
                         <div class="stat-info">
@@ -48,7 +56,7 @@
                             </p>
                         </div>
                     </div>
-                    
+
                     <div class="stat-card">
                         <div class="stat-icon"><i class="fas fa-receipt"></i></div>
                         <div class="stat-info">
@@ -56,7 +64,10 @@
                             <p class="stat-value" id="transactions">0</p>
                         </div>
                     </div>
+                </div>
 
+                <!-- Fila inferior: 3 cards -->
+                <div class="stats-grid stats-grid-bottom">
                     <div class="stat-card">
                         <div class="stat-icon"><i class="fas fa-boxes"></i></div>
                         <div class="stat-info">

@@ -38,7 +38,9 @@ async function loadDashboardStats() {
                     const dashSpan = (elId, toText, delay = 0) => {
                         const el = document.getElementById(elId);
                         if (!el) return;
-                        if (typeof anime === 'undefined') { el.textContent = toText; return; }
+                        // Asignar primero el texto final; anime.js solo anima su entrada.
+                        el.textContent = toText;
+                        if (typeof anime === 'undefined') return;
                         anime({ targets: el, opacity: [0, 1], scale: [0.9, 1], duration: 450, delay, easing: 'easeOutCubic' });
                     };
                     const dashNumber = (elId, toVal, opts = {}) => {

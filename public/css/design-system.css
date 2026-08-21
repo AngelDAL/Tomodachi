@@ -265,3 +265,44 @@ body.modal-open .modal {
 .ds-flex { display: flex; align-items: center; }
 .ds-between { justify-content: space-between; }
 .ds-center { justify-content: center; }
+
+/* ============ CURSORES NATIVOS POR CONTEXTO ============
+   Cursores del sistema según el propósito del elemento, aplicados a
+   clases genéricas para que cubran toda la interfaz. */
+/* Botones y acciones clicables → pointer */
+.btn, button, [role="button"], .nav-item, .nav-link, .tab-btn, .tablink,
+.panel-tab-btn, .drawer-tab, .page-btn, .page-num, .pagination-bar a,
+.nav-group a, .tooltip-item, .context-menu-item, .dropdown-item,
+.gallery-item, .list-item, .product-item-card, .cart-item, .switch-toggle,
+.theme-mode-btn { cursor: pointer; }
+
+/* Enlaces → pointer (por si algún link no lo hereda) */
+a { cursor: pointer; }
+a[href] { cursor: pointer; }
+
+/* Elementos deshabilitados → not-allowed */
+.btn:disabled, button:disabled, input:disabled, select:disabled, textarea:disabled,
+.badge.disabled, .disabled, .locked, [aria-disabled="true"] { cursor: not-allowed; }
+
+/* Campos de texto/selección → text/pointer según el control */
+input[type="text"], input[type="email"], input[type="password"], input[type="number"],
+input[type="search"], input[type="url"], input[type="tel"], input[type="date"],
+textarea { cursor: text; }
+input[type="checkbox"], input[type="radio"], label, select, .form-select,
+.filter-select, .dropdown-select, .form-check { cursor: pointer; }
+
+/* Ayuda / tooltips → help */
+[data-tooltip], .tooltip, .help-icon, .info-icon, .g-name[data-full],
+[name="cursor:help"] { cursor: help; }
+
+/* Resize → redimensionamiento nativo */
+.resize-handle, .resize-corner, textarea { cursor: default; }
+
+/* Arrastre (drag) → grab / grabbing */
+[data-draggable], .drag-handle, .draggable, .move-handle,
+[draggable="true"] { cursor: grab; }
+[data-draggable]:active, .drag-handle:active, .draggable.dragging,
+[draggable="true"]:active { cursor: grabbing; }
+
+/* Menús / abrir menú → context-menu */
+[data-context-menu], .context-menu-trigger, .open-menu, .overflow-menu { cursor: context-menu; }

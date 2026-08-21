@@ -1982,23 +1982,29 @@ function renderGallery(list, animate = false) {
         // guardar nombre completo para el tooltip y envolverlo para la animación
         const fullName = nameEl.textContent.trim();
         nameEl.setAttribute('data-full', fullName);
-        // envolver el texto para animarlo sin mover el pill
+        // envolver el texto para animarlo sin mover el rectángulo
         if (!nameEl.querySelector('.g-name-inner')) {
           nameEl.innerHTML = `<span class="g-name-inner">${fullName}</span>`;
         }
         const inner2 = nameEl.querySelector('.g-name-inner');
-        if (inner2) {
-          const dist = inner2.scrollWidth - nameEl.clientWidth + 24;
-          if (typeof anime !== 'undefined') {
-            anime({
-              targets: inner2,
-              translateX: [0, -dist],
-              duration: Math.max(2600, dist * 18),
-              easing: 'easeInOutSine',
-              direction: 'alternate',
-              loop: true
-            });
-          }
+        if (inner2 && typeof anime !== 'undefined') {
+          const dist = inner2.scrollWidth - nameEl.clientWidth + 20;
+          const mqDuration = Math.max(3600, dist * 22);
+          const startMarquee = () => anime({
+            targets: inner2,
+            translateX: [0, -dist],
+            duration: mqDuration,
+            easing: 'easeInOutSine',
+            direction: 'alternate',
+            loop: true
+          });
+          const stopMarquee = () => {
+            anime.remove(inner2);
+            inner2.style.transform = '';
+          };
+          // Solo al hacer hover (desktop); en táctil, tap-hold vía pointerenter
+          nameEl.addEventListener('mouseenter', startMarquee);
+          nameEl.addEventListener('mouseleave', stopMarquee);
         }
       } else {
         // nombre corto: tooltip igualmente para el completo (por si trunca)

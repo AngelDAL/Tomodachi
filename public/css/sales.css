@@ -763,15 +763,15 @@
     border-radius: 0 0 12px 12px;
 }
 
-/* Nombre del producto — pill superior con fondo 30% del tema */
+/* Nombre del producto — rectángulo superior con fondo de contraste 70% */
 .g-name {
     position: relative;
     display: block;
     width: max-content;
     max-width: 100%;
     padding: 4px 10px;
-    border-radius: 100px;
-    background: color-mix(in srgb, var(--bg-card) 30%, transparent);
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--bg-card) 70%, transparent);
     -webkit-backdrop-filter: blur(2px);
     backdrop-filter: blur(2px);
     font-size: 0.82rem;
@@ -786,29 +786,18 @@
     text-align: left;
     box-shadow: 0 1px 4px rgba(0,0,0,0.15);
 }
-/* Nombre largo: se desplaza (marquee) para leerlo completo */
-.g-name.is-marquee {
-    overflow: hidden;
-    text-overflow: clip;
-    width: 100%;
-    animation: dsNameScroll 6s ease-in-out infinite alternate;
-}
-@keyframes dsNameScroll {
-    from { text-indent: 0; transform: translateX(0); }
-    to { text-indent: 0; transform: translateX(-100%); }
-}
-/* En marquee, el texto relativo via su hijo inner si existe; simplificamos:
-   el nombre no es el que scrollea sino un wrapper span. Para cards donde el
-   nombre cabe, nada de esto se aplica. */
+/* El TEXTO interno es quien se mueve (el rectángulo no), y solo al hacer hover.
+   Va al final, se detiene y regresa (alternate). */
 .g-name .g-name-inner {
     display: inline-block;
-    padding-right: 2ch;
+    white-space: nowrap;
+    will-change: transform;
 }
+.g-name.is-marquee { overflow: hidden; text-overflow: clip; width: 100%; cursor: help; }
+/* El recorrido del texto lo dispara anime.js en el JS, solo al hacer hover. */
 
 /* Tooltip con el nombre completo (hover en desktop, tap-hold en táctil) */
-.g-name[data-full] {
-    cursor: help;
-}
+.g-name[data-full] { cursor: help; }
 .g-name[data-full]::after {
     content: attr(data-full);
     position: absolute;
@@ -838,25 +827,27 @@
     transform: translateY(0);
 }
 
-/* Precio — pill inferior izquierda con fondo 30% del tema */
+/* Precio — rectángulo/pill inferior DERECHA con fondo de contraste 70% */
 .g-price {
     position: relative;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     width: max-content;
     padding: 3px 11px;
-    border-radius: 100px;
-    background: color-mix(in srgb, var(--bg-card) 30%, transparent);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--bg-card) 70%, transparent);
     -webkit-backdrop-filter: blur(2px);
     backdrop-filter: blur(2px);
     font-size: 0.95rem;
     color: var(--primary-color);
     font-weight: 700;
-    text-align: left;
+    text-align: center;
     line-height: 1.2;
     text-shadow: 0 1px 3px rgba(0,0,0,0.3);
     box-shadow: 0 1px 4px rgba(0,0,0,0.15);
     margin-top: auto;
+    align-self: flex-end;
 }
 
 .g-price .original-price {

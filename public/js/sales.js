@@ -114,6 +114,54 @@ function listToGalleryHTML(list) {
   return html;
 }
 
+// Enlaza cards de producto para caja rápida. En desktop se agrega en
+// pointerdown (antes que click) y se suprime solo el click duplicado; en
+// touch se conserva click para no interferir con el desplazamiento.
+function bindFastProductCards(root) {
+  if (!root) return;
+  root.querySelectorAll('.gallery-item').forEach(el => {
+    let pointerAddedAt = 0;
+    const addFromCard = () => {
+      const itemDetails = el.querySelector('.item-details');
+      const nameEl = itemDetails ? itemDetails.querySelector('.g-name') : el.querySelector('.g-name');
+      addProductToCart({
+        product_id: parseInt(el.getAttribute('data-id')),
+        product_name: nameEl ? nameEl.textContent.trim() : el.getAttribute('title') || 'Producto',
+        unit_price: parseFloat(el.getAttribute('data-price')),
+        image_path: el.getAttribute('data-image'),
+        stock_quantity: el.getAttribute('data-stock'),
+        is_bulk: parseInt(el.getAttribute('data-is_bulk')) || 0,
+        bulk_unit: el.getAttribute('data-bulk_unit') || 'kg',
+        category_id: el.getAttribute('data-category') || undefined
+      });
+      // Sólo una señal visual minúscula; no hay delay, overlay ni bloqueo.
+      el.classList.remove('pos-quick-press');
+      void el.offsetWidth;
+      el.classList.add('pos-quick-press');
+    };
+
+    el.addEventListener('pointerdown', (e) => {
+      // Botón izquierdo del mouse/pen. Touch queda en click para no romper scroll.
+      if (e.pointerType === 'touch' || e.button !== 0) return;
+      if (e.target.closest('button, a, input, select, textarea')) return;
+      e.preventDefault();
+      pointerAddedAt = performance.now();
+      addFromCard();
+    });
+    el.addEventListener('click', (e) => {
+      // El click del mouse posterior al pointerdown ya fue contabilizado.
+      if (performance.now() - pointerAddedAt < 450) {
+        e.preventDefault();
+        return;
+      }
+      if (e.target.closest('button, a, input, select, textarea')) return;
+      addFromCard();
+    });
+    el.addEventListener('dragstart', (e) => e.preventDefault());
+    el.addEventListener('animationend', () => el.classList.remove('pos-quick-press'));
+  });
+}
+
 // Inicializar el toggle de vista (grid/catálogo)
 function initViewToggle() {
   const wrap = document.getElementById('viewToggle');
@@ -699,30 +747,7 @@ async function searchProducts(term) {
     productGallery.style.display = 'none';
     searchResults.classList.remove('hidden');
 
-    Array.from(searchResults.querySelectorAll('.gallery-item')).forEach(el => {
-      el.addEventListener('click', () => {
-        // Feedback visual
-        el.classList.add('item-added-feedback');
-
-        addProductToCart({
-          product_id: parseInt(el.getAttribute('data-id')),
-          product_name: el.querySelector('.g-name').textContent,
-          unit_price: parseFloat(el.getAttribute('data-price')),
-          image_path: el.getAttribute('data-image'),
-          stock_quantity: parseFloat(el.getAttribute('data-stock')),
-          is_bulk: parseInt(el.getAttribute('data-is_bulk')) || 0,
-          bulk_unit: el.getAttribute('data-bulk_unit') || 'kg',
-          category_id: el.getAttribute('data-category') || undefined
-        });
-
-        // Pequeño delay para apreciar el feedback antes de cerrar resultados
-        setTimeout(() => {
-          searchInput.value = '';
-          searchResults.classList.add('hidden');
-          productGallery.style.display = 'grid';
-        }, 250);
-      });
-    });
+    bindFastProductCards(searchResults);
 
     addIndicatorsToItems();
   } catch (e) {
@@ -1995,29 +2020,8 @@ function renderGallery(list, animate = false) {
 // Renderizar items respetando la vista activa (grid simple o catálogo)
   productGallery.innerHTML = listToGalleryHTML(list) || '<div class="empty-state" style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);"><i class="fas fa-search" style="font-size: 2rem; margin-bottom: 10px;"></i><p>No se encontraron productos</p></div>';
 
-    // Re-attach events
-    Array.from(productGallery.querySelectorAll('.gallery-item')).forEach(el => {
-        el.addEventListener('click', () => {
-          // Feedback visual
-          const imgWrap = el.querySelector('.img-wrap');
-          if(imgWrap) {
-              imgWrap.style.transform = 'scale(0.95)';
-              setTimeout(() => imgWrap.style.transform = '', 150);
-          }
-          const itemDetails = el.querySelector('.item-details');
-          const nameEl = itemDetails ? itemDetails.querySelector('.g-name') : el.querySelector('.g-name');
-          addProductToCart({
-            product_id: parseInt(el.getAttribute('data-id')),
-            product_name: nameEl ? nameEl.textContent : el.getAttribute('title') || 'Producto',
-            unit_price: parseFloat(el.getAttribute('data-price')),
-            image_path: el.getAttribute('data-image'),
-            stock_quantity: el.getAttribute('data-stock'),
-            is_bulk: parseInt(el.getAttribute('data-is_bulk')) || 0,
-            bulk_unit: el.getAttribute('data-bulk_unit') || 'kg',
-            category_id: el.getAttribute('data-category') || undefined
-          });
-        });
-    });
+    // Enlazar interacción de caja rápida (pointerdown/click táctil)
+    bindFastProductCards(productGallery);
 
   addIndicatorsToItems();
 

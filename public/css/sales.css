@@ -753,6 +753,12 @@
     border-radius: 12px;
     padding: 0;
     cursor: pointer;
+    /* Caja rápida: no seleccionar ni arrastrar texto/imágenes al doble clic. */
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
@@ -770,6 +776,17 @@
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
     transform: translateY(-3px);
     border-color: var(--primary-lighter);
+}
+/* Impedir selección/arrastre de cualquier texto o imagen interna del producto. */
+.gallery-item *, .gallery-item img {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-user-drag: none;
+}
+/* Confirmación visual ultrabreve: no retrasa ni interfiere con el siguiente clic. */
+.gallery-item.pos-quick-press { animation: posQuickPress 90ms ease-out; }
+@keyframes posQuickPress {
+    50% { transform: scale(.985); border-color: var(--primary-color); }
 }
 
 .gallery-item .img-wrap {

@@ -32,6 +32,110 @@ let optPercent, optFixed, optNxn;
 
 let EDITING_PRODUCT_ID = null;
 
+// ===== Vista del grid: 'grid' (por defecto) | 'catalog' (agrupado por catálogo) =====
+let currentViewMode = 'grid';
+
+// Build de una card de producto (reutilizable en grid y catálogo)
+function buildProductCard(p) {
+  const imagePath = getRelativeImagePath(p.image_path);
+  const promoPrice = calculatePromoPrice(p);
+  const hasPromo = promoPrice !== null && promoPrice < parseFloat(p.price);
+  let priceHtml = '';
+  if (hasPromo) {
+       priceHtml = `
+          <span class="original-price" style="text-decoration: line-through; font-size: 0.8em; color: var(--text-muted);">${formatCurrency(p.price)}</span>
+          <span class="promo-price" style="color: var(--danger-color); font-weight: bold;">${formatCurrency(promoPrice)}</span>
+       `;
+  } else {
+       priceHtml = `<span class="current-price">${formatCurrency(p.price)}</span>`;
+  }
+  const stockBadge = (p.stock_quantity !== undefined && p.stock_quantity !== null && p.stock_quantity !== '')
+        ? `<div class="stock-badge ${p.stock_quantity < 5 ? 'low' : ''}">${window.FormatUtils ? window.FormatUtils.qty(p.stock_quantity) : p.stock_quantity}</div>`
+        : '';
+  const esc = (s) => escapeHtml(s);
+  return `
+    <div class="gallery-item"
+         data-id="${p.product_id}"
+         data-price="${p.price}"
+         data-stock="${p.stock_quantity !== undefined ? p.stock_quantity : ''}"
+         data-image="${p.image_path || ''}"
+         data-is_bulk="${p.is_bulk || 0}"
+         data-bulk_unit="${p.bulk_unit || 'kg'}"
+         data-category="${p.category_id || ''}"
+         title="${esc(p.product_name)}">
+      <div class="img-wrap">
+        ${imagePath
+          ? `<img src="${imagePath}" loading="lazy" alt="${esc(p.product_name)}" onerror="this.parentNode.innerHTML='<i class=\\'fas fa-box\\'></i>'">`
+          : '<i class="fas fa-box" style="color:var(--text-light); font-size:1.5rem;"></i>'}
+        ${stockBadge}
+      </div>
+      <div class="item-details">
+        <h4 class="g-name" title="${esc(p.product_name)}">${esc(p.product_name)}</h4>
+        <div class="g-price">${priceHtml}</div>
+      </div>
+    </div>
+  `;
+}
+
+// Lista de productos → HTML según la vista activa (grid simple o agrupado por catálogo)
+function listToGalleryHTML(list) {
+  if (!list || !list.length) return '';
+  if (currentViewMode !== 'catalog') {
+    // Vista de cuadrícula: todas las cards juntas (como siempre se ha tenido)
+    return `<div class="catalog-items">${list.map(buildProductCard).join('')}</div>`;
+  }
+  // Vista por catálogo: cada catálogo es una FILA de ancho completo
+  const catNameMap = {};
+  (allCategories || []).forEach(cat => { catNameMap[cat.category_id] = cat.category_name || cat.name || 'Sin categoría'; });
+  const groups = {};
+  list.forEach(p => {
+    const cid = p.category_id != null ? String(p.category_id) : '';
+    const key = catNameMap[cid] ? cid : '';
+    if (!groups[key]) groups[key] = { name: catNameMap[key] || 'Sin categoría', items: [] };
+    groups[key].items.push(p);
+  });
+  // Solo mostrar catálogos con elementos; con un solo grupo se omite el titular
+  const showHeaders = Object.keys(groups).length > 1;
+  let html = '';
+  Object.keys(groups).forEach(cid => {
+    const g = groups[cid];
+    if (!g.items.length) return; // ocultar catálogos vacíos
+    html += `<div class="catalog-group" data-catalog="${escapeHtml(cid)}">`;
+    if (showHeaders) {
+      html += `
+        <div class="catalog-heading">
+          <span class="catalog-title">${escapeHtml(g.name)}</span>
+          <span class="catalog-count">${g.items.length}</span>
+        </div>
+        <div class="catalog-separator" aria-hidden="true"><span></span></div>`;
+    }
+    html += `<div class="catalog-items">${g.items.map(buildProductCard).join('')}</div></div>`;
+  });
+  return html;
+}
+
+// Inicializar el toggle de vista (grid/catálogo)
+function initViewToggle() {
+  const wrap = document.getElementById('viewToggle');
+  if (!wrap) return;
+  // persistir preferencia
+  try { const saved = localStorage.getItem('pos_view_mode'); if (saved === 'grid' || saved === 'catalog') currentViewMode = saved; } catch (e) {}
+  const applyActive = () => {
+    wrap.querySelectorAll('.view-toggle-btn').forEach(b => {
+      b.classList.toggle('active', b.getAttribute('data-view') === currentViewMode);
+    });
+  };
+  wrap.querySelectorAll('.view-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentViewMode = btn.getAttribute('data-view');
+      try { localStorage.setItem('pos_view_mode', currentViewMode); } catch (e) {}
+      applyActive();
+      filterAndRenderProducts();
+    });
+  });
+  applyActive();
+}
+
 // Agregar toggle para footer del carrito y acciones del header
 function setupToggles() {
     // Footer Cart Toggle eliminado bajo solicitud del usuario
@@ -101,6 +205,7 @@ function initPOS() {
   // Ahora vinculamos eventos
   bindEvents();
   setupToggles(); // Inicializar toggles (footer y header)
+  initViewToggle(); // Toggle de vista (grid / catálogo)
 
   // Delegación de eventos para el carrito (Fix doble click y performance)
   setupCartEventsDelegation();
@@ -586,18 +691,8 @@ async function searchProducts(term) {
       return;
     }
 
-    // Renderizar resultados con el mismo estilo que la galería principal
-    searchResults.innerHTML = list.map((p, index) => {
-      const imagePath = getRelativeImagePath(p.image_path);
-      return `
-      <div class="gallery-item" data-id="${p.product_id}" data-price="${p.price}" data-stock="${p.stock_quantity !== undefined ? p.stock_quantity : ''}" data-image="${p.image_path || ''}" data-is_bulk="${p.is_bulk || 0}" data-bulk_unit="${p.bulk_unit || 'kg'}" data-category="${p.category_id || ''}" title="${escapeHtml(p.product_name)}" style="animation-delay: ${Math.min(index * 0.05, 0.5)}s">
-        <div class="img-wrap">${imagePath ? `<img src="${imagePath}" alt="img" onerror="this.outerHTML='<span class=\\'no-img\\'>Sin imagen</span>'">` : '<span class="no-img">Sin imagen</span>'}</div>
-        <div class="item-details">
-          <div class="g-name" title="${escapeHtml(p.product_name)}">${escapeHtml(p.product_name)}</div>
-          <div class="g-price">${formatCurrency(p.price)}</div>
-        </div>
-      </div>
-    `}).join('');
+    // Renderizar resultados respetando la vista activa (grid / catálogo)
+        searchResults.innerHTML = listToGalleryHTML(list);
 
     productGallery.style.display = 'none';
     searchResults.classList.remove('hidden');
@@ -1888,79 +1983,8 @@ function renderGallery(list, animate = false) {
     return;
   }
 
-  // Renderizar items agrupados por catálogo
-    const buildProductCard = (p) => {
-      const imagePath = getRelativeImagePath(p.image_path);
-      const promoPrice = calculatePromoPrice(p);
-      const hasPromo = promoPrice !== null && promoPrice < parseFloat(p.price);
-      let priceHtml = '';
-      if (hasPromo) {
-           priceHtml = `
-              <span class="original-price" style="text-decoration: line-through; font-size: 0.8em; color: var(--text-muted);">${formatCurrency(p.price)}</span>
-              <span class="promo-price" style="color: var(--danger-color); font-weight: bold;">${formatCurrency(promoPrice)}</span>
-           `;
-      } else {
-           priceHtml = `<span class="current-price">${formatCurrency(p.price)}</span>`;
-      }
-      const stockBadge = (p.stock_quantity !== undefined && p.stock_quantity !== null && p.stock_quantity !== '')
-            ? `<div class="stock-badge ${p.stock_quantity < 5 ? 'low' : ''}">${window.FormatUtils ? window.FormatUtils.qty(p.stock_quantity) : p.stock_quantity}</div>`
-            : '';
-      return `
-              <div class="gallery-item"
-                   data-id="${p.product_id}"
-                   data-price="${p.price}"
-                   data-stock="${p.stock_quantity !== undefined ? p.stock_quantity : ''}"
-                   data-image="${p.image_path || ''}"
-                   data-is_bulk="${p.is_bulk || 0}"
-                   data-bulk_unit="${p.bulk_unit || 'kg'}"
-                   data-category="${p.category_id || ''}"
-                   title="${escapeHtml(p.product_name)}">
-                <div class="img-wrap">
-                  ${imagePath
-                    ? `<img src="${imagePath}" loading="lazy" alt="${escapeHtml(p.product_name)}" onerror="this.parentNode.innerHTML='<i class=\\'fas fa-box\\'></i>'">`
-                    : '<i class="fas fa-box" style="color:var(--text-light); font-size:1.5rem;"></i>'}
-                  ${stockBadge}
-                </div>
-                <div class="item-details">
-                  <h4 class="g-name" title="${escapeHtml(p.product_name)}">${escapeHtml(p.product_name)}</h4>
-                  <div class="g-price">${priceHtml}</div>
-                </div>
-              </div>
-            `;
-          };
-
-    // Mapa category_id -> category_name para titular de catálogo
-    const catNameMap = {};
-    (allCategories || []).forEach(cat => { catNameMap[cat.category_id] = cat.category_name || cat.name || 'Sin categoría'; });
-
-    // Agrupar por catálogo (los productos sin categoría van a 'Sin categoría')
-    const groups = {};
-    list.forEach(p => {
-      const cid = p.category_id != null ? String(p.category_id) : '';
-      const key = catNameMap[cid] ? cid : '';
-      if (!groups[key]) groups[key] = { name: catNameMap[key] || 'Sin categoría', items: [] };
-      groups[key].items.push(p);
-    });
-
-    // Solo mostrar catálogos con elementos; con un solo grupo se omite el titular
-    const showHeaders = Object.keys(groups).length > 1;
-    let html = '';
-    Object.keys(groups).forEach(cid => {
-      const g = groups[cid];
-      if (!g.items.length) return; // ocultar catálogos vacíos
-      html += `<div class="catalog-group" data-catalog="${escapeHtml(cid)}">`;
-      if (showHeaders) {
-        html += `
-          <div class="catalog-heading">
-            <span class="catalog-title">${escapeHtml(g.name)}</span>
-            <span class="catalog-count">${g.items.length}</span>
-          </div>
-          <div class="catalog-separator" aria-hidden="true"><span></span></div>`;
-      }
-      html += `<div class="catalog-items">${g.items.map(buildProductCard).join('')}</div></div>`;
-    });
-
-    productGallery.innerHTML = html || '<div class="empty-state" style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);"><i class="fas fa-search" style="font-size: 2rem; margin-bottom: 10px;"></i><p>No se encontraron productos</p></div>';
+// Renderizar items respetando la vista activa (grid simple o catálogo)
+  productGallery.innerHTML = listToGalleryHTML(list) || '<div class="empty-state" style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);"><i class="fas fa-search" style="font-size: 2rem; margin-bottom: 10px;"></i><p>No se encontraron productos</p></div>';
 
     // Re-attach events
     Array.from(productGallery.querySelectorAll('.gallery-item')).forEach(el => {

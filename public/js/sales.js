@@ -1979,32 +1979,19 @@ function renderGallery(list, animate = false) {
       if (nameEl.scrollWidth > nameEl.clientWidth + 2) overflows = true;
       if (overflows) {
         nameEl.classList.add('is-marquee');
-        // guardar nombre completo para el tooltip y envolverlo para la animación
+        // guardar nombre completo para el tooltip y envolverlo para el recorrido
         const fullName = nameEl.textContent.trim();
         nameEl.setAttribute('data-full', fullName);
-        // envolver el texto para animarlo sin mover el rectángulo
         if (!nameEl.querySelector('.g-name-inner')) {
           nameEl.innerHTML = `<span class="g-name-inner">${fullName}</span>`;
         }
         const inner2 = nameEl.querySelector('.g-name-inner');
-        if (inner2 && typeof anime !== 'undefined') {
+        if (inner2) {
           const dist = inner2.scrollWidth - nameEl.clientWidth + 20;
-          const mqDuration = Math.max(3600, dist * 22);
-          const startMarquee = () => anime({
-            targets: inner2,
-            translateX: [0, -dist],
-            duration: mqDuration,
-            easing: 'easeInOutSine',
-            direction: 'alternate',
-            loop: true
-          });
-          const stopMarquee = () => {
-            anime.remove(inner2);
-            inner2.style.transform = '';
-          };
-          // Solo al hacer hover (desktop); en táctil, tap-hold vía pointerenter
-          nameEl.addEventListener('mouseenter', startMarquee);
-          nameEl.addEventListener('mouseleave', stopMarquee);
+          // Recorrido y regreso son 100% CSS (transition): solo inyectamos la
+          // distancia y la duración del viaje. Al quitar el hover, CSS regresa.
+          nameEl.style.setProperty('--ds-mq-dist', `-${Math.max(dist, 20)}px`);
+          nameEl.style.setProperty('--ds-mq-dur', Math.max(2200, Math.round(dist * 14)));
         }
       } else {
         // nombre corto: tooltip igualmente para el completo (por si trunca)

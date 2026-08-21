@@ -357,11 +357,15 @@ function renderProductsGrid(products) {
     }
     grid.innerHTML = products.map(p => {
         const isSelected = selectedTargets.some(t => t.id == p.product_id);
+        const imgPath = getRelativeImagePath(p.image_path);
+        const imgHtml = imgPath
+            ? `<img src="${imgPath}" alt="${p.product_name}" loading="lazy" onerror="this.outerHTML='<div class=&quot;product-item-noimg&quot;><i class=&quot;fas fa-box&quot;></i></div>'">`
+            : '<div class="product-item-noimg"><i class="fas fa-box"></i></div>';
 
         return `
             <div class="product-item-card ${isSelected ? "selected" : ""}" onclick="toggleProductSelection(${p.product_id})" title="${p.product_name}">
                 <div class="product-item-img-wrapper">
-                    <div class="product-item-noimg"><i class="fas fa-box"></i></div>
+                    ${imgHtml}
                     ${isSelected ? '<div class="selected-indicator"><i class="fas fa-check"></i></div>' : ''}
                 </div>
                 <div class="product-item-content">

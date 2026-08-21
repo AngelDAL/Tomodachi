@@ -1957,6 +1957,56 @@ function renderGallery(list, animate = false) {
 
   addIndicatorsToItems();
 
+  // Nombre largo: si desborda, activar marquee (se desplaza para leerse)
+  // y preparar el hover tooltip con el nombre completo (ya en title="...").
+  productGallery.querySelectorAll('.g-name').forEach(nameEl => {
+    const container = nameEl.parentElement; // .item-details
+    if (!container) return;
+    const avail = container.clientWidth - 20; // padding horizontal del pill area
+    // reset estado previo
+    nameEl.classList.remove('is-marquee');
+    const inner = nameEl.querySelector('.g-name-inner');
+    if (inner) inner.style.transform = '';
+    let overflows = false;
+    // el pill mide max-width 100% y el texto ahoraap; probamos por ancho de texto
+    const probe = document.createElement('span');
+    probe.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font-size:0.82rem;font-weight:600;';
+    probe.textContent = nameEl.textContent;
+    container.appendChild(probe);
+    overflows = probe.offsetWidth > nameEl.clientWidth;
+    container.removeChild(probe);
+    setTimeout(() => {
+      if (nameEl.scrollWidth > nameEl.clientWidth + 2) overflows = true;
+      if (overflows) {
+        nameEl.classList.add('is-marquee');
+        // guardar nombre completo para el tooltip y envolverlo para la animación
+        const fullName = nameEl.textContent.trim();
+        nameEl.setAttribute('data-full', fullName);
+        // envolver el texto para animarlo sin mover el pill
+        if (!nameEl.querySelector('.g-name-inner')) {
+          nameEl.innerHTML = `<span class="g-name-inner">${fullName}</span>`;
+        }
+        const inner2 = nameEl.querySelector('.g-name-inner');
+        if (inner2) {
+          const dist = inner2.scrollWidth - nameEl.clientWidth + 24;
+          if (typeof anime !== 'undefined') {
+            anime({
+              targets: inner2,
+              translateX: [0, -dist],
+              duration: Math.max(2600, dist * 18),
+              easing: 'easeInOutSine',
+              direction: 'alternate',
+              loop: true
+            });
+          }
+        }
+      } else {
+        // nombre corto: tooltip igualmente para el completo (por si trunca)
+        nameEl.setAttribute('data-full', nameEl.textContent.trim());
+      }
+    }, 40);
+  });
+
   // Animación de aparición del grid (anime.js) — estilo catálogo chill.
   // Se dispara la primera vez que se renderiza (o con animate=true).
   if (typeof window.__renderGalleryHasAnimated === 'undefined') window.__renderGalleryHasAnimated = false;

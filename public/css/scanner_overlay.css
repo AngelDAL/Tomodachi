@@ -172,3 +172,23 @@
         background: #111;
     }
 }
+
+/* ============================================================
+   ALINEACIÓN AL DESIGN SYSTEM UNIFICADO (módulo VENTAS — escáner)
+   Solo visual. No renombra clases ni altera la lógica JS.
+   ============================================================ */
+
+#scannerContainer {
+  border-radius: var(--ds-radius-lg);
+  box-shadow: var(--ds-shadow-lg);
+}
+.scanner-close-btn {
+  backdrop-filter: blur(3px);
+  box-shadow: 0 4px 14px -4px rgba(0,0,0,.5);
+}
+/* Escritorio: esquinas redondeadas de la identidad visual */
+@media (min-width: 901px) {
+  body.scanner-active #scannerContainer {
+    border-radius: var(--ds-radius-lg);
+  }
+}

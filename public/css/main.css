@@ -1514,8 +1514,7 @@ table tr:hover {
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(4px);
+    background-color: rgba(0, 0, 0, 0.6);
     z-index: 200000;
     align-items: center;
     justify-content: center;
@@ -1714,8 +1713,7 @@ table tr:hover {
     animation: saleDialogIn 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .sale-detail-dialog::backdrop {
-    background: rgba(0, 0, 0, 0.55);
-    backdrop-filter: blur(3px);
+    background-color: rgba(0, 0, 0, 0.55);
     /* Fondo que aparece gradualmente */
     animation: saleBackdropIn 0.4s ease forwards;
 }
@@ -1835,8 +1833,7 @@ table tr:hover {
     box-shadow: var(--shadow-lg);
 }
 .client-dialog::backdrop {
-    background: rgba(0, 0, 0, 0.55);
-    backdrop-filter: blur(3px);
+    background-color: rgba(0, 0, 0, 0.55);
 }
 .client-dialog .modal-close {
     color: var(--primary-color);

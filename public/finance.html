@@ -35,15 +35,17 @@
             margin-top: 20px;
         }
         .terminal-card {
-            background: var(--card-bg);
-            border-radius: 10px;
+            background: var(--bg-card);
+            border-radius: var(--ds-radius-lg, 20px);
             padding: 20px;
-            box-shadow: var(--card-shadow);
+            box-shadow: var(--ds-shadow-md, var(--card-shadow));
+            border: 1px solid var(--border-light);
             border-left: 5px solid var(--border-color);
-            transition: transform 0.2s;
+            transition: transform .25s cubic-bezier(.4,0,.2,1), box-shadow .3s ease, border-color .25s ease;
         }
         .terminal-card:hover {
-            transform: translateY(-2px);
+            transform: translateY(-3px);
+            box-shadow: var(--ds-shadow-lg, var(--card-shadow));
         }
         .terminal-card.open {
             border-left-color: var(--success-color);
@@ -58,13 +60,26 @@
             margin-bottom: 15px;
         }
         .terminal-status {
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.8em;
-            font-weight: bold;
+            padding: 4px 12px;
+            border-radius: var(--ds-radius-pill, 100px);
+            font-size: 0.78em;
+            font-weight: 600;
+            font-family: var(--font-heading, 'Sora', sans-serif);
+            border: 1.5px solid;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
         }
-        .status-open { background: var(--bg-card); color: var(--success-color); border: 1px solid var(--success-color); }
-        .status-closed { background: var(--bg-card); color: var(--danger-color); border: 1px solid var(--danger-color); }
+        .status-open {
+            background: color-mix(in srgb, var(--success-color) 12%, var(--bg-card));
+            color: var(--success-color);
+            border-color: color-mix(in srgb, var(--success-color) 45%, transparent);
+        }
+        .status-closed {
+            background: color-mix(in srgb, var(--danger-color) 12%, var(--bg-card));
+            color: var(--danger-color);
+            border-color: color-mix(in srgb, var(--danger-color) 45%, transparent);
+        }
         
         .terminal-info {
             margin-bottom: 15px;
@@ -99,21 +114,39 @@
             margin-bottom: 30px;
         }
         .summary-card {
-            background: var(--card-bg);
+            background: linear-gradient(135deg, var(--bg-card), color-mix(in srgb, var(--primary-color) 4%, var(--bg-card)));
             padding: 20px;
-            border-radius: 10px;
-            box-shadow: var(--card-shadow);
+            border-radius: var(--ds-radius-lg, 20px);
+            box-shadow: var(--ds-shadow-md, var(--card-shadow));
+            border: 1px solid var(--border-light);
             display: flex;
             align-items: center;
             gap: 15px;
+            transition: transform .25s cubic-bezier(.4,0,.2,1), box-shadow .3s ease;
+        }
+        .summary-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--ds-shadow-lg, var(--card-shadow));
         }
         .summary-icon {
             font-size: 2.8rem;
             color: var(--primary-color);
-            opacity: 0.8;
+            opacity: 0.85;
             display: flex;
             align-items: center;
             justify-content: center;
+            flex: 0 0 auto;
+        }
+        /* Ajustes visuales: cajas de info / denominaciones */
+        .finance-container .info-box,
+        #denominationSection,
+        #movementsHistoryDrawer [style*="border-radius: 8px"] {
+            border-radius: var(--ds-radius-md, 14px) !important;
+        }
+        .denom-count:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 20%, transparent);
+            outline: none;
         }
     </style>
 </head>

@@ -26,23 +26,23 @@
 }
 .promo-card {
     background: var(--bg-card);
-    border-radius: 12px;
+    border-radius: var(--ds-radius-lg);
     padding: 1.25rem 1.5rem;
     margin-bottom: 0.75rem;
     border-left: 4px solid var(--primary-color);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    box-shadow: var(--ds-shadow-sm);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 .promo-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+    box-shadow: var(--ds-shadow-md);
 }
 .promo-card.inactive {
     border-left-color: var(--text-muted);
-    /* opacity manejado por .client-dialog (main.css) */.6;
+    /* opacity manejado por .client-dialog (main.css) */
     background: var(--bg-lightest);
 }
 .promo-details h3 { margin: 0 0 0.4rem 0; color: var(--text-color); font-size: 1.05rem; }
@@ -50,10 +50,10 @@
 .promo-meta span { display: flex; align-items: center; gap: 0.35rem; }
 .promo-actions { display: flex; gap: 0.4rem; flex-shrink: 0; }
 .promo-actions .btn {
-    padding: 6px 10px;
+    padding: 6px 12px;
     font-size: 0.8rem;
-    border-radius: 6px;
-    border: 1px solid var(--border-color);
+    border-radius: var(--ds-radius-pill);
+    border: 1.5px solid var(--border-color);
     background: var(--bg-card);
     cursor: pointer;
     transition: all 0.2s;
@@ -65,17 +65,19 @@
 .promo-actions .btn-danger { color: var(--danger-color); }
 .promo-actions .btn-danger:hover { background: var(--danger-color); border-color: var(--danger-dark); color: #fff; filter: saturate(1.1) brightness(1.05); }
 
-/* Botón similar a inventario */
+/* Botón similar a inventario, alineado al design system (píldora) */
 .btn-add-product {
-    padding: 10px 16px;
+    padding: 11px 22px;
     background: var(--primary-color);
     color: var(--white);
     border: none;
-    border-radius: var(--border-radius, 8px);
+    border-radius: var(--ds-radius-pill);
     cursor: pointer;
     font-weight: 600;
+    font-family: var(--font-heading);
     font-size: 0.9rem;
-    transition: all 0.2s;
+    box-shadow: 0 6px 18px -8px color-mix(in srgb, var(--primary-color) 70%, transparent);
+    transition: transform .22s cubic-bezier(.4,0,.2,1), box-shadow .3s ease, background .22s ease, filter .22s ease;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -86,8 +88,10 @@
 .btn-add-product:hover {
     background: var(--primary-dark);
     transform: translateY(-1px);
-    box-shadow: 0 3px 8px var(--primary-shadow, rgba(0,0,0,0.12));
+    filter: brightness(1.04);
+    box-shadow: 0 10px 22px -8px color-mix(in srgb, var(--primary-color) 80%, transparent);
 }
+.btn-add-product:active { transform: translateY(1px) scale(.97); }
 
 /* Pagination */
 .pagination-bar {
@@ -106,8 +110,8 @@
 .page-btn {
     width: 36px;
     height: 36px;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--ds-radius-pill);
     background: var(--bg-card);
     color: var(--text-color);
     cursor: pointer;
@@ -125,7 +129,7 @@
 }
 
 .page-btn:disabled {
-    /* opacity manejado por .client-dialog (main.css) */.4;
+    /* opacity manejado por .client-dialog (main.css) */
     cursor: default;
 }
 
@@ -138,8 +142,8 @@
 .page-num {
     min-width: 36px;
     height: 36px;
-    border: 1px solid transparent;
-    border-radius: 8px;
+    border: 1.5px solid transparent;
+    border-radius: var(--ds-radius-pill);
     background: transparent;
     color: var(--text-color);
     cursor: pointer;
@@ -161,6 +165,7 @@
     background: var(--primary-color);
     color: white;
     border-color: var(--primary-color);
+    box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--primary-color) 70%, transparent);
 }
 
 /* Modal Layout Split */
@@ -171,8 +176,7 @@ body.modal-open { overflow: hidden; }
     inset: 0;
     width: 100%;
     height: 100%;
-    background: rgba(15, 23, 42, 0.55);
-    backdrop-filter: blur(2px);
+    background-color: rgba(15, 23, 42, 0.55);
     z-index: 100000;
     align-items: center;
     justify-content: center;
@@ -243,11 +247,11 @@ body.modal-open { overflow: hidden; }
 
 .product-item-card {
     background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--ds-radius-md);
     padding: 0;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.2s ease;
     display: flex;
     flex-direction: column;
     gap: 0;
@@ -255,17 +259,20 @@ body.modal-open { overflow: hidden; }
     min-height: 180px;
     max-height: 220px;
     overflow: hidden;
+    box-shadow: var(--ds-shadow-sm);
 }
 .product-item-card:hover {
     border-color: var(--primary-color);
     transform: translateY(-2px);
-    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    box-shadow: var(--ds-shadow-md);
 }
 .product-item-card.selected {
     border: 2px solid var(--primary-color);
     background: var(--bg-card);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary-color) 15%, transparent), var(--ds-shadow-md);
 }
 .product-item-img-wrapper {
+    border-radius: var(--ds-radius-md) var(--ds-radius-md) 0 0;
     height: 100px;
     width: 100%;
     background: var(--bg-light);
@@ -320,7 +327,7 @@ body.modal-open { overflow: hidden; }
     align-items: center;
     justify-content: center;
     font-size: 12px;
-    /* opacity manejado por .client-dialog (main.css) */;
+    /* opacity manejado por .client-dialog (main.css) */
     transition: opacity 0.2s;
     z-index: 5;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -410,7 +417,7 @@ body.modal-open { overflow: hidden; }
     height: 100%;
     background: rgba(0,0,0,0.5);
     z-index: 100000;
-    /* opacity manejado por .client-dialog (main.css) */;
+    /* opacity manejado por .client-dialog (main.css) */
     visibility: hidden;
     transition: opacity 0.3s ease, visibility 0.3s ease;
     display: flex;
@@ -428,6 +435,7 @@ body.modal-open { overflow: hidden; }
     height: 100%;
     background: var(--bg-card);
     box-shadow: -5px 0 25px rgba(0,0,0,0.15);
+    border-radius: var(--ds-radius-lg) 0 0 var(--ds-radius-lg);
     transform: translateX(100%);
     transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     display: flex;
@@ -483,6 +491,8 @@ body.modal-open { overflow: hidden; }
 
 #promoDrawer .drawer-tabs {
     display: flex;
+    gap: 8px;
+    padding: 10px 12px;
     background: var(--bg-lightest);
     border-bottom: 1px solid var(--border-light);
     flex-shrink: 0;
@@ -494,15 +504,16 @@ body.modal-open { overflow: hidden; }
     align-items: center;
     justify-content: center;
     gap: 8px;
-    padding: 12px 10px;
+    padding: 10px 10px;
     border: none;
     background: transparent;
     color: var(--text-light);
     font-size: 0.85rem;
-    font-weight: 500;
+    font-weight: 600;
+    font-family: var(--font-heading);
     cursor: pointer;
-    transition: all 0.2s ease;
-    border-bottom: 3px solid transparent;
+    border-radius: var(--ds-radius-pill);
+    transition: all 0.3s cubic-bezier(.4,0,.2,1);
 }
 
 #promoDrawer .drawer-tab i {
@@ -513,7 +524,7 @@ body.modal-open { overflow: hidden; }
 
 #promoDrawer .drawer-tab:hover {
     color: var(--text-color);
-    background: rgba(0,0,0,0.02);
+    background: color-mix(in srgb, var(--primary-color) 8%, transparent);
 }
 
 #promoDrawer .drawer-tab:hover i {
@@ -522,8 +533,8 @@ body.modal-open { overflow: hidden; }
 
 #promoDrawer .drawer-tab.active {
     color: var(--primary-color);
-    border-bottom-color: var(--primary-color);
     background: var(--primary-light);
+    box-shadow: 0 4px 12px -6px color-mix(in srgb, var(--primary-color) 60%, transparent);
 }
 
 #promoDrawer .drawer-tab.active i {
@@ -575,9 +586,10 @@ body.modal-open { overflow: hidden; }
     flex: 1;
     padding: 12px;
     border: none;
-    border-radius: 8px;
+    border-radius: var(--ds-radius-pill);
     cursor: pointer;
     font-weight: 600;
+    font-family: var(--font-heading);
     font-size: 0.9rem;
     transition: all 0.2s;
     text-align: center;
@@ -595,11 +607,14 @@ body.modal-open { overflow: hidden; }
 
 #promoDrawer .drawer-actions .btn-save {
     background: var(--primary-color);
-    color: white;
+    color: #fff;
+    box-shadow: 0 6px 18px -8px color-mix(in srgb, var(--primary-color) 70%, transparent);
 }
 
 #promoDrawer .drawer-actions .btn-save:hover {
     background: var(--primary-dark);
+    transform: translateY(-1px);
+    filter: brightness(1.04);
 }
 
 /* Responsive: Show drawer on mobile, hide modal */
@@ -738,9 +753,9 @@ body.modal-open { overflow: hidden; }
 
 .promo-card-v2 {
     background: var(--bg-card, #fff);
-    border-radius: 16px;
+    border-radius: var(--ds-radius-lg);
     border: 1px solid var(--border-color);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    box-shadow: var(--ds-shadow-sm);
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -750,18 +765,18 @@ body.modal-open { overflow: hidden; }
 
 .promo-card-v2:hover {
     transform: translateY(-3px);
-    box-shadow: 0 12px 28px rgba(0,0,0,0.1);
+    box-shadow: var(--ds-shadow-lg);
 }
 
 /* Estado expirado / inactivo: efecto disabled visual */
 .promo-card-v2.promo-done {
-    /* opacity manejado por .client-dialog (main.css) */.72;
+    /* opacity manejado por .client-dialog (main.css) */
     filter: grayscale(0.55);
     background: var(--bg-light);
 }
 
 .promo-card-v2.promo-done:hover {
-    /* opacity manejado por .client-dialog (main.css) */.85;
+    /* opacity manejado por .client-dialog (main.css) */
     filter: grayscale(0.35);
 }
 
@@ -817,10 +832,13 @@ body.modal-open { overflow: hidden; }
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 5px 10px;
-    border-radius: 20px;
+    padding: 5px 12px;
+    border-radius: var(--ds-radius-pill);
+    border: 1.5px solid color-mix(in srgb, var(--text-color) 18%, transparent);
+    box-shadow: 0 2px 6px -3px color-mix(in srgb, var(--text-color) 25%, transparent);
     font-size: 0.72rem;
     font-weight: 800;
+    font-family: var(--font-heading);
     text-transform: uppercase;
     letter-spacing: 0.4px;
     white-space: nowrap;
@@ -865,9 +883,11 @@ body.modal-open { overflow: hidden; }
     font-size: 0.75rem;
     color: var(--text-medium);
     background: var(--bg-light, #f3f4f6);
-    padding: 3px 8px;
-    border-radius: 6px;
-    font-weight: 700;
+    border: 1px solid var(--border-color);
+    padding: 3px 10px;
+    border-radius: var(--ds-radius-pill);
+    font-weight: 600;
+    font-family: var(--font-heading);
     width: fit-content;
 }
 
@@ -924,10 +944,13 @@ body.modal-open { overflow: hidden; }
 
 .promo-date-badge {
     align-self: flex-start;
-    padding: 4px 10px;
-    border-radius: 12px;
+    padding: 4px 12px;
+    border-radius: var(--ds-radius-pill);
+    border: 1.5px solid color-mix(in srgb, var(--text-color) 18%, transparent);
+    box-shadow: 0 2px 6px -3px color-mix(in srgb, var(--text-color) 25%, transparent);
     font-size: 0.75rem;
     font-weight: 800;
+    font-family: var(--font-heading);
     margin-top: 4px;
 }
 
@@ -1062,8 +1085,8 @@ body.modal-open { overflow: hidden; }
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 8px;
-    border: 1px solid var(--border-color);
+    border-radius: var(--ds-radius-pill);
+    border: 1.5px solid var(--border-color);
     background: var(--bg-card);
     cursor: pointer;
     font-size: 0.85rem;
@@ -1163,8 +1186,8 @@ body.modal-open { overflow: hidden; }
 #promoModal .modal-footer .btn,
 #confirmModal .modal-body .btn,
 #promoModal .modal-footer .btn-primary {
-    border-radius: 8px;
-    padding: 10px 20px;
+    border-radius: var(--ds-radius-pill);
+    padding: 11px 22px;
     font-weight: 600;
     transition: all var(--transition-fast);
     border: none;
@@ -1192,9 +1215,10 @@ body.modal-open { overflow: hidden; }
 #confirmModal .modal-body .btn-danger {
     background: var(--danger-color);
     color: #fff;
-    border-radius: 8px;
-    padding: 10px 20px;
+    border-radius: var(--ds-radius-pill);
+    padding: 11px 22px;
     font-weight: 600;
+    font-family: var(--font-heading);
     cursor: pointer;
     transition: all var(--transition-fast);
 }
@@ -1209,8 +1233,8 @@ body.modal-open { overflow: hidden; }
 #promoModal input[type="text"],
 #promoModal input[type="number"],
 #promoModal select {
-    border-radius: 8px;
-    border: 1px solid var(--border-color);
+    border-radius: var(--ds-radius-md);
+    border: 1.5px solid var(--border-color);
     background: var(--bg-input);
     color: var(--text-color);
     padding: 9px 12px;
@@ -1225,17 +1249,18 @@ body.modal-open { overflow: hidden; }
     box-shadow: 0 0 0 3px var(--primary-shadow);
 }
 
-/* Drawer móvil: mismo estilo suave */
+/* Drawer móvil: mismo estilo suave (bottom sheet) */
 #promoDrawer .drawer-content {
     background: var(--bg-card);
-    border-radius: 16px 16px 0 0;
+    border-radius: var(--ds-radius-lg) var(--ds-radius-lg) 0 0;
     box-shadow: var(--shadow-lg);
 }
 #promoDrawer .drawer-actions .btn-cancel,
 #promoDrawer .drawer-actions .btn-save {
-    border-radius: 8px;
-    padding: 10px 20px;
+    border-radius: var(--ds-radius-pill);
+    padding: 12px 20px;
     font-weight: 600;
+    font-family: var(--font-heading);
     transition: all var(--transition-fast);
 }
 #promoDrawer .drawer-actions .btn-save {

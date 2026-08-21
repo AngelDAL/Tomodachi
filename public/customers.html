@@ -13,6 +13,77 @@
     <link rel="stylesheet" href="css/mobile-nav.css?v=4">
     <link rel="stylesheet" href="css/dashboard.css?v=4">
     <link rel="stylesheet" href="css/inventory.css?v=4">
+    <style>
+        /* ============================================================
+           Clientes — alineación local al design system (Sora + radios,
+           sombras, píldoras). Los estilos base de cliente viven en
+           main.css; esto refina con los tokens --ds-* sin tocar otros
+           archivos ni la lógica JS.
+           ============================================================ */
+        /* Tarjetas de cliente */
+        .customer-card {
+            border-radius: var(--ds-radius-lg);
+            box-shadow: var(--ds-shadow-md);
+        }
+        .customer-card:hover { box-shadow: var(--ds-shadow-lg); }
+        .customer-stat { border-radius: var(--ds-radius-md); }
+
+        /* Filtros de cliente (pestañas) */
+        .customer-filter-btn {
+            border-radius: var(--ds-radius-pill);
+            font-family: var(--font-heading);
+        }
+        .customer-filter-btn.active {
+            box-shadow: 0 6px 16px -7px color-mix(in srgb, var(--primary-color) 65%, transparent);
+        }
+
+        /* Toggle vista grid/tabla */
+        .customer-view-toggle { border-radius: var(--ds-radius-pill); }
+        .view-toggle-btn { border-radius: var(--ds-radius-pill); }
+        .view-toggle-btn.active {
+            box-shadow: 0 4px 12px -6px color-mix(in srgb, var(--primary-color) 60%, transparent);
+        }
+
+        /* Badge de estado */
+        .customer-status-badge { font-family: var(--font-heading); }
+        .customer-status-badge.active {
+            box-shadow: 0 2px 6px -3px color-mix(in srgb, var(--success-color) 55%, transparent);
+        }
+
+        /* Botones de acción en tarjetas */
+        .customer-card-pay {
+            border-radius: var(--ds-radius-pill);
+            font-family: var(--font-heading);
+            box-shadow: 0 6px 16px -8px color-mix(in srgb, var(--primary-color) 60%, transparent);
+        }
+        .customer-card-actions .btn {
+            border-radius: var(--ds-radius-pill) !important;
+        }
+        .quick-pay-btn { border-radius: var(--ds-radius-pill); }
+
+        /* Tabla de clientes */
+        #customersTableWrap {
+            border-radius: var(--ds-radius-lg);
+            box-shadow: var(--ds-shadow-sm);
+        }
+
+        /* Detalle: cajas resumen / pago / pestañas */
+        .customer-pay-box,
+        .customer-detail-right {
+            border-radius: var(--ds-radius-md);
+            box-shadow: var(--ds-shadow-sm);
+        }
+        .cd-summary-item { border-radius: var(--ds-radius-md); }
+        .pay-amount-wrap { border-radius: var(--ds-radius-md) !important; }
+        .cd-tabs { gap: 6px; }
+        .cd-tab {
+            border-radius: var(--ds-radius-pill);
+            font-family: var(--font-heading);
+        }
+        .cd-tab.active {
+            box-shadow: 0 6px 16px -7px color-mix(in srgb, var(--primary-color) 65%, transparent);
+        }
+    </style>
     <script src="js/theme-init.js"></script>
     <script src="js/format-utils.js"></script>
 </head>
@@ -73,10 +144,10 @@
                         </button>
                     </div>
                     <div class="customer-summary" style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 12px;">
-                        <div class="summary-chip" style="background: var(--primary-lighter); border: 1px solid var(--primary-light); border-radius: 10px; padding: 8px 14px; font-size:0.9rem;">
+                        <div class="summary-chip" style="background: var(--primary-lighter); border: 1px solid var(--primary-light); border-radius: var(--ds-radius-pill); padding: 8px 16px; font-size:0.9rem; box-shadow: var(--ds-shadow-sm);">
                             <i class="fas fa-users" style="color: var(--primary-color);"></i> <strong id="totalCustomers">0</strong> clientes
                         </div>
-                        <div class="summary-chip" style="background: var(--primary-lighter); border: 1px solid var(--primary-light); border-radius: 10px; padding: 8px 14px; font-size:0.9rem;">
+                        <div class="summary-chip" style="background: var(--primary-lighter); border: 1px solid var(--primary-light); border-radius: var(--ds-radius-pill); padding: 8px 16px; font-size:0.9rem; box-shadow: var(--ds-shadow-sm);">
                             <i class="fas fa-hand-holding-dollar" style="color: var(--warning-color);"></i> Apartado total: <strong id="totalBalance">$0.00</strong>
                         </div>
                     </div>

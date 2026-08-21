@@ -726,3 +726,309 @@ body.plan-free a.premium-locked.btn::after {
     min-width: 170px;
     justify-content: center;
 }
+
+/* ============================================================
+   ALINEACIÓN AL DESIGN SYSTEM UNIFICADO (añadido por agente)
+   ============================================================
+   Sobrescrituras de pulido para Dashboard y Reportes.
+   NO renombra clases ni cambia IDs — solo refina forma, sombras,
+   texto y transiciones con las variables del design system
+   (--ds-* de design-system.css) y color-mix.
+   ============================================================ */
+
+/* ---------- STAT CARDS / KPIs ---------- */
+.stat-card {
+    border-radius: var(--ds-radius-lg, 22px);
+    box-shadow: var(--ds-shadow-md, var(--shadow-md));
+    gap: 18px;
+    padding: 24px 22px;
+    transition: transform .3s cubic-bezier(.4,0,.2,1), box-shadow .3s ease;
+    position: relative;
+    overflow: hidden;
+}
+.stat-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--primary-color) 9%, transparent), transparent 60%),
+        linear-gradient(145deg, color-mix(in srgb, var(--bg-lightest, #fff) 85%, transparent), transparent);
+    pointer-events: none;
+}
+.stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--ds-shadow-lg, var(--shadow-lg));
+}
+.stat-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 58px;
+    height: 58px;
+    flex: 0 0 auto;
+    font-size: 1.6rem;
+    color: var(--primary-color);
+    background: color-mix(in srgb, var(--primary-color) 10%, transparent);
+    border: 1.5px solid color-mix(in srgb, var(--primary-color) 22%, transparent);
+    border-radius: var(--ds-radius-md, 14px);
+    opacity: 1;
+    transition: transform .3s ease, box-shadow .3s ease;
+}
+.stat-card:hover .stat-icon {
+    transform: scale(1.06) rotate(-4deg);
+    box-shadow: 0 8px 18px -8px color-mix(in srgb, var(--primary-color) 45%, transparent);
+}
+.stat-info h3 {
+    font-size: .82rem;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    color: var(--text-light);
+}
+.stat-value {
+    font-size: 1.9rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    background: linear-gradient(120deg, var(--text-color), color-mix(in srgb, var(--primary-color) 55%, var(--text-color)));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+/* ---------- SECTION / CHART / LIST CARDS ---------- */
+.chart-section,
+.list-section,
+.reports-header,
+.report-results,
+.report-selection-container {
+    background: var(--bg-card);
+    border-radius: var(--ds-radius-lg, 20px);
+    box-shadow: var(--ds-shadow-md, var(--shadow-md));
+    border: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent);
+}
+.chart-section .chart-header,
+.list-section > h3 {
+    gap: 10px;
+}
+.chart-section h3,
+.list-section h3 {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+/* Encabezado con textura sutil (heredado del design system) */
+.reports-header {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='44'%3E%3Ccircle cx='22' cy='22' r='8' fill='none' stroke='%23000000' stroke-opacity='0.05'/%3E%3Cpath d='M22 4v36M4 22h36' stroke='%23000000' stroke-opacity='0.03'/%3E%3C/svg%3E");
+    background-color: var(--bg-lightest, var(--bg-card));
+}
+.reports-header h2 {
+    font-family: var(--font-heading);
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    margin: 0;
+}
+
+/* ---------- CHART CONTAINER (solo el contenedor, no los gráficos) ---------- */
+.chart-container {
+    height: 300px;
+    position: relative;
+    width: 100%;
+    background: color-mix(in srgb, var(--bg-lightest, #fff) 60%, transparent);
+    border: 1px solid var(--border-light);
+    border-radius: var(--ds-radius-md, 14px);
+    padding: 10px;
+}
+
+/* ---------- REPORT CARDS (Selector de reportes) ---------- */
+.report-card {
+    background: var(--bg-card);
+    border-radius: var(--ds-radius-lg, 20px);
+    box-shadow: var(--ds-shadow-sm, var(--shadow-sm));
+    border: 1.5px solid transparent;
+    padding: 28px 20px;
+    transition: transform .3s cubic-bezier(.4,0,.2,1), box-shadow .3s ease, border-color .3s ease;
+}
+.report-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--ds-shadow-lg, var(--shadow-lg));
+    border-color: color-mix(in srgb, var(--primary-color) 55%, transparent);
+}
+.report-card-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
+    font-size: 1.6rem;
+    color: var(--primary-color);
+    background: color-mix(in srgb, var(--primary-color) 10%, transparent);
+    border-radius: var(--ds-radius-pill, 100px);
+    margin-bottom: 16px;
+    transition: transform .3s ease, box-shadow .3s ease;
+}
+.report-card:hover .report-card-icon {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 10px 22px -10px color-mix(in srgb, var(--primary-color) 55%, transparent);
+}
+.report-card-title {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+/* ---------- REPORT SELECTION / FILTERS ---------- */
+.report-selection-header {
+    min-height: 44px;
+    border-bottom: 1.5px solid var(--border-light);
+}
+.report-selection-title {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 1.25rem;
+    color: var(--primary-color);
+    gap: 10px;
+}
+.report-company-badge {
+    gap: 8px;
+    padding: 6px 12px;
+    background: color-mix(in srgb, var(--bg-light) 70%, transparent);
+    border: 1px solid var(--border-light);
+    border-radius: var(--ds-radius-pill, 100px);
+}
+.btn-back-floating {
+    border-radius: var(--ds-radius-pill, 100px);
+    font-family: var(--font-heading);
+    font-weight: 600;
+    box-shadow: var(--ds-shadow-sm, var(--shadow-sm));
+}
+
+/* ---------- FILTROS ---------- */
+.report-filters {
+    gap: 16px;
+    align-items: flex-end;
+}
+.filter-group label {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: .8rem;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    color: var(--text-light);
+    margin-bottom: 7px;
+}
+.filter-group .form-control {
+    min-height: 46px;
+    border-radius: var(--ds-radius-md, 14px);
+    background-color: var(--bg-card);
+    box-shadow: var(--ds-shadow-sm, var(--shadow-sm));
+}
+
+/* ---------- BOTONES (píldora + design system) ---------- */
+.btn-primary, .btn-secondary, .btn-save, .btn-danger {
+    border-radius: var(--ds-radius-pill, 100px);
+    font-family: var(--font-heading);
+    font-weight: 600;
+    padding: 12px 24px;
+    box-shadow: var(--ds-shadow-sm, var(--shadow-sm));
+    position: relative;
+    overflow: hidden;
+    transition: transform .22s cubic-bezier(.4,0,.2,1), box-shadow .3s ease,
+                background .22s ease, color .22s ease, filter .22s ease;
+}
+.btn-primary:hover, .btn-save:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 22px -8px color-mix(in srgb, var(--primary-color) 70%, transparent);
+    filter: brightness(1.04);
+}
+.btn-secondary:hover, .btn-danger:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--ds-shadow-md, var(--shadow-md));
+    filter: brightness(1.04);
+}
+.btn-primary:active, .btn-secondary:active,
+.btn-save:active, .btn-danger:active {
+    transform: translateY(1px) scale(.97);
+    box-shadow: none;
+}
+.btn-primary, .btn-save {
+    background-color: var(--primary-color);
+    color: var(--text-on-primary, #fff);
+}
+.btn-danger {
+    background-color: var(--danger-color);
+    color: #fff;
+    border: none;
+}
+.btn-secondary {
+    background-color: var(--bg-light);
+    color: var(--text-color);
+    border: 1.5px solid var(--border-color);
+}
+.btn-secondary:hover {
+    background-color: var(--bg-hover);
+    color: var(--primary-color);
+    border-color: color-mix(in srgb, var(--primary-color) 45%, transparent);
+}
+
+/* ---------- BOTONES DE ICONO (controles de gráfico) ---------- */
+.btn-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--ds-radius-pill, 100px);
+    background: var(--bg-card);
+    border: 1.5px solid var(--border-color);
+    box-shadow: var(--ds-shadow-sm, var(--shadow-sm));
+    color: var(--text-medium);
+    transition: all .25s cubic-bezier(.4,0,.2,1);
+}
+.btn-icon:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--primary-color) 10%, var(--bg-card));
+    color: var(--primary-color);
+    border-color: color-mix(in srgb, var(--primary-color) 55%, transparent);
+    transform: translateY(-1px);
+}
+
+/* ---------- TABLAS ---------- */
+.dashboard-table {
+    border-radius: var(--ds-radius-md, 14px);
+    overflow: hidden;
+}
+.dashboard-table th,
+#reportTable th {
+    border-bottom: 2px solid color-mix(in srgb, var(--primary-color) 18%, var(--border-color));
+    background-color: color-mix(in srgb, var(--bg-light) 80%, transparent);
+    color: var(--text-color) !important;
+    font-weight: 700;
+    letter-spacing: .04em;
+    font-size: .76rem;
+}
+.dashboard-table td {
+    border-bottom: 1px solid var(--border-light);
+}
+#reportTable tfoot,
+.dashboard-table tr[style*="background-color: var(--bg-light)"] {
+    background-color: color-mix(in srgb, var(--primary-color) 5%, var(--bg-light)) !important;
+}
+
+/* ---------- EMPTY STATE ---------- */
+.empty-state {
+    background: color-mix(in srgb, var(--bg-lightest, #fff) 50%, transparent);
+    border: 1.5px dashed var(--border-light);
+    border-radius: var(--ds-radius-md, 14px);
+}
+.empty-state i {
+    color: var(--primary-color);
+    opacity: .55;
+}
+
+/* ---------- REPORT RESULT TABLES dentro de report-results ---------- */
+.report-results {
+    overflow-x: auto;
+}
+
+@media (max-width: 768px) {
+    .stat-value { font-size: 1.55rem; }
+    .stat-icon { width: 50px; height: 50px; font-size: 1.35rem; }
+    .chart-container { height: 350px; }
+}

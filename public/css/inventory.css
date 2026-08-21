@@ -2696,3 +2696,214 @@
     }
 }
 
+/* ==========================================================================
+   DESIGN SYSTEM ALIGNMENT — Inventario
+   --------------------------------------------------------------------------
+   Sobrescribe estilos específicos del módulo para alinear su identidad con
+   design-system.css (cargado antes). Usa los tokens --ds-* y color-mix.
+   NO renombra clases que inventory.js referencia (product-card, meta-stock,
+   product-list-item, add-tab, add-tab-panel, status-badge, etc.).
+   Transiciones siempre < 0.4s.
+   ========================================================================== */
+
+/* ---- Superficies: panel de controles y tarjetas ---- */
+.inv-controls {
+    border-radius: var(--ds-radius-lg);
+    border: 1px solid color-mix(in srgb, var(--border-color) 55%, transparent);
+    box-shadow: var(--ds-shadow-md);
+}
+.inv-controls:hover {
+    box-shadow: var(--ds-shadow-lg);
+}
+
+.product-card {
+    border-radius: var(--ds-radius-lg);
+    border: 1px solid color-mix(in srgb, var(--border-color) 50%, transparent);
+    box-shadow: var(--ds-shadow-sm);
+}
+.product-card:hover {
+    transform: translateY(-5px);
+    border-color: color-mix(in srgb, var(--primary-color) 50%, transparent);
+    box-shadow: var(--ds-shadow-lg);
+}
+
+.details-card {
+    border-radius: var(--ds-radius-lg);
+    box-shadow: var(--ds-shadow-sm);
+}
+.details-card:hover {
+    box-shadow: var(--ds-shadow-md);
+}
+
+.ai-column {
+    border-radius: var(--ds-radius-lg);
+}
+.icon-card, .product-list-item, .profit-item {
+    border-radius: var(--ds-radius-md);
+}
+.icon-card, .product-list-item {
+    box-shadow: var(--ds-shadow-sm);
+}
+.icon-card:hover, .product-list-item:hover {
+    box-shadow: var(--ds-shadow-md);
+}
+
+/* ---- Botones píldora ---- */
+.btn-cancel, .btn-save, .btn-secondary, .btn-danger, .btn-success,
+.btn-sm, .btn-edit, .btn-strength, .btn-add-product {
+    border-radius: var(--ds-radius-pill);
+    font-family: var(--font-heading);
+}
+.btn-save, .btn-primary {
+    box-shadow: 0 6px 18px -8px color-mix(in srgb, var(--primary-color) 70%, transparent);
+}
+.btn-save:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.04);
+}
+.btn-edit {
+    padding: 6px 14px;
+}
+.btn-cancel, .btn-secondary, .btn-danger {
+    border: 1.5px solid color-mix(in srgb, var(--border-color) 65%, transparent);
+    box-shadow: var(--ds-shadow-sm);
+}
+.btn-secondary:hover, .btn-danger:hover {
+    transform: translateY(-1px);
+}
+
+/* Botones cuadrados -> píldora/círculo */
+.btn-scan {
+    border-radius: var(--ds-radius-pill);
+    width: 42px;
+}
+.file-label {
+    border-radius: var(--ds-radius-pill);
+}
+#uploadImageBtn {
+    border-radius: var(--ds-radius-pill);
+}
+#toggleScannerBtn {
+    border-radius: var(--ds-radius-pill) !important;
+}
+.btn-change-image {
+    font-family: var(--font-heading);
+    box-shadow: 0 6px 16px -8px rgba(0,0,0,.45);
+}
+.btn-strength.active {
+    border-radius: var(--ds-radius-pill);
+}
+
+/* ---- Inputs redondeados con foco de marca ---- */
+.search-input, .input-id {
+    border-radius: var(--ds-radius-md);
+    border: 1.5px solid var(--border-color);
+}
+.search-input:focus, .input-id:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 20%, transparent);
+    background: var(--bg-lightest);
+}
+.input-prefix {
+    border-radius: var(--ds-radius-md);
+}
+.input-prefix .prefix {
+    border-radius: var(--ds-radius-md) 0 0 var(--ds-radius-md);
+}
+.input-scan-group input {
+    border-radius: var(--ds-radius-md);
+}
+.input-scan-group .btn-scan {
+    border-radius: var(--ds-radius-md);
+}
+
+/* ---- Zona de subida de imagen ---- */
+.add-image-zone, .image-upload-area, .upload-preview {
+    border-radius: var(--ds-radius-lg);
+}
+.add-image-zone:hover, .image-upload-area:hover {
+    border-color: var(--primary-color);
+    background-color: color-mix(in srgb, var(--primary-color) 5%, var(--bg-card));
+}
+.add-image-remove {
+    border-radius: var(--ds-radius-pill);
+}
+
+/* ---- Badges de stock con borde de color ---- */
+.product-stock, .meta-stock, .product-list-stock, .status-badge {
+    border-radius: var(--ds-radius-pill);
+    border: 1.5px solid color-mix(in srgb, var(--text-light) 40%, transparent);
+    box-shadow: 0 2px 6px -3px color-mix(in srgb, var(--text-color) 30%, transparent);
+    font-family: var(--font-heading);
+}
+.product-stock.low, .meta-stock.stock-low {
+    background: color-mix(in srgb, var(--danger-color) 12%, transparent);
+    color: var(--danger-color);
+    border-color: color-mix(in srgb, var(--danger-color) 45%, transparent);
+}
+.product-stock.good, .product-stock.ok, .meta-stock.stock-ok {
+    background: color-mix(in srgb, var(--success-color) 12%, transparent);
+    color: var(--success-color);
+    border-color: color-mix(in srgb, var(--success-color) 45%, transparent);
+}
+.status-waiting {
+    background: color-mix(in srgb, var(--border-color) 25%, transparent);
+    color: var(--text-light);
+}
+.status-analyzing {
+    background: color-mix(in srgb, var(--warning-color) 12%, transparent);
+    color: var(--warning-color);
+    border-color: color-mix(in srgb, var(--warning-color) 45%, transparent);
+}
+.status-success {
+    background: color-mix(in srgb, var(--success-color) 12%, transparent);
+    color: var(--success-color);
+    border-color: color-mix(in srgb, var(--success-color) 55%, transparent);
+}
+.status-error {
+    background: color-mix(in srgb, var(--danger-color) 12%, transparent);
+    color: var(--danger-color);
+    border-color: color-mix(in srgb, var(--danger-color) 55%, transparent);
+}
+
+/* ---- Tabs redondeados (estilo segmented) ---- */
+.add-tabs, .drawer-tabs {
+    gap: 6px;
+    padding: 5px;
+    background: color-mix(in srgb, var(--bg-lightest) 88%, transparent);
+    border-bottom: none;
+    border: 1px solid color-mix(in srgb, var(--border-color) 40%, transparent);
+    border-radius: var(--ds-radius-pill);
+}
+.add-tab, .drawer-tab {
+    border-radius: var(--ds-radius-pill);
+    border-bottom: none;
+}
+.add-tab:hover, .drawer-tab:hover {
+    background: color-mix(in srgb, var(--primary-color) 6%, transparent);
+}
+.add-tab.active, .drawer-tab.active {
+    background: var(--bg-card);
+    color: var(--primary-color);
+    border-bottom: none;
+    box-shadow: var(--ds-shadow-sm);
+}
+.ai-tab {
+    border-radius: var(--ds-radius-pill) !important;
+}
+
+/* ---- Modales con redondeo y backdrop texturizado ---- */
+.modal, .drawer-overlay {
+    background-color: rgba(0, 0, 0, 0.55);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.10'%3E%3Cpath d='M0 30 30 0 60 30 30 60Z'/%3E%3C/g%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 60px 60px;
+}
+.modal-content, .drawer-content {
+    border-radius: var(--ds-radius-lg);
+    box-shadow: var(--ds-shadow-lg);
+}
+.drawer-content {
+    border-radius: var(--ds-radius-lg) 0 0 var(--ds-radius-lg);
+}
+

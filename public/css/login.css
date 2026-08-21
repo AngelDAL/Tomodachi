@@ -166,8 +166,7 @@ dialog.privacy-modal {
 }
 
 dialog.privacy-modal::backdrop {
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(4px);
+    background-color: rgba(0, 0, 0, 0.6);
     opacity: 0;
     transition: opacity 0.3s ease;
 }

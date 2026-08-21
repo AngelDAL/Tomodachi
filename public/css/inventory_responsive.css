@@ -28,3 +28,31 @@
         justify-content: center;
     }
 }
+
+/* ==========================================================================
+   DESIGN SYSTEM ALIGNMENT — Inventario (responsive)
+   Refuerza alineación en pantallas pequeñas: botones píldora y tarjetas
+   redondeadas consistentes con inventory.css.
+   ========================================================================== */
+@media (max-width: 600px) {
+    .action-buttons > button,
+    .action-buttons .settings-dropdown-container {
+        border-radius: var(--ds-radius-md, 14px);
+    }
+    .action-buttons .btn-add-product {
+        border-radius: var(--ds-radius-md, 14px);
+    }
+    .search-input,
+    .input-id {
+        border-radius: var(--ds-radius-md, 14px);
+    }
+    .btn-cancel, .btn-save {
+        border-radius: var(--ds-radius-pill, 100px);
+    }
+    .product-card, .details-card {
+        border-radius: var(--ds-radius-lg, 20px);
+    }
+    .modal, .drawer-overlay {
+        background-color: rgba(0, 0, 0, 0.55);
+    }
+}

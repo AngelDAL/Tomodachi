@@ -1,25 +1,48 @@
 /* ================================================================
-   Tomodachi — Design System (capa de unificación)
-   Se carga después de main.css en las páginas de la app.
-   Pule los estilos base hacia el perfil unificado: botones cápsula,
-   tipografías, cards con textura, inputs redondeados y animaciones chill.
-   Aditivo: no elimina clases existentes, solo refina.
+   Tomodachi — Design System (CSS DOMINANTE de estructura)
+   ================================================================
+   Este archivo es la fuente única de verdad del estilo de la interfaz.
+   Se carga DESPUÉS de main.css / variables.css en TODAS las páginas.
+   Controla la estructura visual (forma, radios, sombras, tipografía,
+   animaciones) de los componentes base. Cambiar aquí afecta todo el
+   sistema sin tocar cada módulo.
+
+   Convención:
+   - No elimina clases existentes: refina/sobrescribe con mayor especificidad.
+   - Usa las variables de tema de variables.css (--primary-color, etc.).
+   - Añade variables propias bajo --ds-* para un ajuste centralizado.
    ================================================================ */
 
-/* ---------- Tipografía: Sora (encabezados) + Inter (contenido) ---------- */
+/* ---------- Tipografía ---------- */
 @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
+  /* Tipografía */
   --font-heading: 'Sora', 'Inter', -apple-system, sans-serif;
   --font-body: 'Inter', system-ui, sans-serif;
-  --design-radius: 14px;
+
+  /* Radios */
+  --ds-radius-sm: 10px;
+  --ds-radius-md: 14px;
+  --ds-radius-lg: 20px;
+  --ds-radius-pill: 100px;
+
+  /* Elevaciones */
+  --ds-shadow-sm: 0 2px 10px -4px rgba(0,0,0,.14);
+  --ds-shadow-md: 0 8px 22px -10px color-mix(in srgb, var(--text-color) 22%, transparent);
+  --ds-shadow-lg: 0 22px 50px -14px color-mix(in srgb, var(--text-color) 30%, transparent);
+
+  /* Tipografía de encabezados */
+  --hd: var(--font-heading);
+  --bd: var(--font-body);
 }
 
 h1, h2, h3, h4, h5, h6,
-.card-header, .modal-header h3, .drawer-header h3,
-.dashboard-card .card-title, .stat-card .stat-title,
-.section-title, .page-title {
+.card-header, .dashboard-card .card-title, .stat-card .stat-title,
+.section-title, .page-title, .modal-header h3, .drawer-header h3,
+.panel-title, .box-title {
   font-family: var(--font-heading);
+  letter-spacing: -0.01em;
 }
 
 body {
@@ -27,8 +50,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* ---------- Fondo con textura SVG sutil (sin romper layout) ---------- */
-/* Se aplica como capa decorativa muy tenue solo donde hay fondo de página */
+/* ---------- Fondo con textura SVG sutil ---------- */
 body {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='none' stroke='%23000000' stroke-opacity='0.028' stroke-width='1.1'%3E%3Cpath d='M0 40h80M40 0v80'/%3E%3Ccircle cx='40' cy='40' r='13'/%3E%3Ccircle cx='40' cy='40' r='5'/%3E%3C/g%3E%3C/svg%3E");
 }
@@ -36,111 +58,38 @@ body {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.03' stroke-width='1.1'%3E%3Cpath d='M0 40h80M40 0v80'/%3E%3Ccircle cx='40' cy='40' r='13'/%3E%3Ccircle cx='40' cy='40' r='5'/%3E%3C/g%3E%3C/svg%3E");
 }
 
-/* ---------- Botones cápsula (refinando .btn) ---------- */
+/* ================================================================
+   BOTONES — forma cápsula
+   ================================================================ */
 .btn {
-  border-radius: 100px;
+  border-radius: var(--ds-radius-pill) !important;
   font-family: var(--font-heading);
   font-weight: 600;
   padding: 11px 24px;
-  box-shadow: 0 2px 10px -4px rgba(0,0,0,.18);
+  box-shadow: var(--ds-shadow-sm);
   position: relative;
   overflow: hidden;
-  will-change: transform;
+  transition: transform .22s cubic-bezier(.4,0,.2,1), box-shadow .3s ease,
+              background .22s ease, color .22s ease, filter .22s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+  border: 1.5px solid transparent;
+  cursor: pointer;
 }
-.btn:active {
-  transform: translateY(1px) scale(.97);
-  box-shadow: none;
-}
-.btn-primary {
-  box-shadow: 0 6px 18px -8px color-mix(in srgb, var(--primary-color) 70%, transparent);
-}
-.btn-primary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 22px -8px color-mix(in srgb, var(--primary-color) 80%, transparent);
-}
-.btn-outline, .btn-outline-primary, .btn-outline-secondary {
-  border-radius: 100px;
-}
+.btn:hover { filter: brightness(1.04); }
+.btn:active { transform: translateY(1px) scale(.97); box-shadow: none; }
+.btn:disabled { opacity: .6; cursor: not-allowed; }
 
-/* ---------- Cards con textura y redondeo ---------- */
-.card, .card-item, .dashboard-card, .stat-card, .panel, .widget-card {
-  border-radius: var(--design-radius) !important;
-  box-shadow: 0 10px 30px -14px color-mix(in srgb, var(--text-color) 20%, transparent);
-  overflow: hidden;
-}
-.card:hover, .dashboard-card:hover {
-  box-shadow: 0 18px 40px -16px color-mix(in srgb, var(--text-color) 26%, transparent);
-}
+.btn-primary { box-shadow: 0 6px 18px -8px color-mix(in srgb, var(--primary-color) 70%, transparent); }
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 10px 22px -8px color-mix(in srgb, var(--primary-color) 80%, transparent); }
 
-/* Encabezado de card con textura SVG sutil */
-.card-header, .card .card-header, .dashboard-card .card-header {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='44'%3E%3Ccircle cx='22' cy='22' r='8' fill='none' stroke='%23000000' stroke-opacity='0.05'/%3E%3Cpath d='M22 4v36M4 22h36' stroke='%23000000' stroke-opacity='0.03'/%3E%3C/svg%3E");
-  background-color: var(--bg-lightest, var(--bg-color-slight, transparent));
-}
-[data-theme="dark"] .card-header {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='44'%3E%3Ccircle cx='22' cy='22' r='8' fill='none' stroke='%23ffffff' stroke-opacity='0.06'/%3E%3Cpath d='M22 4v36M4 22h36' stroke='%23ffffff' stroke-opacity='0.04'/%3E%3C/svg%3E");
-}
-
-/* ---------- Inputs redondeados ---------- */
-.input, .form-control, .form-input, input[type="text"],
-input[type="number"], input[type="email"], input[type="password"], select, textarea {
-  border-radius: 12px !important;
-  transition: all .25s cubic-bezier(.4,0,.2,1);
-}
-.input:focus, .form-control:focus, input:focus, select:focus, textarea:focus {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 20%, transparent);
-  outline: none;
-}
-
-/* ---------- Badges con borde llamativo ---------- */
-.badge {
-  border: 1.5px solid color-mix(in srgb, var(--primary-color) 45%, transparent);
-  border-radius: 100px;
-  box-shadow: 0 2px 6px -3px color-mix(in srgb, var(--primary-color) 40%, transparent);
-}
-
-/* ---------- Tabs con indicador (si el módulo usa .tab) ---------- */
-.nav-tabs, .tab-nav { gap: 6px; }
-.nav-tabs .nav-link, .tab {
-  border-radius: 100px;
-  transition: all .3s cubic-bezier(.4,0,.2,1);
-}
-
-/* ---------- Modales (si usan capas .modal/.modal-content) ---------- */
-.modal-content, .modal, .modal-dialog {
-  border-radius: 20px !important;
-  box-shadow: 0 25px 60px -15px rgba(0,0,0,.35);
-  overflow: hidden;
-}
-
-/* ================================================================
-   ANIMACIONES CHILL (disparadas por js/design-system.js con anime.js)
-   Clases preparadas: elementos entran suaves al aparecer en el viewport.
-   ================================================================ */
-
-/* estado inicial (ocultos) — lo activa JS con IntersectionObserver */
-.ds-reveal {
-  opacity: 0;
-  transform: translateY(18px);
-  transition: opacity .001s;
-}
-
-/* utilidad para que las filas padre no colapsen */
-.ds-stagger > * { will-change: transform, opacity; }
-
-/* Animaciones suaves de respiración ya listas */
-.ds-breathe { animation: dsBreathe 3.2s ease-in-out infinite; }
-@keyframes dsBreathe {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.03); }
-}
-
-/* botón con brillo sutil (los módulos que usen .btn) */
+/* Brillos sutiles */
 .btn::after {
   content: "";
-  position: absolute;
-  top: 0; left: -70%;
+  position: absolute; top: 0; left: -70%;
   width: 50%; height: 100%;
   background: linear-gradient(110deg, transparent, rgba(255,255,255,.35), transparent);
   transform: skewX(-20deg);
@@ -149,3 +98,157 @@ input[type="number"], input[type="email"], input[type="password"], select, texta
   pointer-events: none;
 }
 .btn:hover::after { left: 130%; opacity: 1; }
+
+/* ================================================================
+   INPUTS / SELECTS / TEXTAREA
+   ================================================================ */
+.input, .form-control, .form-input,
+input[type="text"], input[type="number"], input[type="email"],
+input[type="password"], input[type="date"], input[type="datetime-local"],
+input[type="search"], select, textarea {
+  border-radius: var(--ds-radius-md) !important;
+  border: 1.5px solid var(--border-color);
+  transition: border-color .22s ease, box-shadow .22s ease, background .22s ease;
+  font-family: var(--font-body);
+}
+.input:focus, .form-control:focus, .form-input:focus,
+input:focus, select:focus, textarea:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 20%, transparent);
+  outline: none;
+}
+select {
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 38px;
+}
+
+/* ================================================================
+   CARDS
+   ================================================================ */
+.card, .card-item, .dashboard-card, .stat-card, .panel, .widget-card, .widget {
+  border-radius: var(--ds-radius-lg) !important;
+  box-shadow: var(--ds-shadow-md);
+  overflow: hidden;
+}
+.card:hover, .dashboard-card:hover, .widget:hover {
+  box-shadow: var(--ds-shadow-lg);
+  transform: translateY(-2px);
+}
+.card-header, .card .card-header, .dashboard-card .card-header,
+.panel-header, .widget-header {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='44'%3E%3Ccircle cx='22' cy='22' r='8' fill='none' stroke='%23000000' stroke-opacity='0.05'/%3E%3Cpath d='M22 4v36M4 22h36' stroke='%23000000' stroke-opacity='0.03'/%3E%3C/svg%3E");
+  background-color: var(--bg-lightest, var(--bg-color-slight, transparent));
+}
+[data-theme="dark"] .card-header,
+[data-theme="dark"] .panel-header,
+[data-theme="dark"] .widget-header {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='44'%3E%3Ccircle cx='22' cy='22' r='8' fill='none' stroke='%23ffffff' stroke-opacity='0.06'/%3E%3Cpath d='M22 4v36M4 22h36' stroke='%23ffffff' stroke-opacity='0.04'/%3E%3C/svg%3E");
+}
+
+/* ================================================================
+   TABLAS
+   ================================================================ */
+table, .table, .data-table {
+  border-radius: var(--ds-radius-md);
+}
+th {
+  font-family: var(--font-heading);
+  font-size: .76rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+table tbody tr,
+.table tbody tr,
+.data-table tbody tr {
+  transition: background .2s ease;
+}
+table tbody tr:hover,
+.table tbody tr:hover,
+.data-table tbody tr:hover {
+  background: color-mix(in srgb, var(--primary-color) 6%, transparent);
+}
+
+/* ================================================================
+   BADGES
+   ================================================================ */
+.badge, .status-badge, .pill {
+  border: 1.5px solid color-mix(in srgb, var(--primary-color) 45%, transparent);
+  border-radius: var(--ds-radius-pill) !important;
+  box-shadow: 0 2px 6px -3px color-mix(in srgb, var(--primary-color) 40%, transparent);
+  font-family: var(--font-heading);
+  font-weight: 600;
+}
+
+/* ================================================================
+   TABS
+   ================================================================ */
+.nav-tabs, .tab-nav, .tabs {
+  gap: 6px;
+}
+.nav-tabs .nav-link, .tab, .tab-btn {
+  border-radius: var(--ds-radius-pill);
+  transition: all .3s cubic-bezier(.4,0,.2,1);
+}
+
+/* ================================================================
+   MODALES / DIALOGS / DRAWERS
+   ================================================================ */
+.modal-content, .modal, .modal-dialog, .dialog-box {
+  border-radius: var(--ds-radius-lg) !important;
+  box-shadow: var(--ds-shadow-lg);
+  overflow: hidden;
+}
+.drawer, .drawer-content {
+  border-radius: var(--ds-radius-lg) 0 0 var(--ds-radius-lg);
+}
+.modal-header, .modal-footer,
+.drawer-header, .drawer-footer {
+  font-family: var(--font-heading);
+}
+
+/* Modales / drawers con backdrop con textura SVG sutil (sin blur) */
+.client-dialog::backdrop,
+.sale-detail-dialog::backdrop,
+.dialog::backdrop {
+  background-color: rgba(0,0,0,.55);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.10'%3E%3Cpath d='M0 30 30 0 60 30 30 60Z'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 60px 60px;
+}
+.relogin-modal, .promo-modal-overlay {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.10'%3E%3Cpath d='M0 30 30 0 60 30 30 60Z'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 60px 60px;
+}
+body.modal-open .modal {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.10'%3E%3Cpath d='M0 30 30 0 60 30 30 60Z'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 60px 60px;
+}
+
+/* ================================================================
+   ANIMACIONES CHILL (activadas por js/design-system.js con anime.js)
+   ================================================================ */
+.ds-reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity .001s;
+}
+.ds-stagger > * { will-change: transform, opacity; }
+
+.ds-breathe { animation: dsBreathe 3.2s ease-in-out infinite; }
+@keyframes dsBreathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+
+/* Utilidades reutilizables de estructura */
+.ds-gap-4 { gap: 4px; } .ds-gap-8 { gap: 8px; } .ds-gap-12 { gap: 12px; } .ds-gap-16 { gap: 16px; }
+.ds-flex { display: flex; align-items: center; }
+.ds-between { justify-content: space-between; }
+.ds-center { justify-content: center; }

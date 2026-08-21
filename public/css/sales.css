@@ -3064,3 +3064,138 @@
     align-items: flex-end;
     flex-shrink: 0;
 }
+
+/* ============================================================
+   ALINEACIÓN AL DESIGN SYSTEM UNIFICADO (módulo VENTAS)
+   Solo visual. No renombra clases ni altera la lógica JS.
+   Usa variables del tema y variables --ds-* del design system.
+   ============================================================ */
+
+/* Producto: esquinas redondeadas + sombra suave de la identidad */
+.gallery-item {
+  border-radius: var(--ds-radius-md);
+  box-shadow: var(--ds-shadow-sm);
+}
+.gallery-item:hover {
+  box-shadow: var(--ds-shadow-md);
+}
+.gallery-item .img-wrap {
+  border-radius: var(--ds-radius-md);
+}
+.gallery-item .item-details::before {
+  border-radius: 0 0 var(--ds-radius-md) var(--ds-radius-md);
+}
+
+/* Botones de acción principales: forma cápsula */
+.btn-checkout-primary,
+.btn-finalize-sale,
+.btn-finalize {
+  border-radius: var(--ds-radius-pill);
+}
+.btn-checkout-primary {
+  box-shadow: 0 8px 20px -8px color-mix(in srgb, var(--primary-color) 55%, transparent);
+}
+.btn-finalize-sale,
+.btn-finalize {
+  box-shadow: 0 8px 20px -8px color-mix(in srgb, var(--secondary-color) 55%, transparent);
+}
+
+/* Pay input y cambio: radio blando + foco de marca */
+.pay-input {
+  border-radius: var(--ds-radius-md);
+}
+.pay-input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 20%, transparent);
+}
+.change-display {
+  border-radius: var(--ds-radius-md);
+}
+.scale-status-indicator {
+  border-radius: var(--ds-radius-pill);
+}
+
+/* Selects de filtros redondeados */
+.filter-select,
+.dropdown-select {
+  border-radius: var(--ds-radius-md);
+}
+
+/* Tabs del carrito redondeadas (activas por si se habilitan) */
+.cart-tabs {
+  gap: 6px;
+  border-bottom: none;
+  padding: 4px;
+}
+.panel-tab-btn {
+  border-radius: var(--ds-radius-pill);
+  border-bottom: none;
+  margin-bottom: 0;
+}
+.panel-tab-btn.active {
+  background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+  border-bottom-color: transparent;
+}
+
+/* Iconos/botones de acción redondeados */
+.action-btn {
+  border-radius: var(--ds-radius-pill);
+}
+.remove-btn,
+.edit-btn {
+  border-radius: var(--ds-radius-pill);
+}
+.qty-input,
+.compact-input {
+  border-radius: var(--ds-radius-md);
+}
+.cart-item-img,
+.cart-item-img-placeholder {
+  border-radius: var(--ds-radius-sm);
+}
+
+/* Modal: backdrop con textura SVG sutil y blur muy ligero */
+.modal-overlay {
+  background-color: rgba(0,0,0,.5);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.10'%3E%3Cpath d='M0 30 30 0 60 30 30 60Z'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 60px 60px;
+  backdrop-filter: blur(3px);
+}
+.modal-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .2s ease, color .2s ease;
+}
+.modal-close:hover {
+  background: color-mix(in srgb, var(--text-color) 8%, transparent);
+  color: var(--text-color);
+}
+
+/* Inputs del modal: redondeados con foco de marca */
+.discount-type-selector select,
+.input-group input,
+.nxn-item input {
+  border-radius: var(--ds-radius-md);
+}
+
+/* Context menu redondeado */
+.context-menu {
+  border-radius: var(--ds-radius-md);
+}
+.context-menu-item {
+  border-radius: var(--ds-radius-sm);
+}
+
+/* Overlay del escáner: backdrop con textura sutil (blur muy ligero) */
+.scanner-overlay {
+  backdrop-filter: blur(3px);
+}
+.scanned-product-card {
+  border-radius: var(--ds-radius-lg);
+  box-shadow: var(--ds-shadow-lg);
+}

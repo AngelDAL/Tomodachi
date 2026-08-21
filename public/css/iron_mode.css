@@ -163,3 +163,29 @@
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+/* ==========================================================================
+   DESIGN SYSTEM ALIGNMENT — Kawaii Voice Mode
+   Alinea el overlay de voz con la identidad (tipografías Sora/Inter y
+   radios del design system). No altera lógica.
+   ========================================================================== */
+.jarvis-overlay {
+    font-family: var(--font-body, 'Inter', system-ui, sans-serif);
+}
+.jarvis-status {
+    font-family: var(--font-heading, 'Sora', 'Inter', sans-serif);
+    border-radius: var(--ds-radius-pill, 100px);
+    background: color-mix(in srgb, var(--bg-card) 80%, transparent);
+    padding: 6px 20px;
+    box-shadow: var(--ds-shadow-md, 0 8px 22px -10px rgba(0,0,0,.2));
+}
+.voice-avatar {
+    border: 2px solid color-mix(in srgb, var(--voice-primary) 45%, transparent);
+    box-shadow: 0 12px 30px -10px color-mix(in srgb, var(--voice-primary) 45%, transparent);
+}
+.pulse-ring {
+    background: color-mix(in srgb, var(--voice-primary) 60%, transparent);
+}
+.voice-wave {
+    filter: saturate(1.15);
+}

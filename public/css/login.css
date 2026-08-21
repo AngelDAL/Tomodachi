@@ -49,16 +49,16 @@ body {
     overflow: hidden;
 }
 
-/* Patrón SVG del catálogo: siempre visible aunque la foto de fondo no cargue.
-   Blanco monocromático muy sutil sobre la paleta activa (Sakuya/Remilia). */
+/* Patrón SVG del catálogo: rombos monocromáticos, siempre visible aunque
+   la foto de fondo no cargue. Sutil sobre la paleta Sakuya/Remilia. */
 .left-pane::before {
     content: '';
     position: absolute;
     inset: 0;
     z-index: 0;
     pointer-events: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.20' stroke-width='1.2'%3E%3Cpath d='M0 40h80M40 0v80'/%3E%3Ccircle cx='40' cy='40' r='14'/%3E%3Ccircle cx='40' cy='40' r='6'/%3E%3Cpath d='M28 40h24M40 28v24'/%3E%3C/g%3E%3C/svg%3E");
-    background-size: 80px 80px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.16' stroke-width='1.1'%3E%3Cpath d='M0 30 30 0 60 30 30 60Z'/%3E%3Cpath d='M-30 30 0 0 30 30 0 60Z'/%3E%3Cpath d='M30 30 60 0 90 30 60 60Z'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: 60px 60px;
     background-position: center;
 }
 

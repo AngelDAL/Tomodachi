@@ -9,8 +9,10 @@
     <link rel="stylesheet" href="css/fonts.css?v=4">
     <!-- FontAwesome -->
     <link rel="stylesheet" href="lib/fontawesome/css/all.min.css?v=4">
+    <!-- Theme pre-paint: aplica la paleta persistida antes de mostrar el login -->
+    <script src="js/theme-init.js"></script>
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="css/login.css?v=5">
+    <link rel="stylesheet" href="css/login.css?v=6">
     <link rel="stylesheet" href="css/design-system.css?v=6">
     <script src="lib/animejs/anime.min.js" defer></script>
     <script src="js/design-system.js?v=6" defer></script>
@@ -120,9 +122,6 @@
     </div>
 
     <script>
-        // Limpiar tema anterior
-        localStorage.removeItem('pos_theme_config');
-
         const loginForm = document.getElementById('loginForm');
         const errorMessage = document.getElementById('errorMessage');
         

@@ -502,8 +502,26 @@ CREATE TABLE display_group_steps (
 -- Datos iniciales
 
 -- Insertar tienda principal
-INSERT INTO stores (store_name, address, phone, status) VALUES
-('Tienda Principal', 'Calle Principal #123, Ciudad', '555-1234', 'active');
+INSERT INTO stores (store_name, address, phone, status, theme_config, theme_config_dark) VALUES
+(
+    'Tienda Principal', 'Calle Principal #123, Ciudad', '555-1234', 'active',
+    JSON_OBJECT(
+        'primary_color', '#4C77AF', 'secondary_color', '#2196F3',
+        'success_color', '#4CAF50', 'danger_color', '#F44336',
+        'warning_color', '#FF9800', 'info_color', '#2196F3',
+        'dark_color', '#1A1A2E', 'bg_body', '#F4F7F6',
+        'text_color', '#1A1A2E', 'bg_card', '#FFFFFF',
+        'border_color', '#E0E0E0', 'theme_mode', 'light', 'dark_mode', FALSE
+    ),
+    JSON_OBJECT(
+        'primary_color', '#C62828', 'secondary_color', '#E53935',
+        'success_color', '#66BB6A', 'danger_color', '#EF5350',
+        'warning_color', '#FFB74D', 'info_color', '#EF5350',
+        'dark_color', '#1A080B', 'bg_body', '#120609',
+        'text_color', '#FCE4EC', 'bg_card', '#241015',
+        'border_color', '#5C1E2A'
+    )
+);
 
 -- Insertar terminal por defecto
 INSERT INTO terminals (store_id, terminal_name) VALUES

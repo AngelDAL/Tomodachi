@@ -4110,7 +4110,12 @@ function linkPosCustomer(id, name, phone, email, balance, creditLimit, totalPurc
   // cuando el usuario hace clic en el chip del cliente (decisión de Angel).
 }
 
-function unlinkPosCustomer() {
+function unlinkPosCustomer(opts = {}) {
+  // Recordar si había un cliente vinculado y su nombre ANTES de limpiar.
+  const hadCustomer = !!linkedCustomer;
+  const custName = linkedCustomer ? (linkedCustomer.full_name || '') : '';
+  // Si se especificó un mensaje de éxito (p. ej. compra registrada), usarlo;
+  // si no, por defecto advertir solo si había cliente.
   linkedCustomer = null;
   renderLinkedCustomer();
   const custSel = document.getElementById('customerSelect');
@@ -4118,7 +4123,12 @@ function unlinkPosCustomer() {
   // Si el método era apartado y se desvincula, volver a efectivo
   const paySel = document.getElementById('paymentMethod');
   if (paySel && paySel.value === 'credit') paySel.value = 'cash';
-  showNotification('Cliente desvinculado', 'info');
+  // Notificación: solo si había un cliente vinculado (no molestar si nunca
+  // se vinculó), y con mensaje customizado amigable ("compra registrada").
+  if (hadCustomer) {
+    const msg = opts.successMsg || `Compra de "${custName}" registrada correctamente`;
+    showNotification(msg, opts.type || 'success');
+  }
 }
 
 function renderLinkedCustomer() {
@@ -4214,7 +4224,7 @@ function buildPosCustomerPanelHTML() {
     </div>
 
     <div class="pos-cd-actions">
-      <button class="btn btn-danger" onclick="unlinkPosCustomer(); closePosCustomerDrawer();" style="padding:9px 14px; border-radius:8px; border:none; cursor:pointer;">
+      <button class="btn btn-danger" onclick="unlinkPosCustomer({ successMsg:'Cliente removido de la venta', type:'info' }); closePosCustomerDrawer();" style="padding:9px 14px; border-radius:8px; border:none; cursor:pointer;">
         <i class="fas fa-times"></i> Cancelar selección de este cliente
       </button>
     </div>
@@ -4363,7 +4373,7 @@ function bindPosCustomerEvents() {
       if (si) si.focus();
     }
   });
-  if (unlinkBtn) unlinkBtn.addEventListener('click', (e) => { e.stopPropagation(); unlinkPosCustomer(); });
+  if (unlinkBtn) unlinkBtn.addEventListener('click', (e) => { e.stopPropagation(); unlinkPosCustomer({ successMsg:'Cliente removido de la venta', type:'info' }); });
 
   // Modal crear cliente rápido
   const saveBtn = document.getElementById('posQuickCustomerSave');

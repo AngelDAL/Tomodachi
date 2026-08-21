@@ -90,7 +90,9 @@
                                 <span id="selectedReportTitle">Reporte Seleccionado</span>
                             </div>
                             <div id="reportCompanyBadge" class="report-company-badge" style="display:none;">
-                                <img id="reportCompanyLogo" src="" alt="Logo" style="width:34px; height:34px; object-fit:contain; border-radius:6px; background:#fff; padding:2px; border:1px solid var(--border-color);">
+                                <span style="display:inline-flex; width:34px; height:34px; border-radius:50%; overflow:hidden; background:#fff; border:1px solid var(--border-color); flex:0 0 auto;">
+                                    <img id="reportCompanyLogo" src="" alt="Logo" style="width:100%; height:100%; object-fit:cover; display:block;">
+                                </span>
                                 <span id="reportCompanyName" style="font-size:0.9rem; font-weight:600; color: var(--text-color);"></span>
                             </div>
                         </div>
@@ -950,26 +952,35 @@
             // Texto del encabezado: contraste sobre el primario
             const headerTextRGB = getContrastColor(primaryColor) === '#000000' ? [30, 30, 46] : [255, 255, 255];
 
-            // Logo a la izquierda (dentro de una tarjeta blanca para que se vea)
-            let logoX = margin, logoY = 8, logoW = 24, logoH = 24;
+            // Logo a la izquierda (dentro de un CÍRCULO blanco, imagen contenida sin distorsión)
+            let logoX = margin, logoY = 8, logoD = 24; // diámetro del círculo
             if (logoDataUrl) {
-                // Fondo blanco redondeado detrás del logo
+                // Círculo blanco de fondo
                 doc.setFillColor(255, 255, 255);
-                doc.roundedRect(logoX - 2, logoY - 2, logoW + 4, logoH + 4, 2, 2, 'F');
+                doc.circle(logoX + logoD / 2, logoY + logoD / 2, logoD / 2, 'F');
                 try {
-                    doc.addImage(logoDataUrl, 'PNG', logoX, logoY, logoW, logoH, undefined, 'FAST');
+                    // Obtener dimensiones reales de la imagen para contenerla (object-fit: contain)
+                    let iw = logoD, ih = logoD;
+                    try { const ip = doc.getImageProperties(logoDataUrl); if (ip && ip.width && ip.height) { iw = ip.width; ih = ip.height; } } catch (e2) {}
+                    const r = iw / ih;
+                    let dw = logoD, dh = logoD;
+                    // contain: ajustar al interior del círculo conservando proporción,
+                    // con un pequeño margen para que no toque el borde.
+                    const pad = 0.78;
+                    if (r >= 1) { dw = logoD * pad; dh = dw / r; } else { dh = logoD * pad; dw = dh * r; }
+                    doc.addImage(logoDataUrl, 'PNG', logoX + (logoD - dw) / 2, logoY + (logoD - dh) / 2, dw, dh, undefined, 'FAST');
                 } catch (e) {
-                    try { doc.addImage(logoDataUrl, 'JPEG', logoX, logoY, logoW, logoH, undefined, 'FAST'); }
+                    try { doc.addImage(logoDataUrl, 'JPEG', logoX + (logoD - logoD * 0.78) / 2, logoY + (logoD - logoD * 0.78) / 2, logoD * 0.78, logoD * 0.78, undefined, 'FAST'); }
                     catch (e2) { /* sin logo */ }
                 }
             } else {
                 // Sin logo: icono de tienda (círculo con inicial)
                 doc.setFillColor(255, 255, 255);
-                doc.circle(logoX + logoW / 2, logoY + logoH / 2, logoW / 2 + 1, 'F');
+                doc.circle(logoX + logoD / 2, logoY + logoD / 2, logoD / 2 + 1, 'F');
                 doc.setTextColor(primaryRGB[0], primaryRGB[1], primaryRGB[2]);
                 doc.setFont('helvetica', 'bold');
                 doc.setFontSize(22);
-                doc.text((storeName || 'T').charAt(0).toUpperCase(), logoX + logoW / 2, logoY + logoH / 2 + 7, { align: 'center' });
+                doc.text((storeName || 'T').charAt(0).toUpperCase(), logoX + logoD / 2, logoY + logoD / 2 + 7, { align: 'center' });
             }
 
             // Nombre del negocio a la derecha del logo

@@ -2600,3 +2600,20 @@ label .currency-icon {
         grid-template-columns: 1fr;
     }
 }
+
+/* ===== Estado vacío del grid de clientes: centrado V y H ===== */
+.customer-grid-empty {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-height: 320px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2.5rem;
+    color: var(--text-muted);
+    gap: 10px;
+}
+.customer-grid-empty i { font-size: 2.4rem; margin-bottom: 4px; opacity: .7; }
+.customers-grid { align-content: start; }

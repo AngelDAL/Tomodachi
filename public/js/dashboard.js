@@ -469,24 +469,3 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Escape' && modal.open) closeModal();
     });
 });
-
-/* ===== Botón temporal: alternar tema claro/oscuro ===== */
-document.addEventListener('DOMContentLoaded', () => {
-    const btn = document.getElementById('tempThemeToggle');
-    const label = document.getElementById('tempThemeLabel');
-    if (!btn) return;
-    const updateLabel = () => {
-        const dark = document.documentElement.getAttribute('data-theme') === 'dark';
-        if (label) label.textContent = dark ? 'Tema oscuro' : 'Tema claro';
-    };
-    btn.addEventListener('click', () => {
-        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        if (window.ThemeSystem && ThemeSystem.setMode) {
-            ThemeSystem.setMode(isDark ? 'light' : 'dark');
-        } else {
-            document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
-        }
-        setTimeout(updateLabel, 30);
-    });
-    updateLabel();
-});

@@ -203,6 +203,19 @@ table tbody tr:hover,
   box-shadow: var(--ds-shadow-lg);
   overflow: hidden;
 }
+/* El modal de detalle de venta es un TICKET: esquinas superiores
+   redondeadas pero las INFERIORES en punta/rectas (0) para que la
+   decoración de dientes de recibo haga el efecto completo.
+   También fija un ancho estable desde la apertura (evita el salto al
+   pasar de skeleton a contenido con width:fit-content). */
+.sale-detail-dialog {
+  width: min(92vw, 520px);
+}
+.sale-detail-dialog .modal-content {
+  border-radius: var(--ds-radius-lg) var(--ds-radius-lg) 0 0 !important;
+  overflow: visible;
+  width: min(92vw, 520px);
+}
 .drawer, .drawer-content {
   border-radius: var(--ds-radius-lg) 0 0 var(--ds-radius-lg);
 }

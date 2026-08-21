@@ -118,14 +118,22 @@ async function initSidebar() {
 
     // Bottom group: pushed to the bottom on desktop
     // (El selector de tema se movió a Configuración → Interfaz en profile.html;
-    //  aquí solo queda el logout)
+    //  aquí queda el toggle rápido de tema + logout)
     const bottomGroupHTML = `
         <div class="nav-bottom-group">
+            <a href="#" class="nav-item" id="tempThemeToggle" aria-label="Alternar tema">
+                <span class="nav-icon"><i class="fas ${isDarkChecked() ? 'fa-moon' : 'fa-sun'}"></i></span>
+                <span class="nav-text" id="tempThemeLabel">Tema ${isDarkChecked() ? 'oscuro' : 'claro'}</span>
+            </a>
             <a href="#" class="nav-item" id="logoutBtn">
                 <span><i class="fas fa-sign-out-alt"></i></span> <span class="nav-text">Cerrar Sesión</span>
             </a>
         </div>
     `;
+
+    function isDarkChecked() {
+        return document.documentElement.getAttribute('data-theme') === 'dark';
+    }
 
     sidebarNav.innerHTML = menuHTML + profileHTML + bottomGroupHTML;
 
@@ -231,6 +239,32 @@ async function initSidebar() {
 
     const logoutTooltipBtn = document.getElementById('logoutTooltipBtn');
     if (logoutTooltipBtn) logoutTooltipBtn.addEventListener('click', handleLogout);
+
+    // Botón temporal de tema (claro/oscuro) — usa ThemeSystem si existe
+    const tempThemeBtn = document.getElementById('tempThemeToggle');
+    const tempThemeLbl = document.getElementById('tempThemeLabel');
+    const syncThemeBtn = () => {
+        const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+        if (tempThemeBtn) {
+            const icon = tempThemeBtn.querySelector('.nav-icon i');
+            if (icon) icon.className = `fas ${dark ? 'fa-moon' : 'fa-sun'}`;
+        }
+        if (tempThemeLbl) tempThemeLbl.textContent = `Tema ${dark ? 'oscuro' : 'claro'}`;
+    };
+    if (tempThemeBtn) {
+        tempThemeBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            if (window.ThemeSystem && ThemeSystem.setMode) {
+                ThemeSystem.setMode(isDark ? 'light' : 'dark');
+            } else {
+                document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
+            }
+            setTimeout(syncThemeBtn, 40);
+        });
+    }
+    document.addEventListener('tomodachi:themechange', syncThemeBtn);
+    syncThemeBtn();
 
     // Profile Menu Toggle Logic (Consolidated from app.js)
     // If app.js handles this, we might have duplicate listeners if we add it here too.

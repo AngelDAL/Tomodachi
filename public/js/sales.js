@@ -1888,72 +1888,103 @@ function renderGallery(list, animate = false) {
     return;
   }
 
-  // Renderizar items con estructura optimizada
-  productGallery.innerHTML = list.map(p => {
-    const imagePath = getRelativeImagePath(p.image_path);
-    const promoPrice = calculatePromoPrice(p);
-    const hasPromo = promoPrice !== null && promoPrice < parseFloat(p.price);
-    
-    let priceHtml = '';
-    if (hasPromo) {
-         priceHtml = `
-            <span class="original-price" style="text-decoration: line-through; font-size: 0.8em; color: var(--text-muted);">${formatCurrency(p.price)}</span>
-            <span class="promo-price" style="color: var(--danger-color); font-weight: bold;">${formatCurrency(promoPrice)}</span>
-         `;
-    } else {
-         priceHtml = `<span class="current-price">${formatCurrency(p.price)}</span>`;
-    }
+  // Renderizar items agrupados por catálogo
+    const buildProductCard = (p) => {
+      const imagePath = getRelativeImagePath(p.image_path);
+      const promoPrice = calculatePromoPrice(p);
+      const hasPromo = promoPrice !== null && promoPrice < parseFloat(p.price);
+      let priceHtml = '';
+      if (hasPromo) {
+           priceHtml = `
+              <span class="original-price" style="text-decoration: line-through; font-size: 0.8em; color: var(--text-muted);">${formatCurrency(p.price)}</span>
+              <span class="promo-price" style="color: var(--danger-color); font-weight: bold;">${formatCurrency(promoPrice)}</span>
+           `;
+      } else {
+           priceHtml = `<span class="current-price">${formatCurrency(p.price)}</span>`;
+      }
+      const stockBadge = (p.stock_quantity !== undefined && p.stock_quantity !== null && p.stock_quantity !== '')
+            ? `<div class="stock-badge ${p.stock_quantity < 5 ? 'low' : ''}">${window.FormatUtils ? window.FormatUtils.qty(p.stock_quantity) : p.stock_quantity}</div>`
+            : '';
+      return `
+              <div class="gallery-item"
+                   data-id="${p.product_id}"
+                   data-price="${p.price}"
+                   data-stock="${p.stock_quantity !== undefined ? p.stock_quantity : ''}"
+                   data-image="${p.image_path || ''}"
+                   data-is_bulk="${p.is_bulk || 0}"
+                   data-bulk_unit="${p.bulk_unit || 'kg'}"
+                   data-category="${p.category_id || ''}"
+                   title="${escapeHtml(p.product_name)}">
+                <div class="img-wrap">
+                  ${imagePath
+                    ? `<img src="${imagePath}" loading="lazy" alt="${escapeHtml(p.product_name)}" onerror="this.parentNode.innerHTML='<i class=\\'fas fa-box\\'></i>'">`
+                    : '<i class="fas fa-box" style="color:var(--text-light); font-size:1.5rem;"></i>'}
+                  ${stockBadge}
+                </div>
+                <div class="item-details">
+                  <h4 class="g-name" title="${escapeHtml(p.product_name)}">${escapeHtml(p.product_name)}</h4>
+                  <div class="g-price">${priceHtml}</div>
+                </div>
+              </div>
+            `;
+          };
 
-    const stockBadge = (p.stock_quantity !== undefined && p.stock_quantity !== null && p.stock_quantity !== '') 
-          ? `<div class="stock-badge ${p.stock_quantity < 5 ? 'low' : ''}">${window.FormatUtils ? window.FormatUtils.qty(p.stock_quantity) : p.stock_quantity}</div>` 
-          : '';
+    // Mapa category_id -> category_name para titular de catálogo
+    const catNameMap = {};
+    (allCategories || []).forEach(cat => { catNameMap[cat.category_id] = cat.category_name || cat.name || 'Sin categoría'; });
 
-    return `
-      <div class="gallery-item" 
-           data-id="${p.product_id}" 
-           data-price="${p.price}" 
-           data-stock="${p.stock_quantity !== undefined ? p.stock_quantity : ''}" 
-           data-image="${p.image_path || ''}" 
-           data-is_bulk="${p.is_bulk || 0}" 
-           data-bulk_unit="${p.bulk_unit || 'kg'}" 
-           data-category="${p.category_id || ''}"
-           title="${escapeHtml(p.product_name)}">
-             
-        <div class="img-wrap">
-            ${imagePath ? `<img src="${imagePath}" loading="lazy" alt="${escapeHtml(p.product_name)}" onerror="this.parentNode.innerHTML='<i class=\\'fas fa-box\\'></i>'">` : '<i class="fas fa-box" style="color:var(--text-light); font-size:1.5rem;"></i>'}
-            ${stockBadge}
-        </div>
-        
-        <div class="item-details">
-            <h4 class="g-name" title="${escapeHtml(p.product_name)}">${escapeHtml(p.product_name)}</h4>
-            <div class="g-price">${priceHtml}</div>
-        </div>
-      </div>
-    `;
-  }).join('');
+    // Agrupar por catálogo (los productos sin categoría van a 'Sin categoría')
+    const groups = {};
+    list.forEach(p => {
+      const cid = p.category_id != null ? String(p.category_id) : '';
+      const key = catNameMap[cid] ? cid : '';
+      if (!groups[key]) groups[key] = { name: catNameMap[key] || 'Sin categoría', items: [] };
+      groups[key].items.push(p);
+    });
 
-  // Re-attach events
-  Array.from(productGallery.querySelectorAll('.gallery-item')).forEach(el => {
-      el.addEventListener('click', () => {
-        // Feedback visual
-        const imgWrap = el.querySelector('.img-wrap');
-        if(imgWrap) {
-            imgWrap.style.transform = 'scale(0.95)';
-            setTimeout(() => imgWrap.style.transform = '', 150);
-        }
+    // Solo mostrar catálogos con elementos; con un solo grupo se omite el titular
+    const showHeaders = Object.keys(groups).length > 1;
+    let html = '';
+    Object.keys(groups).forEach(cid => {
+      const g = groups[cid];
+      if (!g.items.length) return; // ocultar catálogos vacíos
+      html += `<div class="catalog-group" data-catalog="${escapeHtml(cid)}">`;
+      if (showHeaders) {
+        html += `
+          <div class="catalog-heading">
+            <span class="catalog-title">${escapeHtml(g.name)}</span>
+            <span class="catalog-count">${g.items.length}</span>
+          </div>
+          <div class="catalog-separator" aria-hidden="true"><span></span></div>`;
+      }
+      html += `<div class="catalog-items">${g.items.map(buildProductCard).join('')}</div></div>`;
+    });
 
-        addProductToCart({
-          product_id: parseInt(el.getAttribute('data-id')),
-          product_name: el.querySelector('h4').textContent,
-          unit_price: parseFloat(el.getAttribute('data-price')),
-          image_path: el.getAttribute('data-image'),
-          stock_quantity: el.getAttribute('data-stock'),
-          is_bulk: parseInt(el.getAttribute('data-is_bulk')) || 0,
-          bulk_unit: el.getAttribute('data-bulk_unit') || 'kg',
-          category_id: el.getAttribute('data-category') || undefined
+    productGallery.innerHTML = html || '<div class="empty-state" style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);"><i class="fas fa-search" style="font-size: 2rem; margin-bottom: 10px;"></i><p>No se encontraron productos</p></div>';
+
+    // Re-attach events
+    Array.from(productGallery.querySelectorAll('.gallery-item')).forEach(el => {
+        el.addEventListener('click', () => {
+          // Feedback visual
+          const imgWrap = el.querySelector('.img-wrap');
+          if(imgWrap) {
+              imgWrap.style.transform = 'scale(0.95)';
+              setTimeout(() => imgWrap.style.transform = '', 150);
+          }
+          const itemDetails = el.querySelector('.item-details');
+          const nameEl = itemDetails ? itemDetails.querySelector('.g-name') : el.querySelector('.g-name');
+          addProductToCart({
+            product_id: parseInt(el.getAttribute('data-id')),
+            product_name: nameEl ? nameEl.textContent : el.getAttribute('title') || 'Producto',
+            unit_price: parseFloat(el.getAttribute('data-price')),
+            image_path: el.getAttribute('data-image'),
+            stock_quantity: el.getAttribute('data-stock'),
+            is_bulk: parseInt(el.getAttribute('data-is_bulk')) || 0,
+            bulk_unit: el.getAttribute('data-bulk_unit') || 'kg',
+            category_id: el.getAttribute('data-category') || undefined
+          });
         });
-      });
-  });
+    });
 
   addIndicatorsToItems();
 
@@ -1989,9 +2020,9 @@ function renderGallery(list, animate = false) {
         if (inner2) {
           const dist = inner2.scrollWidth - nameEl.clientWidth + 20;
           // Recorrido y regreso son 100% CSS (transition): solo inyectamos la
-          // distancia y la duración del viaje. Al quitar el hover, CSS regresa.
+          // distancia y la duración del viaje (RÁPIDO). Al quitar el hover, CSS regresa.
           nameEl.style.setProperty('--ds-mq-dist', `-${Math.max(dist, 20)}px`);
-          nameEl.style.setProperty('--ds-mq-dur', Math.max(2200, Math.round(dist * 14)));
+          nameEl.style.setProperty('--ds-mq-dur', Math.max(1400, Math.round(dist * 9)));
         }
       } else {
         // nombre corto: tooltip igualmente para el completo (por si trunca)

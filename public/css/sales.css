@@ -660,11 +660,65 @@
 
 /* Estandarización de Cards de Producto */
 .gallery-main {
+    display: block;
+    padding: 4px 12px 12px;
+    /* max-height removed to allow full scroll area */
+}
+
+/* Agrupación por catálogo */
+.catalog-group {
+    margin-bottom: 18px;
+}
+.catalog-heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 2px 4px;
+}
+.catalog-title {
+    font-family: var(--font-heading, inherit);
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: var(--text-color);
+    letter-spacing: .02em;
+}
+.catalog-count {
+    font-size: .72rem;
+    font-weight: 700;
+    color: var(--secondary-color);
+    background: color-mix(in srgb, var(--secondary-color) 14%, transparent);
+    border: 1px solid color-mix(in srgb, var(--secondary-color) 30%, transparent);
+    padding: 1px 9px;
+    border-radius: 100px;
+}
+/* Separador de puntos redondos, color secundario y opacidad baja */
+.catalog-separator {
+    position: relative;
+    height: 12px;
+    margin: 6px 2px 14px;
+}
+.catalog-separator span {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 6px;
+    transform: translateY(-50%);
+    background-image: radial-gradient(
+        circle,
+        color-mix(in srgb, var(--secondary-color) 45%, transparent) 0 2.2px,
+        transparent 2.6px
+    );
+    background-size: 16px 6px;
+    background-repeat: repeat-x;
+    background-position: center;
+    border-radius: 100px;
+}
+.catalog-items {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
     gap: 12px;
-    padding: 12px;
-    /* max-height removed to allow full scroll area */
+    padding: 6px 0 0;
 }
 
 .gallery-item {
@@ -780,29 +834,29 @@
     line-height: 1.3;
     text-shadow: 0 1px 2px rgba(0,0,0,0.25);
     white-space: nowrap;
-    overflow: hidden;
-    margin: 0 0 auto;
-    box-sizing: border-box;
-    text-align: left;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.15);
-}
-/* El TEXTO interno es quien se mueve; recorrido y regreso se hacen con
-   transition (CSS): al hacer hover el texto viaja ya la última parte,
-   al quitar el hover regresa con un desplazamiento suave (sin saltos).
-   La distancia (--ds-mq-dist) se inyecta desde el JS. */
-.g-name .g-name-inner {
-    display: inline-block;
-    white-space: nowrap;
-    will-change: transform;
-    transform: translateX(0);
-    transition: transform 0.55s cubic-bezier(.4,0,.2,1); /* regreso suave */
-}
-.g-name.is-marquee { overflow: hidden; text-overflow: clip; width: 100%; cursor: help; }
-.g-name.is-marquee:hover .g-name-inner {
-    transform: translateX(var(--ds-mq-dist, -40px));
-    /* viaje hacia el final: lento y lineal para poder leerlo */
-    transition: transform calc(var(--ds-mq-dur, 3400) * 1ms) linear;
-}
+        overflow: hidden;
+        margin: 0 0 auto;
+        box-sizing: border-box;
+        text-align: center;   /* centrar si el texto cabe */
+        box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+    }
+    /* Si el nombre no cabe (marquee), alineado a la izquierda y hace el recorrido. */
+    .g-name.is-marquee { text-align: left; }
+    /* El TEXTO interno es quien se mueve; recorrido y regreso se hacen con
+       transition (CSS). Reciento/vuelta RÁPIDOS para no perder tiempo. */
+    .g-name .g-name-inner {
+        display: inline-block;
+        white-space: nowrap;
+        will-change: transform;
+        transform: translateX(0);
+        transition: transform 0.35s cubic-bezier(.4,0,.2,1); /* regreso suave y ágil */
+    }
+    .g-name.is-marquee { overflow: hidden; text-overflow: clip; width: 100%; cursor: help; }
+    .g-name.is-marquee:hover .g-name-inner {
+        transform: translateX(var(--ds-mq-dist, -40px));
+        /* viaje hacia el final: rápido y lineal para leerlo sin eternizarse */
+        transition: transform calc(var(--ds-mq-dur, 2200) * 1ms) linear;
+    }
 
 /* Tooltip con el nombre completo (hover en desktop, tap-hold en táctil) */
 .g-name[data-full] { cursor: help; }

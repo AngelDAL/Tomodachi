@@ -488,9 +488,7 @@
 /* Resultados de búsqueda */
 /* Resultados de búsqueda - Estilo Galería */
 .search-results {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-    gap: 10px;
+    display: block; /* el grid real va en .catalog-items (según vista activa) */
     padding: 8px;
     overflow: scroll;
 }

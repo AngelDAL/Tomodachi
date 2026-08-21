@@ -787,7 +787,6 @@ function _addToCartInternal(prod) {
   }
   playSound('Sound2.mp3');
   renderCart();
-  showNotification('Producto añadido', 'success');
 }
 
 
@@ -2393,7 +2392,6 @@ async function fetchByCode(code) {
         bulk_unit: p.bulk_unit || 'kg'
       });
       showScannedProductOverlay(p);
-      showNotification('Producto añadido', 'success');
     } else {
       showNotification('Código no encontrado', 'error');
     }
@@ -4111,11 +4109,6 @@ function linkPosCustomer(id, name, phone, email, balance, creditLimit, totalPurc
 }
 
 function unlinkPosCustomer(opts = {}) {
-  // Recordar si había un cliente vinculado y su nombre ANTES de limpiar.
-  const hadCustomer = !!linkedCustomer;
-  const custName = linkedCustomer ? (linkedCustomer.full_name || '') : '';
-  // Si se especificó un mensaje de éxito (p. ej. compra registrada), usarlo;
-  // si no, por defecto advertir solo si había cliente.
   linkedCustomer = null;
   renderLinkedCustomer();
   const custSel = document.getElementById('customerSelect');
@@ -4123,12 +4116,7 @@ function unlinkPosCustomer(opts = {}) {
   // Si el método era apartado y se desvincula, volver a efectivo
   const paySel = document.getElementById('paymentMethod');
   if (paySel && paySel.value === 'credit') paySel.value = 'cash';
-  // Notificación: solo si había un cliente vinculado (no molestar si nunca
-  // se vinculó), y con mensaje customizado amigable ("compra registrada").
-  if (hadCustomer) {
-    const msg = opts.successMsg || `Compra de "${custName}" registrada correctamente`;
-    showNotification(msg, opts.type || 'success');
-  }
+  // Sin notificación: se ve claramente en el chip del cliente si se quita.
 }
 
 function renderLinkedCustomer() {
@@ -4224,7 +4212,7 @@ function buildPosCustomerPanelHTML() {
     </div>
 
     <div class="pos-cd-actions">
-      <button class="btn btn-danger" onclick="unlinkPosCustomer({ successMsg:'Cliente removido de la venta', type:'info' }); closePosCustomerDrawer();" style="padding:9px 14px; border-radius:8px; border:none; cursor:pointer;">
+      <button class="btn btn-danger" onclick="unlinkPosCustomer(); closePosCustomerDrawer();" style="padding:9px 14px; border-radius:8px; border:none; cursor:pointer;">
         <i class="fas fa-times"></i> Cancelar selección de este cliente
       </button>
     </div>
@@ -4373,7 +4361,7 @@ function bindPosCustomerEvents() {
       if (si) si.focus();
     }
   });
-  if (unlinkBtn) unlinkBtn.addEventListener('click', (e) => { e.stopPropagation(); unlinkPosCustomer({ successMsg:'Cliente removido de la venta', type:'info' }); });
+  if (unlinkBtn) unlinkBtn.addEventListener('click', (e) => { e.stopPropagation(); unlinkPosCustomer(); });
 
   // Modal crear cliente rápido
   const saveBtn = document.getElementById('posQuickCustomerSave');

@@ -1534,6 +1534,21 @@ function recalcTotals() {
   const promoDiscount = (typeof CURRENT_BILL_DISCOUNT !== 'undefined') ? CURRENT_BILL_DISCOUNT : 0;
   const tax = (taxInput && taxInput.value) ? parseFloat(taxInput.value) : 0;
   const total = Math.max(0, subtotal - discount - promoDiscount + tax);
+  // Salto (bump) del total cuando aumenta — animación de ligero rebote
+  const prevTotal = window.__lastCartTotal ?? 0;
+  if (total > prevTotal && typeof anime !== 'undefined') {
+    [totalBadge, panelTotalEl].forEach(el => {
+      if (el) {
+        anime({ targets: el, scale: [1, 1.16, 1], duration: 380, easing: 'easeOutQuad' });
+      }
+    });
+  } else if (total < prevTotal && typeof anime !== 'undefined') {
+    [totalBadge, panelTotalEl].forEach(el => {
+      if (el) { el.style.transition = 'opacity .2s'; el.style.opacity = '0.5';
+        setTimeout(() => { if(el) el.style.opacity = ''; }, 120); }
+    });
+  }
+  window.__lastCartTotal = total;
   if (totalBadge) {
     totalBadge.textContent = formatCurrency(total);
   }
@@ -1941,6 +1956,22 @@ function renderGallery(list, animate = false) {
   });
 
   addIndicatorsToItems();
+
+  // Animación de aparición del grid (anime.js) — estilo catálogo chill.
+  // Se dispara la primera vez que se renderiza (o con animate=true).
+  if (typeof window.__renderGalleryHasAnimated === 'undefined') window.__renderGalleryHasAnimated = false;
+  if ((animate || window.__renderGalleryHasAnimated === false) && typeof anime !== 'undefined') {
+    window.__renderGalleryHasAnimated = true;
+    const items = productGallery.querySelectorAll('.gallery-item');
+    anime({
+      targets: items,
+      translateY: [18, 0],
+      opacity: [0, 1],
+      duration: 520,
+      delay: anime.stagger(45),
+      easing: 'easeOutCubic'
+    });
+  }
 }
 
 

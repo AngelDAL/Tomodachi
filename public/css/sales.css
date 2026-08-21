@@ -669,7 +669,7 @@
 
 .gallery-item {
     background: var(--bg-card);
-    border: 1px solid var(--border-light);
+    border: 1.5px solid var(--border-light);
     border-radius: 12px;
     padding: 0;
     cursor: pointer;
@@ -677,8 +677,9 @@
     flex-direction: column;
     justify-content: flex-end;
     align-items: stretch;
-    /* Altura fija para uniformidad */
-    height: 190px;
+    /* Forma CUADRADA + ligero margen y borde visible */
+    aspect-ratio: 1 / 1;
+    height: auto;
     overflow: hidden;
     transition: all 0.2s;
     position: relative;
@@ -743,7 +744,7 @@
     min-width: 0; /* Permite que el texto se trunque correctamente */
 }
 
-/* Fondo translúcido con difuminado hacia la imagen */
+/* Fondo translúcido con difuminado hacia la imagen — GRADIENTE MÁS PRONUNCIADO */
 .gallery-item .item-details::before {
     content: '';
     position: absolute;
@@ -753,9 +754,9 @@
     bottom: 0;
     background: linear-gradient(
         to bottom,
-        var(--overlay-fade) 0%,
-        var(--overlay-fade-mid) 30%,
-        var(--overlay-fade-mid) 100%
+        var(--overlay-fade, rgba(0,0,0,0)) 0%,
+        var(--overlay-fade-mid, rgba(0,0,0,0.35)) 50%,
+        rgba(0, 0, 0, 0.62) 100%
     );
     z-index: -1;
     pointer-events: none;
@@ -767,7 +768,8 @@
     color: var(--text-color);
     font-weight: 600;
     line-height: 1.2;
-    /* Truncar texto en una línea con ellipsis */
+    /* Sombra de fuente para legibilidad sobre la imagen */
+    text-shadow: 0 1px 2px rgba(0,0,0,0.35);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -782,6 +784,8 @@
     font-weight: 700;
     text-align: left;
     line-height: 1.2;
+    /* Sombra de fuente para legibilidad sobre la imagen */
+    text-shadow: 0 1px 3px rgba(0,0,0,0.45);
 }
 
 .g-price .original-price {

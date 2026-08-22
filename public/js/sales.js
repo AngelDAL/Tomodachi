@@ -499,7 +499,8 @@ function bindEvents() {
                     totals: calculateTotalsForDisplay(),
                     storeInfo: {
                         name: localStorage.getItem('tomodachi_store_name') || document.querySelector('.sidebar-header h2')?.textContent || 'Tomodachi',
-                        logo: ''
+                        logo: '',
+                        ...getThemeInfoForCustomerDisplay()
                     },
                     activeTab: parseInt(CURRENT_TAB),
                     session: displaySessionUUID || undefined
@@ -3579,6 +3580,21 @@ function calculateTotalsForDisplay() {
   };
 }
 
+// Theme activo para la pantalla de cliente (incluido en Broadcast/localStorage/polling).
+function getThemeInfoForCustomerDisplay() {
+  let themeConfig = window.__activeThemeConfig || null;
+  let themeConfigDark = window.__activeThemeConfigDark || null;
+  try {
+    if (!themeConfig) themeConfig = JSON.parse(localStorage.getItem('pos_theme_config') || 'null');
+    if (!themeConfigDark) themeConfigDark = JSON.parse(localStorage.getItem('pos_theme_config_dark') || 'null');
+  } catch (_) {}
+  return {
+    theme_config: themeConfig || {},
+    theme_config_dark: themeConfigDark || null,
+    theme_mode: window.ThemeSystem ? window.ThemeSystem.getMode() : (themeConfig?.theme_mode || 'light')
+  };
+}
+
 // Enviar datos del carrito a la pantalla de cliente
 function sendCartToCustomerDisplay() {
   const allItems = getCombinedCartForDisplay();
@@ -3589,7 +3605,7 @@ function sendCartToCustomerDisplay() {
     type: 'cart_update',
     cart: allItems,
     totals: totals,
-    storeInfo: { name: storeName, logo: '' },
+    storeInfo: { name: storeName, logo: '', ...getThemeInfoForCustomerDisplay() },
     activeTab: parseInt(CURRENT_TAB),
     timestamp: Date.now()
   };

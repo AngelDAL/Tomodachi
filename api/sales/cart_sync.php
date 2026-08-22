@@ -132,6 +132,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     }
 
     $data = json_decode(file_get_contents($file), true);
+    // El display puede abrirse en otra tablet y no comparte localStorage con
+    // el POS. Enriquecer con tema real de la tienda, sin exponer store_id.
+    $syncStoreId = isset($data['store_id']) ? (int)$data['store_id'] : 0;
+    if ($syncStoreId > 0) {
+        $stmtStore = $db->getConnection()->prepare('SELECT store_name, logo_url, theme_config, theme_config_dark FROM stores WHERE store_id = ? LIMIT 1');
+        $stmtStore->execute([$syncStoreId]);
+        $store = $stmtStore->fetch(PDO::FETCH_ASSOC);
+        if ($store) {
+            $storeInfo = is_array($data['storeInfo'] ?? null) ? $data['storeInfo'] : [];
+            if (empty($storeInfo['name'])) $storeInfo['name'] = $store['store_name'];
+            if (empty($storeInfo['logo']) && !empty($store['logo_url'])) $storeInfo['logo'] = $store['logo_url'];
+            $storeInfo['theme_config'] = $store['theme_config'] ? json_decode($store['theme_config'], true) : [];
+            $storeInfo['theme_config_dark'] = $store['theme_config_dark'] ? json_decode($store['theme_config_dark'], true) : null;
+            $data['storeInfo'] = $storeInfo;
+        }
+    }
     // Strip store_id from response for security
     unset($data['store_id']);
 

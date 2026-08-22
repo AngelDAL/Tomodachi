@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Genso Cafe">
+  <defs>
+    <linearGradient id="coffee" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8a5a3b"/>
+      <stop offset="1" stop-color="#3b2418"/>
+    </linearGradient>
+    <linearGradient id="foam" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f7e6c9"/>
+      <stop offset="1" stop-color="#d9a96b"/>
+    </linearGradient>
+  </defs>
+  <circle cx="128" cy="128" r="120" fill="url(#coffee)"/>
+  <circle cx="128" cy="128" r="108" fill="none" stroke="#e2b86c" stroke-width="4" opacity=".75"/>
+  <path d="M84 105h78v48c0 26-18 43-39 43s-39-17-39-43v-48z" fill="url(#foam)"/>
+  <path d="M163 119h14c17 0 27 10 27 25s-10 25-27 25h-18" fill="none" stroke="#e2b86c" stroke-width="12" stroke-linecap="round"/>
+  <path d="M105 127c11-12 35-12 46 0-9 12-33 12-46 0z" fill="none" stroke="#6f4e37" stroke-width="5" stroke-linecap="round"/>
+  <path d="M115 71c-10-12 8-22 0-34M136 71c-10-12 8-22 0-34M156 77c-8-10 7-18 0-28" fill="none" stroke="#f7e6c9" stroke-width="6" stroke-linecap="round"/>
+  <text x="128" y="224" text-anchor="middle" font-family="Georgia,serif" font-size="22" font-weight="700" fill="#f7e6c9" letter-spacing="2">GENSO</text>
+</svg>

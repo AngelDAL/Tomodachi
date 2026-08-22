@@ -953,7 +953,10 @@
         let lastJson = '';
 
         function startPolling() {
-            if (!SESSION_UUID) return;
+            if (!SESSION_UUID) {
+                setConnStatus('ready');
+                return;
+            }
             setConnStatus('connecting');
             pollOnce();
             pollTimer = setInterval(pollOnce, 2000);
@@ -997,6 +1000,7 @@
                 broadcastChannel.onmessage = (event) => {
                     if (event.data.type === 'cart_update') {
                         updateDisplay(event.data.cart, event.data.totals, event.data.storeInfo, event.data.activeTab);
+                        setConnStatus('connected');
                     }
                 };
                 setTimeout(() => {
@@ -1013,6 +1017,7 @@
                     try {
                         const data = JSON.parse(e.newValue || '{}');
                         updateDisplay(data.cart, data.totals, data.storeInfo, data.activeTab);
+                        setConnStatus('connected');
                     } catch (_) {}
                 }
             });
@@ -1021,6 +1026,7 @@
                 if (stored) {
                     const data = JSON.parse(stored);
                     updateDisplay(data.cart, data.totals, data.storeInfo, data.activeTab);
+                        setConnStatus('connected');
                 }
             } catch (_) {}
         }
@@ -1035,6 +1041,9 @@
                 connStatus.className = 'conn-status connected';
             } else if (status === 'connecting') {
                 connStatus.textContent = 'Conectando...';
+                connStatus.className = 'conn-status';
+            } else if (status === 'ready') {
+                connStatus.textContent = 'Listo para conectar';
                 connStatus.className = 'conn-status';
             } else {
                 connStatus.textContent = 'Desconectado';

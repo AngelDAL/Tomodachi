@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grupos de Pantallas - Tomodachi</title>
+<link rel="stylesheet" href="css/fonts.css"><link rel="stylesheet" href="lib/fontawesome/css/all.min.css"><link rel="stylesheet" href="css/main.css"><script src="js/theme-init.js"></script>
+<style>
+.page{max-width:1080px;margin:auto;padding:1.5rem}
+.head{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem}
+.head h1{font-size:1.25rem;margin:0;display:flex;align-items:center;gap:.6rem}
+.btn{border:0;border-radius:8px;padding:.55rem .9rem;font:inherit;font-size:.85rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:.45rem}
+.btn-primary{background:var(--primary-color);color:#fff}
+.btn-secondary{background:var(--bg-secondary,#eef2f7);color:var(--text-primary,#333);border:1px solid var(--border-color,#d5dfe8)}
+.btn-danger{background:#fee2e2;color:#b91c1c}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem}
+.gcard{background:var(--card-bg,#fff);border:1px solid var(--border-color,#e2e8f0);border-radius:12px;padding:1rem;cursor:pointer;transition:box-shadow .15s;display:flex;flex-direction:column;gap:.5rem}
+.gcard:hover{box-shadow:0 8px 20px rgba(0,0,0,.1)}
+.gcard .gname{font-weight:700;font-size:.95rem;display:flex;align-items:center;gap:.5rem}
+.gcard .gmeta{font-size:.75rem;color:var(--text-muted,#64748b)}
+.gcard .gacts{display:flex;gap:.4rem;margin-top:.3rem}
+.gcard .gacts button{flex:1}
+.badge{font-size:.68rem;padding:.15rem .5rem;border-radius:20px;font-weight:700}
+.badge.on{background:#dcfce7;color:#166534}.badge.off{background:#fee2e2;color:#991b1b}
+.empty{padding:3rem;text-align:center;color:var(--text-muted,#64748b);border:2px dashed var(--border-color,#d5dfe8);border-radius:12px;grid-column:1/-1}
+.empty i{font-size:2.2rem;opacity:.35;margin-bottom:.6rem;display:block}
+.toast{position:fixed;bottom:1.5rem;right:1.5rem;background:#1e293b;color:#fff;padding:.85rem 1.25rem;border-radius:8px;z-index:100;transform:translateY(100px);opacity:0;transition:all .3s}.toast.show{transform:none;opacity:1}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:200;padding:1rem}
+.modal-box{background:var(--card-bg,#fff);border-radius:12px;padding:1.25rem;width:100%;max-width:380px;color:var(--text-primary,#333)}
+.modal-box h3{margin:0 0 1rem}
+.modal-box input{width:100%;padding:.6rem;border:1px solid var(--border-color,#d5dfe8);border-radius:8px;font:inherit;margin-bottom:.8rem}
+.modal-box .modal-actions{display:flex;gap:.5rem;justify-content:flex-end}
+</style>
+    <link rel="stylesheet" href="css/design-system.css?v=6">
+    <script src="lib/animejs/anime.min.js" defer></script>
+    <script src="js/design-system.js?v=6" defer></script>
+</head>
+<body>
+<div class="page">
+  <div class="head">
+    <h1><i class="fas fa-tv"></i> Grupos de Pantallas</h1>
+    <button class="btn btn-primary" id="btnNew"><i class="fas fa-plus"></i> Nuevo grupo</button>
+  </div>
+  <div class="grid" id="groupsGrid"><div class="empty">Cargando...</div></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<!-- Modal nuevo grupo -->
+<div class="modal-overlay" id="newModal">
+  <div class="modal-box">
+    <h3>Nuevo grupo de pantallas</h3>
+    <input type="text" id="newName" placeholder="Nombre del grupo (ej. Menú principal)">
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="newCancel">Cancelar</button>
+      <button class="btn btn-primary" id="newOk">Crear</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API='../api'; let tt;
+const $=x=>document.getElementById(x);
+function toast(m,t=''){const e=$('toast');e.textContent=m;e.className='toast '+t+' show';clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('show'),2500)}
+async function call(u,o={}){const r=await fetch(`${API}/${u}`,{credentials:'include',...o});return r.json().catch(()=>({success:false,message:'inválido'}))}
+function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML}
+
+async function load(){
+  const r=await call('display_groups/read.php');
+  if(!r.success){$('groupsGrid').innerHTML='<div class="empty">Error al cargar grupos</div>';return}
+  const gs=r.data||[];
+  $('groupsGrid').innerHTML=gs.length?gs.map(g=>`
+    <article class="gcard" onclick="openEditor(${g.group_id})">
+      <div class="gname"><i class="fas fa-tv" style="color:var(--primary-color)"></i> ${esc(g.name)}
+        <span class="badge ${g.is_active==1?'on':'off'}" style="margin-left:auto">${g.is_active==1?'ACTIVO':'INACTIVO'}</span></div>
+      <div class="gmeta"><i class="fas fa-columns"></i> ${g.screen_count} pantallas · ${g.step_count} pasadas</div>
+      <div class="gacts" onclick="event.stopPropagation()">
+        <button class="btn btn-secondary" onclick="dupe(${g.group_id})" title="Guardar como plantilla / variante"><i class="fas fa-copy"></i></button>
+        <button class="btn btn-secondary" onclick="toggleAct(${g.group_id},${g.is_active==1?0:1})" title="Activar/Desactivar"><i class="fas ${g.is_active==1?'fa-pause':'fa-play'}"></i></button>
+        <button class="btn btn-danger" onclick="del(${g.group_id})" title="Eliminar"><i class="fas fa-trash"></i></button>
+      </div>
+    </article>`).join(''):'<div class="empty"><i class="fas fa-tv"></i>No hay grupos todavía.<br>Crea uno para componer varias pantallas sincronizadas.</div>'
+}
+
+function openEditor(id){location.href=`digital-group-editor.html?group=${id}`}
+async function dupe(id){
+  if(!confirm('Duplicar este grupo como plantilla (versión alternativa)?'))return;
+  const r=await call('display_groups/duplicate.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({group_id:id})});
+  toast(r.success?'Grupo duplicado como plantilla':(r.message||'Error'),r.success?'':'error');
+  if(r.success)load();
+}
+async function toggleAct(id,act){
+  const r=await call('display_groups/update.php',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({group_id:id,is_active:act})});
+  toast(r.success?'Actualizado':(r.message||'Error'),r.success?'':'error');
+  if(r.success)load();
+}
+async function del(id){
+  if(!confirm('Eliminar este grupo de pantallas?'))return;
+  const r=await call('display_groups/delete.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({group_id:id})});
+  toast(r.success?'Eliminado':(r.message||'Error'),r.success?'':'error');
+  if(r.success)load();
+}
+
+$('btnNew').onclick=()=>{$('newModal').style.display='flex';$('newName').value='';$('newName').focus()}
+$('newCancel').onclick=()=>{$('newModal').style.display='none'}
+$('newOk').onclick=async()=>{
+  const name=$('newName').value.trim(); if(!name){toast('Escribe un nombre','error');return}
+  const r=await call('display_groups/create.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});
+  if(r.success){$('newModal').style.display='none';toast('Grupo creado');openEditor(r.data.group_id)}
+  else toast(r.message||'Error','error');
+};
+$('newModal').onclick=e=>{if(e.target===e.currentTarget)$('newModal').style.display='none'}
+
+load();
+</script>
+</body>
+</html>

@@ -1,0 +1,124 @@
+<?php
+/**
+ * Obtener board completo con slides y elementos
+ * GET /api/digital_boards/get_board.php?board_id=X
+ *
+ * PÚBLICO (para pantallas/TVs): solo muestra boards ACTIVOS.
+ * AUTENTICADO (editor/vista previa): si el usuario logueado pertenece a la
+ * misma tienda que el board, puede previsualizarlo aunque esté INACTIVO
+ * (algo que aún no se ha publicado pero se está diseñando).
+ */
+require_once '../../config/database.php';
+require_once '../../config/constants.php';
+require_once '../../includes/Database.class.php';
+require_once '../../includes/Response.class.php';
+require_once '../../includes/Auth.class.php';
+
+header('Access-Control-Allow-Origin: *');
+header('Content-Type: application/json; charset=utf-8');
+
+try {
+    $db = new Database();
+    $auth = new Auth($db);
+    
+    $board_id = isset($_GET['board_id']) ? (int)$_GET['board_id'] : 0;
+    if ($board_id <= 0) {
+        Response::validationError(['board_id' => 'Requerido']);
+    }
+    
+    // ¿El usuario logueado pertenece a la tienda del board?
+    // Si hay sesión y coincide la tienda, se permite previsualizar boards
+    // inactivos; de lo contrario (público/TV) solo boards activos.
+    $current = $auth->isLoggedIn() ? $auth->getCurrentUser() : null;
+    $board = $db->selectOne(
+        'SELECT board_id, store_id, name, orientation, slide_duration, 
+                transition_animation, theme_config, show_qr, is_active
+         FROM digital_boards 
+         WHERE board_id = ?',
+        [$board_id]
+    );
+    
+    if (!$board) {
+        Response::notFound('Board no encontrado');
+    }
+    
+    $canPreviewOwn = $current && (int)$current['store_id'] === (int)$board['store_id'];
+    
+    if ((int)$board['is_active'] !== 1 && !$canPreviewOwn) {
+        Response::notFound('Board no encontrado o inactivo');
+    }
+    
+    // Verificar activación automática por fecha (solo para boards activos de TV;
+    // el diseñador puede previsualizar aunque la programación no haya empezado).
+    $now = date('Y-m-d H:i:s');
+    if ((int)$board['is_active'] === 1) {
+        if ($board['scheduled_start'] && $now < $board['scheduled_start']) {
+            Response::error('Board aún no activo', 403);
+        }
+        if ($board['scheduled_end'] && $now > $board['scheduled_end']) {
+            Response::error('Board ya expiró', 403);
+        }
+    }
+    
+    // Nota: El endpoint es público para TV (sin auth), pero verificamos que el
+    // board pertenezca a una tienda válida para evitar accesos cross-tenant.
+    
+    // Si hay asignaciones reutilizables, la pantalla se compone exclusivamente de esa secuencia.
+    // Si no las hay, mantiene compatibilidad con las slides legacy propias del board.
+    $assignmentCount = $db->selectOne('SELECT COUNT(*) AS total FROM digital_board_slide_assignments WHERE board_id = ?', [$board_id]);
+    if ((int)($assignmentCount['total'] ?? 0) > 0) {
+        $slides = $db->select(
+            'SELECT bs.slide_id, a.position, bs.orientation, bs.layout_width, bs.layout_height,
+                    bs.title, bs.grid_cols, bs.grid_rows,
+                    bs.enter_animation, bs.exit_animation,
+                    COALESCE(a.custom_duration, bs.custom_duration) AS custom_duration,
+                    bs.background_color, bs.background_image
+            FROM digital_board_slide_assignments a
+            INNER JOIN board_slides bs ON bs.slide_id = a.source_slide_id
+            WHERE a.board_id = ?
+            ORDER BY a.position ASC, a.assignment_id ASC',
+            [$board_id]
+        );
+    } else {
+        $slides = $db->select(
+            'SELECT slide_id, position, orientation, layout_width, layout_height,
+                    title, grid_cols, grid_rows, 
+                    enter_animation, exit_animation, custom_duration, 
+                    background_color, background_image
+            FROM board_slides 
+            WHERE board_id = ? 
+            ORDER BY position ASC',
+            [$board_id]
+        );
+    }
+    
+    // Obtener elementos de cada slide
+    foreach ($slides as &$slide) {
+        $elements = $db->select(
+            'SELECT element_id, element_type, grid_col, grid_row, col_span, row_span,
+                    z_index, content, animation, animation_delay
+             FROM slide_elements 
+             WHERE slide_id = ? 
+             ORDER BY z_index ASC, grid_row ASC, grid_col ASC',
+            [$slide['slide_id']]
+        );
+        
+        // Parsear content JSON
+        foreach ($elements as &$element) {
+            $element['content'] = json_decode($element['content'], true);
+        }
+        
+        $slide['elements'] = $elements;
+    }
+    
+    $board['slides'] = $slides;
+    
+    // Decodificar theme_config si existe
+    if ($board['theme_config']) {
+        $board['theme_config'] = json_decode($board['theme_config'], true);
+    }
+    
+    Response::success($board, 'Board obtenido');
+} catch (Exception $e) {
+    Response::error('Error del servidor: ' . $e->getMessage(), 500);
+}

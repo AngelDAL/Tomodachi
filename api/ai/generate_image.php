@@ -4,9 +4,15 @@ require_once '../../config/database.php';
 require_once '../../includes/Database.class.php';
 require_once '../../includes/Auth.class.php';
 require_once '../../includes/Response.class.php';
-require_once 'config.php';
 
 header('Content-Type: application/json');
+
+// Funciones de IA deshabilitadas en Community Edition (OPEN_SOURCE)
+// (check antes de cargar config.php para no depender de API keys en CE)
+if (APP_MODE === 'OPEN_SOURCE') {
+    Response::error('Funciones de IA no incluidas en Community Edition', 403);
+}
+require_once 'config.php';
 
 // Verificar sesión y permisos
 $db = new Database();
@@ -16,7 +22,6 @@ if (!$auth->isLoggedIn()) {
     Response::error('No autorizado', 401);
 }
 
-// Restricción: Herramientas de IA solo para Premium
 $auth->requirePremium();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {

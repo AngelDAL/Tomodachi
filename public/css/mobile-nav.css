@@ -36,7 +36,7 @@
         box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
         border-radius: 16px 16px 0 0; /* Rounded top corners */
         padding: 0 5px;
-        z-index: 9999;
+        z-index: 99999;
         overflow-x: hidden; /* Prevent horizontal scroll unless necessary */
     }
 
@@ -168,10 +168,10 @@
         opacity: 0;
         visibility: hidden;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        z-index: 10000;
+        z-index: 100000;
         
         display: block !important; /* Force display context */
-        background: #fff;
+        background: var(--bg-card);
         border-radius: 12px;
         box-shadow: 0 4px 20px rgba(0,0,0,0.15);
         padding: 5px 0;
@@ -187,7 +187,7 @@
     .tooltip-item {
         padding: 12px 20px;
         font-size: 1rem;
-        border-bottom: 1px solid #f0f0f0;
+        border-bottom: 1px solid var(--border-color);
     }
 
     .tooltip-item:last-child {

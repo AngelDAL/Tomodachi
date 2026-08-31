@@ -8,6 +8,7 @@ require_once '../../config/constants.php';
 require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
 require_once '../../includes/Auth.class.php';
+require_once '../../includes/ApiAuth.class.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 if ($method !== 'GET') { Response::error('Método no permitido', 405); }
@@ -16,14 +17,20 @@ try {
     $db = new Database();
     $auth = new Auth($db);
 
-    if (!$auth->isLoggedIn()) { Response::unauthorized(); }
+    $apiAuth = new ApiAuth($db);
+    $actor = $apiAuth->requireActor($auth);
+    $apiAuth->requireScope($actor, 'read');
 
     $register_id = isset($_GET['register_id']) ? (int)$_GET['register_id'] : 0;
     if (!$register_id) { Response::validationError(['register_id' => 'Requerido']); }
 
-    // Verificar que la caja existe
-    $register = $db->selectOne('SELECT * FROM cash_registers WHERE register_id = ?', [$register_id]);
-    if (!$register) { Response::error('Caja no encontrada', 404); }
+    // Seguridad: el usuario solo puede ver movimientos de cajas de su propia tienda
+    $currentUser = $actor;
+    $register = $db->selectOne('SELECT register_id, store_id FROM cash_registers WHERE register_id = ?', [$register_id]);
+    if (!$register) { Response::notFound('Caja no existe'); }
+    if ((int)$register['store_id'] !== (int)$currentUser['store_id']) {
+        Response::error('No autorizado para ver cajas de otra tienda', 403);
+    }
 
     // Obtener movimientos
     $sql = "SELECT 

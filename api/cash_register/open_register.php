@@ -10,6 +10,7 @@ require_once '../../includes/Response.class.php';
 
 require_once '../../includes/Validator.class.php';
 require_once '../../includes/Auth.class.php';
+require_once '../../includes/ApiAuth.class.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
@@ -19,10 +20,15 @@ try {
     $db = new Database();
     $auth = new Auth($db);
 
-    if (!$auth->isLoggedIn()) { Response::unauthorized(); }
-    if (!$auth->hasRole([ROLE_ADMIN,ROLE_MANAGER,ROLE_CASHIER])) { Response::error('Permisos insuficientes',403); }
+    $apiAuth = new ApiAuth($db);
+    $actor = $apiAuth->requireActor($auth);
+    if ($actor['via'] === 'session') {
+        if (!$auth->hasRole([ROLE_ADMIN,ROLE_MANAGER,ROLE_CASHIER])) { Response::error('Permisos insuficientes',403); }
+    } else {
+        $apiAuth->requireScope($actor, 'write');
+    }
 
-    $currentUser = $auth->getCurrentUser();
+    $currentUser = $actor;
 
     $data = json_decode(file_get_contents('php://input'), true);
     if (!$data) { Response::validationError(['body'=>'JSON inválido']); }
@@ -33,7 +39,11 @@ try {
     if ($store_id<=0) { Response::validationError(['store_id'=>'Requerido']); }
     if ($initial<0) { Response::validationError(['initial_amount'=>'No negativo']); }
 
-    // Verificar tienda
+    // Seguridad: el usuario solo puede abrir cajas en su propia tienda
+    if ($store_id !== (int)$currentUser['store_id']) {
+        Response::error('No autorizado para abrir cajas en otra tienda', 403);
+    }
+
     $store = $db->selectOne('SELECT store_id FROM stores WHERE store_id = ? AND status = ?',[$store_id,STATUS_ACTIVE]);
     if (!$store) { Response::error('Tienda inválida',404); }
 

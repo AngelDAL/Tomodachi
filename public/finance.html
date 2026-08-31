@@ -6,14 +6,16 @@
     <meta name="view-transition" content="same-origin">
     <title>Finanzas - Tomodachi</title>
     <!-- Local Fonts -->
-    <link rel="stylesheet" href="css/fonts.css">
+    <link rel="stylesheet" href="css/fonts.css?v=4">
     <!-- FontAwesome -->
-    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
-    <link rel="stylesheet" href="css/main.css">
-    <link rel="stylesheet" href="css/sidebar-modern.css">
-    <link rel="stylesheet" href="css/mobile-nav.css">
-    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css?v=4">
+    <link rel="stylesheet" href="css/main.css?v=4">
+    <link rel="stylesheet" href="css/design-system.css?v=5">
+    <link rel="stylesheet" href="css/sidebar-modern.css?v=4">
+    <link rel="stylesheet" href="css/mobile-nav.css?v=4">
+    <link rel="stylesheet" href="css/dashboard.css?v=4">
     <script src="js/theme-init.js"></script>
+    <script src="js/format-utils.js"></script>
     <style>
         .finance-container {
             padding: 20px;
@@ -33,15 +35,17 @@
             margin-top: 20px;
         }
         .terminal-card {
-            background: var(--card-bg);
-            border-radius: 10px;
+            background: var(--bg-card);
+            border-radius: var(--ds-radius-lg, 20px);
             padding: 20px;
-            box-shadow: var(--card-shadow);
-            border-left: 5px solid #ccc;
-            transition: transform 0.2s;
+            box-shadow: var(--ds-shadow-md, var(--card-shadow));
+            border: 1px solid var(--border-light);
+            border-left: 5px solid var(--border-color);
+            transition: transform .25s cubic-bezier(.4,0,.2,1), box-shadow .3s ease, border-color .25s ease;
         }
         .terminal-card:hover {
-            transform: translateY(-2px);
+            transform: translateY(-3px);
+            box-shadow: var(--ds-shadow-lg, var(--card-shadow));
         }
         .terminal-card.open {
             border-left-color: var(--success-color);
@@ -56,13 +60,26 @@
             margin-bottom: 15px;
         }
         .terminal-status {
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.8em;
-            font-weight: bold;
+            padding: 4px 12px;
+            border-radius: var(--ds-radius-pill, 100px);
+            font-size: 0.78em;
+            font-weight: 600;
+            font-family: var(--font-heading, 'Sora', sans-serif);
+            border: 1.5px solid;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
         }
-        .status-open { background: #d1e7dd; color: #0f5132; }
-        .status-closed { background: #f8d7da; color: #842029; }
+        .status-open {
+            background: color-mix(in srgb, var(--success-color) 12%, var(--bg-card));
+            color: var(--success-color);
+            border-color: color-mix(in srgb, var(--success-color) 45%, transparent);
+        }
+        .status-closed {
+            background: color-mix(in srgb, var(--danger-color) 12%, var(--bg-card));
+            color: var(--danger-color);
+            border-color: color-mix(in srgb, var(--danger-color) 45%, transparent);
+        }
         
         .terminal-info {
             margin-bottom: 15px;
@@ -97,24 +114,39 @@
             margin-bottom: 30px;
         }
         .summary-card {
-            background: var(--card-bg);
+            background: linear-gradient(135deg, var(--bg-card), color-mix(in srgb, var(--primary-color) 4%, var(--bg-card)));
             padding: 20px;
-            border-radius: 10px;
-            box-shadow: var(--card-shadow);
+            border-radius: var(--ds-radius-lg, 20px);
+            box-shadow: var(--ds-shadow-md, var(--card-shadow));
+            border: 1px solid var(--border-light);
             display: flex;
             align-items: center;
             gap: 15px;
+            transition: transform .25s cubic-bezier(.4,0,.2,1), box-shadow .3s ease;
+        }
+        .summary-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--ds-shadow-lg, var(--card-shadow));
         }
         .summary-icon {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: #e3f2fd;
+            font-size: 2.8rem;
             color: var(--primary-color);
+            opacity: 0.85;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5em;
+            flex: 0 0 auto;
+        }
+        /* Ajustes visuales: cajas de info / denominaciones */
+        .finance-container .info-box,
+        #denominationSection,
+        #movementsHistoryDrawer [style*="border-radius: 8px"] {
+            border-radius: var(--ds-radius-md, 14px) !important;
+        }
+        .denom-count:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 20%, transparent);
+            outline: none;
         }
     </style>
 </head>
@@ -129,7 +161,7 @@
             </div>
             
             <nav class="sidebar-nav">
-                <!-- Navigation Loaded by js/sidebar-loader.js -->
+                <!-- Navigation Loaded by js/sidebar-loader.js?v=5 -->
             </nav>
         </aside>
         
@@ -208,12 +240,12 @@
                         <input type="text" id="closeTerminalName" readonly class="form-control-plaintext">
                     </div>
                     
-                    <div class="info-box" style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
+                    <div class="info-box" style="background: var(--bg-light); padding: 15px; border-radius: 5px; margin-bottom: 15px;">
                         <div class="info-row"><span>Saldo Inicial:</span> <span id="closeInitial"></span></div>
                         <div class="info-row"><span>Ventas:</span> <span id="closeSales"></span></div>
                         <div class="info-row"><span>Entradas:</span> <span id="closeEntries"></span></div>
                         <div class="info-row"><span>Retiros:</span> <span id="closeWithdrawals"></span></div>
-                        <div class="info-row" style="border-top: 1px solid #ddd; margin-top: 5px; padding-top: 5px; font-weight: bold;">
+                        <div class="info-row" style="border-top: 1px solid var(--border-color); margin-top: 5px; padding-top: 5px; font-weight: bold;">
                             <span>Esperado en Caja:</span> <span id="closeExpected"></span>
                         </div>
                     </div>
@@ -221,6 +253,75 @@
                     <div class="form-group">
                         <label for="countedAmount">Dinero Contado (Real)</label>
                         <input type="number" id="countedAmount" name="counted_amount" step="0.01" min="0" required placeholder="0.00">
+                    </div>
+
+                    <div class="form-group" id="denominationSection" style="background:var(--bg-light); padding: 12px; border-radius: 8px; margin-bottom: 10px;">
+                        <label style="font-weight:600; margin-bottom:8px; display:block;"><i class="fas fa-coins" style="margin-right:6px; color:var(--primary-color);"></i>Arqueo por denominaciones <small style="font-weight:normal; color:#888;">(opcional, autocalcula el contado)</small></label>
+                        <div id="denominationGrid" style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                            <div class="denom-row" style="display:flex; align-items:center; gap:6px;">
+                                <span style="min-width:60px; font-weight:600;">$1000</span>
+                                <input type="number" class="denom-count" data-denom="1000" min="0" step="1" value="0" style="flex:1; padding:6px; border-radius:6px; border:1px solid var(--border-color);">
+                            </div>
+                            <div class="denom-row" style="display:flex; align-items:center; gap:6px;">
+                                <span style="min-width:60px; font-weight:600;">$500</span>
+                                <input type="number" class="denom-count" data-denom="500" min="0" step="1" value="0" style="flex:1; padding:6px; border-radius:6px; border:1px solid var(--border-color);">
+                            </div>
+                            <div class="denom-row" style="display:flex; align-items:center; gap:6px;">
+                                <span style="min-width:60px; font-weight:600;">$200</span>
+                                <input type="number" class="denom-count" data-denom="200" min="0" step="1" value="0" style="flex:1; padding:6px; border-radius:6px; border:1px solid var(--border-color);">
+                            </div>
+                            <div class="denom-row" style="display:flex; align-items:center; gap:6px;">
+                                <span style="min-width:60px; font-weight:600;">$100</span>
+                                <input type="number" class="denom-count" data-denom="100" min="0" step="1" value="0" style="flex:1; padding:6px; border-radius:6px; border:1px solid var(--border-color);">
+                            </div>
+                            <div class="denom-row" style="display:flex; align-items:center; gap:6px;">
+                                <span style="min-width:60px; font-weight:600;">$50</span>
+                                <input type="number" class="denom-count" data-denom="50" min="0" step="1" value="0" style="flex:1; padding:6px; border-radius:6px; border:1px solid var(--border-color);">
+                            </div>
+                            <div class="denom-row" style="display:flex; align-items:center; gap:6px;">
+                                <span style="min-width:60px; font-weight:600;">$20</span>
+                                <input type="number" class="denom-count" data-denom="20" min="0" step="1" value="0" style="flex:1; padding:6px; border-radius:6px; border:1px solid var(--border-color);">
+                            </div>
+                            <div class="denom-row" style="display:flex; align-items:center; gap:6px;">
+                                <span style="min-width:60px; font-weight:600;">$10</span>
+                                <input type="number" class="denom-count" data-denom="10" min="0" step="1" value="0" style="flex:1; padding:6px; border-radius:6px; border:1px solid var(--border-color);">
+                            </div>
+                            <div class="denom-row" style="display:flex; align-items:center; gap:6px;">
+                                <span style="min-width:60px; font-weight:600;">$5</span>
+                                <input type="number" class="denom-count" data-denom="5" min="0" step="1" value="0" style="flex:1; padding:6px; border-radius:6px; border:1px solid var(--border-color);">
+                            </div>
+                            <div class="denom-row" style="display:flex; align-items:center; gap:6px;">
+                                <span style="min-width:60px; font-weight:600;">$2</span>
+                                <input type="number" class="denom-count" data-denom="2" min="0" step="1" value="0" style="flex:1; padding:6px; border-radius:6px; border:1px solid var(--border-color);">
+                            </div>
+                            <div class="denom-row" style="display:flex; align-items:center; gap:6px;">
+                                <span style="min-width:60px; font-weight:600;">$1</span>
+                                <input type="number" class="denom-count" data-denom="1" min="0" step="1" value="0" style="flex:1; padding:6px; border-radius:6px; border:1px solid var(--border-color);">
+                            </div>
+                            <div class="denom-row" style="display:flex; align-items:center; gap:6px;">
+                                <span style="min-width:60px; font-weight:600;">$0.50</span>
+                                <input type="number" class="denom-count" data-denom="0.5" min="0" step="1" value="0" style="flex:1; padding:6px; border-radius:6px; border:1px solid var(--border-color);">
+                            </div>
+                            <div class="denom-row" style="display:flex; align-items:center; gap:6px;">
+                                <span style="min-width:60px; font-weight:600;">$0.20</span>
+                                <input type="number" class="denom-count" data-denom="0.2" min="0" step="1" value="0" style="flex:1; padding:6px; border-radius:6px; border:1px solid var(--border-color);">
+                            </div>
+                            <div class="denom-row" style="display:flex; align-items:center; gap:6px;">
+                                <span style="min-width:60px; font-weight:600;">$0.10</span>
+                                <input type="number" class="denom-count" data-denom="0.1" min="0" step="1" value="0" style="flex:1; padding:6px; border-radius:6px; border:1px solid var(--border-color);">
+                            </div>
+                            <div class="denom-row" style="display:flex; align-items:center; gap:6px;">
+                                <span style="min-width:60px; font-weight:600;">$0.05</span>
+                                <input type="number" class="denom-count" data-denom="0.05" min="0" step="1" value="0" style="flex:1; padding:6px; border-radius:6px; border:1px solid var(--border-color);">
+                            </div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; padding-top:8px; border-top:1px dashed var(--border-color);">
+                            <span style="font-weight:600;">Total denominaciones:</span>
+                            <span id="denominationTotal" style="font-weight:800; color:var(--primary-color); font-size:1.1rem;">$0.00</span>
+                        </div>
+                        <button type="button" id="applyDenominationsBtn" class="btn" style="width:100%; margin-top:10px; padding:8px; border-radius:6px; background:var(--success-color); color:#fff; border:none; cursor:pointer;">
+                            <i class="fas fa-calculator"></i> Usar este total como dinero contado
+                        </button>
                     </div>
                     
                     <div id="diffDisplay" style="text-align: center; margin: 10px 0; font-weight: bold;"></div>
@@ -245,15 +346,63 @@
             </div>
             <div class="drawer-body" style="display: flex; flex-direction: column; height: 100%;">
                 
-                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: center; border: 1px solid #e9ecef;">
-                    <div style="font-size: 0.9em; color: #666; margin-bottom: 5px;">Monto Esperado Actual</div>
+                <div style="background: var(--bg-light); padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: center; border: 1px solid var(--border-color);">
+                    <div style="font-size: 0.9em; color: var(--text-light); margin-bottom: 5px;">Monto Esperado Actual</div>
                     <div id="historyExpectedAmount" style="font-size: 1.8em; font-weight: bold; color: var(--text-color);">$0.00</div>
                 </div>
 
                 <div style="margin-bottom: 15px;">
-                    <button class="btn-primary" style="width: 100%;" onclick="openMovementsModal(currentHistoryRegisterId)">
-                        <i class="fas fa-plus-circle"></i> Registrar Entrada/Salida
+                    <button class="btn-primary" style="width: 100%;" onclick="toggleMovementForm()" type="button">
+                        <i class="fas fa-plus-circle"></i> <span id="toggleMoveFormLabel">Registrar Entrada/Salida</span>
                     </button>
+                </div>
+
+                <!-- Formulario inline de movimiento (sin abrir otro drawer) -->
+                <div id="inlineMovementForm" class="move-form" style="display:none;">
+                    <div class="move-form-header">
+                        <i class="fas fa-exchange-alt"></i> Nuevo Movimiento
+                    </div>
+
+                    <!-- Switch Entrada / Salida -->
+                    <div class="move-form-row">
+                        <label class="move-label"><i class="fas fa-arrows-alt-v"></i> Tipo de movimiento</label>
+                        <div class="move-type-switch" id="moveTypeSwitch">
+                            <button type="button" class="move-type-btn entry active" data-type="entry">
+                                <i class="fas fa-arrow-down"></i> Entrada
+                            </button>
+                            <button type="button" class="move-type-btn withdrawal" data-type="withdrawal">
+                                <i class="fas fa-arrow-up"></i> Retiro
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Monto -->
+                    <div class="move-form-row">
+                        <label class="move-label"><i class="fas fa-coins"></i> Monto</label>
+                        <div class="move-amount-wrap">
+                            <span class="move-amount-symbol" id="inlineMoveSymbol">$</span>
+                            <input type="number" id="inlineMoveAmount" step="0.01" min="0.01" placeholder="0.00" required>
+                        </div>
+                    </div>
+
+                    <!-- Descripción -->
+                    <div class="move-form-row">
+                        <label class="move-label"><i class="fas fa-pen"></i> Descripción / Motivo</label>
+                        <div class="move-desc-wrap">
+                            <i class="fas fa-sticky-note"></i>
+                            <input type="text" id="inlineMoveDesc" required placeholder="Ej: Pago a proveedor, Cambio inicial...">
+                        </div>
+                    </div>
+
+                    <!-- Acciones -->
+                    <div class="move-form-actions">
+                        <button class="btn-secondary move-cancel" onclick="toggleMovementForm(false)" type="button">
+                            <i class="fas fa-times"></i> Cancelar
+                        </button>
+                        <button class="btn-primary move-submit" onclick="submitInlineMovement()" type="button">
+                            <i class="fas fa-check"></i> Registrar Movimiento
+                        </button>
+                    </div>
                 </div>
                 <div id="movementsList" style="flex: 1; overflow-y: auto;">
                     <!-- Lista inyectada por JS -->
@@ -313,18 +462,17 @@
         </div>
     </div>
     
-    <script src="js/sidebar-loader.js"></script>
+    <script src="js/sidebar-loader.js?v=5"></script>
     <script src="js/app.js"></script>
     <script src="js/finance.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             const session = await checkSession();
-            if (!session) {
-                window.location.href = 'login.html';
-                return;
-            }
+            if (!session) { requireSession(); return; }
             loadTerminals();
         });
     </script>
+    <script src="lib/animejs/anime.min.js"></script>
+    <script src="js/design-system.js?v=5"></script>
 </body>
 </html>

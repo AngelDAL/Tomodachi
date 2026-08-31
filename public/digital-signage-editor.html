@@ -1,0 +1,1785 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="view-transition" content="same-origin">
+    <title>Editor de Pantalla - Tomodachi</title>
+    <link rel="stylesheet" href="css/fonts.css?v=4">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css?v=4">
+    <link rel="stylesheet" href="css/main.css?v=4">
+    <link rel="stylesheet" href="css/design-system.css?v=5">
+    <link rel="stylesheet" href="css/sidebar-modern.css?v=4">
+    <link rel="stylesheet" href="css/mobile-nav.css?v=4">
+    <script src="js/theme-init.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+
+        body { margin: 0; }
+
+        /* ===== Topbar ===== */
+        .editor-topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.6rem 1.25rem;
+            background: var(--card-bg, #fff);
+            border-bottom: 1px solid var(--border-color, #e2e8f0);
+            height: 56px;
+        }
+        .editor-topbar .br-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            min-width: 0;
+        }
+        .br-title span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .topbar-actions { display: flex; gap: 0.5rem; align-items: center; }
+
+        /* ===== Barra de pantallas (slides) y tamaño ===== */
+        .screens-bar {
+            display: flex; align-items: center; gap: 0.75rem;
+            padding: 0.45rem 1.25rem;
+            background: var(--bg-secondary, #f1f5f9);
+            border-bottom: 1px solid var(--border-color, #e2e8f0);
+            flex-wrap: wrap;
+        }
+        .screens-tabs { display: flex; gap: 0.4rem; flex: 1; min-width: 0; overflow-x: auto; }
+        .screen-tab {
+            padding: 0.4rem 0.85rem; border-radius: 6px;
+            border: 1px solid var(--border-color, #d5dfe8);
+            background: var(--bg-primary, #fff); color: var(--text-primary, #333);
+            font: inherit; font-size: 0.8rem; font-weight: 600;
+            cursor: pointer; white-space: nowrap;
+            display: inline-flex; align-items: center; gap: 0.35rem;
+        }
+        .screen-tab.active {
+            background: var(--primary-color); color: #fff; border-color: var(--primary-color);
+        }
+        .btn-add-screen {
+            padding: 0.4rem 0.8rem; border-radius: 6px;
+            border: 1.5px dashed var(--primary-color, #3a6ea5);
+            background: transparent; color: var(--primary-color, #3a6ea5);
+            font: inherit; font-size: 0.78rem; font-weight: 700;
+            cursor: pointer; white-space: nowrap;
+            display: inline-flex; align-items: center; gap: 0.35rem;
+        }
+        .btn-add-screen:hover { background: color-mix(in srgb, var(--primary-color,#3a6ea5) 12%, transparent); }
+        .screen-size { display: flex; align-items: center; gap: 0.3rem; font-size: 0.72rem; color: var(--text-muted, #64748b); }
+        .screen-size input { width: 60px; }
+        .sz-x, .sz-px { font-size: 0.78rem; color: var(--text-muted, #64748b); }
+        .screen-size label { font-weight: 600; }
+
+        .editor-orientation {
+            min-height: 34px;
+            padding: 0.35rem 0.55rem;
+            border: 1px solid var(--border-color, #ddd);
+            border-radius: 6px;
+            background: var(--bg-primary, #fff);
+            color: var(--text-primary, #333);
+            font: inherit;
+            font-size: 0.82rem;
+        }
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+        .topbar-actions button {
+            padding: 0.45rem 1rem;
+            border: none; border-radius: 6px;
+            cursor: pointer; font-weight: 600; font-size: 0.85rem;
+            display: flex; align-items: center; gap: 0.4rem;
+            transition: all 0.15s;
+        }
+        .btn-save-top { background: var(--primary-color); color: #fff; }
+        .btn-save-top:hover { background: var(--primary-dark, #005a9e); }
+        .btn-preview-top {
+            background: var(--bg-secondary, #e8eef3);
+            color: var(--text-primary, #1c2a3a);
+            border: 1.5px solid var(--primary-color);
+        }
+        .btn-preview-top:hover { background: color-mix(in srgb, var(--primary-color, #3a6ea5) 12%, transparent); }
+        .btn-back {
+            width: 38px; height: 38px;
+            display: inline-flex; align-items: center; justify-content: center;
+            background: var(--bg-secondary, #e8eef3);
+            color: var(--text-primary, #333);
+            border: 1px solid var(--border-color, #d5dfe8);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: all 0.15s;
+            flex: 0 0 auto;
+        }
+        .btn-back:hover { background: var(--bg-tertiary, #d8e0e8); border-color: var(--primary-color, #3a6ea5); color: var(--primary-color, #3a6ea5); }
+
+        /* ===== Layout ===== */
+        .editor-wrap { display: flex; height: calc(100vh - 56px); }
+
+        /* ===== Panel izquierdo: tools ===== */
+        .editor-tools {
+            width: 220px;
+            background: var(--card-bg, #fff);
+            border-right: 1px solid var(--border-color, #e2e8f0);
+            padding: 1rem;
+            overflow-y: auto; flex-shrink: 0;
+        }
+        .editor-tools h3 {
+            font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;
+            color: var(--text-muted, #64748b); margin: 0 0 0.8rem 0;
+            padding-bottom: 0.4rem; border-bottom: 1px solid var(--border-color, #e2e8f0);
+        }
+        .tool-btn {
+            width: 100%; padding: 0.6rem; margin-bottom: 0.5rem;
+            border: 1px solid var(--border-color, #ddd); border-radius: 6px;
+            background: var(--bg-primary, #fff); color: var(--text-primary, #333);
+            cursor: pointer; font-size: 0.85rem; font-weight: 600;
+            display: flex; align-items: center; gap: 0.5rem;
+            transition: all 0.15s; text-align: left;
+        }
+        .tool-btn:hover { border-color: var(--primary-color); background: var(--primary-color); color: #fff; }
+        .tool-btn i { width: 18px; text-align: center; }
+        .tools-divider {
+            height: 1px; background: var(--border-color, #e2e8f0);
+            margin: 0.8rem 0;
+        }
+        .layer-list { list-style: none; padding: 0; margin: 0; }
+        .layer-item {
+            display: flex; align-items: center; gap: 0.5rem;
+            padding: 0.4rem 0.5rem; border-radius: 4px; cursor: pointer;
+            font-size: 0.8rem; color: var(--text-primary, #333);
+            transition: all 0.12s;
+        }
+        .layer-item:hover { background: var(--bg-secondary, #f5f5f5); }
+        .layer-item.active { background: var(--primary-color); color: #fff; }
+        .layer-item i { width: 14px; text-align: center; font-size: 0.75rem; }
+        .layer-item .layer-name { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+        .layer-item .layer-grip { color: var(--text-muted, #94a3b8); cursor: grab; width: 12px; flex: 0 0 auto; }
+        .layer-item.layer-dragging { opacity: 0.5; }
+        .layer-item.layer-drag-over { border: 1px dashed var(--primary-color, #3a6ea5); background: var(--bg-secondary, #f0f5fa); }
+
+        /* ===== Canvas ===== */
+        .editor-canvas-wrap {
+            flex: 1; background: linear-gradient(135deg, #1e293b, #0f172a);
+            display: flex; align-items: center; justify-content: center;
+            overflow: auto; position: relative;
+        }
+        .canvas-frame {
+            position: relative;
+            background: #fff;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            transform-origin: center;
+            overflow: hidden;
+        }
+        /* Elemento absoluto dentro del canvas */
+        .ppt-el {
+            position: absolute;
+            border: 1px solid transparent;
+            cursor: move;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .ppt-el.selected {
+            border: 2px solid #38bdf8;
+            outline: 1px solid rgba(56,189,248,0.55);
+        }
+        .ppt-el .resizer {
+            position: absolute;
+            width: 14px; height: 14px;
+            background: #fff;
+            border: 2px solid #38bdf8;
+            border-radius: 50%;
+            z-index: 20;
+            touch-action: none;
+        }
+        .ppt-el .resizer.nw { top: -7px; left: -7px; cursor: nw-resize; }
+        .ppt-el .resizer.n { top: -7px; left: 50%; margin-left: -7px; cursor: n-resize; }
+        .ppt-el .resizer.ne { top: -7px; right: -7px; cursor: ne-resize; }
+        .ppt-el .resizer.e { top: 50%; right: -7px; margin-top: -7px; cursor: e-resize; }
+        .ppt-el .resizer.se { bottom: -7px; right: -7px; cursor: se-resize; }
+        .ppt-el .resizer.s { bottom: -7px; left: 50%; margin-left: -7px; cursor: s-resize; }
+        .ppt-el .resizer.sw { bottom: -7px; left: -7px; cursor: sw-resize; }
+        .ppt-el .resizer.w { top: 50%; left: -7px; margin-top: -7px; cursor: w-resize; }
+        .ppt-el .resizer { display: none; }
+        .ppt-el.selected .resizer { display: block; }
+
+        /* Contenido del elemento */
+        .ppt-el .el-bg {
+            position: absolute; inset: 0;
+            width: 100%; height: 100%;
+        }
+        .ppt-el .el-bg.bg-fill { background-size: 100% 100%; }
+        .ppt-el .el-bg.bg-cover { background-size: cover; }
+        .ppt-el .el-bg.bg-contain { background-size: contain; background-repeat: no-repeat; background-position: center; }
+        .ppt-el .el-content {
+            position: absolute; inset: 0;
+            width: 100%; height: 100%;
+            display: flex;
+            overflow: hidden;
+        }
+        .ppt-el .el-text {
+            max-width: 100%;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            font-weight: 700;
+            line-height: 1.2;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+        }
+        .ppt-el.placeholder-hint {
+            background: rgba(255,255,255,0.08);
+            border: 1px dashed rgba(255,255,255,0.3);
+            color: #94a3b8;
+            display: flex; align-items: center; justify-content: center;
+            width: 100%; height: 100%;
+            font-size: 0.9rem;
+        }
+        .editor-state {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.65rem;
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-primary, #334155);
+            background: var(--bg-primary, #fff);
+        }
+        .editor-state > i { font-size: 2rem; color: var(--primary-color); }
+        .editor-state > strong { font-size: 1.05rem; }
+        .editor-state > span { max-width: 360px; color: var(--text-muted, #64748b); font-size: 0.9rem; }
+        .editor-state button {
+            margin-top: 0.5rem;
+            padding: 0.55rem 0.8rem;
+            border: none;
+            border-radius: 6px;
+            background: var(--primary-color);
+            color: #fff;
+            cursor: pointer;
+            font: inherit;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        /* ===== Panel propiedades ===== */
+        .editor-props {
+            width: 280px;
+            background: var(--card-bg, #fff);
+            border-left: 1px solid var(--border-color, #e2e8f0);
+            padding: 1rem; overflow-y: auto; flex-shrink: 0;
+        }
+        .editor-props h3 {
+            font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;
+            color: var(--text-muted, #64748b); margin: 0 0 0.8rem 0;
+            padding-bottom: 0.4rem; border-bottom: 1px solid var(--border-color, #e2e8f0);
+        }
+        .prop-section {
+            margin-bottom: 1rem; padding-bottom: 0.8rem;
+            border-bottom: 1px solid var(--border-color, #e2e8f0);
+        }
+        .tool-group { margin-bottom: 0.7rem; }
+        .tool-group label {
+            display: block; font-size: 0.75rem; font-weight: 600;
+            color: var(--text-primary, #333); margin-bottom: 0.3rem;
+        }
+        .tool-group input[type="text"],
+        .tool-group textarea,
+        .tool-group input[type="number"],
+        .tool-group select {
+            width: 100%; padding: 0.45rem 0.6rem;
+            border: 1px solid var(--border-color, #ddd); border-radius: 6px;
+            font-size: 0.85rem; font-family: inherit;
+            background: var(--bg-primary, #fff); color: var(--text-primary, #333);
+        }
+        .tool-group textarea { resize: vertical; min-height: 50px; }
+        .tool-group input[type="color"] { width: 40px; height: 32px; padding: 2px; border: 1px solid var(--border-color); border-radius: 4px; }
+        .tool-row { display: flex; gap: 0.5rem; }
+        .tool-row .tool-group { flex: 1; }
+
+        .img-preview {
+            width: 100%; height: 60px; border-radius: 6px; margin-top: 0.35rem;
+            background-size: cover; background-position: center;
+            border: 1px solid var(--border-color, #ddd);
+        }
+        .media-upload-row {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            margin-top: 0.45rem;
+        }
+        .media-upload-btn {
+            flex: 0 0 auto;
+            padding: 0.45rem 0.6rem;
+            border: 1px solid var(--border-color, #ddd);
+            border-radius: 6px;
+            background: var(--bg-primary, #fff);
+            color: var(--text-primary, #333);
+            font: inherit;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .media-upload-btn:hover { border-color: var(--primary-color); color: var(--primary-color); }
+        .media-upload-btn:disabled { opacity: 0.6; cursor: wait; }
+        .media-upload-status { font-size: 0.72rem; color: var(--text-muted, #64748b); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .media-upload-note {
+            display: block;
+            margin-top: 0.4rem;
+            font-size: 0.7rem;
+            line-height: 1.35;
+            color: var(--text-muted, #64748b);
+            background: var(--bg-secondary, #f1f5f9);
+            border: 1px dashed var(--border-color, #d5dfe8);
+            border-radius: 6px;
+            padding: 0.35rem 0.5rem;
+        }
+        .media-upload-note i { margin-right: 0.25rem; }
+
+        /* Inputs con arrastre horizontal (tipo Photoshop) */
+        .drag-num {
+            width: 100%;
+            padding: 0.45rem 0.5rem;
+            border: 1px solid var(--border-color, #d5dfe8);
+            border-radius: 6px;
+            background: var(--bg-primary, #fff);
+            color: var(--text-primary, #1c2a3a);
+            font: inherit;
+            font-size: 0.82rem;
+            cursor: ew-resize;
+            text-align: center;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .drag-num:hover, .drag-num:focus {
+            border-color: var(--primary-color, #3a6ea5);
+            outline: none;
+            box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color, #3a6ea5) 22%, transparent);
+        }
+        .drag-num.num-single { text-align: center; }
+        .drag-num-wrap { position: relative; }
+        .drag-num-hint {
+            margin-top: 0.4rem;
+            font-size: 0.7rem;
+            color: var(--text-muted, #64748b);
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        .drag-num-hint i { color: var(--primary-color, #3a6ea5); }
+        body.dragging-num { cursor: ew-resize; user-select: none; }
+
+        /* Inputs de color nativos (color picker) en una sola línea */
+        .tool-group input[type="color"] {
+            width: 100%;
+            height: 36px;
+            padding: 2px;
+            border: 1px solid var(--border-color, #d5dfe8);
+            border-radius: 6px;
+            background: var(--bg-primary, #fff);
+            cursor: pointer;
+        }
+        .empty-props {
+            color: var(--text-muted, #666); font-size: 0.85rem; text-align: center;
+            padding: 1.5rem 0;
+        }
+        .pos-hint {
+            display: flex; gap: 0.3rem; flex-wrap: wrap;
+        }
+        .pos-btn {
+            padding: 0.3rem 0.4rem; border: 1px solid var(--border-color, #ddd);
+            border-radius: 4px; background: var(--bg-primary, #fff); cursor: pointer;
+            font-size: 0.75rem; color: var(--text-primary, #333);
+        }
+        .pos-btn.active { background: var(--primary-color); color: #fff; border-color: var(--primary-color); }
+        .element-actions { display: flex; gap: 0.35rem; }
+        .element-actions button {
+            flex: 1;
+            min-height: 32px;
+            padding: 0.35rem 0.45rem;
+            border: 1px solid var(--border-color, #ddd);
+            border-radius: 5px;
+            background: var(--bg-primary, #fff);
+            color: var(--text-primary, #333);
+            cursor: pointer;
+            font: inherit;
+            font-size: 0.76rem;
+        }
+        .element-actions button:hover { border-color: var(--primary-color); color: var(--primary-color); }
+        .element-actions button.danger:hover { border-color: var(--danger-color, #dc2626); color: var(--danger-color, #dc2626); }
+
+        /* Toast */
+        .toast {
+            position: fixed; bottom: 1.5rem; right: 1.5rem;
+            background: #1e293b; color: #fff; padding: 0.85rem 1.25rem;
+            border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+            z-index: 10000; font-size: 0.9rem;
+            display: flex; align-items: center; gap: 0.5rem;
+            transform: translateY(100px); opacity: 0; transition: all 0.3s;
+        }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast.success { background: #10b981; }
+        .toast.error { background: #ef4444; }
+
+        /* ===== Modal de biblioteca de imágenes ===== */
+        .modal-overlay {
+            position: fixed; inset: 0; z-index: 20000;
+            background: rgba(0,0,0,0.55);
+            display: none; align-items: center; justify-content: center;
+            padding: 1rem;
+        }
+        .modal-box {
+            background: var(--bg-card, #fff); color: var(--text-primary, #1c2a3a);
+            border-radius: 12px; width: 100%; max-width: 720px; max-height: 82vh;
+            display: flex; flex-direction: column;
+            box-shadow: 0 24px 60px rgba(0,0,0,0.4);
+            overflow: hidden;
+        }
+        .modal-head {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0.85rem 1.1rem; border-bottom: 1px solid var(--border-color, #d5dfe8);
+        }
+        .modal-head h3 { margin: 0; font-size: 1rem; }
+        .modal-close {
+            background: none; border: 0; font-size: 1.6rem; line-height: 1;
+            cursor: pointer; color: var(--text-muted, #64748b); padding: 0 0.25rem;
+        }
+        .modal-close:hover { color: #ef4444; }
+        .modal-body { padding: 1rem; overflow-y: auto; }
+        .lib-empty {
+            text-align: center; color: var(--text-muted, #64748b);
+            padding: 2rem 1rem; font-size: 0.9rem; line-height: 1.5;
+        }
+        .lib-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: 0.6rem;
+        }
+        .lib-item {
+            border: 1.5px solid var(--border-color, #d5dfe8); border-radius: 8px;
+            padding: 0.35rem; background: var(--bg-primary, #fff); cursor: pointer;
+            display: flex; flex-direction: column; align-items: center; gap: 0.3rem;
+            transition: border-color 0.15s, box-shadow 0.15s; font: inherit;
+        }
+        .lib-item:hover {
+            border-color: var(--primary-color, #3a6ea5);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        }
+        .lib-item img {
+            width: 100%; height: 74px; object-fit: cover; border-radius: 5px;
+            background: var(--bg-secondary, #eef2f7);
+        }
+        .lib-name {
+            font-size: 0.68rem; color: var(--text-muted, #64748b);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;
+            text-align: center;
+        }
+
+        @media (max-width: 900px) {
+            .editor-topbar { height: auto; min-height: 56px; padding: 0.55rem 0.75rem; }
+            .br-title { max-width: 52vw; }
+            .topbar-actions button { padding: 0.5rem 0.7rem; }
+            .editor-wrap {
+                height: calc(100vh - 62px);
+                display: grid;
+                grid-template-rows: auto minmax(320px, 1fr) auto;
+                overflow: hidden;
+            }
+            .editor-tools {
+                grid-row: 1;
+                width: 100%; padding: 0.7rem;
+                border-right: none; border-bottom: 1px solid var(--border-color);
+                display: flex; align-items: center; gap: 0.5rem;
+                overflow-x: auto; overflow-y: hidden;
+                white-space: nowrap;
+            }
+            .editor-tools h3, .editor-tools .tools-divider, .editor-tools .layer-list { display: none; }
+            .editor-tools .tool-btn { flex: 0 0 auto; width: auto; margin: 0; min-height: 40px; }
+            .editor-canvas-wrap { grid-row: 2; min-height: 0; padding: 1rem; }
+            .editor-props {
+                grid-row: 3; width: 100%; max-height: 38vh;
+                border-left: none; border-top: 1px solid var(--border-color);
+                padding: 0.8rem; overflow-y: auto;
+            }
+            .ppt-el .resizer { width: 24px; height: 24px; border-width: 3px; }
+            .ppt-el .resizer.nw { top: -12px; left: -12px; }
+            .ppt-el .resizer.n { top: -12px; margin-left: -12px; }
+            .ppt-el .resizer.ne { top: -12px; right: -12px; }
+            .ppt-el .resizer.e { right: -12px; margin-top: -12px; }
+            .ppt-el .resizer.se { bottom: -12px; right: -12px; }
+            .ppt-el .resizer.s { bottom: -12px; margin-left: -12px; }
+            .ppt-el .resizer.sw { bottom: -12px; left: -12px; }
+            .ppt-el .resizer.w { left: -12px; margin-top: -12px; }
+        }
+
+        @media (max-width: 520px) {
+            .topbar-actions .topbar-label { display: none; }
+            .editor-topbar .br-title { font-size: 0.95rem; }
+            .tool-row { gap: 0.35rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="editor-topbar">
+        <div class="br-title">
+            <button class="btn-back" id="btnBack"><i class="fas fa-arrow-left"></i></button>
+            <span id="boardTitle">Editor de Pantalla</span>
+        </div>
+        <div class="topbar-actions">
+            <label class="sr-only" for="canvasOrientation">Orientación</label>
+            <select id="canvasOrientation" class="editor-orientation" title="Orientación de la diapositiva">
+                <option value="horizontal">Horizontal</option>
+                <option value="vertical">Vertical</option>
+            </select>
+            <button type="button" class="btn-preview-top" id="btnPreview" title="Vista previa del display">
+                <i class="fas fa-eye"></i> <span class="topbar-label">Vista previa</span>
+            </button>
+            <button class="btn-save-top" id="btnSave"><i class="fas fa-save"></i> <span class="topbar-label">Guardar</span></button>
+        </div>
+    </div>
+
+    <!-- Barra de pantallas (slides) + tamaño -->
+    <div class="screens-bar" id="screensBar">
+        <div class="screens-tabs" id="screensTabs"></div>
+        <button type="button" class="btn-add-screen" id="btnAddScreen" title="Agregar otra pantalla (diapositiva)"><i class="fas fa-plus"></i> Pantalla</button>
+        <div class="screen-size">
+            <label>Ancho</label><input type="text" class="drag-num num-single" id="scrW" data-drag-min="300" data-drag-max="4000" data-drag-step="10" inputmode="decimal">
+            <span class="sz-x">&times;</span>
+            <label>Alto</label><input type="text" class="drag-num num-single" id="scrH" data-drag-min="300" data-drag-max="4000" data-drag-step="10" inputmode="decimal">
+            <span class="sz-px">px</span>
+        </div>
+    </div>
+
+    <div class="editor-wrap">
+        <!-- Herramientas -->
+        <aside class="editor-tools">
+            <h3>Agregar elemento</h3>
+            <button class="tool-btn" data-add="rect" id="addRect"><i class="fas fa-square"></i> Rectángulo</button>
+            <button class="tool-btn" data-add="text"><i class="fas fa-font"></i> Texto</button>
+            <button class="tool-btn" data-add="image"><i class="fas fa-image"></i> Imagen</button>
+
+            <div class="tools-divider"></div>
+            <h3>Capas</h3>
+            <ul class="layer-list" id="layerList"></ul>
+        </aside>
+
+        <!-- Canvas -->
+        <div class="editor-canvas-wrap" id="canvasWrap">
+            <div class="canvas-frame" id="canvasFrame">
+                <div class="placeholder-hint">Agrega un elemento para comenzar</div>
+            </div>
+        </div>
+
+        <!-- Propiedades -->
+        <aside class="editor-props" id="editorProps">
+            <h3>Propiedades</h3>
+            <div id="propsContent">
+                <div class="empty-props">
+                    <i class="fas fa-mouse-pointer" style="font-size:1.5rem; opacity:0.3; margin-bottom:0.5rem; display:block;"></i>
+                    Selecciona un elemento para editarlo
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <!-- Modal de biblioteca de imágenes de la tienda -->
+    <div class="modal-overlay" id="libModal" style="display:none;">
+        <div class="modal-box">
+            <div class="modal-head">
+                <h3><i class="fas fa-images"></i> Biblioteca de imágenes</h3>
+                <button type="button" class="modal-close" id="libModalClose" title="Cerrar">&times;</button>
+            </div>
+            <div class="modal-body" id="libModalBody">
+                <div class="lib-empty">Cargando imágenes...</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="lib/interactjs/interact.min.js"></script>
+    <script src="js/sidebar-loader.js?v=5"></script>
+    <script>
+        // ===== Config =====
+        const API_BASE = '../api';
+        const LOGICAL_WIDTH = 1600;
+        const DEFAULT_H = { width: 1600, height: 900 };
+        const DEFAULT_V = { width: 900, height: 1600 };
+        let canvasOrientation = 'horizontal';
+
+        // Orientación efectiva del slide actual: su propia orientación si está
+        // fijada (horizontal/vertical), o la del board si el slide es 'auto'.
+        function activeOrientation() {
+            const slide = slides[currentSlide];
+            if (slide && slide.orientation && slide.orientation !== 'auto') {
+                return slide.orientation;
+            }
+            return (board && board.orientation === 'vertical') ? 'vertical' : 'horizontal';
+        }
+
+        // Dimensiones lógicas del lienzo del slide actual.
+        function slideDimensions() {
+            const slide = slides[currentSlide];
+            // Tamaño personalizado si está definido
+            if (slide && slide.layout_width && slide.layout_height) {
+                return { width: slide.layout_width, height: slide.layout_height };
+            }
+            return activeOrientation() === 'vertical' ? DEFAULT_V : DEFAULT_H;
+        }
+
+        // Sincroniza canvasOrientation + el select con el slide actual.
+        function syncOrientationUI() {
+            canvasOrientation = activeOrientation();
+            const sel = $('canvasOrientation');
+            if (sel) sel.value = canvasOrientation;
+            fitCanvas();
+        }
+
+        function canvasDimensions() {
+            return slideDimensions();
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const boardId = urlParams.get('board');
+        const requestedSlideId = parseInt(urlParams.get('slide') || '0', 10);
+
+        // Estado
+        let board = null;
+        let slides = [];
+        let currentSlide = 0;
+        let elements = [];      // elementos actuales (local, no persistido)
+        let selectedId = null;
+        let seq = 0;
+
+        // ===== Utilidades =====
+        function $(id) { return document.getElementById(id); }
+        function esc(t) { const d = document.createElement('div'); d.textContent = t == null ? '' : t; return d.innerHTML; }
+        let _toastTimer;
+        function notify(msg, type = 'success') {
+            const t = $('toast');
+            t.textContent = msg;
+            t.className = `toast ${type} show`;
+            clearTimeout(_toastTimer);
+            _toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+        }
+        async function api(url, opts = {}) {
+            const res = await fetch(`${API_BASE}/${url}`, { credentials: 'include', ...opts });
+            return res.json().catch(() => ({ success: false, message: 'Respuesta inválida' }));
+        }
+        function elTypeIcon(t) {
+            return { rect: 'fa-square', text: 'fa-font', image: 'fa-image', video: 'fa-video' }[t] || 'fa-square';
+        }
+        function elTypeLabel(t) {
+            return { rect: 'Rectángulo', text: 'Texto', image: 'Imagen', video: 'Video' }[t] || t;
+        }
+        function clamp(v, min, max) { return Math.min(max, Math.max(min, v)); }
+
+        // ===== Helpers de color de fondo con opacidad =====
+        // background_color puede ser '#rrggbb' (alpha 1) o 'rgba(r,g,b,a)'.
+        function colorHex(hex) { return /^#([0-9a-f]{6})$/i.test(hex || '') ? hex : '#2563eb'; }
+        // Devuelve el canal alfa (0..1) del color guardado: rgba extrae su 'a'; hex => 1.
+        function colorAlpha(c) {
+            if (!c) return 1;
+            const m = c.match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+))?\s*\)/);
+            if (m) return m[4] !== undefined ? clamp(parseFloat(m[4]), 0, 1) : 1;
+            return /^#[0-9a-f]{6}$/i.test(c) ? 1 : 1;
+        }
+        // Une un color rgb con un alpha dado en un string rgba().
+        function colorWithAlpha(c, alpha) {
+            const a = clamp(alpha, 0, 1);
+            const m = c && c.match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/);
+            if (m) return `rgba(${m[1]}, ${m[2]}, ${m[3]}, ${a.toFixed(2)})`;
+            const hex = colorHex(c);
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            return `rgba(${r}, ${g}, ${b}, ${a.toFixed(2)})`;
+        }
+        function bgHex(el) { return colorHex(el.background_color); }
+        function bgAlpha(el) { return colorAlpha(el.background_color); }
+
+        // ===== Carga =====
+        async function init() {
+            if (!boardId) { showEditorState('Falta el identificador de la pantalla', 'Abre el editor desde la lista de Pantallas Digitales.'); return; }
+            $('boardTitle').textContent = 'Cargando...';
+            const data = await api('digital_boards/read.php');
+            if (!data.success) {
+                showEditorState('No se pudieron cargar las pantallas', data.message || 'Intenta recargar la página.');
+                return;
+            }
+            board = data.data.find(b => b.board_id == boardId);
+            if (!board) {
+                showEditorState('Esta pantalla no pertenece a la tienda activa', 'El display público puede verse desde cualquier dispositivo, pero el diseño solo se edita desde la tienda que lo creó.');
+                return;
+            }
+            $('boardTitle').textContent = board.name;
+            canvasOrientation = board.orientation === 'vertical' ? 'vertical' : 'horizontal';
+            $('canvasOrientation').value = canvasOrientation;
+
+            const slidesRes = await api(`board_slides/read.php?board_id=${boardId}`);
+            if (!slidesRes.success) {
+                showEditorState('No se pudieron cargar los slides', slidesRes.message || 'Verifica tus permisos e intenta de nuevo.');
+                return;
+            }
+            slides = slidesRes.data || [];
+            if (slides.length === 0) {
+                const created = await api('board_slides/create.php', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ board_id: boardId, title: 'Slide 1' })
+                });
+                if (!created.success) {
+                    showEditorState('No se pudo preparar el lienzo', created.message || 'No fue posible crear el primer slide.');
+                    return;
+                }
+                const refresh = await api(`board_slides/read.php?board_id=${boardId}`);
+                if (!refresh.success || !refresh.data?.length) {
+                    showEditorState('No se pudo cargar el primer slide', refresh.message || 'Intenta recargar la página.');
+                    return;
+                }
+                slides = refresh.data;
+            }
+            if (requestedSlideId) {
+                const index = slides.findIndex(slide => slide.slide_id === requestedSlideId);
+                if (index >= 0) currentSlide = index;
+            }
+            await loadElements();
+            renderScreensTabs();
+        }
+
+        function showEditorState(title, message) {
+            $('boardTitle').textContent = 'Editor de Pantalla';
+            $('canvasFrame').innerHTML = `<div class="editor-state"><i class="fas fa-lock"></i><strong>${esc(title)}</strong><span>${esc(message)}</span><button type="button" id="stateBack">Volver a Pantallas Digitales</button></div>`;
+            document.querySelector('.editor-tools').style.pointerEvents = 'none';
+            document.querySelector('.editor-tools').style.opacity = '0.55';
+            $('editorProps').innerHTML = '<h3>Propiedades</h3><div class="empty-props">Selecciona una pantalla disponible desde la lista.</div>';
+            $('btnSave').disabled = true;
+            $('canvasOrientation').disabled = true;
+            $('stateBack')?.addEventListener('click', () => window.location.href = 'digital-signage.html');
+        }
+
+        async function loadElements() {
+            const slideId = slides[currentSlide].slide_id;
+            const data = await api(`slide_elements/read.php?slide_id=${slideId}`);
+            elements = (data.success ? data.data : []).map(el => normalizeEl(el));
+            if (elements.length === 0) {
+                // Demo: crear elementos de ejemplo si está vacío
+                createDemo();
+            }
+            syncOrientationUI();
+            render();
+        }
+
+        // ===== Barra de pantallas (diapositivas) =====
+        function renderScreensTabs() {
+            const tabs = $('screensTabs');
+            if (!tabs) return;
+            tabs.innerHTML = slides.map((s, i) => `
+                <button type="button" class="screen-tab ${i === currentSlide ? 'active' : ''}" data-i="${i}" title="Editar pantalla ${i + 1}: ${esc(s.title || '')}">
+                    <i class="fas fa-tv" style="font-size:.7rem;"></i> ${esc(s.title || 'Pantalla ' + (i + 1))}
+                </button>
+            `).join('');
+            tabs.querySelectorAll('.screen-tab').forEach(btn => {
+                btn.addEventListener('click', () => switchSlide(parseInt(btn.dataset.i, 10)));
+            });
+            // Sincronizar el tamaño del slide actual
+            const w = $('scrW'), h = $('scrH');
+            const dims = slideDimensions();
+            if (w) w.value = dims.width;
+            if (h) h.value = dims.height;
+        }
+
+        // Guarda el slide actual antes de cambiar, luego carga el nuevo.
+        async function switchSlide(index) {
+            if (index === currentSlide || index < 0 || index >= slides.length) return;
+            // Persistir el tamaño antes de cambiar
+            await saveSlideSize();
+            currentSlide = index;
+            await loadElements();
+            renderScreensTabs();
+            syncOrientationUI();
+        }
+
+        // Crea una pantalla (diapositiva) nueva y le cambia.
+        async function addSlide() {
+            if (!board) return;
+            await saveSlideSize();
+            const created = await api('board_slides/create.php', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ board_id: board.board_id, title: 'Pantalla ' + (slides.length + 1) })
+            });
+            if (!created.success) { notify(created.message || 'No se pudo crear la pantalla', 'error'); return; }
+            const refresh = await api(`board_slides/read.php?board_id=${boardId}`);
+            slides = (refresh.success && refresh.data) ? refresh.data : slides;
+            currentSlide = slides.length - 1;
+            await loadElements();
+            renderScreensTabs();
+            notify('Pantalla agregada');
+        }
+
+        // Guarda el tamaño (ancho/alto) del slide actual.
+        async function saveSlideSize() {
+            const slide = slides[currentSlide];
+            if (!slide) return;
+            const w = $('scrW'), h = $('scrH');
+            if (!w || !h) return;
+            const lw = parseInt(w.value, 10) || null;
+            const lh = parseInt(h.value, 10) || null;
+            if (isNaN(lw) && isNaN(lh)) return;
+            await api('board_slides/update.php', {
+                method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ slide_id: slide.slide_id, layout_width: lw, layout_height: lh })
+            });
+            if (lw) slide.layout_width = lw;
+            if (lh) slide.layout_height = lh;
+            syncOrientationUI();
+        }
+
+        $('btnAddScreen') && $('btnAddScreen').addEventListener('click', () => addSlide());
+        $('scrW') && $('scrW').addEventListener('change', () => { saveSlideSize(); });
+        $('scrH') && $('scrH').addEventListener('change', () => { saveSlideSize(); });
+
+        // Normalizar elemento servidor a estructura local
+        function normalizeEl(el) {
+            const c = el.content && typeof el.content === 'object' ? el.content : {};
+            // Los elementos del editor PowerPoint se distinguen por content.rect.
+            // Los rectángulos se persisten como banner porque es un tipo válido de la tabla.
+            let type = c.presentation_type || el.element_type;
+            if (c.rect && el.element_type === 'banner') type = 'rect';
+            // Campos de geometría en content
+            const rect = c.rect || { x_pct: 30, y_pct: 30, w_pct: 20, h_pct: 20 };
+            return {
+                tempId: 'srv_' + el.element_id,
+                element_id: el.element_id,
+                type: type,
+                background_image: c.background_image || '',
+                background_fit: c.background_fit || 'fill',
+                background_color: c.background_color || '',
+                text: c.text || '',
+                text_size_pct: c.text_size_pct || 4,
+                text_color: c.text_color || '#ffffff',
+                text_pos_h: c.text_pos_h || 'center',
+                text_pos_v: c.text_pos_v || 'middle',
+                text_offset_x: c.text_offset_x || 0,
+                text_offset_y: c.text_offset_y || 0,
+                animation: c.animation || el.animation || 'none',
+                z_index: el.z_index || 1,
+                rect: rect
+            };
+        }
+
+        function createDemo() {
+            elements = [
+                {
+                    tempId: 'tmp_demo_bg', type: 'rect',
+                    background_image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1600&h=900&fit=crop',
+                    background_fit: 'fill', background_color: '',
+                    text: '', text_size_pct: 5, text_color: '#fff',
+                    text_pos_h: 'center', text_pos_v: 'middle', text_offset_x: 0, text_offset_y: 0,
+                    animation: 'none', z_index: 1,
+                    rect: { x_pct: 0, y_pct: 0, w_pct: 100, h_pct: 100 }
+                },
+                {
+                    tempId: 'tmp_demo_title', type: 'text',
+                    background_image: '', background_fit: 'fill', background_color: 'rgba(0,0,0,0.5)',
+                    text: 'BIENVENIDO', text_size_pct: 5, text_color: '#ffffff',
+                    text_pos_h: 'center', text_pos_v: 'middle', text_offset_x: 0, text_offset_y: 0,
+                    animation: 'fade_in', z_index: 2,
+                    rect: { x_pct: 30, y_pct: 15, w_pct: 40, h_pct: 15 }
+                },
+                {
+                    tempId: 'tmp_demo_card', type: 'rect',
+                    background_image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&h=600&fit=crop',
+                    background_fit: 'cover', background_color: '',
+                    text: 'MONTAÑAS AL AMANECER', text_size_pct: 3.5, text_color: '#fff',
+                    text_pos_h: 'center', text_pos_v: 'bottom', text_offset_x: 0, text_offset_y: -30,
+                    animation: 'fade_in', z_index: 3,
+                    rect: { x_pct: 8, y_pct: 55, w_pct: 38, h_pct: 35 }
+                },
+                {
+                    tempId: 'tmp_demo_card2', type: 'rect',
+                    background_image: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&h=600&fit=crop',
+                    background_fit: 'cover', background_color: '',
+                    text: 'BOSQUE TRANQUILO', text_size_pct: 3.5, text_color: '#fff',
+                    text_pos_h: 'center', text_pos_v: 'bottom', text_offset_x: 0, text_offset_y: -30,
+                    animation: 'slide_up', z_index: 4,
+                    rect: { x_pct: 54, y_pct: 55, w_pct: 38, h_pct: 35 }
+                },
+                {
+                    tempId: 'tmp_demo_promo', type: 'text',
+                    background_image: '', background_fit: 'fill', background_color: '#1d4e4f',
+                    text: 'DISFRUTA LA NATURALEZA', text_size_pct: 3, text_color: '#fff',
+                    text_pos_h: 'center', text_pos_v: 'middle', text_offset_x: 0, text_offset_y: 0,
+                    animation: 'fade_in', z_index: 5,
+                    rect: { x_pct: 10, y_pct: 93, w_pct: 80, h_pct: 6 }
+                }
+            ];
+            selectedId = null;
+        }
+
+        // ===== Render =====
+        function render() {
+            renderCanvas();
+            renderLayers();
+            renderProps();
+        }
+
+        function renderCanvas() {
+            const frame = $('canvasFrame');
+            frame.innerHTML = '';
+            const placeholder = document.createElement('div');
+            placeholder.className = 'placeholder-hint';
+            placeholder.textContent = 'Agrega un elemento para comenzar';
+            frame.appendChild(placeholder);
+
+            if (elements.length === 0) return;
+            placeholder.style.display = 'none';
+
+            // Ordenar por z_index
+            const sorted = [...elements].sort((a, b) => a.z_index - b.z_index);
+            sorted.forEach(el => {
+                const div = buildElementDiv(el);
+                frame.appendChild(div);
+            });
+            attachInteract();
+            bindDirectResize();
+        }
+
+        function buildElementDiv(el) {
+            const div = document.createElement('div');
+            div.className = 'ppt-el' + (selectedId === el.tempId ? ' selected' : '');
+            div.dataset.id = el.tempId;
+            div.style.zIndex = el.z_index;
+            const r = el.rect;
+            div.style.left = r.x_pct + '%';
+            div.style.top = r.y_pct + '%';
+            div.style.width = r.w_pct + '%';
+            div.style.height = r.h_pct + '%';
+
+            let html = '';
+            // Fondo
+            if (el.background_image) {
+                html += `<div class="el-bg bg-${el.background_fit}" style="background-image:url('${esc(el.background_image)}');"></div>`;
+            }
+            if (el.background_color && !el.background_image) {
+                html += `<div class="el-bg" style="background:${esc(el.background_color)};"></div>`;
+            }
+            // Contenido (texto)
+            html += `<div class="el-content" style="justify-content:${hJustify(el.text_pos_h)}; align-items:${vAlign(el.text_pos_v)}; padding:0;">`;
+            if (el.type === 'text' || el.type === 'rect') {
+                if (el.text) {
+                    // Usar la dimensión menor evita texto desproporcionado en diseño vertical.
+                    const dims = canvasDimensions();
+                    const sizePx = (el.text_size_pct / 100) * Math.min(dims.width, dims.height);
+                    html += `<div class="el-text" style="font-size:${sizePx}px; color:${esc(el.text_color)}; transform:translate(${el.text_offset_x}px, ${el.text_offset_y}px); white-space:pre-line; text-align:${el.text_pos_h};">${esc(el.text)}</div>`;
+                } else if (el.type === 'text') {
+                    html += `<div class="el-text" style="font-size:24px; color:${esc(el.text_color)};">Texto</div>`;
+                }
+            }
+            html += `</div>`;
+            // Resizers
+            const dirs = ['nw','n','ne','e','se','s','sw','w'];
+            html += dirs.map(d => `<div class="resizer ${d}" data-dir="${d}"></div>`).join('');
+            div.innerHTML = html;
+            return div;
+        }
+
+        function hJustify(h) { return { left: 'flex-start', center: 'center', right: 'flex-end' }[h] || 'center'; }
+        function vAlign(v) { return { top: 'flex-start', middle: 'center', bottom: 'flex-end' }[v] || 'center'; }
+
+        // ===== Interact.js: drag & resize =====
+        function attachInteract() {
+            // Limpiar interacciones previas
+            interact('#canvasFrame .ppt-el').unset();
+
+            interact('#canvasFrame .ppt-el')
+                .draggable({
+                    ignoreFrom: '.resizer',
+                    listeners: {
+                        move: (event) => {
+                            const id = event.target.dataset.id;
+                            const el = elements.find(e => e.tempId === id);
+                            if (!el) return;
+                            const frame = $('canvasFrame');
+                            const fw = frame.clientWidth;
+                            const fh = frame.clientHeight;
+                            el.rect.x_pct = clamp(el.rect.x_pct + (event.dx / fw * 100), 0, 100 - el.rect.w_pct);
+                            el.rect.y_pct = clamp(el.rect.y_pct + (event.dy / fh * 100), 0, 100 - el.rect.h_pct);
+                            event.target.style.left = el.rect.x_pct + '%';
+                            event.target.style.top = el.rect.y_pct + '%';
+                        },
+                        end: () => { renderProps(); }
+                    }
+                })
+                .resizable({
+                    edges: {
+                        top: '.resizer.n, .resizer.ne, .resizer.nw',
+                        right: '.resizer.e, .resizer.ne, .resizer.se',
+                        bottom: '.resizer.s, .resizer.se, .resizer.sw',
+                        left: '.resizer.w, .resizer.nw, .resizer.sw'
+                    },
+                    listeners: {
+                        move: (event) => {
+                            const target = event.target;
+                            const id = target.dataset.id;
+                            const el = elements.find(e => e.tempId === id);
+                            if (!el) return;
+                            const frame = $('canvasFrame');
+                            const fw = frame.clientWidth;
+                            const fh = frame.clientHeight;
+                            const rect = el.rect;
+                            // Nuevo ancho/alto en %
+                            let w = (event.rect.width / fw) * 100;
+                            let h = (event.rect.height / fh) * 100;
+                            // event.rect is viewport-relative; convert it to canvas-relative coordinates
+                            const frameBox = frame.getBoundingClientRect();
+                            let x = ((event.rect.left - frameBox.left) / fw) * 100;
+                            let y = ((event.rect.top - frameBox.top) / fh) * 100;
+                            if (w < 2) w = 2;
+                            if (h < 2) h = 2;
+                            rect.w_pct = w;
+                            rect.h_pct = h;
+                            rect.x_pct = clamp(x, 0, 100 - w);
+                            rect.y_pct = clamp(y, 0, 100 - h);
+                            // Aplicar
+                            target.style.width = w + '%';
+                            target.style.height = h + '%';
+                            target.style.left = rect.x_pct + '%';
+                            target.style.top = rect.y_pct + '%';
+                        },
+                        end: () => { renderProps(); }
+                    }
+                });
+        }
+
+        // Resize directo basado en Pointer Events: funciona con mouse, touch y stylus.
+        function bindDirectResize() {
+            document.querySelectorAll('#canvasFrame .resizer').forEach(handle => {
+                handle.addEventListener('pointerdown', (startEvent) => {
+                    startEvent.preventDefault();
+                    startEvent.stopPropagation();
+                    const target = handle.closest('.ppt-el');
+                    const element = elements.find(item => item.tempId === target.dataset.id);
+                    if (!element) return;
+                    const frame = $('canvasFrame');
+                    const frameBox = frame.getBoundingClientRect();
+                    const start = { ...element.rect };
+                    const direction = handle.dataset.dir;
+                    handle.setPointerCapture?.(startEvent.pointerId);
+
+                    const move = (event) => {
+                        event.preventDefault();
+                        const dx = ((event.clientX - startEvent.clientX) / frameBox.width) * 100;
+                        const dy = ((event.clientY - startEvent.clientY) / frameBox.height) * 100;
+                        let x = start.x_pct;
+                        let y = start.y_pct;
+                        let w = start.w_pct;
+                        let h = start.h_pct;
+
+                        if (direction.includes('e')) w = start.w_pct + dx;
+                        if (direction.includes('s')) h = start.h_pct + dy;
+                        if (direction.includes('w')) { x = start.x_pct + dx; w = start.w_pct - dx; }
+                        if (direction.includes('n')) { y = start.y_pct + dy; h = start.h_pct - dy; }
+
+                        if (w < 4) { if (direction.includes('w')) x = start.x_pct + start.w_pct - 4; w = 4; }
+                        if (h < 4) { if (direction.includes('n')) y = start.y_pct + start.h_pct - 4; h = 4; }
+                        x = clamp(x, 0, 100 - w);
+                        y = clamp(y, 0, 100 - h);
+                        w = clamp(w, 4, 100 - x);
+                        h = clamp(h, 4, 100 - y);
+
+                        element.rect = { x_pct: x, y_pct: y, w_pct: w, h_pct: h };
+                        target.style.left = x + '%';
+                        target.style.top = y + '%';
+                        target.style.width = w + '%';
+                        target.style.height = h + '%';
+                    };
+                    const end = () => {
+                        window.removeEventListener('pointermove', move);
+                        window.removeEventListener('pointerup', end);
+                        window.removeEventListener('pointercancel', end);
+                        renderProps();
+                    };
+                    window.addEventListener('pointermove', move, { passive: false });
+                    window.addEventListener('pointerup', end, { once: true });
+                    window.addEventListener('pointercancel', end, { once: true });
+                });
+            });
+        }
+
+        // ===== Selección =====
+        // Actualiza SOLO la clase 'selected' de los nodos ya existentes en el
+        // lienzo, sin reconstruir el DOM. Reconstruir en pointerdown destruía
+        // el elemento que interact.js estaba a punto de arrastrar (se recreaba
+        // el nodo con otra referencia) y por eso el drag moría al primer click.
+        function applySelection() {
+            document.querySelectorAll('#canvasFrame .ppt-el').forEach(el => {
+                const isSelected = selectedId === el.dataset.id;
+                el.classList.toggle('selected', isSelected);
+            });
+            renderProps();
+            renderLayers();
+        }
+
+        $('canvasFrame').addEventListener('pointerdown', (e) => {
+            const ppt = e.target.closest('.ppt-el');
+            selectedId = ppt ? ppt.dataset.id : null;
+            applySelection();
+        });
+
+        // ===== Edición inline (doble clic) =====
+        // Doble clic sobre un elemento con texto abre un editor superpuesto
+        // para modificar el texto directamente en el lienzo, sin ir al panel.
+        function startInlineEdit(target) {
+            const id = target ? target.dataset.id : selectedId;
+            const el = elements.find(e => e.tempId === id);
+            if (!el || (el.type !== 'text' && el.type !== 'rect')) return;
+
+            // Cerrar cualquier editor activo
+            document.querySelector('.inline-text-editor')?.remove();
+
+            selectedId = id;
+            applySelection();
+
+            // Crear el textarea posicionado sobre el elemento
+            const frame = $('canvasFrame');
+            const editor = document.createElement('textarea');
+            editor.className = 'inline-text-editor';
+            editor.value = el.text || '';
+            editor.dataset.id = id;
+            editor.style.left = (el.rect.x_pct || 0) + '%';
+            editor.style.top = (el.rect.y_pct || 0) + '%';
+            editor.style.width = (el.rect.w_pct || 20) + '%';
+            editor.style.height = (el.rect.h_pct || 15) + '%';
+            editor.style.color = el.text_color || '#fff';
+            editor.style.fontSize = (el.text_size_pct || 4) + '%';
+            editor.style.textAlign = el.text_pos_h || 'center';
+            editor.style.padding = '4px';
+            editor.style.boxSizing = 'border-box';
+            editor.style.background = 'rgba(255,255,255,0.92)';
+            editor.style.color = '#111';
+            editor.style.border = '2px solid var(--primary-color, #3a6ea5)';
+            editor.style.borderRadius = '4px';
+            editor.style.fontFamily = 'inherit';
+            editor.style.lineHeight = '1.2';
+            editor.style.zIndex = 9999;
+            frame.appendChild(editor);
+            editor.focus();
+            editor.select();
+
+            let done = false;
+            const commit = () => {
+                if (done) return;
+                done = true;
+                el.text = editor.value;
+                renderCanvas();
+                renderLayers();
+                renderProps();
+            };
+            const cancel = () => {
+                if (done) return;
+                done = true;
+                editor.remove();
+            };
+
+            editor.addEventListener('blur', commit);
+            editor.addEventListener('keydown', (ev) => {
+                if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); editor.blur(); }
+                if (ev.key === 'Escape') { editor.remove(); cancel(); }
+            });
+            // El pointerdown sobre el editor no debe abrir otro select
+            editor.addEventListener('pointerdown', (ev) => ev.stopPropagation());
+        }
+
+        $('canvasFrame').addEventListener('dblclick', (e) => {
+            const ppt = e.target.closest('.ppt-el');
+            if (ppt) {
+                e.preventDefault();
+                startInlineEdit(ppt);
+            }
+        });
+
+        // ===== Capas (reordenar por arrastre con Pointer Events) =====
+        // Se usa arrastre manual (pointerdown/move/up) en lugar del DnD HTML5
+        // nativo porque funciona en mouse Y touch, y es simulable en pruebas.
+        // La lista se ordena de arriba (primero, mayor z) hacia atrás (último,
+        // menor z): lo más profundo queda al final de la lista.
+        function renderLayers() {
+            const list = $('layerList');
+            const sorted = [...elements].sort((a, b) => b.z_index - a.z_index);
+            list.innerHTML = sorted.map(el => `
+                <li class="layer-item ${selectedId === el.tempId ? 'active' : ''}" data-id="${el.tempId}">
+                    <i class="fas fa-grip-vertical layer-grip" title="Arrastra para reordenar"></i>
+                    <i class="fas ${elTypeIcon(el.type)}"></i>
+                    <span class="layer-name">${esc(el.text.split('\n')[0] || elTypeLabel(el.type))}</span>
+                </li>
+            `).join('');
+
+            list.querySelectorAll('.layer-item').forEach(li => {
+                li.addEventListener('click', (e) => {
+                    if (e.target.closest('.layer-grip')) return;
+                    selectedId = li.dataset.id; renderCanvas(); renderProps(); renderLayers();
+                });
+            });
+
+            // --- Arrastre manual para reordenar (mouse + touch) ---
+            let drag = { el: null, id: null, startY: 0, over: null };
+
+            const cleanup = () => {
+                list.querySelectorAll('.layer-item').forEach(l => l.classList.remove('layer-drag-over', 'layer-dragging'));
+                drag.el = null; drag.id = null; drag.over = null;
+            };
+
+            const drop = () => {
+                if (!drag.el || !drag.over || drag.over === drag.el) { cleanup(); return; }
+                const order = Array.from(list.querySelectorAll('.layer-item')).map(l => l.dataset.id);
+                const fromIdx = order.indexOf(drag.id);
+                const toIdx = order.indexOf(drag.over.dataset.id);
+                if (fromIdx < 0 || toIdx < 0) { cleanup(); return; }
+                order.splice(fromIdx, 1);
+                order.splice(toIdx, 0, drag.id);
+                // En la lista el PRIMERO es el más ARRIBA (mayor z) y el ÚLTIMO
+                // el más profundo (menor z). Reasignamos z en ese sentido.
+                elements.forEach(el => {
+                    const pos = order.indexOf(el.tempId);
+                    if (pos >= 0) el.z_index = order.length - pos;
+                });
+                selectedId = drag.id;
+                render();
+                notify('Capas reordenadas');
+                cleanup();
+            };
+
+            document.querySelectorAll('#layerList .layer-grip').forEach(grip => {
+                grip.addEventListener('pointerdown', (e) => {
+                    e.preventDefault();
+                    const li = grip.closest('.layer-item');
+                    if (!li) return;
+                    drag.el = li; drag.id = li.dataset.id; drag.startY = e.clientY;
+                    li.classList.add('layer-dragging');
+                    li.setPointerCapture?.(e.pointerId);
+
+                    const onMove = (ev) => {
+                        ev.preventDefault();
+                        // Determinar sobre qué item está el puntero (hit test por Y)
+                        const items = Array.from(list.querySelectorAll('.layer-item'));
+                        let target = null;
+                        for (const it of items) {
+                            const r = it.getBoundingClientRect();
+                            if (ev.clientY >= r.top && ev.clientY <= r.bottom) { target = it; break; }
+                        }
+                        if (target) {
+                            drag.over = target;
+                            items.forEach(it => it.classList.remove('layer-drag-over'));
+                            target.classList.add('layer-drag-over');
+                        }
+                    };
+                    const onUp = () => {
+                        window.removeEventListener('pointermove', onMove);
+                        window.removeEventListener('pointerup', onUp);
+                        drop();
+                    };
+                    window.addEventListener('pointermove', onMove, { passive: false });
+                    window.addEventListener('pointerup', onUp);
+                });
+            });
+        }
+
+        // ===== Agregar elemento =====
+        document.querySelectorAll('[data-add]').forEach(btn => {
+            btn.addEventListener('click', () => addElement(btn.dataset.add));
+        });
+
+        function addElement(type) {
+            seq++;
+            const el = {
+                tempId: 'tmp_' + seq,
+                type: type,
+                background_image: '', background_fit: 'fill', background_color: '',
+                text: type === 'text' ? 'Nuevo texto' : (type === 'image' ? '' : ''),
+                text_size_pct: 5, text_color: '#ffffff',
+                text_pos_h: 'center', text_pos_v: 'middle', text_offset_x: 0, text_offset_y: 0,
+                animation: 'none', z_index: (elements.length ? Math.max(...elements.map(e => e.z_index)) : 0) + 1,
+                rect: { x_pct: 30, y_pct: 30, w_pct: 20, h_pct: 20 }
+            };
+            if (type === 'rect') el.background_color = '#2563eb';
+            if (type === 'image') { el.background_color = '#334155'; }
+            elements.push(el);
+            selectedId = el.tempId;
+            render();
+        }
+
+        // ===== Propiedades =====
+        function renderProps() {
+            const container = $('propsContent');
+            if (!selectedId) {
+                container.innerHTML = `<div class="empty-props">Selecciona un elemento para editarlo</div>`;
+                return;
+            }
+            const el = elements.find(e => e.tempId === selectedId);
+            if (!el) { container.innerHTML = ''; return; }
+
+            let html = '';
+            // Encabezado
+            html += `<div class="prop-section">
+                <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.7rem;">
+                    <i class="fas ${elTypeIcon(el.type)}" style="color:var(--primary-color);"></i>
+                    <strong>${elTypeLabel(el.type)}</strong>
+                </div>
+                <div class="element-actions">
+                    <button type="button" id="pf-back" title="Enviar atrás"><i class="fas fa-layer-group"></i> Atrás</button>
+                    <button type="button" id="pf-front" title="Traer al frente"><i class="fas fa-layer-group"></i> Frente</button>
+                    <button type="button" id="pf-duplicate" title="Duplicar"><i class="fas fa-copy"></i></button>
+                    <button type="button" id="pf-delete" class="danger" title="Eliminar"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>`;
+
+            // Tamaño y posición — inputs con ARRASTRE HORIZONTAL (tipo Photoshop):
+            // arrastra hacia la derecha para aumentar, hacia la izquierda para reducir.
+            html += `<div class="prop-section">
+                <div class="tool-row">
+                    <div class="tool-group"><label>X (%)</label><input type="text" class="drag-num num-single" id="pf-x" value="${Math.round(el.rect.x_pct)}" data-drag-min="0" data-drag-max="100" data-drag-step="0.5" inputmode="decimal"></div>
+                    <div class="tool-group"><label>Y (%)</label><input type="text" class="drag-num num-single" id="pf-y" value="${Math.round(el.rect.y_pct)}" data-drag-min="0" data-drag-max="100" data-drag-step="0.5" inputmode="decimal"></div>
+                </div>
+                <div class="tool-row">
+                    <div class="tool-group"><label>Ancho (%)</label><input type="text" class="drag-num num-single" id="pf-w" value="${Math.round(el.rect.w_pct)}" data-drag-min="2" data-drag-max="100" data-drag-step="0.5" inputmode="decimal"></div>
+                    <div class="tool-group"><label>Alto (%)</label><input type="text" class="drag-num num-single" id="pf-h" value="${Math.round(el.rect.h_pct)}" data-drag-min="2" data-drag-max="100" data-drag-step="0.5" inputmode="decimal"></div>
+                </div>
+                <div class="drag-num-hint"><i class="fas fa-arrows-alt-h"></i> Arrastra horizontalmente para ajustar</div>
+            </div>`;
+
+            // Fondo (solo para rect e image; los elementos de texto no llevan fondo)
+            if (el.type === 'rect' || el.type === 'image') {
+                html += `<div class="prop-section">
+                    <div class="tool-group"><label>Imagen de fondo</label>
+                        <div class="media-upload-row">
+                            <input type="file" id="pf-upload" accept="image/*" hidden>
+                            <button type="button" class="media-upload-btn" id="pf-upload-btn"><i class="fas fa-upload"></i> Subir desde equipo</button>
+                            <button type="button" class="media-upload-btn" id="pf-library-btn"><i class="fas fa-images"></i> Biblioteca</button>
+                            <span class="media-upload-status" id="pf-upload-status"></span>
+                        </div>
+                        <div class="img-preview" id="pf-bgprev" style="${el.background_image ? `background-image:url('${esc(el.background_image)}')` : 'display:none;'}"></div>
+                    </div>
+                    <div class="tool-group"><label>Ajuste de imagen</label>
+                        <select id="pf-bgfit">
+                            <option value="fill" ${el.background_fit==='fill'?'selected':''}>Llenar (fill)</option>
+                            <option value="cover" ${el.background_fit==='cover'?'selected':''}>Cubrir (cover)</option>
+                            <option value="contain" ${el.background_fit==='contain'?'selected':''}>Contener (contain)</option>
+                        </select>
+                    </div>
+                    <div class="tool-row">
+                        <div class="tool-group"><label>Color de fondo</label><input type="color" id="pf-bgcolor" value="${bgHex(el)}"></div>
+                        <div class="tool-group"><label>Opacidad (%)</label><input type="text" class="drag-num num-single" id="pf-bgopacity" value="${Math.round(bgAlpha(el) * 100)}" data-drag-min="0" data-drag-max="100" data-drag-step="1" inputmode="decimal"></div>
+                    </div>
+                </div>`;
+            }
+
+            // Texto (solo para elementos de texto; un rect es una forma, no texto)
+            if (el.type === 'text') {
+                html += `<div class="prop-section">
+                    <div class="tool-group"><label>Texto</label>
+                        <textarea id="pf-text">${esc(el.text)}</textarea>
+                    </div>
+                    <div class="tool-group"><label>Tamaño de texto (%) <span id="pf-sizeval" style="color:var(--text-muted);">${el.text_size_pct}</span></label>
+                        <div class="drag-num-wrap">
+                            <input type="text" class="drag-num num-textsize" id="pf-textsize" value="${el.text_size_pct}" data-drag-min="1" data-drag-max="30" data-drag-step="0.5" inputmode="decimal" title="Arrastra para ajustar o escribe el valor">
+                        </div>
+                    </div>
+                    <div class="tool-row">
+                        <div class="tool-group"><label>Color</label><input type="color" id="pf-textcolor" value="${el.text_color && el.text_color.startsWith('#') ? el.text_color : '#ffffff'}"></div>
+                    </div>
+                    <div class="tool-group"><label>Posición del texto</label>
+                        <div class="pos-hint">
+                            ${[['center','center','CC'],['left','center','LC'],['right','center','RC'],['center','top','CT'],['center','bottom','CB']].map(([h,v,l]) =>
+                                `<button class="pos-btn ${el.text_pos_h===h && el.text_pos_v===v?'active':''}" data-ph="${h}" data-pv="${v}">${l}</button>`
+                            ).join('')}
+                        </div>
+                    </div>
+                    <div class="tool-row">
+                        <div class="tool-group"><label>Offset X (px)</label><input type="text" class="drag-num" id="pf-texoffx" value="${el.text_offset_x}" data-drag-min="-500" data-drag-max="500" data-drag-step="1" inputmode="decimal"></div>
+                        <div class="tool-group"><label>Offset Y (px)</label><input type="text" class="drag-num" id="pf-texoffy" value="${el.text_offset_y}" data-drag-min="-500" data-drag-max="500" data-drag-step="1" inputmode="decimal"></div>
+                    </div>
+                </div>`;
+            }
+
+            // Animación
+            html += `<div class="prop-section">
+                <div class="tool-group"><label>Animación</label>
+                    <select id="pf-anim">
+                        <option value="none" ${el.animation==='none'?'selected':''}>Ninguna</option>
+                        <option value="fade_in" ${el.animation==='fade_in'?'selected':''}>Aparecer</option>
+                        <option value="slide_up" ${el.animation==='slide_up'?'selected':''}>Subir</option>
+                        <option value="slide_left" ${el.animation==='slide_left'?'selected':''}>Deslizar izq</option>
+                        <option value="scale_in" ${el.animation==='scale_in'?'selected':''}>Escalar</option>
+                    </select>
+                </div>
+            </div>`;
+
+            container.innerHTML = html;
+
+            // Bind events
+            bindProp('pf-text', el, (v, e) => { e.text = v; renderCanvas(); renderLayers(); });
+            bindPropNum('pf-x', el, (v, e) => { e.rect.x_pct = v; renderCanvas(); });
+            bindPropNum('pf-y', el, (v, e) => { e.rect.y_pct = v; renderCanvas(); });
+            bindPropNum('pf-w', el, (v, e) => { e.rect.w_pct = v; renderCanvas(); });
+            bindPropNum('pf-h', el, (v, e) => { e.rect.h_pct = v; renderCanvas(); });
+            $('pf-upload-btn') && $('pf-upload-btn').addEventListener('click', () => $('pf-upload').click());
+            // Botón Biblioteca: abre el modal con las imágenes ya subidas de la tienda.
+            $('pf-library-btn') && $('pf-library-btn').addEventListener('click', async () => {
+                const modal = $('libModal');
+                const body = $('libModalBody');
+                if (!modal || !body) return;
+                modal.style.display = 'flex';
+                body.innerHTML = '<div class="lib-empty">Cargando imágenes...</div>';
+                try {
+                    const res = await api('digital_boards/list_media.php');
+                    const items = (res.success && res.data) ? res.data : [];
+                    if (items.length === 0) {
+                        body.innerHTML = '<div class="lib-empty"><i class="fas fa-images" style="font-size:2rem;opacity:.3;margin-bottom:.5rem;display:block;"></i>Aún no hay imágenes en tu biblioteca.<br>Sube una desde "Subir desde equipo".</div>';
+                        return;
+                    }
+                    body.innerHTML = '<div class="lib-grid">' + items.map(m => `
+                        <button type="button" class="lib-item" data-url="${esc(m.url)}" title="${esc(m.original_name || m.filename)}">
+                            <img src="${esc(m.url)}" alt="${esc(m.original_name || 'imagen')}" loading="lazy">
+                            <span class="lib-name">${esc(m.original_name || m.filename)}</span>
+                        </button>
+                    `).join('') + '</div>';
+                    body.querySelectorAll('.lib-item').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const url = btn.dataset.url;
+                            el.background_image = url;
+                            const preview = $('pf-bgprev');
+                            if (preview) { preview.style.backgroundImage = `url('${url}')`; preview.style.display = ''; }
+                            modal.style.display = 'none';
+                            renderCanvas();
+                            notify('Imagen aplicada de la biblioteca');
+                        });
+                    });
+                } catch (e) {
+                    body.innerHTML = '<div class="lib-empty">Error al cargar la biblioteca.</div>';
+                    notify('Error al cargar la biblioteca', 'error');
+                }
+            });
+            $('libModalClose') && $('libModalClose').addEventListener('click', () => { const m=$('libModal'); if(m) m.style.display='none'; });
+            $('libModal') && $('libModal').addEventListener('click', (e) => { if (e.target === e.currentTarget) { e.currentTarget.style.display='none'; } });
+            $('pf-upload') && $('pf-upload').addEventListener('change', (event) => {
+                const file = event.target.files && event.target.files[0];
+                const input = event.target;
+                if (!file) return;
+                const status = $('pf-upload-status');
+                const button = $('pf-upload-btn');
+
+                // Validar que sea una imagen (por tipo MIME del navegador)
+                if (!file.type || !file.type.startsWith('image/')) {
+                    status.textContent = 'Solo se permiten imágenes';
+                    notify('El archivo no es una imagen', 'error');
+                    input.value = '';
+                    return;
+                }
+                // Validar tamaño (máx 100MB)
+                if (file.size > 100 * 1024 * 1024) {
+                    status.textContent = 'Máximo 100 MB';
+                    notify('La imagen supera el tamaño permitido (100 MB)', 'error');
+                    input.value = '';
+                    return;
+                }
+
+                button.disabled = true;
+                // Nota de optimización (se reemplaza al terminar)
+                if ($('pf-upload-note')) $('pf-upload-note').style.display = 'none';
+                status.textContent = 'Subiendo y optimizando... 0%';
+
+                // XMLHttpRequest para mostrar progreso real de subida
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', `${API_BASE}/digital_boards/upload_media.php`);
+                xhr.withCredentials = true;
+
+                xhr.upload.onprogress = (e) => {
+                    if (e.lengthComputable) {
+                        const pct = Math.round((e.loaded / e.total) * 100);
+                        status.textContent = `Subiendo y optimizando... ${pct}%`;
+                    }
+                };
+
+                xhr.onload = () => {
+                    let result = null;
+                    try { result = JSON.parse(xhr.responseText); } catch (_) {}
+                    button.disabled = false;
+                    if (xhr.status >= 200 && result && result.success) {
+                        const url = result.data.url;
+                        el.background_image = url;
+                        const preview = $('pf-bgprev');
+                        if (preview) {
+                            preview.style.backgroundImage = `url('${url}')`;
+                            preview.style.display = '';
+                        }
+                        const saved = result.data.file_size;
+                        const savedMB = (saved / (1024 * 1024)).toFixed(1);
+                        status.textContent = `Lista (${savedMB} MB optimizado)`;
+                        renderCanvas();
+                        notify('Imagen subida y optimizada');
+                    } else {
+                        const msg = (result && result.message) || 'No se pudo subir la imagen';
+                        status.textContent = 'No se pudo subir';
+                        notify(msg, 'error');
+                    }
+                    input.value = '';
+                };
+                xhr.onerror = () => {
+                    button.disabled = false;
+                    status.textContent = 'Error de conexión';
+                    notify('Error de conexión al subir', 'error');
+                    input.value = '';
+                };
+
+                const fd = new FormData();
+                fd.append('file', file);
+                xhr.send(fd);
+            });
+            $('pf-bgfit') && $('pf-bgfit').addEventListener('change', (ev) => { el.background_fit = ev.target.value; renderCanvas(); });
+            // Color de fondo con opacidad: se guarda como rgba(r,g,b,a).
+            bindProp('pf-bgcolor', el, (v, e) => {
+                e.background_color = colorWithAlpha(v, bgAlpha(e));
+                renderCanvas();
+            });
+            bindPropNum('pf-bgopacity', el, (v, e) => {
+                e.background_color = colorWithAlpha(e.background_color, (v || 0) / 100);
+                renderCanvas();
+            });
+            bindProp('pf-textcolor', el, (v, e) => { e.text_color = v; renderCanvas(); });
+            $('pf-textsize') && $('pf-textsize').addEventListener('input', (ev) => { el.text_size_pct = parseFloat(ev.target.value); $('pf-sizeval').textContent = parseFloat(ev.target.value); renderCanvas(); });
+            bindPropNum('pf-texoffx', el, (v, e) => { e.text_offset_x = v; renderCanvas(); });
+            bindPropNum('pf-texoffy', el, (v, e) => { e.text_offset_y = v; renderCanvas(); });
+            $('pf-anim') && $('pf-anim').addEventListener('change', (ev) => { el.animation = ev.target.value; });
+            $('pf-back') && $('pf-back').addEventListener('click', () => {
+                el.z_index = Math.max(1, el.z_index - 1);
+                render();
+            });
+            $('pf-front') && $('pf-front').addEventListener('click', () => {
+                el.z_index = Math.max(...elements.map(item => item.z_index)) + 1;
+                render();
+            });
+            $('pf-duplicate') && $('pf-duplicate').addEventListener('click', () => {
+                seq++;
+                const copy = JSON.parse(JSON.stringify(el));
+                copy.tempId = 'tmp_' + seq;
+                delete copy.element_id;
+                copy.z_index = Math.max(...elements.map(item => item.z_index)) + 1;
+                copy.rect.x_pct = clamp(copy.rect.x_pct + 3, 0, 100 - copy.rect.w_pct);
+                copy.rect.y_pct = clamp(copy.rect.y_pct + 3, 0, 100 - copy.rect.h_pct);
+                elements.push(copy);
+                selectedId = copy.tempId;
+                render();
+            });
+            $('pf-delete') && $('pf-delete').addEventListener('click', () => {
+                elements = elements.filter(item => item.tempId !== el.tempId);
+                selectedId = null;
+                render();
+                notify('Elemento eliminado');
+            });
+            // Posición relativa del texto
+            container.querySelectorAll('[data-ph]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    el.text_pos_h = btn.dataset.ph;
+                    el.text_pos_v = btn.dataset.pv;
+                    renderCanvas();
+                    renderProps();
+                });
+            });
+
+            // Activar arrastre horizontal tipo Photoshop sobre los inputs numéricos
+            makeDraggableNums(container);
+        }
+
+        // ===== Inputs con arrastre horizontal (tipo Photoshop) =====
+        // Un input .drag-num se ajusta arrastrando el mouse hacia la derecha
+        // (aumenta) o hacia la izquierda (reduce), además de poder escribirle
+        // directamente un valor. No usa controles de inicio/fin tediosos.
+        function makeDraggableNums(container) {
+            const dragState = { active: null, startX: 0, startVal: 0, input: null };
+
+            function updateValue(input, val) {
+                const min = parseFloat(input.dataset.dragMin);
+                const max = parseFloat(input.dataset.dragMax);
+                let v = val;
+                if (!isNaN(min)) v = Math.max(v, min);
+                if (!isNaN(max)) v = Math.min(v, max);
+                const step = parseFloat(input.dataset.dragStep) || 1;
+                v = Math.round(v / step) * step;
+                // Redondear a 1 decimal para evitar ruido de float
+                v = Math.round(v * 10) / 10;
+                input.value = String(v);
+                // Dispara los binders existentes (bindPropNum escucha 'change')
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+
+            container.querySelectorAll('.drag-num').forEach(input => {
+                input.addEventListener('mousedown', (e) => {
+                    if (e.button !== 0) return;
+                    const cur = parseFloat(input.value);
+                    if (isNaN(cur)) return;
+                    dragState.active = input;
+                    dragState.startX = e.clientX;
+                    dragState.startVal = cur;
+                    e.preventDefault(); // evitar foco/selección de texto al arrastrar
+                    document.body.classList.add('dragging-num');
+                    // Marcamos el input como "en drag" para no disparar el click de selección
+                    input.__dragging = false;
+                });
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!dragState.active) return;
+                const dx = e.clientX - dragState.startX;
+                // 1px de arrastre horizontal ≈ 0.2 de paso (escala sensible)
+                const step = parseFloat(dragState.active.dataset.dragStep) || 1;
+                updateValue(dragState.active, dragState.startVal + dx * step * 0.2);
+                dragState.active.__dragging = true;
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (dragState.active) {
+                    // Si no hubo arrastre (solo click), permitir editar escribiendo
+                    if (!dragState.active.__dragging) {
+                        dragState.active.focus();
+                    }
+                    dragState.active = null;
+                }
+                document.body.classList.remove('dragging-num');
+            });
+        }
+
+        function bindProp(id, el, apply) {
+            const inp = $(id);
+            if (!inp) return;
+            inp.addEventListener('input', (e) => apply(e.target.value, el));
+        }
+        function bindPropNum(id, el, apply) {
+            const inp = $(id);
+            if (!inp) return;
+            inp.addEventListener('change', (e) => {
+                let v = parseFloat(e.target.value);
+                if (isNaN(v)) v = 0;
+                apply(v, el);
+            });
+        }
+
+        // ===== Guardar =====
+        $('btnSave').addEventListener('click', save);
+        $('btnBack').addEventListener('click', () => window.location.href = 'digital-signage.html');
+        // Vista previa: abre el display público del board actual en otra pestaña.
+        $('btnPreview').addEventListener('click', () => {
+            if (!board) { notify('No hay pantalla cargada', 'error'); return; }
+            window.open(`${window.location.origin}/public/digital-signage-display.html?board=${board.board_id}`, '_blank');
+        });
+
+        async function save() {
+            if (!slides[currentSlide]) { notify('No hay slide', 'error'); return; }
+            const slideId = slides[currentSlide].slide_id;
+            notify('Guardando...', 'success');
+
+            // Borrar existentes
+            const existing = await api(`slide_elements/read.php?slide_id=${slideId}`);
+            if (existing.success) {
+                for (const el of existing.data) {
+                    await api('slide_elements/delete.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ element_id: el.element_id })
+                    });
+                }
+            }
+
+            // Guardar cada elemento
+            let ok = 0;
+            for (const el of elements) {
+                const content = {
+                    presentation_type: el.type,
+                    rect: el.rect,
+                    background_image: el.background_image,
+                    background_fit: el.background_fit,
+                    background_color: el.background_color,
+                    text: el.text,
+                    text_size_pct: el.text_size_pct,
+                    text_color: el.text_color,
+                    text_pos_h: el.text_pos_h,
+                    text_pos_v: el.text_pos_v,
+                    text_offset_x: el.text_offset_x,
+                    text_offset_y: el.text_offset_y,
+                    animation: el.animation,
+                    z_index: el.z_index
+                };
+                // La tabla usa tipos existentes: rectángulos se almacenan como banner.
+                const storageType = el.type === 'rect' ? 'banner' : (el.type === 'video' ? 'image' : el.type);
+                const res = await api('slide_elements/create.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        slide_id: slideId,
+                        element_type: storageType,
+                        grid_col: 1, grid_row: 1, col_span: 1, row_span: 1,
+                        z_index: el.z_index,
+                        content: content,
+                        animation: el.animation === 'none' ? 'fade_in' : el.animation,
+                        animation_delay: 0
+                    })
+                });
+                if (res.success) ok++;
+            }
+            notify(`Guardados ${ok} elementos`, ok === elements.length ? 'success' : 'error');
+        }
+
+        // Escalar canvas al viewport manteniendo la relación horizontal o vertical.
+        function fitCanvas() {
+            const wrap = $('canvasWrap');
+            const frame = $('canvasFrame');
+            const dims = canvasDimensions();
+            const availW = Math.max(200, wrap.clientWidth - 60);
+            const availH = Math.max(200, wrap.clientHeight - 60);
+            const scale = Math.min(availW / dims.width, availH / dims.height);
+            frame.style.width = (dims.width * scale) + 'px';
+            frame.style.height = (dims.height * scale) + 'px';
+        }
+
+        $('canvasOrientation').addEventListener('change', async (event) => {
+            canvasOrientation = event.target.value;
+            const slide = slides[currentSlide];
+            if (!slide) return;
+            // Actualizar el estado local ANTES de redibujar (síncrono), para que
+            // fitCanvas()/slideDimensions() vean la nueva orientación al momento.
+            slide.orientation = canvasOrientation;
+            fitCanvas();
+            renderCanvas();
+            // La orientación se guarda POR SLIDE: cada slide puede tener su
+            // propio tipo de vista (horizontal/vertical) y tamaño personalizado.
+            const result = await api('board_slides/update.php', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ slide_id: slide.slide_id, orientation: canvasOrientation })
+            });
+            if (result.success) {
+                notify('Orientación de la diapositiva actualizada');
+            } else {
+                notify('No se pudo actualizar la orientación', 'error');
+            }
+        });
+
+        window.addEventListener('resize', fitCanvas);
+
+        init();
+        setTimeout(fitCanvas, 100);
+    </script>
+    <script src="lib/animejs/anime.min.js"></script>
+    <script src="js/design-system.js?v=5"></script>
+</body>
+</html>

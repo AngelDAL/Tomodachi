@@ -6,15 +6,17 @@
     <meta name="view-transition" content="same-origin">
     <title>Inventario - Tomodachi</title>
     <!-- Local Fonts -->
-    <link rel="stylesheet" href="css/fonts.css">
+    <link rel="stylesheet" href="css/fonts.css?v=4">
     <!-- FontAwesome -->
-    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
-    <link rel="stylesheet" href="css/main.css">
-    <link rel="stylesheet" href="css/sidebar-modern.css">
-    <link rel="stylesheet" href="css/mobile-nav.css">
-    <link rel="stylesheet" href="css/dashboard.css">
-    <link rel="stylesheet" href="css/inventory.css">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css?v=4">
+    <link rel="stylesheet" href="css/main.css?v=4">
+    <link rel="stylesheet" href="css/design-system.css?v=5">
+    <link rel="stylesheet" href="css/sidebar-modern.css?v=4">
+    <link rel="stylesheet" href="css/mobile-nav.css?v=4">
+    <link rel="stylesheet" href="css/dashboard.css?v=4">
+    <link rel="stylesheet" href="css/inventory.css?v=4">
     <script src="js/theme-init.js"></script>
+    <script src="js/format-utils.js"></script>
 </head>
 <body>
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
@@ -27,7 +29,7 @@
             </div>
             
             <nav class="sidebar-nav">
-                <!-- Navigation Loaded by js/sidebar-loader.js -->
+                <!-- Navigation Loaded by js/sidebar-loader.js?v=5 -->
             </nav>
         </aside>
         
@@ -163,7 +165,7 @@
                         <div class="add-form-triplet">
                             <div class="form-group">
                                 <label for="productCostInput">
-                                    <i class="fas fa-dollar-sign"></i> Costo
+                                    <span class="currency-icon">$</span> Costo
                                 </label>
                                 <div class="input-prefix">
                                     <span class="prefix">$</span>
@@ -494,7 +496,7 @@
                 </button>
             </div>
             <div class="modal-body">
-                <form id="addCategoryForm" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 20px;">
+                <form id="addCategoryForm" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 20px;">
                     <div class="form-group">
                         <label for="newCategoryName">Nombre de la Categoría</label>
                         <input type="text" id="newCategoryName" placeholder="Ej: Bebidas" required style="width: 100%;">
@@ -559,9 +561,9 @@
                     <div class="ai-column settings-column">
                         <h3>2. Configuración IA</h3>
                         
-                        <div class="ai-tabs" style="display: flex; gap: 5px; margin-bottom: 15px; background: #eee; padding: 4px; border-radius: 8px;">
-                            <button class="ai-tab active" onclick="switchAIMode('enhance')" style="flex: 1; border: none; background: white; padding: 8px; border-radius: 6px; cursor: pointer; font-weight: 600; color: var(--primary-color); box-shadow: 0 2px 4px rgba(0,0,0,0.1);">Mejorar</button>
-                            <button class="ai-tab" onclick="switchAIMode('studio')" style="flex: 1; border: none; background: transparent; padding: 8px; border-radius: 6px; cursor: pointer; font-weight: 600; color: #666;">Estudio</button>
+                        <div class="ai-tabs" style="display: flex; gap: 5px; margin-bottom: 15px; background: var(--bg-light); padding: 4px; border-radius: 8px;">
+                            <button class="ai-tab active" onclick="switchAIMode('enhance')" style="flex: 1; border: none; background: var(--bg-card); padding: 8px; border-radius: 6px; cursor: pointer; font-weight: 600; color: var(--primary-color); box-shadow: var(--shadow-sm);">Mejorar</button>
+                            <button class="ai-tab" onclick="switchAIMode('studio')" style="flex: 1; border: none; background: transparent; padding: 8px; border-radius: 6px; cursor: pointer; font-weight: 600; color: var(--text-light);">Estudio</button>
                         </div>
 
                         <!-- MODO MEJORAR (Original) -->
@@ -603,7 +605,7 @@
                         <div id="modeStudio" class="ai-mode-content" style="display:none;">
                             <div class="form-group">
                                 <label>Tipo de Fondo</label>
-                                <select id="studioBgType" class="form-control" onchange="toggleStudioOptions()" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ddd;">
+                                <select id="studioBgType" class="form-control" onchange="toggleStudioOptions()" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color);">
                                     <option value="generate">Generar Escenario (IA)</option>
                                     <option value="white">Fondo Blanco / Transparente</option>
                                 </select>
@@ -620,7 +622,7 @@
                                     <button class="btn-secondary" onclick="generateBackgroundPreview()" style="width:100%; margin-bottom:10px; display: flex; align-items: center; justify-content: center; gap: 8px;">
                                         <i class="fas fa-image"></i> Generar Solo Fondo
                                     </button>
-                                    <div id="bgPreviewArea" style="display:none; margin-bottom:10px; position:relative; border: 2px dashed #ddd; padding: 5px; border-radius: 8px;">
+                                    <div id="bgPreviewArea" style="display:none; margin-bottom:10px; position:relative; border: 2px dashed var(--border-color); padding: 5px; border-radius: 8px;">
                                         <img id="bgPreviewImg" src="" style="width:100%; border-radius:6px; display: block;">
                                         <div style="display: flex; gap: 5px; margin-top: 5px;">
                                             <button class="btn-sm btn-success" onclick="saveBackgroundToLibrary()" style="flex: 1;">
@@ -681,7 +683,7 @@
                             </button>
                             <div class="ai-suggestions">
                                 <label>Sugerencia de Descripción:</label>
-                                <p id="aiDescriptionSuggestion" style="font-size: 0.9em; font-style: italic; color: #666; background: #f5f5f5; padding: 10px; border-radius: 5px; margin-top: 5px;"></p>
+                                <p id="aiDescriptionSuggestion" style="font-size: 0.9em; font-style: italic; color: var(--text-light); background: var(--bg-light); padding: 10px; border-radius: 5px; margin-top: 5px;"></p>
                                 <button class="btn-secondary btn-sm" onclick="copyAIDescription()" style="margin-top: 5px; width: 100%;">Copiar Descripción</button>
                             </div>
                         </div>
@@ -691,7 +693,7 @@
         </div>
     </div>
     
-    <script src="js/sidebar-loader.js"></script>
+    <script src="js/sidebar-loader.js?v=5"></script>
     <script src="js/app.js"></script>
     <script src="lib/html5-qrcode/html5-qrcode.min.js"></script>
     <script src="js/scanner.js"></script>
@@ -700,10 +702,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             const session = await checkSession();
-            if (!session) {
-                window.location.href = 'login.html';
-                return;
-            }
+            if (!session) { requireSession(); return; }
             
             // Iniciar Tour
             if (window.TourSystem) {
@@ -729,8 +728,8 @@
     .btn-strength {
         flex: 1;
         padding: 10px;
-        border: 1px solid #ddd;
-        background: #f8f9fa;
+        border: 1px solid var(--border-color);
+        background: var(--bg-light);
         border-radius: 6px;
         cursor: pointer;
         transition: all 0.2s;
@@ -740,14 +739,14 @@
         gap: 5px;
         font-size: 0.9em;
     }
-    .btn-strength i { font-size: 1.2em; color: #666; }
+    .btn-strength i { font-size: 1.2em; color: var(--text-light); }
     .btn-strength.active {
-        background: #e3f2fd;
-        border-color: #2196f3;
-        color: #1976d2;
+        background: var(--info-color);
+        border-color: var(--info-color);
+        color: var(--info-color);
         font-weight: bold;
     }
-    .btn-strength.active i { color: #1976d2; }
+    .btn-strength.active i { color: var(--info-color); }
 
     /* Comparador de Imágenes */
     .comparison-container {
@@ -764,7 +763,7 @@
         overflow: hidden;
         border-radius: 8px;
         box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        background: #f0f0f0;
+        background: var(--bg-light);
     }
     .comp-img {
         position: absolute;
@@ -789,7 +788,7 @@
         flex: 1;
         height: 6px;
         -webkit-appearance: none;
-        background: #ddd;
+        background: var(--bg-light);
         border-radius: 3px;
         outline: none;
     }
@@ -805,16 +804,18 @@
     .comp-label {
         font-size: 0.85em;
         font-weight: bold;
-        color: #555;
+        color: var(--text-medium);
         width: 60px;
         text-align: center;
     }
     .mobile-hint {
         text-align: center;
         font-size: 0.8em;
-        color: #999;
+        color: var(--text-muted);
         margin-top: -5px;
     }
 </style>
+    <script src="lib/animejs/anime.min.js"></script>
+    <script src="js/design-system.js?v=5"></script>
 </body>
 </html>

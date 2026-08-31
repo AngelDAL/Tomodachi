@@ -6,11 +6,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iniciar Sesión - Tomodachi</title>
     <!-- Local Fonts -->
-    <link rel="stylesheet" href="css/fonts.css">
+    <link rel="stylesheet" href="css/fonts.css?v=4">
     <!-- FontAwesome -->
-    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css?v=4">
+    <!-- Theme pre-paint: aplica la paleta persistida antes de mostrar el login -->
+    <script src="js/theme-init.js"></script>
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="css/login.css">
+    <link rel="stylesheet" href="css/login.css?v=9">
+    <link rel="stylesheet" href="css/design-system.css?v=6">
+    <script src="lib/animejs/anime.min.js" defer></script>
+    <script src="js/design-system.js?v=6" defer></script>
 </head>
 
 <body>
@@ -31,17 +36,9 @@
                     </svg>
                 </div>
                 <h1>Tomodachi</h1>
-                <p class="tagline">Gestiona tus negocio de una forma Baburosa!.</p>
-                <p class="powered-by desktop-only" style="font-size: 0.8rem; opacity: 0.8; margin-top: 0.5rem;">Powered by Baburu</p>
+                <p class="tagline">Gestiona tu negocio de una forma simple y organizada.</p>
             </div>
             
-            <!-- Legal / Privacy Disclaimer Trigger -->
-            <div class="legal-disclaimer desktop-only">
-                <button id="openPrivacyBtn" class="privacy-link">
-                    <i class="fas fa-shield-alt"></i> Privacidad y Responsabilidad
-                </button>
-            </div>
-
             <!-- Decorative SVG Waves -->
             <div class="waves-container">
                 <svg class="waves" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
@@ -121,96 +118,13 @@
                     <p>¿No tienes una cuenta? <a href="register.html">Regístrate ahora</a></p>
                 </div>
             </div>
-
-            <!-- Mobile Footer -->
-            <div class="mobile-footer mobile-only">
-                <button id="openPrivacyBtnMobile" class="privacy-link-mobile">
-                    <i class="fas fa-shield-alt"></i> Privacidad y Responsabilidad
-                </button>
-                <p class="powered-by-mobile">Powered by Baburu</p>
-            </div>
         </div>
     </div>
 
-    <!-- Privacy Modal -->
-    <dialog id="privacyModal" class="privacy-modal">
-        <div class="modal-wrapper">
-            <div class="modal-header">
-                <h2><i class="fas fa-user-shield"></i> Términos y Privacidad</h2>
-                <button class="close-modal-btn" aria-label="Cerrar"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="modal-body">
-                <div class="term-section">
-                    <h3><i class="fas fa-lock"></i> 1. Privacidad de Datos</h3>
-                    <p>En <strong>Tomodachi</strong>, la privacidad de su negocio es nuestra prioridad. Queremos garantizarle que:</p>
-                    <ul>
-                        <li><strong>Cero Monitoreo:</strong> No rastreamos, analizamos, ni almacenamos externamente información sobre sus precios, inventarios, ventas o estrategias comerciales.</li>
-                    </ul>
-                </div>
-
-                <div class="term-section">
-                    <h3><i class="fas fa-server"></i> 2. Infraestructura y Alojamiento</h3>
-                    <p>Tomodachi es un software que usted instala y controla:</p>
-                    <ul>
-                        <li><strong>Disponibilidad:</strong> La estabilidad del sistema depende exclusivamente del proveedor de hosting.</li>
-                        <li><strong>Responsabilidad:</strong> No nos hacemos responsables por caídas del servidor, pérdida de conexión a internet o fallos de hardware ajenos al código del software.</li>
-                    </ul>
-                </div>
-
-                <div class="term-section">
-                    <h3><i class="fas fa-exclamation-triangle"></i> 3. Limitación de Responsabilidad</h3>
-                    <p>El software se proporciona "tal cual", sin garantía de ningún tipo. Los desarrolladores no serán responsables por daños directos o indirectos derivados del uso del sistema.</p>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-accept" id="closePrivacyBtn">Entendido</button>
-            </div>
-        </div>
-    </dialog>
-
     <script>
-        // Limpiar tema anterior
-        localStorage.removeItem('pos_theme_config');
-
         const loginForm = document.getElementById('loginForm');
         const errorMessage = document.getElementById('errorMessage');
         
-        // Modal Logic
-        const privacyModal = document.getElementById('privacyModal');
-        const openPrivacyBtn = document.getElementById('openPrivacyBtn');
-        const openPrivacyBtnMobile = document.getElementById('openPrivacyBtnMobile');
-        const closePrivacyBtn = document.getElementById('closePrivacyBtn');
-        const closeModalIcon = document.querySelector('.close-modal-btn');
-
-        function openModal() {
-            privacyModal.showModal();
-            privacyModal.classList.add('open');
-        }
-
-        if (openPrivacyBtn) openPrivacyBtn.addEventListener('click', openModal);
-        if (openPrivacyBtnMobile) openPrivacyBtnMobile.addEventListener('click', openModal);
-
-        function closePrivacyModal() {
-            privacyModal.classList.remove('open');
-            privacyModal.classList.add('close');
-            setTimeout(() => {
-                privacyModal.close();
-                privacyModal.classList.remove('close');
-            }, 300); // Match animation duration
-        }
-
-        closePrivacyBtn.addEventListener('click', closePrivacyModal);
-        closeModalIcon.addEventListener('click', closePrivacyModal);
-
-        privacyModal.addEventListener('click', (e) => {
-            const rect = privacyModal.getBoundingClientRect();
-            const isInDialog = (rect.top <= e.clientY && e.clientY <= rect.top + rect.height &&
-              rect.left <= e.clientX && e.clientX <= rect.left + rect.width);
-            if (!isInDialog) {
-                closePrivacyModal();
-            }
-        });
-
         function togglePasswordVisibility() {
             const passwordInput = document.getElementById('password');
             const icon = document.querySelector('.toggle-password i');
@@ -249,6 +163,12 @@
                 const data = await response.json();
 
                 if (data.success) {
+                    // Guardar preferencia de sesión persistente
+                    if (remember) {
+                        localStorage.setItem('tomodachi_keep_session', '1');
+                    } else {
+                        localStorage.removeItem('tomodachi_keep_session');
+                    }
                     btn.innerHTML = '<i class="fas fa-check"></i> ¡Éxito!';
                     btn.style.background = '#48bb78';
                     setTimeout(() => {

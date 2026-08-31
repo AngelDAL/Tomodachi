@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Herramienta de Prueba de Balanzas - Tomodachi</title>
-    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css?v=4">
     <style>
         * {
             margin: 0;
@@ -33,12 +33,12 @@
         }
 
         .header h1 {
-            color: #333;
+            color: var(--text-color);
             margin-bottom: 10px;
         }
 
         .header p {
-            color: #666;
+            color: var(--text-light);
             font-size: 0.95rem;
         }
 
@@ -63,7 +63,7 @@
         }
 
         .card h2 {
-            color: #333;
+            color: var(--text-color);
             margin-bottom: 15px;
             display: flex;
             align-items: center;
@@ -81,7 +81,7 @@
         label {
             display: block;
             margin-bottom: 5px;
-            color: #333;
+            color: var(--text-color);
             font-weight: 600;
             font-size: 0.9rem;
         }
@@ -89,7 +89,7 @@
         input, select {
             width: 100%;
             padding: 10px;
-            border: 2px solid #e0e0e0;
+            border: 2px solid var(--border-color);
             border-radius: 6px;
             font-size: 1rem;
             transition: all 0.3s;
@@ -130,7 +130,7 @@
         }
 
         .btn-primary:disabled {
-            background: #ccc;
+            background: var(--bg-light);
             cursor: not-allowed;
             transform: none;
         }
@@ -145,12 +145,12 @@
         }
 
         .btn-secondary {
-            background: #f3f4f6;
-            color: #333;
+            background: var(--bg-light);
+            color: var(--text-color);
         }
 
         .btn-secondary:hover {
-            background: #e5e7eb;
+            background: var(--bg-light);
         }
 
         .status-indicator {
@@ -203,7 +203,7 @@
 
         .weight-display {
             background: #f9fafb;
-            border: 2px solid #e0e0e0;
+            border: 2px solid var(--border-color);
             border-radius: 8px;
             padding: 20px;
             text-align: center;
@@ -220,7 +220,7 @@
 
         .weight-unit {
             font-size: 1.2rem;
-            color: #666;
+            color: var(--text-light);
         }
 
         .log {
@@ -270,7 +270,7 @@
         }
 
         .simulator-section h3 {
-            color: #333;
+            color: var(--text-color);
             margin-bottom: 10px;
             font-size: 0.95rem;
         }
@@ -301,6 +301,9 @@
             color: #166534;
         }
     </style>
+    <link rel="stylesheet" href="css/design-system.css?v=6">
+    <script src="lib/animejs/anime.min.js" defer></script>
+    <script src="js/design-system.js?v=6" defer></script>
 </head>
 <body>
     <div class="container">
@@ -353,7 +356,7 @@
             <div class="card">
                 <h2><i class="fas fa-flask"></i> Simulador</h2>
 
-                <p style="color: #666; margin-bottom: 15px; font-size: 0.9rem;">
+                <p style="color: var(--text-light); margin-bottom: 15px; font-size: 0.9rem;">
                     Simula datos de balanza para pruebas sin hardware real
                 </p>
 
@@ -405,33 +408,33 @@
         <div class="card" style="margin-top: 20px;">
             <h2><i class="fas fa-question-circle"></i> Ayuda</h2>
 
-            <h3 style="color: #333; margin: 15px 0 10px;">Cómo usar:</h3>
-            <ol style="color: #666; line-height: 1.8; margin-left: 20px;">
+            <h3 style="color: var(--text-color); margin: 15px 0 10px;">Cómo usar:</h3>
+            <ol style="color: var(--text-light); line-height: 1.8; margin-left: 20px;">
                 <li>Selecciona el protocolo compatible con tu balanza</li>
                 <li>Haz clic en "Conectar" y selecciona el puerto COM de tu balanza</li>
                 <li>Si está conectada, deberías ver los pesos en tiempo real</li>
                 <li>Usa el simulador para pruebas sin hardware real</li>
             </ol>
 
-            <h3 style="color: #333; margin: 15px 0 10px;">Protocolos soportados:</h3>
-            <ul style="color: #666; line-height: 1.8; margin-left: 20px;">
+            <h3 style="color: var(--text-color); margin: 15px 0 10px;">Protocolos soportados:</h3>
+            <ul style="color: var(--text-light); line-height: 1.8; margin-left: 20px;">
                 <li><strong>Genérico:</strong> Formato simple "1234.56" (9600 baud)</li>
                 <li><strong>Datalogic:</strong> Formato "ST,GS,1234.56,g" (9600 baud)</li>
                 <li><strong>Excell:</strong> Formato "+1234.56g" (1200 baud)</li>
             </ul>
 
-            <h3 style="color: #333; margin: 15px 0 10px;">Navegadores soportados:</h3>
+            <h3 style="color: var(--text-color); margin: 15px 0 10px;">Navegadores soportados:</h3>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 10px;">
-                <div style="padding: 10px; background: #f3f4f6; border-radius: 6px; text-align: center;">
-                    <i class="fab fa-chrome" style="color: #ea4335; margin-right: 5px;"></i>
+                <div style="padding: 10px; background: var(--bg-light); border-radius: 6px; text-align: center;">
+                    <i class="fab fa-chrome" style="color: var(--danger-color); margin-right: 5px;"></i>
                     Chrome 89+
                 </div>
-                <div style="padding: 10px; background: #f3f4f6; border-radius: 6px; text-align: center;">
+                <div style="padding: 10px; background: var(--bg-light); border-radius: 6px; text-align: center;">
                     <i class="fab fa-edge" style="color: #0078d4; margin-right: 5px;"></i>
                     Edge 89+
                 </div>
-                <div style="padding: 10px; background: #f3f4f6; border-radius: 6px; text-align: center;">
-                    <i class="fab fa-opera" style="color: #ff1b2d; margin-right: 5px;"></i>
+                <div style="padding: 10px; background: var(--bg-light); border-radius: 6px; text-align: center;">
+                    <i class="fab fa-opera" style="color: var(--danger-color); margin-right: 5px;"></i>
                     Opera 75+
                 </div>
             </div>
@@ -506,11 +509,11 @@
 
                 const success = await scaleManager.requestPort();
                 if (success) {
-                    addLog('✓ Puerto conectado exitosamente', 'success');
+                    addLog('Puerto conectado exitosamente', 'success');
                     updateStatus();
                 }
             } catch (error) {
-                addLog(`✗ Error: ${error.message}`, 'error');
+                addLog(`Error: ${error.message}`, 'error');
             }
         });
 
@@ -522,17 +525,17 @@
 
         simulateBtn.addEventListener('click', () => {
             if (!scaleManager.isConnected) {
-                addLog('✗ Debes estar conectado para simular', 'error');
+                addLog('Debes estar conectado para simular', 'error');
                 return;
             }
 
             const weight = parseFloat(simulateWeightInput.value);
             if (isNaN(weight)) {
-                addLog('✗ Peso inválido', 'error');
+                addLog('Peso inválido', 'error');
                 return;
             }
 
-            addLog(`📊 Simulando peso: ${weight.toFixed(3)}...`, 'info');
+            addLog(`Simulando peso: ${weight.toFixed(3)}...`, 'info');
             scaleManager.simulateWeight(weight, 'kg');
         });
 
@@ -558,7 +561,7 @@
 
         // Callbacks de ScaleManager
         scaleManager.on('onConnect', (data) => {
-            addLog('✓ Conectado correctamente', 'success');
+            addLog('Conectado correctamente', 'success');
             updateStatus();
         });
 
@@ -574,7 +577,7 @@
         });
 
         scaleManager.on('onError', (data) => {
-            addLog(`✗ Error: ${data.message}`, 'error');
+            addLog(`Error: ${data.message}`, 'error');
         });
 
         // Inicializar

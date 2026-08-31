@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="view-transition" content="same-origin">
+    <title>Clientes - Tomodachi</title>
+    <link rel="stylesheet" href="css/fonts.css?v=4">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css?v=4">
+    <link rel="stylesheet" href="css/main.css?v=4">
+    <link rel="stylesheet" href="css/design-system.css?v=5">
+    <link rel="stylesheet" href="css/sidebar-modern.css?v=4">
+    <link rel="stylesheet" href="css/mobile-nav.css?v=4">
+    <link rel="stylesheet" href="css/dashboard.css?v=4">
+    <link rel="stylesheet" href="css/inventory.css?v=4">
+    <style>
+        /* ============================================================
+           Clientes — alineación local al design system (Sora + radios,
+           sombras, píldoras). Los estilos base de cliente viven en
+           main.css; esto refina con los tokens --ds-* sin tocar otros
+           archivos ni la lógica JS.
+           ============================================================ */
+        /* Tarjetas de cliente */
+        .customer-card {
+            border-radius: var(--ds-radius-lg);
+            box-shadow: var(--ds-shadow-md);
+        }
+        .customer-card:hover { box-shadow: var(--ds-shadow-lg); }
+        .customer-stat { border-radius: var(--ds-radius-md); }
+
+        /* Filtros de cliente (pestañas) */
+        .customer-filter-btn {
+            border-radius: var(--ds-radius-pill);
+            font-family: var(--font-heading);
+        }
+        .customer-filter-btn.active {
+            box-shadow: 0 6px 16px -7px color-mix(in srgb, var(--primary-color) 65%, transparent);
+        }
+
+        /* Toggle vista grid/tabla */
+        .customer-view-toggle { border-radius: var(--ds-radius-pill); }
+        .view-toggle-btn { border-radius: var(--ds-radius-pill); }
+        .view-toggle-btn.active {
+            box-shadow: 0 4px 12px -6px color-mix(in srgb, var(--primary-color) 60%, transparent);
+        }
+
+        /* Badge de estado */
+        .customer-status-badge { font-family: var(--font-heading); }
+        .customer-status-badge.active {
+            box-shadow: 0 2px 6px -3px color-mix(in srgb, var(--success-color) 55%, transparent);
+        }
+
+        /* Botones de acción en tarjetas */
+        .customer-card-pay {
+            border-radius: var(--ds-radius-pill);
+            font-family: var(--font-heading);
+            box-shadow: 0 6px 16px -8px color-mix(in srgb, var(--primary-color) 60%, transparent);
+        }
+        .customer-card-actions .btn {
+            border-radius: var(--ds-radius-pill) !important;
+        }
+        .quick-pay-btn { border-radius: var(--ds-radius-pill); }
+
+        /* Tabla de clientes */
+        #customersTableWrap {
+            border-radius: var(--ds-radius-lg);
+            box-shadow: var(--ds-shadow-sm);
+        }
+
+        /* Detalle: cajas resumen / pago / pestañas */
+        .customer-pay-box,
+        .customer-detail-right {
+            border-radius: var(--ds-radius-md);
+            box-shadow: var(--ds-shadow-sm);
+        }
+        .cd-summary-item { border-radius: var(--ds-radius-md); }
+        .pay-amount-wrap { border-radius: var(--ds-radius-md) !important; }
+        .cd-tabs { gap: 6px; }
+        .cd-tab {
+            border-radius: var(--ds-radius-pill);
+            font-family: var(--font-heading);
+        }
+        .cd-tab.active {
+            box-shadow: 0 6px 16px -7px color-mix(in srgb, var(--primary-color) 65%, transparent);
+        }
+    </style>
+    <script src="js/theme-init.js"></script>
+    <script src="js/format-utils.js"></script>
+</head>
+<body>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <div class="app-container">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <button class="sidebar-close" id="sidebarClose" aria-label="Cerrar menú"><i class="fas fa-times"></i></button>
+                <h2>Tomodachi</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <!-- Navigation Loaded by js/sidebar-loader.js?v=5 -->
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="inventory-container">
+                <section class="inv-controls">
+                    <div class="controls-top">
+                        <div class="search-section">
+                            <div class="search-header">
+                                <h3><i class="fas fa-users"></i> Clientes</h3>
+                            </div>
+                            <div class="search-bar">
+                                <div class="search-input-wrapper">
+                                    <i class="fas fa-search search-icon"></i>
+                                    <input type="text" id="customerSearchInput" placeholder="Buscar por nombre, teléfono o correo..." aria-label="Buscar clientes" class="search-input">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="inv-actions" style="display:flex; gap:10px; align-items:center;">
+                            <div class="customer-view-toggle" role="group" aria-label="Cambiar vista">
+                                <button type="button" id="viewGridBtn" class="view-toggle-btn active" title="Vista cuadrícula">
+                                    <i class="fas fa-th-large"></i>
+                                </button>
+                                <button type="button" id="viewTableBtn" class="view-toggle-btn" title="Vista tabla">
+                                    <i class="fas fa-list"></i>
+                                </button>
+                            </div>
+                            <button id="addCustomerBtn" class="btn btn-primary" style="padding: 0.7rem 1.4rem; border-radius: 8px;">
+                                <i class="fas fa-user-plus"></i> Nuevo Cliente
+                            </button>
+                        </div>
+                    </div>
+                    <div class="customer-filters" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+                        <button class="customer-filter-btn active" data-status="" data-balance="" onclick="setCustomerFilter(this)">
+                            <i class="fas fa-users"></i> Todos
+                        </button>
+                        <button class="customer-filter-btn" data-status="active" data-balance="" onclick="setCustomerFilter(this)">
+                            <i class="fas fa-user-check"></i> Clientes
+                        </button>
+                        <button class="customer-filter-btn" data-status="" data-balance="with_balance" onclick="setCustomerFilter(this)">
+                            <i class="fas fa-hand-holding-dollar"></i> Apartados (con saldo)
+                        </button>
+                        <button class="customer-filter-btn" data-status="inactive" data-balance="" onclick="setCustomerFilter(this)">
+                            <i class="fas fa-user-slash"></i> Inactivos
+                        </button>
+                    </div>
+                    <div class="customer-summary" style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 12px;">
+                        <div class="summary-chip" style="background: var(--primary-lighter); border: 1px solid var(--primary-light); border-radius: var(--ds-radius-pill); padding: 8px 16px; font-size:0.9rem; box-shadow: var(--ds-shadow-sm);">
+                            <i class="fas fa-users" style="color: var(--primary-color);"></i> <strong id="totalCustomers">0</strong> clientes
+                        </div>
+                        <div class="summary-chip" style="background: var(--primary-lighter); border: 1px solid var(--primary-light); border-radius: var(--ds-radius-pill); padding: 8px 16px; font-size:0.9rem; box-shadow: var(--ds-shadow-sm);">
+                            <i class="fas fa-hand-holding-dollar" style="color: var(--warning-color);"></i> Apartado total: <strong id="totalBalance">$0.00</strong>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Vista cuadrícula (default) -->
+                <section class="inv-table-section" id="customersGridView">
+                    <div id="customersGrid" class="customers-grid">
+                        <div class="customer-grid-empty" style="text-align:center; padding:2.5rem; color:var(--text-muted);">
+                            <i class="fas fa-spinner fa-spin"></i> Cargando clientes...
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Vista tabla -->
+                <section class="inv-table-section" id="customersTableView" style="display:none;">
+                    <div id="customersTableWrap">
+                    <table class="inventory-table" id="customersTable" style="width:100%; border-collapse: collapse;">
+                        <thead>
+                            <tr>
+                                <th>Cliente</th>
+                                <th>Teléfono</th>
+                                <th>Saldo (apartado)</th>
+                                <th>Límite</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customersTableBody">
+                            <tr><td colspan="6" style="text-align:center; padding:2rem; color:var(--text-muted);">
+                                <i class="fas fa-spinner fa-spin"></i> Cargando clientes...
+                            </td></tr>
+                        </tbody>
+                    </table>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal: Nuevo/Editar cliente -->
+    <dialog id="customerModal" class="client-dialog" aria-label="Cliente">
+        <div class="modal-content" style="max-width: 580px; border: none; border-radius: 16px; padding: 2.2rem; background: var(--bg-card, #fff);">
+            <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.4rem;">
+                <h2 id="customerModalTitle" style="margin:0; font-size:1.3rem; color: var(--text-color, #1a1a2e);"><i class="fas fa-user" style="color: var(--primary-color); margin-right: 8px;"></i>Nuevo Cliente</h2>
+                <button id="customerModalClose" class="modal-close" aria-label="Cerrar" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color: var(--primary-color);">×</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="customerIdInput">
+                <div class="customer-form-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label style="display:flex; align-items:center; gap:6px; font-size:0.85rem; margin-bottom:6px; color: var(--text-medium); font-weight:600;">
+                            <i class="fas fa-user" style="color: var(--primary-color);"></i> Nombre completo *
+                        </label>
+                        <input type="text" id="customerNameInput" class="form-input" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-lightest); transition: border-color var(--transition-fast), box-shadow var(--transition-fast);" placeholder="Nombre del cliente">
+                    </div>
+                    <div class="form-group">
+                        <label style="display:flex; align-items:center; gap:6px; font-size:0.85rem; margin-bottom:6px; color: var(--text-medium); font-weight:600;">
+                            <i class="fas fa-phone" style="color: var(--primary-color);"></i> Teléfono
+                        </label>
+                        <input type="text" id="customerPhoneInput" class="form-input" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-lightest);" placeholder="555-1234">
+                    </div>
+                    <div class="form-group">
+                        <label style="display:flex; align-items:center; gap:6px; font-size:0.85rem; margin-bottom:6px; color: var(--text-medium); font-weight:600;">
+                            <i class="fas fa-envelope" style="color: var(--primary-color);"></i> Email
+                        </label>
+                        <input type="email" id="customerEmailInput" class="form-input" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-lightest);" placeholder="cliente@correo.com">
+                    </div>
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label style="display:flex; align-items:center; gap:6px; font-size:0.85rem; margin-bottom:6px; color: var(--text-medium); font-weight:600;">
+                            <i class="fas fa-map-marker-alt" style="color: var(--primary-color);"></i> Dirección
+                        </label>
+                        <input type="text" id="customerAddressInput" class="form-input" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-lightest);" placeholder="Dirección (opcional)">
+                    </div>
+                    <div class="form-group">
+                        <label style="display:flex; align-items:center; gap:6px; font-size:0.85rem; margin-bottom:6px; color: var(--text-medium); font-weight:600;">
+                            <i class="fas fa-credit-card" style="color: var(--primary-color);"></i> Límite de crédito
+                        </label>
+                        <input type="number" id="customerLimitInput" class="form-input" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-lightest);" min="0" step="0.01" value="0">
+                        <p style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">0 = sin límite</p>
+                    </div>
+                    <div class="form-group">
+                        <label style="display:flex; align-items:center; gap:6px; font-size:0.85rem; margin-bottom:6px; color: var(--text-medium); font-weight:600;">
+                            <i class="fas fa-sticky-note" style="color: var(--primary-color);"></i> Notas
+                        </label>
+                        <input type="text" id="customerNotesInput" class="form-input" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-lightest);" placeholder="Notas (opcional)">
+                    </div>
+                </div>
+                <div style="display:flex; gap:10px; justify-content:flex-end; margin-top: 20px;">
+                    <button id="customerCancelBtn" class="btn" style="padding:10px 20px; border-radius:8px; background: var(--bg-light); border:1px solid var(--border-color); cursor:pointer; color: var(--text-medium); transition: background var(--transition-fast);">Cancelar</button>
+                    <button id="customerSaveBtn" class="btn btn-primary" style="padding:10px 24px; border-radius:8px; background: var(--primary-color); color:#fff; border:none; cursor:pointer; box-shadow: var(--shadow-primary); transition: background var(--transition-fast), transform var(--transition-fast);">
+                        <i class="fas fa-save"></i> Guardar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </dialog>
+
+    <!-- Modal: Detalle del cliente (historial + abono) -->
+    <dialog id="customerDetailModal" class="client-dialog" aria-label="Detalle del cliente">
+        <div class="modal-content" style="max-width: 900px; border: none; border-radius: 14px; padding: 2.2rem; background: var(--bg-card, #fff);">
+            <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.4rem;">
+                <h2 id="customerDetailTitle" style="margin:0; font-size:1.3rem; color: var(--text-color, #1a1a2e);"><i class="fas fa-id-card" style="color: var(--primary-color); margin-right: 8px;"></i>Detalle del Cliente</h2>
+                <button id="customerDetailClose" class="modal-close" aria-label="Cerrar" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color: var(--primary-color);">×</button>
+            </div>
+            <div class="modal-body" style="max-height: 74vh; overflow-y: auto;">
+                <div id="customerDetailBody"></div>
+            </div>
+        </div>
+    </dialog>
+
+    <script src="js/sidebar-loader.js?v=5"></script>
+    <script src="js/app.js"></script>
+    <script>
+        // Verificar sesión (modal de re-login si caducó y pidió sesión permanente)
+        (async () => {
+            const session = await checkSession();
+            if (!session) {
+                if (typeof requireSession === 'function') { requireSession(); }
+                return;
+            }
+            initCustomers();
+        })();
+
+        let CUSTOMERS = [];
+        let currentStatusFilter = '';
+        let currentBalanceFilter = '';
+        let currentViewMode = 'grid'; // 'grid' | 'table' (default grid)
+
+        function fmtMXN(n) {
+            // Delegar en FormatUtils (formato regional de la empresa).
+            if (window.FormatUtils) return window.FormatUtils.currency(n);
+            return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(Number(n) || 0);
+        }
+
+        function esc(s) {
+            const d = document.createElement('div');
+            d.textContent = String(s ?? '');
+            return d.innerHTML;
+        }
+
+        async function initCustomers() {
+            await loadCustomers();
+            bindCustomerEvents();
+        }
+
+        async function loadCustomers(search, status, balance) {
+            const body = document.getElementById('customersTableBody');
+            // Reintento: el SW o la red pueden fallar la primera vez al navegar.
+            for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    const params = new URLSearchParams();
+                    if (search) params.set('search', search);
+                    if (status) params.set('status', status);
+                    if (balance) params.set('balance', balance);
+                    const qs = params.toString();
+                    let url = '../api/customers/customers.php' + (qs ? '?' + qs : '');
+                    const res = await fetch(url);
+                    if (!res.ok) {
+                        if (attempt < 3) { await new Promise(r => setTimeout(r, 600 * attempt)); continue; }
+                        break;
+                    }
+                    const data = await res.json();
+                    if (!data.success) throw new Error(data.message);
+                    CUSTOMERS = data.data || [];
+                    renderCustomers(CUSTOMERS);
+                    return;
+                } catch (e) {
+                    if (attempt < 3) { await new Promise(r => setTimeout(r, 600 * attempt)); continue; }
+                    if (body) body.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:2rem; color: var(--danger-color);">Error: ${esc(e.message)}</td></tr>`;
+                    const grid = document.getElementById('customersGrid');
+                    if (grid) grid.innerHTML = `<div class="customer-grid-empty" style="text-align:center; padding:2.5rem; color: var(--danger-color);">Error: ${esc(e.message)}</div>`;
+                }
+            }
+        }
+
+        // Filtro por pestañas (Todos / Clientes / Apartados / Inactivos)
+        function setCustomerFilter(btn) {
+            document.querySelectorAll('.customer-filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const status = btn.getAttribute('data-status');
+            const balance = btn.getAttribute('data-balance');
+            currentStatusFilter = status;
+            currentBalanceFilter = balance;
+            loadCustomers(document.getElementById('customerSearchInput').value.trim(), status, balance);
+        }
+
+        function customerInitials(name) {
+            return String(name || '?').split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
+        }
+
+        function customerStatusBadge(c) {
+            const active = c.status === 'active';
+            return `<span class="customer-status-badge ${active ? 'active' : 'inactive'}">
+                <i class="fas fa-circle"></i> ${active ? 'Activo' : 'Inactivo'}
+            </span>`;
+        }
+
+        function renderCustomers(list) {
+            const totalCustomers = document.getElementById('totalCustomers');
+            const totalBalance = document.getElementById('totalBalance');
+            if (totalCustomers) totalCustomers.textContent = list.length;
+            const totalBal = list.reduce((s, c) => s + (Number(c.balance) || 0), 0);
+            if (totalBalance) totalBalance.textContent = fmtMXN(totalBal);
+
+            if (currentViewMode === 'grid') {
+                renderCustomersGrid(list);
+            } else {
+                renderCustomersTable(list);
+            }
+        }
+
+        function renderCustomersGrid(list) {
+            const grid = document.getElementById('customersGrid');
+            if (!grid) return;
+
+            if (!list.length) {
+                grid.innerHTML = `<div class="customer-grid-empty" style="text-align:center; padding:2.5rem; color:var(--text-muted);">
+                    <i class="fas fa-user-friends" style="font-size:2.2rem; margin-bottom:10px; display:block;"></i>
+                    Sin clientes registrados. Crea el primero con "Nuevo Cliente".
+                </div>`;
+                return;
+            }
+
+            grid.innerHTML = list.map(c => {
+                const hasBalance = Number(c.balance) > 0;
+                const limit = Number(c.credit_limit) > 0 ? fmtMXN(c.credit_limit) : 'Sin límite';
+                return `
+                <div class="customer-card" onclick="openCustomerDetail(${c.customer_id})" title="Ver historial y abonar">
+                    <div class="customer-card-top">
+                        <div class="customer-avatar" style="background: var(--primary-light); color: var(--primary-color);">
+                            ${customerInitials(c.full_name)}
+                        </div>
+                        <div class="customer-card-name">
+                            <strong>${esc(c.full_name)}</strong>
+                            ${customerStatusBadge(c)}
+                        </div>
+                        <div class="customer-card-actions">
+                            <button class="btn btn-sm" onclick="event.stopPropagation(); openCustomerModal(${c.customer_id})" title="Editar" style="padding:5px 9px; border-radius:6px; border:none; background:var(--bg-light); cursor:pointer; color: var(--text-medium);"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm" onclick="event.stopPropagation(); deleteCustomer(${c.customer_id})" title="Eliminar" style="padding:5px 9px; border-radius:6px; border:none; background:var(--danger-color); color:#fff; cursor:pointer;"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                    <div class="customer-card-contact">
+                        ${c.phone ? `<span><i class="fas fa-phone"></i> ${esc(c.phone)}</span>` : ''}
+                        ${c.email ? `<span><i class="fas fa-envelope"></i> ${esc(c.email)}</span>` : ''}
+                    </div>
+                    <div class="customer-card-stats">
+                        <div class="customer-stat ${hasBalance ? 'has-balance' : ''}">
+                            <span class="customer-stat-label">Saldo</span>
+                            <span class="customer-stat-value">${fmtMXN(c.balance)}</span>
+                        </div>
+                        <div class="customer-stat">
+                            <span class="customer-stat-label">Límite</span>
+                            <span class="customer-stat-value">${limit}</span>
+                        </div>
+                    </div>
+                    ${hasBalance ? `<button class="customer-card-pay" onclick="event.stopPropagation(); openCustomerDetail(${c.customer_id})">
+                        <i class="fas fa-hand-holding-dollar"></i> Abonar / Ver
+                    </button>` : ''}
+                </div>`;
+            }).join('');
+        }
+
+        function renderCustomersTable(list) {
+            const body = document.getElementById('customersTableBody');
+            if (!body) return;
+
+            if (!list.length) {
+                body.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:2rem; color:var(--text-muted);">Sin clientes registrados. Crea el primero con "Nuevo Cliente".</td></tr>`;
+                return;
+            }
+            body.innerHTML = list.map(c => `
+                <tr style="cursor:pointer;" onclick="openCustomerDetail(${c.customer_id})" title="Ver historial y abonar">
+                    <td data-label="Cliente"><strong>${esc(c.full_name)}</strong></td>
+                    <td data-label="Teléfono">${esc(c.phone || '—')}</td>
+                    <td data-label="Saldo" style="color: ${Number(c.balance) > 0 ? 'var(--warning-color)' : 'var(--success-color)'}; font-weight:600;">${fmtMXN(c.balance)}</td>
+                    <td data-label="Límite">${Number(c.credit_limit) > 0 ? fmtMXN(c.credit_limit) : 'Sin límite'}</td>
+                    <td data-label="Estado">${customerStatusBadge(c)}</td>
+                    <td data-label="Acciones">
+                        <button class="btn btn-sm" onclick="event.stopPropagation(); openCustomerModal(${c.customer_id})" title="Editar" style="margin-right:6px; padding:4px 10px; border-radius:6px; border:none; background:var(--bg-light); cursor:pointer;"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-sm" onclick="event.stopPropagation(); deleteCustomer(${c.customer_id})" title="Eliminar" style="padding:4px 10px; border-radius:6px; border:none; background:var(--danger-color); color:#fff; cursor:pointer;"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function setCustomerViewMode(mode) {
+            currentViewMode = mode;
+            const gridBtn = document.getElementById('viewGridBtn');
+            const tableBtn = document.getElementById('viewTableBtn');
+            const gridView = document.getElementById('customersGridView');
+            const tableView = document.getElementById('customersTableView');
+
+            if (gridBtn) gridBtn.classList.toggle('active', mode === 'grid');
+            if (tableBtn) tableBtn.classList.toggle('active', mode === 'table');
+            if (gridView) gridView.style.display = mode === 'grid' ? '' : 'none';
+            if (tableView) tableView.style.display = mode === 'table' ? '' : 'none';
+
+            // Re-render en el contenedor activo
+            renderCustomers(CUSTOMERS);
+        }
+
+        function bindCustomerEvents() {
+            document.getElementById('customerSearchInput').addEventListener('input', debounce(e => {
+                loadCustomers(e.target.value.trim(), currentStatusFilter, currentBalanceFilter);
+            }, 350));
+
+            const gridBtn = document.getElementById('viewGridBtn');
+            const tableBtn = document.getElementById('viewTableBtn');
+            if (gridBtn) gridBtn.addEventListener('click', () => setCustomerViewMode('grid'));
+            if (tableBtn) tableBtn.addEventListener('click', () => setCustomerViewMode('table'));
+
+            document.getElementById('addCustomerBtn').addEventListener('click', () => openCustomerModal());
+            document.getElementById('customerModalClose').addEventListener('click', closeCustomerModal);
+            document.getElementById('customerCancelBtn').addEventListener('click', closeCustomerModal);
+            document.getElementById('customerSaveBtn').addEventListener('click', saveCustomer);
+
+            const detailModal = document.getElementById('customerDetailModal');
+            document.getElementById('customerDetailClose').addEventListener('click', () => detailModal.close());
+            detailModal.addEventListener('click', e => { if (e.target === detailModal) detailModal.close(); });
+            document.addEventListener('keydown', e => { if (e.key === 'Escape' && detailModal.open) detailModal.close(); });
+        }
+
+        function debounce(fn, ms) {
+            let t;
+            return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+        }
+
+        function openCustomerModal(id) {
+            document.getElementById('customerModalTitle').textContent = id ? 'Editar Cliente' : 'Nuevo Cliente';
+            const c = id ? CUSTOMERS.find(x => x.customer_id === id) : null;
+            document.getElementById('customerIdInput').value = c ? c.customer_id : '';
+            document.getElementById('customerNameInput').value = c ? c.full_name : '';
+            document.getElementById('customerPhoneInput').value = c ? (c.phone || '') : '';
+            document.getElementById('customerEmailInput').value = c ? (c.email || '') : '';
+            document.getElementById('customerAddressInput').value = c ? (c.address || '') : '';
+            document.getElementById('customerLimitInput').value = c ? (c.credit_limit || 0) : 0;
+            document.getElementById('customerNotesInput').value = c ? (c.notes || '') : '';
+            document.getElementById('customerModal').showModal();
+        }
+
+        function closeCustomerModal() {
+            document.getElementById('customerModal').close();
+        }
+
+        async function saveCustomer() {
+            const id = document.getElementById('customerIdInput').value;
+            const name = document.getElementById('customerNameInput').value.trim();
+            if (!name) { alert('El nombre es requerido'); return; }
+            const payload = {
+                full_name: name,
+                phone: document.getElementById('customerPhoneInput').value.trim(),
+                email: document.getElementById('customerEmailInput').value.trim(),
+                address: document.getElementById('customerAddressInput').value.trim(),
+                credit_limit: parseFloat(document.getElementById('customerLimitInput').value) || 0,
+                notes: document.getElementById('customerNotesInput').value.trim()
+            };
+            try {
+                const res = await fetch('../api/customers/customers.php', {
+                    method: id ? 'PUT' : 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(id ? { customer_id: Number(id), ...payload } : payload)
+                });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.message);
+                closeCustomerModal();
+                loadCustomers(document.getElementById('customerSearchInput').value.trim(), currentStatusFilter, currentBalanceFilter);
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
+        async function deleteCustomer(id) {
+            const c = CUSTOMERS.find(x => x.customer_id === id);
+            if (!confirm(`¿Eliminar al cliente "${c ? c.full_name : ''}"? No se puede si tiene saldo pendiente.`)) return;
+            try {
+                const res = await fetch('../api/customers/customers.php', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ customer_id: id })
+                });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.message);
+                loadCustomers(document.getElementById('customerSearchInput').value.trim(), currentStatusFilter, currentBalanceFilter);
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
+        async function openCustomerDetail(id) {
+            try {
+                const res = await fetch(`../api/customers/customers.php?id=${id}`);
+                const data = await res.json();
+                if (!data.success) throw new Error(data.message);
+                const { customer, sales, payments } = data.data;
+                document.getElementById('customerDetailTitle').textContent = customer.full_name;
+                const body = document.getElementById('customerDetailBody');
+
+                const hasBalance = Number(customer.balance) > 0;
+                const limit = Number(customer.credit_limit) > 0 ? fmtMXN(customer.credit_limit) : 'Sin límite';
+                const salesCount = (sales || []).length;
+                const payCount = (payments || []).length;
+
+                let salesRows = (sales || []).map(s => `
+                    <tr>
+                        <td data-label="Venta">#${s.sale_id}</td>
+                        <td data-label="Fecha">${window.FormatUtils ? window.FormatUtils.date(s.sale_date) : new Date(s.sale_date).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
+                        <td data-label="Total" style="text-align:right;">${fmtMXN(s.total)}</td>
+                        <td data-label="Pagado" style="text-align:right; color: var(--success-color);">${fmtMXN(s.amount_paid)}</td>
+                        <td data-label="Estado">${s.status === 'completed' ? (Number(s.amount_paid) >= Number(s.total) ? 'Pagada' : 'Apartado') : s.status}</td>
+                    </tr>`).join('') || '<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">Sin ventas</td></tr>';
+
+                let payRows = (payments || []).map(p => `
+                    <tr>
+                        <td data-label="Fecha">${window.FormatUtils ? window.FormatUtils.date(p.created_at) : new Date(p.created_at).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
+                        <td data-label="Monto" style="text-align:right; color: var(--success-color);">+${fmtMXN(p.amount)}</td>
+                        <td data-label="Método">${p.payment_method || 'cash'}</td>
+                        <td data-label="Notas">${esc(p.notes || '—')}</td>
+                    </tr>`).join('') || '<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Sin abonos</td></tr>';
+
+                // Símbolo de moneda regional para el input de abono
+                const curSym = window.FormatUtils ? (window.FormatUtils.getConfig().currency_symbol || '$') : '$';
+
+                body.innerHTML = `
+                <div class="customer-detail-layout">
+                    <!-- COLUMNA IZQUIERDA: resumen + registro de abono -->
+                    <div class="customer-detail-left">
+                        <div class="cd-profile">
+                            <div class="customer-avatar cd-avatar" style="background: var(--primary-light); color: var(--primary-color);">
+                                ${customerInitials(customer.full_name)}
+                            </div>
+                            <div class="cd-profile-info">
+                                <strong>${esc(customer.full_name)}</strong>
+                                <span class="cd-contact">
+                                    ${customer.phone ? `<span><i class="fas fa-phone"></i> ${esc(customer.phone)}</span>` : ''}
+                                    ${customer.email ? `<span><i class="fas fa-envelope"></i> ${esc(customer.email)}</span>` : ''}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="cd-summary">
+                            <div class="cd-summary-item ${hasBalance ? 'warning' : ''}">
+                                <span class="cd-summary-label"><i class="fas fa-hand-holding-dollar"></i> Saldo pendiente</span>
+                                <span class="cd-summary-value">${fmtMXN(customer.balance)}</span>
+                            </div>
+                            <div class="cd-summary-item">
+                                <span class="cd-summary-label"><i class="fas fa-shopping-bag"></i> Compras totales</span>
+                                <span class="cd-summary-value">${customer.total_purchases || 0}</span>
+                            </div>
+                            <div class="cd-summary-item">
+                                <span class="cd-summary-label"><i class="fas fa-credit-card"></i> Límite de crédito</span>
+                                <span class="cd-summary-value">${limit}</span>
+                            </div>
+                        </div>
+
+                        <div class="customer-pay-box">
+                            <div class="cd-pay-title">
+                                <i class="fas fa-hand-holding-dollar"></i> Registrar abono
+                            </div>
+                            ${hasBalance ? `
+                            <div class="cd-quick-pays">
+                                ${[0.25, 0.5, 1].map(f => {
+                                    const amount = Math.round(Number(customer.balance) * f * 100) / 100;
+                                    if (amount <= 0) return '';
+                                    return `<button type="button" class="quick-pay-btn" onclick="setQuickPayment(${amount})">${f === 1 ? 'Total' : (f * 100) + '%'}</button>`;
+                                }).join('')}
+                            </div>` : `<p class="cd-no-balance"><i class="fas fa-check-circle"></i> Cliente sin saldo pendiente</p>`}
+                            <div class="cd-pay-fields">
+                                <div class="pay-amount-wrap" style="flex:1; display:flex; align-items:center; background: var(--bg-lightest); border:1px solid var(--border-color); border-radius:8px; overflow:hidden;">
+                                    <span class="pay-amount-symbol" style="padding:0 10px; font-weight:700; color: var(--primary-color); background: var(--bg-light); border-right:1px solid var(--border-color); line-height:42px;">${curSym}</span>
+                                    <input type="number" id="paymentAmountInput" min="0.01" step="0.01" placeholder="0.00" style="flex:1; border:none; outline:none; padding:10px 12px; background:transparent; font-size:1.05rem; font-weight:600; color: var(--text-color);">
+                                </div>
+                                <select id="paymentMethodInput" style="padding:9px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-input); color: var(--text-color);">
+                                    <option value="cash">Efectivo</option>
+                                    <option value="card">Tarjeta</option>
+                                    <option value="transfer">Transferencia</option>
+                                </select>
+                            </div>
+                            <button onclick="submitPayment(${customer.customer_id})" class="btn btn-primary" style="width:100%; margin-top:10px; padding:11px 16px; border-radius:8px; background:var(--primary-color); color:#fff; border:none; cursor:pointer; font-weight:700;">
+                                <i class="fas fa-check"></i> Registrar abono
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- COLUMNA DERECHA: pestañas Ventas / Abonos -->
+                    <div class="customer-detail-right">
+                        <div class="cd-tabs">
+                            <button type="button" class="cd-tab active" data-tab="sales" onclick="switchDetailTab('sales')">
+                                <i class="fas fa-receipt"></i> Ventas <span class="cd-tab-count">${salesCount}</span>
+                            </button>
+                            <button type="button" class="cd-tab" data-tab="payments" onclick="switchDetailTab('payments')">
+                                <i class="fas fa-coins"></i> Abonos <span class="cd-tab-count">${payCount}</span>
+                            </button>
+                        </div>
+                        <div class="cd-tab-content" id="cdTabSales">
+                            <table class="dashboard-table cd-table" style="width:100%; font-size:0.85rem;">
+                                <thead><tr><th>Venta</th><th>Fecha</th><th style="text-align:right;">Total</th><th style="text-align:right;">Pagado</th><th>Estado</th></tr></thead>
+                                <tbody>${salesRows}</tbody>
+                            </table>
+                        </div>
+                        <div class="cd-tab-content" id="cdTabPayments" style="display:none;">
+                            <table class="dashboard-table cd-table" style="width:100%; font-size:0.85rem;">
+                                <thead><tr><th>Fecha</th><th style="text-align:right;">Monto</th><th>Método</th><th>Notas</th></tr></thead>
+                                <tbody>${payRows}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                `;
+                document.getElementById('customerDetailModal').showModal();
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
+        // Cambia la pestaña activa (Ventas / Abonos) en el detalle
+        function switchDetailTab(tab) {
+            document.querySelectorAll('.cd-tab').forEach(t => t.classList.toggle('active', t.getAttribute('data-tab') === tab));
+            const sales = document.getElementById('cdTabSales');
+            const payments = document.getElementById('cdTabPayments');
+            if (sales) sales.style.display = tab === 'sales' ? '' : 'none';
+            if (payments) payments.style.display = tab === 'payments' ? '' : 'none';
+        }
+
+        // Rellena el monto del abono con un % del saldo pendiente
+        function setQuickPayment(amount) {
+            const input = document.getElementById('paymentAmountInput');
+            if (input) {
+                input.value = amount > 0 ? amount : '';
+                input.focus();
+            }
+        }
+
+        async function submitPayment(customerId) {
+            const amount = parseFloat(document.getElementById('paymentAmountInput').value);
+            if (!amount || amount <= 0) { alert('Monto inválido'); return; }
+            const payment_method = document.getElementById('paymentMethodInput').value;
+            try {
+                const res = await fetch('../api/customers/payments.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ customer_id: customerId, amount, payment_method })
+                });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.message);
+                openCustomerDetail(customerId);
+                loadCustomers(document.getElementById('customerSearchInput').value.trim(), currentStatusFilter, currentBalanceFilter);
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+    </script>
+    <script src="lib/animejs/anime.min.js"></script>
+    <script src="js/design-system.js?v=5"></script>
+</body>
+</html>

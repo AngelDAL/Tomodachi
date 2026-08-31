@@ -1,7 +1,14 @@
 async function loadTerminals() {
     const grid = document.getElementById('terminalsGrid');
+    // Reintento: el SW o la red pueden fallar la primera vez al navegar.
+    for (let attempt = 1; attempt <= 3; attempt++) {
     try {
         const response = await fetch('../api/terminals/read.php');
+        if (!response.ok) {
+            if (attempt < 3) { await new Promise(r => setTimeout(r, 600 * attempt)); continue; }
+            showNotification('Error al cargar terminales', 'error');
+            return;
+        }
         const result = await response.json();
         
         if (!result.success) {
@@ -47,7 +54,7 @@ async function loadTerminals() {
                         </div>
                         <div class="info-row">
                             <span>Apertura:</span>
-                            <span>${new Date(term.opening_date).toLocaleString()}</span>
+                            <span>${window.FormatUtils ? window.FormatUtils.date(term.opening_date) : new Date(term.opening_date).toLocaleString()}</span>
                         </div>
                         <div class="amount-display">${formatCurrency(balance)}</div>
                     </div>
@@ -63,7 +70,7 @@ async function loadTerminals() {
             } else {
                 content += `
                     <div class="terminal-info">
-                        <p style="color: #666; font-style: italic;">Caja cerrada. Inicie sesión para comenzar a vender.</p>
+                        <p style="color: var(--text-light); font-style: italic;">Caja cerrada. Inicie sesión para comenzar a vender.</p>
                     </div>
                     <div class="terminal-actions">
                         <button class="btn-primary" onclick="openOpenRegisterModal(${term.terminal_id}, '${term.terminal_name}')">
@@ -86,6 +93,9 @@ async function loadTerminals() {
     } catch (error) {
         console.error(error);
         grid.innerHTML = '<p>Error de conexión</p>';
+        if (attempt < 3) { await new Promise(r => setTimeout(r, 600 * attempt)); continue; }
+    }
+    return; // Éxito
     }
 }
 
@@ -159,14 +169,14 @@ function renderMovementsList(movements, initialAmount, openingDate) {
 
     list.innerHTML = processedMovements.map(m => {
         let icon = 'fa-circle';
-        let color = '#666';
+        let color = getComputedStyle(document.documentElement).getPropertyValue('--text-light').trim() || '#666';
         let typeLabel = 'Movimiento';
         let amountClass = '';
         let sign = '';
 
         if (m.type === 'opening') {
             icon = 'fa-lock-open';
-            color = '#666';
+            color = getComputedStyle(document.documentElement).getPropertyValue('--text-light').trim() || '#666';
             typeLabel = 'Apertura';
             amountClass = 'text-muted';
         } else if (m.movement_type === 'sale') {
@@ -190,22 +200,22 @@ function renderMovementsList(movements, initialAmount, openingDate) {
         }
 
         return `
-            <div class="movement-item" style="display:flex; gap:10px; padding:12px 10px; border-bottom:1px solid #eee; align-items:center;">
+            <div class="movement-item" style="display:flex; gap:10px; padding:12px 10px; border-bottom:1px solid var(--border-color); align-items:center;">
                 <div style="width:35px; height:35px; border-radius:50%; background:${color}20; color:${color}; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
                     <i class="fas ${icon}"></i>
                 </div>
                 <div style="flex:1; min-width:0;">
                     <div style="font-weight:600; font-size:0.95em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${typeLabel}</div>
-                    <div style="font-size:0.85em; color:#666; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${m.description || '-'}</div>
-                    <div style="font-size:0.75em; color:#999;">
-                        <i class="fas fa-user"></i> ${m.user_name} &bull; ${new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                    <div style="font-size:0.85em; color:var(--text-light); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${m.description || '-'}</div>
+                    <div style="font-size:0.75em; color:var(--text-muted);">
+                        <i class="fas fa-user"></i> ${m.user_name} &bull; ${window.FormatUtils ? window.FormatUtils.timeOnly(m.created_at) : new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                     </div>
                 </div>
                 <div style="text-align:right;">
                     <div style="font-weight:bold; font-size:1.1em;" class="${amountClass}">
                         ${sign}${formatCurrency(m.amount)}
                     </div>
-                    <div style="font-size:0.75em; color:#999; margin-top:2px;">
+                    <div style="font-size:0.75em; color:var(--text-muted); margin-top:2px;">
                         Acum: ${formatCurrency(m.accumulated)}
                     </div>
                 </div>
@@ -252,6 +262,85 @@ function openMovementsModal(registerId) {
     document.getElementById('moveAmount').value = '';
     document.getElementById('moveDesc').value = '';
     document.getElementById('movementsModal').classList.add('show');
+}
+
+// Alterna el formulario inline de movimiento dentro del drawer de historial
+function toggleMovementForm(forceShow) {
+    const form = document.getElementById('inlineMovementForm');
+    if (!form) return;
+    const show = forceShow !== undefined ? !!forceShow : form.style.display === 'none';
+    form.style.display = show ? 'block' : 'none';
+    const label = document.getElementById('toggleMoveFormLabel');
+    if (label) label.textContent = show ? 'Ocultar formulario' : 'Registrar Entrada/Salida';
+    if (show) {
+        document.getElementById('inlineMoveAmount').value = '';
+        document.getElementById('inlineMoveDesc').value = '';
+        // Símbolo de moneda según formato regional
+        const symEl = document.getElementById('inlineMoveSymbol');
+        if (symEl) symEl.textContent = window.FormatUtils ? (window.FormatUtils.getConfig().currency_symbol || '$') : '$';
+        document.getElementById('inlineMoveAmount').focus();
+    }
+}
+
+// Switch Entrada / Retiro
+document.addEventListener('DOMContentLoaded', () => {
+    const switchEl = document.getElementById('moveTypeSwitch');
+    if (switchEl) {
+        switchEl.addEventListener('click', (e) => {
+            const btn = e.target.closest('.move-type-btn');
+            if (!btn) return;
+            switchEl.querySelectorAll('.move-type-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        });
+    }
+});
+
+// Devuelve el tipo seleccionado en el switch
+function getInlineMoveType() {
+    const active = document.querySelector('#moveTypeSwitch .move-type-btn.active');
+    return active ? active.getAttribute('data-type') : 'entry';
+}
+
+// Registra el movimiento desde el formulario inline (sin abrir otro drawer)
+async function submitInlineMovement() {
+    const registerId = currentHistoryRegisterId;
+    const type = getInlineMoveType();
+    const amount = document.getElementById('inlineMoveAmount').value;
+    const description = document.getElementById('inlineMoveDesc').value.trim();
+
+    if (!registerId) { notify('Sin caja seleccionada', 'error'); return; }
+    if (!amount || parseFloat(amount) <= 0) { notify('Ingresa un monto válido', 'error'); return; }
+    if (!description) { notify('Ingresa una descripción', 'error'); return; }
+
+    const btn = event && event.target ? event.target : null;
+    if (btn) { btn.disabled = true; }
+
+    try {
+        const res = await fetch('../api/cash_register/cash_movements.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                register_id: registerId,
+                movement_type: type,
+                amount: amount,
+                description: description
+            })
+        });
+        const result = await res.json();
+        if (result.success) {
+            notify('Movimiento registrado', 'success');
+            // Mantener el drawer abierto y recargar la lista (flujo continuo)
+            toggleMovementForm(false);
+            openHistoryDrawer(currentHistoryRegisterId);
+        } else {
+            notify(result.error || 'Error al registrar movimiento', 'error');
+            if (btn) btn.disabled = false;
+        }
+    } catch (err) {
+        console.error(err);
+        notify('Error de conexión', 'error');
+        if (btn) btn.disabled = false;
+    }
 }
 
 function openAddTerminalModal() {
@@ -332,6 +421,25 @@ document.getElementById('closeRegisterForm').addEventListener('submit', async (e
         notes: formData.get('notes')
     };
 
+    // Arqueo por denominaciones: si el usuario llenó alguna, enviarla
+    // (el backend autocalcula counted_amount si vienen denominaciones)
+    const denomInputs = document.querySelectorAll('.denom-count');
+    const denominations = [];
+    let denomHasValue = false;
+    denomInputs.forEach(inp => {
+        const count = parseInt(inp.value, 10) || 0;
+        if (count > 0) {
+            denomHasValue = true;
+            denominations.push({ denomination: parseFloat(inp.dataset.denom), count });
+        }
+    });
+    if (denomHasValue) {
+        data.denominations = denominations;
+        // Calculamos el total aquí también para mostrarlo en la respuesta si difiere
+        const denomTotal = denominations.reduce((s, d) => s + d.denomination * d.count, 0);
+        data.counted_amount = Math.round(denomTotal * 100) / 100;
+    }
+
     try {
         const res = await fetch('../api/cash_register/close_register.php', {
             method: 'POST',
@@ -360,7 +468,7 @@ document.getElementById('movementsForm').addEventListener('submit', async (e) =>
     const formData = new FormData(e.target);
     const data = {
         register_id: formData.get('register_id'),
-        type: formData.get('type'),
+        movement_type: formData.get('type'),
         amount: formData.get('amount'),
         description: formData.get('description')
     };
@@ -455,5 +563,42 @@ document.getElementById('countedAmount').addEventListener('input', function(e) {
 });
 
 function formatCurrency(amount) {
+    if (window.FormatUtils) return window.FormatUtils.currency(amount);
     return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
+}
+
+// ==========================================
+// Arqueo por denominaciones (Fase B)
+// ==========================================
+function calcDenominationTotal() {
+    let total = 0;
+    document.querySelectorAll('.denom-count').forEach(inp => {
+        const count = parseFloat(inp.value) || 0;
+        total += (parseFloat(inp.dataset.denom) || 0) * count;
+    });
+    return Math.round(total * 100) / 100;
+}
+
+function updateDenominationTotal() {
+    const el = document.getElementById('denominationTotal');
+    if (el) el.textContent = formatCurrency(calcDenominationTotal());
+}
+
+// Calcular en vivo
+document.querySelectorAll('.denom-count').forEach(inp => {
+    inp.addEventListener('input', updateDenominationTotal);
+});
+
+// Botón: usar el total de denominaciones como dinero contado
+const applyDenomBtn = document.getElementById('applyDenominationsBtn');
+if (applyDenomBtn) {
+    applyDenomBtn.addEventListener('click', function() {
+        const total = calcDenominationTotal();
+        const countedInput = document.getElementById('countedAmount');
+        if (countedInput) {
+            countedInput.value = total.toFixed(2);
+            countedInput.dispatchEvent(new Event('input')); // dispara el cálculo de diferencia
+            notify('Dinero contado actualizado con el arqueo', 'success');
+        }
+    });
 }

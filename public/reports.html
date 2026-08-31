@@ -7,14 +7,16 @@
     <meta name="view-transition" content="same-origin">
     <title>Reportes - Tomodachi</title>
     <!-- Local Fonts -->
-    <link rel="stylesheet" href="css/fonts.css">
+    <link rel="stylesheet" href="css/fonts.css?v=4">
     <!-- FontAwesome -->
-    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
-    <link rel="stylesheet" href="css/main.css">
-    <link rel="stylesheet" href="css/sidebar-modern.css">
-    <link rel="stylesheet" href="css/mobile-nav.css">
-    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css?v=4">
+    <link rel="stylesheet" href="css/main.css?v=4">
+    <link rel="stylesheet" href="css/design-system.css?v=5">
+    <link rel="stylesheet" href="css/sidebar-modern.css?v=4">
+    <link rel="stylesheet" href="css/mobile-nav.css?v=4">
+    <link rel="stylesheet" href="css/dashboard.css?v=4">
     <script src="js/theme-init.js"></script>
+    <script src="js/format-utils.js"></script>
     <script src="lib/qrcodejs/qrcode.min.js"></script>
 </head>
 
@@ -24,12 +26,12 @@
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
-                <button class="sidebar-close" id="sidebarClose" aria-label="Cerrar menú">✕</button>
+                <button class="sidebar-close" id="sidebarClose" aria-label="Cerrar menú"><i class="fas fa-times"></i></button>
                 <h2>Tomodachi</h2>
             </div>
 
             <nav class="sidebar-nav">
-                <!-- Navigation Loaded by js/sidebar-loader.js -->
+                <!-- Navigation Loaded by js/sidebar-loader.js?v=5 -->
             </nav>
         </aside>
 
@@ -71,6 +73,10 @@
                             <div class="report-card-icon"><i class="fas fa-qrcode"></i></div>
                             <div class="report-card-title">Etiquetas QR</div>
                         </div>
+                        <div class="report-card" onclick="selectReport('close_z', 'Cierre Z / Auditoría', 'fa-receipt')">
+                            <div class="report-card-icon"><i class="fas fa-receipt"></i></div>
+                            <div class="report-card-title">Cierre Z / Auditoría</div>
+                        </div>
                     </div>
 
                     <!-- Contenedor de Selección y Filtros (Oculto inicialmente) -->
@@ -82,6 +88,12 @@
                             <div class="report-selection-title">
                                 <i id="selectedReportIcon" class="fas fa-chart-bar"></i>
                                 <span id="selectedReportTitle">Reporte Seleccionado</span>
+                            </div>
+                            <div id="reportCompanyBadge" class="report-company-badge" style="display:none;">
+                                <span style="display:inline-flex; width:34px; height:34px; border-radius:50%; overflow:hidden; background:#fff; border:1px solid var(--border-color); flex:0 0 auto;">
+                                    <img id="reportCompanyLogo" src="" alt="Logo" style="width:100%; height:100%; object-fit:cover; display:block;">
+                                </span>
+                                <span id="reportCompanyName" style="font-size:0.9rem; font-weight:600; color: var(--text-color);"></span>
                             </div>
                         </div>
 
@@ -125,14 +137,64 @@
         </main>
     </div>
 
-    <script src="js/sidebar-loader.js"></script>
+    <!-- Modal: Detalle de venta -->
+    <dialog id="saleDetailModal" class="sale-detail-dialog" aria-label="Detalle de venta">
+        <div class="modal-content" style="max-width: 560px; border: none;">
+            <div class="modal-header">
+                <h2 id="saleDetailTitle">Detalle de Venta</h2>
+                <button type="button" class="modal-close" id="saleDetailClose" aria-label="Cerrar">&times;</button>
+            </div>
+            <div class="modal-body" id="saleDetailBody" style="max-height: 60vh; overflow-y: auto;">
+                <!-- Contenido inyectado por JS -->
+            </div>
+        </div>
+    </dialog>
+
+    <script src="js/sidebar-loader.js?v=5"></script>
     <script src="js/app.js"></script>
     <script src="lib/xlsx/xlsx.full.min.js"></script>
     <script src="lib/html2pdf/html2pdf.bundle.min.js"></script>
+    <script src="lib/jspdf/jspdf.umd.min.js"></script>
+    <script src="lib/jspdf/jspdf.plugin.autotable.min.js"></script>
     <script>
         let currentUser = null;
         let currentReportData = null;
         let currentReportType = '';
+
+        // Carga defensiva de la sesión: si DOMContentLoaded aún no terminó
+        // (o la sesión expiró), obtiene los datos del usuario antes de usarlos.
+        async function ensureCurrentUser() {
+            if (currentUser) return currentUser;
+            try {
+                const session = await checkSession();
+                if (session) currentUser = session;
+            } catch (e) { /* noop */ }
+            return currentUser;
+        }
+
+        // Muestra el logo y nombre de la empresa en el encabezado del reporte
+        async function updateReportCompanyBadge() {
+            const badge = document.getElementById('reportCompanyBadge');
+            if (!badge) return;
+            try {
+                const user = await ensureCurrentUser() || {};
+                const logoImg = document.getElementById('reportCompanyLogo');
+                const nameEl = document.getElementById('reportCompanyName');
+                if (nameEl) nameEl.textContent = user.store_name || 'Mi Negocio';
+                const logoUrl = getRelativeImagePath(user.logo_url) || 'assets/images/default-logo.png';
+                if (logoImg && logoUrl && logoUrl !== 'assets/images/default-logo.png') {
+                    logoImg.src = logoUrl;
+                    logoImg.style.display = 'inline-block';
+                    badge.style.display = 'flex';
+                } else {
+                    // Sin logo: mostrar solo el nombre
+                    logoImg.style.display = 'none';
+                    badge.style.display = 'flex';
+                }
+            } catch (e) {
+                badge.style.display = 'none';
+            }
+        }
 
         function toLocalISOString(date) {
             const offset = date.getTimezoneOffset() * 60000;
@@ -141,10 +203,7 @@
 
         document.addEventListener('DOMContentLoaded', async () => {
             const session = await checkSession();
-            if (!session) {
-                window.location.href = 'login.html';
-                return;
-            }
+            if (!session) { requireSession(); return; }
             currentUser = session;
 
             // document.getElementById('userName').textContent = session.full_name;
@@ -159,10 +218,16 @@
             document.getElementById('endDate').value = toLocalISOString(lastDay);
         });
 
-        document.getElementById('logoutBtn').addEventListener('click', async (e) => {
-            e.preventDefault();
-            await logout();
-        });
+        // Logout: el sidebar-loader.js ya adjunta sus propios listeners al
+        // inyectar el sidebar; aquí solo añadimos el nuestro si el botón ya
+        // existe (evita TypeError si aún no fue generado).
+        const logoutBtnEl = document.getElementById('logoutBtn');
+        if (logoutBtnEl) {
+            logoutBtnEl.addEventListener('click', async (e) => {
+                e.preventDefault();
+                await logout();
+            });
+        }
 
         function selectReport(type, title, iconClass) {
             currentReportType = type;
@@ -172,6 +237,9 @@
             // Fix icon class if it already has 'fas' or not
             const icon = document.getElementById('selectedReportIcon');
             icon.className = iconClass.includes('fa-') ? (iconClass.includes('fas') ? iconClass : 'fas ' + iconClass) : 'fas ' + iconClass;
+
+            // Mostrar logo y nombre de la empresa en el encabezado del reporte
+            updateReportCompanyBadge();
             
             // Hide grid, show selection container
             document.getElementById('reportCardsGrid').style.display = 'none';
@@ -214,6 +282,27 @@
 
             if (type === 'qr_labels') {
                 renderQRLabelGenerator();
+                return;
+            }
+
+            // Cierre Z: endpoint dedicado (estructura distinta a los reportes de lista)
+            if (type === 'close_z') {
+                resultsDiv.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Generando auditoría...</p></div>';
+                exportBtns.style.display = 'none';
+                const date = (startDate || '').slice(0, 10);
+                try {
+                    const resp = await fetch(`../api/reports/close_z.php?date=${date || new Date().toISOString().slice(0,10)}`);
+                    const result = await resp.json();
+                    if (!result.success) throw new Error(result.message || 'Error al generar auditoría');
+                    currentReportData = result.data;
+                    currentReportType = type;
+                    renderCloseZ(result.data);
+                    exportBtns.style.display = 'none'; // el cierre Z se imprime con Ctrl+P (estructura propia)
+                } catch (error) {
+                    console.error(error);
+                    resultsDiv.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error: ${error.message}</p></div>`;
+                    currentReportData = null;
+                }
                 return;
             }
 
@@ -269,23 +358,23 @@
                     totalSales += parseFloat(row.total);
                     totalProfit += parseFloat(row.profit);
                     html += `
-                        <tr>
+                        <tr style="cursor: pointer;" title="Clic para ver detalle de la venta #${row.sale_id}" onclick="showSaleDetail(${row.sale_id})">
                             <td data-label="ID Venta">#${row.sale_id}</td>
-                            <td data-label="Fecha">${new Date(row.sale_date).toLocaleString()}</td>
+                            <td data-label="Fecha">${(window.FormatUtils ? window.FormatUtils.date(row.sale_date) : new Date(row.sale_date).toLocaleString())}</td>
                             <td data-label="Usuario">${row.username}</td>
                             <td data-label="Método Pago">${formatPaymentMethod(row.payment_method)}</td>
-                            <td data-label="Total">$${parseFloat(row.total).toFixed(2)}</td>
-                            <td data-label="Ganancia" style="color: ${row.profit >= 0 ? 'green' : 'red'}">$${parseFloat(row.profit).toFixed(2)}</td>
+                            <td data-label="Total">${window.FormatUtils ? window.FormatUtils.currency(parseFloat(row.total)) : `$${parseFloat(row.total).toFixed(2)}`}</td>
+                            <td data-label="Ganancia" style="color: ${row.profit >= 0 ? 'green' : 'red'}">${window.FormatUtils ? window.FormatUtils.currency(parseFloat(row.profit)) : `$${parseFloat(row.profit).toFixed(2)}`}</td>
                         </tr>
                     `;
                 });
                 
                 // Footer row
                 html += `
-                    <tr style="background-color: #f8f9fa; font-weight: bold;">
+                    <tr style="background-color: var(--bg-light); font-weight: bold;">
                         <td colspan="4" style="text-align: right;">TOTALES:</td>
-                        <td>$${totalSales.toFixed(2)}</td>
-                        <td>$${totalProfit.toFixed(2)}</td>
+                        <td>${window.FormatUtils ? window.FormatUtils.currency(totalSales) : `$${totalSales.toFixed(2)}`}</td>
+                        <td>${window.FormatUtils ? window.FormatUtils.currency(totalProfit) : `$${totalProfit.toFixed(2)}`}</td>
                     </tr>
                 `;
 
@@ -311,19 +400,19 @@
                             <td data-label="Producto">${row.product_name}</td>
                             <td data-label="Código">${row.barcode || '-'}</td>
                             <td data-label="Stock">${row.current_stock}</td>
-                            <td data-label="Costo">$${parseFloat(row.cost).toFixed(2)}</td>
-                            <td data-label="Precio">$${parseFloat(row.price).toFixed(2)}</td>
-                            <td data-label="Valor Costo">$${parseFloat(row.total_cost_value).toFixed(2)}</td>
-                            <td data-label="Valor Venta">$${parseFloat(row.total_price_value).toFixed(2)}</td>
+                            <td data-label="Costo">${window.FormatUtils ? window.FormatUtils.currency(parseFloat(row.cost)) : `$${parseFloat(row.cost).toFixed(2)}`}</td>
+                            <td data-label="Precio">${window.FormatUtils ? window.FormatUtils.currency(parseFloat(row.price)) : `$${parseFloat(row.price).toFixed(2)}`}</td>
+                            <td data-label="Valor Costo">${window.FormatUtils ? window.FormatUtils.currency(parseFloat(row.total_cost_value)) : `$${parseFloat(row.total_cost_value).toFixed(2)}`}</td>
+                            <td data-label="Valor Venta">${window.FormatUtils ? window.FormatUtils.currency(parseFloat(row.total_price_value)) : `$${parseFloat(row.total_price_value).toFixed(2)}`}</td>
                         </tr>
                     `;
                 });
 
                 html += `
-                    <tr style="background-color: #f8f9fa; font-weight: bold;">
+                    <tr style="background-color: var(--bg-light); font-weight: bold;">
                         <td colspan="5" style="text-align: right;">TOTALES:</td>
-                        <td>$${totalCostVal.toFixed(2)}</td>
-                        <td>$${totalPriceVal.toFixed(2)}</td>
+                        <td>${window.FormatUtils ? window.FormatUtils.currency(totalCostVal) : `$${totalCostVal.toFixed(2)}`}</td>
+                        <td>${window.FormatUtils ? window.FormatUtils.currency(totalPriceVal) : `$${totalPriceVal.toFixed(2)}`}</td>
                     </tr>
                 `;
 
@@ -342,8 +431,8 @@
                             <td data-label="Producto">${row.product_name}</td>
                             <td data-label="Código">${row.barcode || '-'}</td>
                             <td data-label="Unidades">${row.total_sold}</td>
-                            <td data-label="Ingresos">$${parseFloat(row.revenue).toFixed(2)}</td>
-                            <td data-label="Ganancia">$${parseFloat(row.profit).toFixed(2)}</td>
+                            <td data-label="Ingresos">${window.FormatUtils ? window.FormatUtils.currency(parseFloat(row.revenue)) : `$${parseFloat(row.revenue).toFixed(2)}`}</td>
+                            <td data-label="Ganancia">${window.FormatUtils ? window.FormatUtils.currency(parseFloat(row.profit)) : `$${parseFloat(row.profit).toFixed(2)}`}</td>
                         </tr>
                     `;
                 });
@@ -367,13 +456,13 @@
                     html += `
                         <tr>
                             <td data-label="ID">#${row.register_id}</td>
-                            <td data-label="Apertura">${new Date(row.opening_date).toLocaleString()}</td>
-                            <td data-label="Cierre">${row.closing_date ? new Date(row.closing_date).toLocaleString() : '-'}</td>
+                            <td data-label="Apertura">${(window.FormatUtils ? window.FormatUtils.date(row.opening_date) : new Date(row.opening_date).toLocaleString())}</td>
+                            <td data-label="Cierre">${row.closing_date ? (window.FormatUtils ? window.FormatUtils.date(row.closing_date) : new Date(row.closing_date).toLocaleString()) : '-'}</td>
                             <td data-label="Terminal">${row.terminal_name || 'General'}</td>
                             <td data-label="Usuario">${row.username}</td>
-                            <td data-label="Inicial">$${parseFloat(row.initial_amount).toFixed(2)}</td>
-                            <td data-label="Final">${row.final_amount !== null ? '$' + parseFloat(row.final_amount).toFixed(2) : '-'}</td>
-                            <td data-label="Diferencia" style="color: ${diffColor}">${row.difference !== null ? '$' + diff.toFixed(2) : '-'}</td>
+                            <td data-label="Inicial">${window.FormatUtils ? window.FormatUtils.currency(parseFloat(row.initial_amount)) : `$${parseFloat(row.initial_amount).toFixed(2)}`}</td>
+                            <td data-label="Final">${row.final_amount !== null ? (window.FormatUtils ? window.FormatUtils.currency(row.final_amount) : '$' + parseFloat(row.final_amount).toFixed(2)) : '-'}</td>
+                            <td data-label="Diferencia" style="color: ${diffColor}">${row.difference !== null ? (window.FormatUtils ? window.FormatUtils.currency(diff) : '$' + diff.toFixed(2)) : '-'}</td>
                             <td data-label="Estado"><span class="badge ${row.status === 'open' ? 'badge-success' : 'badge-secondary'}">${row.status === 'open' ? 'Abierta' : 'Cerrada'}</span></td>
                         </tr>
                     `;
@@ -397,11 +486,11 @@
 
                     html += `
                         <tr>
-                            <td data-label="Fecha">${new Date(row.created_at).toLocaleString()}</td>
+                            <td data-label="Fecha">${(window.FormatUtils ? window.FormatUtils.date(row.created_at) : new Date(row.created_at).toLocaleString())}</td>
                             <td data-label="Terminal">${row.terminal_name || 'General'}</td>
                             <td data-label="Usuario">${row.username}</td>
                             <td data-label="Tipo" class="${typeClass}">${typeLabel}</td>
-                            <td data-label="Monto">$${parseFloat(row.amount).toFixed(2)}</td>
+                            <td data-label="Monto">${window.FormatUtils ? window.FormatUtils.currency(parseFloat(row.amount)) : `$${parseFloat(row.amount).toFixed(2)}`}</td>
                             <td data-label="Descripción">${row.description || '-'}</td>
                         </tr>
                     `;
@@ -421,12 +510,12 @@
                 data.forEach(row => {
                     html += `
                         <tr>
-                            <td data-label="Fecha">${new Date(row.created_at).toLocaleString()}</td>
+                            <td data-label="Fecha">${(window.FormatUtils ? window.FormatUtils.date(row.created_at) : new Date(row.created_at).toLocaleString())}</td>
                             <td data-label="Producto">${row.product_name}</td>
                             <td data-label="Tipo">${formatMovementType(row.movement_type)}</td>
-                            <td data-label="Cant.">${row.quantity}</td>
-                            <td data-label="Stock Ant.">${row.previous_stock}</td>
-                            <td data-label="Stock Nuevo">${row.new_stock}</td>
+                            <td data-label="Cant.">${window.FormatUtils ? window.FormatUtils.qty(row.quantity) : row.quantity}</td>
+                            <td data-label="Stock Ant.">${window.FormatUtils ? window.FormatUtils.qty(row.previous_stock) : row.previous_stock}</td>
+                            <td data-label="Stock Nuevo">${window.FormatUtils ? window.FormatUtils.qty(row.new_stock) : row.new_stock}</td>
                             <td data-label="Usuario">${row.username}</td>
                             <td data-label="Notas">${row.notes || '-'}</td>
                         </tr>
@@ -469,8 +558,8 @@
                     totalProfit += parseFloat(row.profit);
                 });
                 summary = {
-                    'Total Ventas': '$' + totalSales.toFixed(2),
-                    'Total Ganancia': '$' + totalProfit.toFixed(2),
+                    'Total Ventas': (window.FormatUtils ? window.FormatUtils.currency(totalSales) : '$' + totalSales.toFixed(2)),
+                    'Total Ganancia': (window.FormatUtils ? window.FormatUtils.currency(totalProfit) : '$' + totalProfit.toFixed(2)),
                     'Cantidad de Transacciones': currentReportData.length
                 };
             } else if (currentReportType === 'inventory') {
@@ -486,8 +575,8 @@
                 summary = {
                     'Total Productos (Items)': totalItems,
                     'Total Unidades en Stock': totalStock,
-                    'Valor Total Costo': '$' + totalCostVal.toFixed(2),
-                    'Valor Total Venta': '$' + totalPriceVal.toFixed(2)
+                    'Valor Total Costo': (window.FormatUtils ? window.FormatUtils.currency(totalCostVal) : '$' + totalCostVal.toFixed(2)),
+                    'Valor Total Venta': (window.FormatUtils ? window.FormatUtils.currency(totalPriceVal) : '$' + totalPriceVal.toFixed(2))
                 };
             } else if (currentReportType === 'cash_registers') {
                 let totalDiff = 0;
@@ -501,7 +590,7 @@
                 summary = {
                     'Total Registros': currentReportData.length,
                     'Cajas Cerradas': closedCount,
-                    'Diferencia Acumulada': '$' + totalDiff.toFixed(2)
+                    'Diferencia Acumulada': (window.FormatUtils ? window.FormatUtils.currency(totalDiff) : '$' + totalDiff.toFixed(2))
                 };
             } else if (currentReportType === 'cash_movements') {
                 let totalIn = 0;
@@ -515,9 +604,9 @@
                 });
                 summary = {
                     'Total Movimientos': currentReportData.length,
-                    'Total Entradas (Inc. Ventas)': '$' + totalIn.toFixed(2),
-                    'Total Retiros': '$' + totalOut.toFixed(2),
-                    'Flujo Neto': '$' + (totalIn - totalOut).toFixed(2)
+                    'Total Entradas (Inc. Ventas)': (window.FormatUtils ? window.FormatUtils.currency(totalIn) : '$' + totalIn.toFixed(2)),
+                    'Total Retiros': (window.FormatUtils ? window.FormatUtils.currency(totalOut) : '$' + totalOut.toFixed(2)),
+                    'Flujo Neto': (window.FormatUtils ? window.FormatUtils.currency(totalIn - totalOut) : '$' + (totalIn - totalOut).toFixed(2))
                 };
             } else if (currentReportType === 'top_products') {
                 let totalRevenue = 0;
@@ -527,8 +616,8 @@
                     totalProfit += parseFloat(row.profit);
                 });
                 summary = {
-                    'Total Ingresos (Top)': '$' + totalRevenue.toFixed(2),
-                    'Total Ganancia (Top)': '$' + totalProfit.toFixed(2)
+                    'Total Ingresos (Top)': (window.FormatUtils ? window.FormatUtils.currency(totalRevenue) : '$' + totalRevenue.toFixed(2)),
+                    'Total Ganancia (Top)': (window.FormatUtils ? window.FormatUtils.currency(totalProfit) : '$' + totalProfit.toFixed(2))
                 };
             } else if (currentReportType === 'inventory_movements') {
                 let totalMoves = currentReportData.length;
@@ -550,13 +639,14 @@
             return summary;
         }
 
-        function exportExcel() {
+        async function exportExcel() {
             if (!currentReportData) return;
             
+            const user = await ensureCurrentUser() || {};
             const now = new Date();
-            const dateStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
-            const storeName = currentUser.store_name || 'Tomodachi';
-            const userName = currentUser.full_name || currentUser.username;
+            const dateStr = (window.FormatUtils ? window.FormatUtils.date(now) : now.toLocaleDateString() + ' ' + now.toLocaleTimeString());
+            const storeName = user.store_name || 'Tomodachi';
+            const userName = user.full_name || user.username || 'Usuario';
             
             let reportTitle = '';
             switch(currentReportType) {
@@ -588,7 +678,7 @@
                 currentReportData.forEach(row => {
                     ws_data.push([
                         '#' + row.sale_id,
-                        new Date(row.sale_date).toLocaleString(),
+                        (window.FormatUtils ? window.FormatUtils.date(row.sale_date) : new Date(row.sale_date).toLocaleString()),
                         row.username,
                         formatPaymentMethod(row.payment_method),
                         parseFloat(row.total).toFixed(2),
@@ -623,7 +713,7 @@
                 ws_data.push(['Fecha', 'Producto', 'Tipo', 'Cant.', 'Stock Ant.', 'Stock Nuevo', 'Usuario', 'Notas']);
                 currentReportData.forEach(row => {
                     ws_data.push([
-                        new Date(row.created_at).toLocaleString(),
+                        (window.FormatUtils ? window.FormatUtils.date(row.created_at) : new Date(row.created_at).toLocaleString()),
                         row.product_name,
                         formatMovementType(row.movement_type),
                         row.quantity,
@@ -666,15 +756,16 @@
             return (yiq >= 128) ? '#000000' : '#FFFFFF';
         }
 
-        function exportPDF() {
+        async function exportPDF() {
             if (!currentReportData) return;
 
+            const user = await ensureCurrentUser() || {};
             const now = new Date();
-            const dateStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
-            const storeName = currentUser.store_name || 'Mi Negocio';
-            const userName = currentUser.full_name || currentUser.username;
-            const logoUrl = getRelativeImagePath(currentUser.logo_url) || 'assets/images/default-logo.png';
-            
+            const dateStr = (window.FormatUtils ? window.FormatUtils.date(now) : now.toLocaleDateString() + ' ' + now.toLocaleTimeString());
+            const storeName = user.store_name || 'Mi Negocio';
+            const userName = user.full_name || user.username || 'Usuario';
+            const logoUrl = getRelativeImagePath(user.logo_url) || 'assets/images/default-logo.png';
+
             // Get theme colors
             const theme = getThemeColors();
             const primaryColor = theme && theme.primary_color ? theme.primary_color : '#333333';
@@ -686,144 +777,366 @@
                 case 'inventory': reportTitle = 'Reporte de Valoración de Inventario'; break;
                 case 'top_products': reportTitle = 'Reporte de Productos Más Vendidos'; break;
                 case 'inventory_movements': reportTitle = 'Reporte de Movimientos de Inventario'; break;
+                case 'cash_registers': reportTitle = 'Reporte de Cajas Registradoras'; break;
+                case 'cash_movements': reportTitle = 'Reporte de Movimientos de Caja'; break;
                 default: reportTitle = 'Reporte del Sistema';
             }
 
-            const summary = getReportSummary();
-            let summaryHtml = `<div style="margin-bottom: 20px; padding: 10px; background: #f8f9fa; border-radius: 5px; border-left: 5px solid ${primaryColor};"><h3>Resumen</h3><ul style="list-style: none; padding: 0;">`;
-            for (const [key, value] of Object.entries(summary)) {
-                summaryHtml += `<li style="margin-bottom: 5px;"><strong>${key}:</strong> ${value}</li>`;
+            // ============================================================
+            // PDF con tabla REAL (jsPDF + autoTable)
+            // A diferencia de html2canvas (que rasteriza a imagen y corta
+            // tablas entre páginas), autoTable genera una tabla vectorial
+            // con paginación automática: las filas nunca se cortan a la
+            // mitad y el contenido se reparte limpiamente entre hojas.
+            // ============================================================
+
+            // Configurar cabeceras y filas según el tipo de reporte
+            let tableHead = [];
+            let tableRows = [];
+            const money = (v) => window.FormatUtils ? window.FormatUtils.currency(v) : '$' + (parseFloat(v) || 0).toFixed(2);
+
+            switch (currentReportType) {
+                case 'sales':
+                    tableHead = [['ID', 'Fecha', 'Usuario', 'Método', 'Total', 'Ganancia']];
+                    tableRows = currentReportData.map(r => [
+                        '#' + r.sale_id,
+                        (window.FormatUtils ? window.FormatUtils.date(r.sale_date) : new Date(r.sale_date).toLocaleString()),
+                        r.username || '-',
+                        formatPaymentMethod(r.payment_method),
+                        money(r.total),
+                        money(r.profit)
+                    ]);
+                    break;
+                case 'inventory':
+                    tableHead = [['Producto', 'Código', 'Stock', 'Costo', 'Precio', 'V. Costo', 'V. Venta']];
+                    tableRows = currentReportData.map(r => [
+                        r.product_name,
+                        r.barcode || '-',
+                        r.current_stock,
+                        money(r.cost),
+                        money(r.price),
+                        money(r.total_cost_value),
+                        money(r.total_price_value)
+                    ]);
+                    break;
+                case 'top_products':
+                    tableHead = [['Producto', 'Código', 'Unidades', 'Ingresos', 'Ganancia']];
+                    tableRows = currentReportData.map(r => [
+                        r.product_name,
+                        r.barcode || '-',
+                        r.total_sold,
+                        money(r.revenue),
+                        money(r.profit)
+                    ]);
+                    break;
+                case 'inventory_movements':
+                    tableHead = [['Fecha', 'Producto', 'Tipo', 'Cant.', 'Stock Ant.', 'Stock Nuevo', 'Usuario', 'Notas']];
+                    tableRows = currentReportData.map(r => [
+                        (window.FormatUtils ? window.FormatUtils.date(r.created_at) : new Date(r.created_at).toLocaleString()),
+                        r.product_name,
+                        formatMovementType(r.movement_type),
+                        r.quantity,
+                        r.previous_stock,
+                        r.new_stock,
+                        r.username || '-',
+                        r.notes || '-'
+                    ]);
+                    break;
+                case 'cash_registers':
+                    tableHead = [['ID', 'Apertura', 'Cierre', 'Terminal', 'Usuario', 'Inicial', 'Final', 'Diferencia', 'Estado']];
+                    tableRows = currentReportData.map(r => {
+                        const diff = parseFloat(r.difference || 0);
+                        return [
+                            '#' + r.register_id,
+                            (window.FormatUtils ? window.FormatUtils.date(r.opening_date) : new Date(r.opening_date).toLocaleString()),
+                            r.closing_date ? (window.FormatUtils ? window.FormatUtils.date(r.closing_date) : new Date(r.closing_date).toLocaleString()) : '-',
+                            r.terminal_name || 'General',
+                            r.username || '-',
+                            money(r.initial_amount),
+                            r.final_amount !== null ? money(r.final_amount) : '-',
+                            r.difference !== null ? money(diff) : '-',
+                            r.status === 'open' ? 'Abierta' : 'Cerrada'
+                        ];
+                    });
+                    break;
+                case 'cash_movements':
+                    tableHead = [['Fecha', 'Terminal', 'Usuario', 'Tipo', 'Monto', 'Descripción']];
+                    tableRows = currentReportData.map(r => {
+                        let typeLabel = r.movement_type;
+                        if (r.movement_type === 'entry') typeLabel = 'Entrada';
+                        else if (r.movement_type === 'withdrawal') typeLabel = 'Retiro';
+                        else if (r.movement_type === 'sale') typeLabel = 'Venta';
+                        return [
+                            (window.FormatUtils ? window.FormatUtils.date(r.created_at) : new Date(r.created_at).toLocaleString()),
+                            r.terminal_name || 'General',
+                            r.username || '-',
+                            typeLabel,
+                            money(r.amount),
+                            r.description || '-'
+                        ];
+                    });
+                    break;
+                default:
+                    // Reporte genérico: volcar columnas del primer registro
+                    if (currentReportData.length > 0) {
+                        tableHead = [Object.keys(currentReportData[0])];
+                        tableRows = currentReportData.map(r => Object.values(r).map(v => v === null || v === undefined ? '-' : String(v)));
+                    }
             }
-            summaryHtml += '</ul></div>';
 
-            // Construir tabla limpia para PDF
-            let tableHtml = `<table style="width: 100%; border-collapse: collapse; font-size: 12px;"><thead><tr style="background-color: ${primaryColor}; color: ${headerTextColor}; font-weight: bold;">`;
-            
-            if (currentReportType === 'sales') {
-                tableHtml += '<th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+';">ID</th><th style="padding: 8px; '+`background-color: ${primaryColor}; color: ${headerTextColor};`+'; ">Fecha</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Usuario</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Método</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Total</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Ganancia</th></tr></thead><tbody>';
-                currentReportData.forEach((row, index) => {
-                    const bg = index % 2 === 0 ? '#fff' : '#f2f2f2';
-                    tableHtml += `<tr style="background-color: ${bg};">
-                        <td style="padding: 8px; border: 1px solid #ddd;">#${row.sale_id}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${new Date(row.sale_date).toLocaleString()}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${row.username}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${formatPaymentMethod(row.payment_method)}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">$${parseFloat(row.total).toFixed(2)}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">$${parseFloat(row.profit).toFixed(2)}</td>
-                    </tr>`;
-                });
-            } else if (currentReportType === 'inventory') {
-                tableHtml += '<th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Producto</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Código</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Stock</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Costo</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Precio</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">V. Costo</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">V. Venta</th></tr></thead><tbody>';
-                currentReportData.forEach((row, index) => {
-                    const bg = index % 2 === 0 ? '#fff' : '#f2f2f2';
-                    tableHtml += `<tr style="background-color: ${bg};">
-                        <td style="padding: 8px; border: 1px solid #ddd;">${row.product_name}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${row.barcode || '-'}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${row.current_stock}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">$${parseFloat(row.cost).toFixed(2)}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">$${parseFloat(row.price).toFixed(2)}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">$${parseFloat(row.total_cost_value).toFixed(2)}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">$${parseFloat(row.total_price_value).toFixed(2)}</td>
-                    </tr>`;
-                });
-            } else if (currentReportType === 'top_products') {
-                tableHtml += '<th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Producto</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Código</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Unidades</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Ingresos</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Ganancia</th></tr></thead><tbody>';
-                currentReportData.forEach((row, index) => {
-                    const bg = index % 2 === 0 ? '#fff' : '#f2f2f2';
-                    tableHtml += `<tr style="background-color: ${bg};">
-                        <td style="padding: 8px; border: 1px solid #ddd;">${row.product_name}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${row.barcode || '-'}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${row.total_sold}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">$${parseFloat(row.revenue).toFixed(2)}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">$${parseFloat(row.profit).toFixed(2)}</td>
-                    </tr>`;
-                });
-            } else if (currentReportType === 'inventory_movements') {
-                tableHtml += '<th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Fecha</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Producto</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Tipo</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Cant.</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Stock Ant.</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Stock Nuevo</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Usuario</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Notas</th></tr></thead><tbody>';
-                currentReportData.forEach((row, index) => {
-                    const bg = index % 2 === 0 ? '#fff' : '#f2f2f2';
-                    tableHtml += `<tr style="background-color: ${bg};">
-                        <td style="padding: 8px; border: 1px solid #ddd;">${new Date(row.created_at).toLocaleString()}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${row.product_name}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${formatMovementType(row.movement_type)}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${row.quantity}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${row.previous_stock}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${row.new_stock}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${row.username}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${row.notes || '-'}</td>
-                    </tr>`;
-                });
-            } else if (currentReportType === 'cash_registers') {
-                tableHtml += '<th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">ID</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Apertura</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Cierre</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Terminal</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Usuario</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Inicial</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Final</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Diferencia</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Estado</th></tr></thead><tbody>';
-                currentReportData.forEach((row, index) => {
-                    const bg = index % 2 === 0 ? '#fff' : '#f2f2f2';
-                    const diff = parseFloat(row.difference || 0);
-                    const diffColor = diff < 0 ? 'red' : (diff > 0 ? 'green' : 'inherit');
-                    
-                    tableHtml += `<tr style="background-color: ${bg};">
-                        <td style="padding: 8px; border: 1px solid #ddd;">#${row.register_id}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${new Date(row.opening_date).toLocaleString()}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${row.closing_date ? new Date(row.closing_date).toLocaleString() : '-'}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${row.terminal_name || 'General'}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${row.username}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">$${parseFloat(row.initial_amount).toFixed(2)}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${row.final_amount !== null ? '$' + parseFloat(row.final_amount).toFixed(2) : '-'}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd; color: ${diffColor};">${row.difference !== null ? '$' + diff.toFixed(2) : '-'}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${row.status === 'open' ? 'Abierta' : 'Cerrada'}</td>
-                    </tr>`;
-                });
-            } else if (currentReportType === 'cash_movements') {
-                tableHtml += '<th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Fecha</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Terminal</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Usuario</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Tipo</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Monto</th><th style="padding: 8px;'+`background-color: ${primaryColor}; color: ${headerTextColor};`+'">Descripción</th></tr></thead><tbody>';
-                currentReportData.forEach((row, index) => {
-                    const bg = index % 2 === 0 ? '#fff' : '#f2f2f2';
-                    let typeLabel = row.movement_type;
-                    let typeColor = 'inherit';
-                    if (row.movement_type === 'entry') { typeLabel = 'Entrada'; typeColor = 'green'; }
-                    else if (row.movement_type === 'withdrawal') { typeLabel = 'Retiro'; typeColor = 'red'; }
-                    else if (row.movement_type === 'sale') { typeLabel = 'Venta'; }
-
-                    tableHtml += `<tr style="background-color: ${bg};">
-                        <td style="padding: 8px; border: 1px solid #ddd;">${new Date(row.created_at).toLocaleString()}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${row.terminal_name || 'General'}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${row.username}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd; color: ${typeColor};">${typeLabel}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">$${parseFloat(row.amount).toFixed(2)}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${row.description || '-'}</td>
-                    </tr>`;
-                });
+            if (tableHead.length === 0 || tableRows.length === 0) {
+                showNotification('No hay datos para exportar a PDF', 'warning');
+                return;
             }
-            tableHtml += '</tbody></table>';
 
-            // Contenedor temporal para el PDF
-            const container = document.createElement('div');
-            container.innerHTML = `
-                <div style="padding: 20px; font-family: Arial, sans-serif;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid ${primaryColor}; padding-bottom: 10px;">
-                        <div>
-                            <h1 style="margin: 0; color: ${primaryColor};">${storeName}</h1>
-                            <h3 style="margin: 5px 0; color: #666;">${reportTitle}</h3>
-                        </div>
-                        <img src="${logoUrl}" style="max-height: 60px; max-width: 150px;" onerror="this.style.display='none'">
-                    </div>
-                    <div style="margin-bottom: 20px; font-size: 12px; color: #555;">
-                        <p style="margin: 2px 0;"><strong>Generado por:</strong> ${userName}</p>
-                        <p style="margin: 2px 0;"><strong>Fecha:</strong> ${dateStr}</p>
-                    </div>
-                    ${summaryHtml}
-                    ${tableHtml}
-                </div>
-            `;
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const margin = 14;
+            const contentWidth = pageWidth - (margin * 2);
 
-            const opt = {
-                margin: 10,
-                filename: `Reporte_${currentReportType}_${now.toISOString().split('T')[0]}.pdf`,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            // Parsear el color primario del negocio a RGB
+            const hexToRgb = (hex) => {
+                const h = hex.replace('#', '');
+                return [parseInt(h.substr(0, 2), 16), parseInt(h.substr(2, 2), 16), parseInt(h.substr(4, 2), 16)];
             };
-            
-            html2pdf().set(opt).from(container).save();
+            const primaryRGB = hexToRgb(primaryColor);
+            // Versión oscura del primario (para la banda superior degradada)
+            const darken = (rgb, f) => rgb.map(v => Math.max(0, Math.round(v * f)));
+            const primaryDarkRGB = darken(primaryRGB, 0.78);
+
+            // Cargar el logo (si existe) a dataURL para poder insertarlo
+            let logoDataUrl = null;
+            try {
+                if (logoUrl && logoUrl !== 'assets/images/default-logo.png') {
+                    const imgResp = await fetch(logoUrl);
+                    if (imgResp.ok) {
+                        const blob = await imgResp.blob();
+                        logoDataUrl = await new Promise((resolve) => {
+                            const reader = new FileReader();
+                            reader.onload = () => resolve(reader.result);
+                            reader.onerror = () => resolve(null);
+                            reader.readAsDataURL(blob);
+                        });
+                    }
+                }
+            } catch (e) { logoDataUrl = null; }
+
+            // Preparar un PNG circular real para el PDF (cover, sin deformar).
+            // jsPDF no recorta <img> con CSS, por eso se hace el clip en canvas.
+            let logoCircleDataUrl = null;
+            if (logoDataUrl) {
+                try {
+                    logoCircleDataUrl = await new Promise((resolve) => {
+                        const image = new Image();
+                        image.onload = () => {
+                            const size = 160;
+                            const canvas = document.createElement('canvas');
+                            canvas.width = size;
+                            canvas.height = size;
+                            const ctx = canvas.getContext('2d');
+                            ctx.beginPath();
+                            ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+                            ctx.closePath();
+                            ctx.clip();
+                            // object-fit: cover: llena el círculo conservando proporción.
+                            const scale = Math.max(size / image.naturalWidth, size / image.naturalHeight);
+                            const w = image.naturalWidth * scale;
+                            const h = image.naturalHeight * scale;
+                            ctx.drawImage(image, (size - w) / 2, (size - h) / 2, w, h);
+                            resolve(canvas.toDataURL('image/png'));
+                        };
+                        image.onerror = () => resolve(null);
+                        image.src = logoDataUrl;
+                    });
+                } catch (e) { logoCircleDataUrl = null; }
+            }
+
+            // Periodo del reporte (si aplica)
+            let periodStr = '';
+            try {
+                const sd = document.getElementById('startDate');
+                const ed = document.getElementById('endDate');
+                if (sd && sd.value) {
+                    const s = new Date(sd.value);
+                    const e = ed && ed.value ? new Date(ed.value) : new Date();
+                    periodStr = (window.FormatUtils ? window.FormatUtils.dateOnly(s) : s.toLocaleDateString()) + ' - ' + (ed && ed.value ? (window.FormatUtils ? window.FormatUtils.dateOnly(e) : e.toLocaleDateString()) : 'Hoy');
+                }
+            } catch (e) { periodStr = ''; }
+
+            const dateStrFull = (window.FormatUtils ? window.FormatUtils.dateLong(now) : now.toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
+            const timeStr = window.FormatUtils ? window.FormatUtils.timeOnly(now) : now.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+
+            // ============================================================
+            // ENCABEZADO: banda de color primario con logo y nombre
+            // ============================================================
+            const headerH = 46;
+            // Banda principal (color primario)
+            doc.setFillColor(primaryRGB[0], primaryRGB[1], primaryRGB[2]);
+            doc.rect(0, 0, pageWidth, headerH, 'F');
+            // Franja inferior más oscura (detalle de diseño)
+            doc.setFillColor(primaryDarkRGB[0], primaryDarkRGB[1], primaryDarkRGB[2]);
+            doc.rect(0, headerH - 2.5, pageWidth, 2.5, 'F');
+
+            // Texto del encabezado: contraste sobre el primario
+            const headerTextRGB = getContrastColor(primaryColor) === '#000000' ? [30, 30, 46] : [255, 255, 255];
+
+            // Logo a la izquierda: PNG circular ya recortado con cover (sin rectángulo ni distorsión)
+            let logoX = margin, logoY = 8, logoD = 24; // diámetro del círculo
+            if (logoCircleDataUrl) {
+                // Fondo blanco sutil para el borde del avatar circular
+                doc.setFillColor(255, 255, 255);
+                doc.circle(logoX + logoD / 2, logoY + logoD / 2, logoD / 2, 'F');
+                try {
+                    doc.addImage(logoCircleDataUrl, 'PNG', logoX, logoY, logoD, logoD, undefined, 'FAST');
+                } catch (e) { /* sin logo */ }
+            } else {
+                // Sin logo: icono de tienda (círculo con inicial)
+                doc.setFillColor(255, 255, 255);
+                doc.circle(logoX + logoD / 2, logoY + logoD / 2, logoD / 2 + 1, 'F');
+                doc.setTextColor(primaryRGB[0], primaryRGB[1], primaryRGB[2]);
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(22);
+                doc.text((storeName || 'T').charAt(0).toUpperCase(), logoX + logoD / 2, logoY + logoD / 2 + 7, { align: 'center' });
+            }
+
+            // Nombre del negocio a la derecha del logo
+            const textX = logoX + logoD + 8;
+            doc.setTextColor(headerTextRGB[0], headerTextRGB[1], headerTextRGB[2]);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(19);
+            doc.text(storeName, textX, 20);
+
+            // Título del reporte (debajo del nombre)
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(11);
+            doc.setTextColor(headerTextRGB[0], headerTextRGB[1], headerTextRGB[2]);
+            doc.text(reportTitle, textX, 28);
+
+            // Línea blanca decorativa
+            doc.setDrawColor(255, 255, 255);
+            doc.setLineWidth(0.3);
+            doc.setLineDashPattern([1, 1], 0);
+            doc.line(textX, 32, pageWidth - margin, 32);
+            doc.setLineDashPattern([], 0);
+
+            // ============================================================
+            // TARJETA DE INFORMACIÓN (fecha, generado por, periodo)
+            // ============================================================
+            let y = headerH + 8;
+            const infoCardH = 22;
+            doc.setFillColor(245, 245, 245);
+            doc.roundedRect(margin, y, contentWidth, infoCardH, 2, 2, 'F');
+            doc.setDrawColor(primaryRGB[0], primaryRGB[1], primaryRGB[2]);
+            doc.setLineWidth(0.6);
+            doc.line(margin, y, margin, y + infoCardH);
+
+            doc.setFontSize(8.5);
+            doc.setTextColor(120, 120, 120);
+            doc.setFont('helvetica', 'bold');
+            doc.text('FECHA DE CREACIÓN', margin + 4, y + 6);
+            doc.text('GENERADO POR', margin + 4 + contentWidth * 0.32, y + 6);
+            doc.text('PERIODO', margin + 4 + contentWidth * 0.62, y + 6);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(40, 40, 40);
+            doc.setFontSize(9.5);
+            doc.text(`${dateStrFull}`, margin + 4, y + 12);
+            doc.text(`${timeStr} hrs`, margin + 4, y + 17);
+            doc.text(userName, margin + 4 + contentWidth * 0.32, y + 12);
+            doc.text(user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : '', margin + 4 + contentWidth * 0.32, y + 17);
+            doc.text(periodStr || 'Todos los datos', margin + 4 + contentWidth * 0.62, y + 12);
+
+            // Separadores verticales de la tarjeta
+            doc.setDrawColor(210, 210, 210);
+            doc.setLineWidth(0.2);
+            doc.line(margin + contentWidth * 0.31, y + 2, margin + contentWidth * 0.31, y + infoCardH - 2);
+            doc.line(margin + contentWidth * 0.61, y + 2, margin + contentWidth * 0.61, y + infoCardH - 2);
+
+            // ============================================================
+            // RESUMEN (si hay)
+            // ============================================================
+            const summary = getReportSummary();
+            let yStart = y + infoCardH + 8;
+            const summaryKeys = Object.keys(summary);
+            if (summaryKeys.length > 0) {
+                // Tarjeta de resumen con borde superior de color
+                const sumH = 10 + (summaryKeys.length * 5);
+                doc.setFillColor(250, 250, 250);
+                doc.roundedRect(margin, yStart - 2, contentWidth, sumH, 2, 2, 'F');
+                doc.setDrawColor(primaryRGB[0], primaryRGB[1], primaryRGB[2]);
+                doc.setLineWidth(0.8);
+                doc.line(margin, yStart - 2, margin, yStart - 2 + sumH);
+
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(10);
+                doc.setTextColor(30, 30, 46);
+                doc.text('Resumen', margin + 4, yStart + 4);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(51, 51, 51);
+                let sy = yStart + 10;
+                summaryKeys.forEach(k => {
+                    doc.setFontSize(9);
+                    doc.text(`- ${k}: ${summary[k]}`, margin + 4, sy);
+                    sy += 5;
+                });
+                yStart = yStart + sumH + 8;
+            }
+
+
+            // Tabla real con autoTable (paginación automática, filas intactas)
+            const headerRGB = [
+                parseInt(primaryColor.substr(1, 2), 16),
+                parseInt(primaryColor.substr(3, 2), 16),
+                parseInt(primaryColor.substr(5, 2), 16)
+            ];
+            const headerTextRGBTable = getContrastColor(primaryColor) === '#000000' ? [0, 0, 0] : [255, 255, 255];
+
+            doc.autoTable({
+                head: tableHead,
+                body: tableRows,
+                startY: yStart,
+                margin: { left: margin, right: margin, top: 40, bottom: 20 },
+                styles: {
+                    font: 'helvetica',
+                    fontSize: 8,
+                    cellPadding: 2,
+                    textColor: [26, 26, 46],
+                    lineColor: [204, 204, 204],
+                    lineWidth: 0.15,
+                    overflow: 'linebreak',
+                    valign: 'middle'
+                },
+                headStyles: {
+                    fillColor: headerRGB,
+                    textColor: headerTextRGBTable,
+                    fontStyle: 'bold',
+                    fontSize: 8.5
+                },
+                alternateRowStyles: {
+                    fillColor: [245, 245, 245]
+                },
+                didDrawPage: (data) => {
+                    // Pie de página: número de página
+                    const pageCount = doc.internal.getNumberOfPages();
+                    doc.setFontSize(8);
+                    doc.setTextColor(120, 120, 120);
+                    doc.text(`Página ${doc.internal.getCurrentPageInfo().pageNumber} de ${pageCount}`, pageWidth / 2, doc.internal.pageSize.getHeight() - 8, { align: 'center' });
+                    // Título corto en cabecera de páginas siguientes
+                    if (doc.internal.getCurrentPageInfo().pageNumber > 1) {
+                        doc.setFontSize(8);
+                        doc.setTextColor(85, 85, 85);
+                        doc.text(`${storeName} - ${reportTitle}`, margin, 12);
+                        doc.setDrawColor(headerRGB[0], headerRGB[1], headerRGB[2]);
+                        doc.setLineWidth(0.6);
+                        doc.line(margin, 14, pageWidth - margin, 14);
+                    }
+                }
+            });
+
+            doc.save(`Reporte_${currentReportType}_${now.toISOString().split('T')[0]}.pdf`);
         }
+
 
                 // --- QR Label Generator Logic ---
         let allProducts = [];
@@ -864,13 +1177,13 @@
                         margin-bottom: 20px;
                     }
                     .qr-product-card {
-                        border: 1px solid #eee;
+                        border: 1px solid #cccccc;
                         border-radius: 8px;
                         padding: 10px;
                         text-align: center;
                         cursor: pointer;
                         transition: all 0.2s;
-                        background: white;
+                        background: var(--bg-card);
                         position: relative;
                         display: flex;
                         flex-direction: column;
@@ -882,13 +1195,13 @@
                         border-color: var(--primary-color);
                     }
                     .qr-product-card.no-qr {
-                        background: #f8f9fa;
+                        background: var(--bg-light);
                         opacity: 0.9;
-                        border: 1px dashed #ccc;
+                        border: 1px dashed var(--border-color);
                     }
                     .qr-product-card.no-qr:hover {
-                        border-color: #666;
-                        background: #f0f0f0;
+                        border-color: var(--text-light);
+                        background: var(--bg-light);
                     }
                     .qr-product-img {
                         width: 100px;
@@ -909,15 +1222,15 @@
                     }
                     .qr-product-stock {
                         font-size: 0.8rem;
-                        color: #666;
+                        color: var(--text-light);
                         margin-top: auto;
                     }
                     .qr-status-badge {
                         position: absolute;
                         top: 8px;
                         right: 8px;
-                        background: #eee;
-                        color: #666;
+                        background: var(--bg-light);
+                        color: var(--text-light);
                         font-size: 10px;
                         padding: 3px 6px;
                         border-radius: 4px;
@@ -939,7 +1252,7 @@
                         display: flex;
                     }
                     .qr-modal-content {
-                        background: white;
+                        background: var(--bg-card);
                         padding: 25px;
                         border-radius: 10px;
                         width: 90%;
@@ -967,7 +1280,7 @@
                     </div>
 
                     <div class="qr-list-container" style="margin-bottom: 20px; margin-top: 30px;">
-                        <h3 style="margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                        <h3 style="margin-bottom: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
                             <i class="fas fa-print"></i> Lista de Impresión
                         </h3>
                         <table class="dashboard-table" id="qrListTable">
@@ -982,7 +1295,7 @@
                                 </tr>
                             </thead>
                             <tbody id="qrListBody">
-                                <tr><td colspan="6" style="text-align: center; color: #999;">Seleccione productos del grid para agregar a la lista</td></tr>
+                                <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Seleccione productos del grid para agregar a la lista</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -1003,13 +1316,13 @@
                 <div id="assignQRModal" class="qr-modal">
                     <div class="qr-modal-content">
                         <h3 style="margin-top: 0; margin-bottom: 15px;">Asignar Código QR/Barras</h3>
-                        <p id="assignQRProductName" style="color: #666; margin-bottom: 20px;"></p>
+                        <p id="assignQRProductName" style="color: var(--text-light); margin-bottom: 20px;"></p>
                         <input type="hidden" id="assignQRProductId">
                         
                         <div class="form-group" style="margin-bottom: 20px;">
                             <label style="display: block; margin-bottom: 5px; font-weight: bold;">Código</label>
                             <input type="text" id="assignQRInput" class="form-control" placeholder="Escanee o escriba el código">
-                            <small style="color: #999;">Puede usar un lector de código de barras</small>
+                            <small style="color: var(--text-muted);">Puede usar un lector de código de barras</small>
                         </div>
 
                         <div style="display: flex; justify-content: flex-end; gap: 10px;">
@@ -1030,7 +1343,7 @@
             if (!grid) return;
 
             if (products.length === 0) {
-                grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 20px; color: #999;">No se encontraron productos</div>';
+                grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 20px; color: var(--text-muted);">No se encontraron productos</div>';
                 return;
             }
 
@@ -1040,8 +1353,8 @@
                 const imgPath = getRelativeImagePath(rawImg);
                 
                 const imgHtml = imgPath 
-                    ? `<img src="${imgPath}" class="qr-product-img" alt="${p.product_name}" onerror="this.outerHTML='<div class=\\'qr-product-img\\' style=\\'display:flex;align-items:center;justify-content:center;background:#f8f9fa;color:#ccc;font-size:2rem;\\'><i class=\\'fas fa-box\\'></i></div>'">`
-                    : `<div class="qr-product-img" style="display:flex;align-items:center;justify-content:center;background:#f8f9fa;color:#ccc;font-size:2rem;"><i class="fas fa-box"></i></div>`;
+                    ? `<img src="${imgPath}" class="qr-product-img" alt="${p.product_name}" onerror="this.outerHTML='<div class=\\'qr-product-img\\' style=\\'display:flex;align-items:center;justify-content:center;background:var(--bg-light);color:var(--text-muted);font-size:2rem;\\'><i class=\\'fas fa-box\\'></i></div>'">`
+                    : `<div class="qr-product-img" style="display:flex;align-items:center;justify-content:center;background:var(--bg-light);color:var(--text-muted);font-size:2rem;"><i class="fas fa-box"></i></div>`;
 
                 const stock = p.current_stock !== null ? p.current_stock : 0;
                 
@@ -1126,7 +1439,7 @@
             if (!tbody) return;
 
             if (qrLabelList.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #999;">Seleccione productos del grid para agregar a la lista</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Seleccione productos del grid para agregar a la lista</td></tr>';
                 return;
             }
 
@@ -1135,15 +1448,15 @@
                 const imgPath = getRelativeImagePath(rawImg);
                 
                 const imgHtml = imgPath 
-                    ? `<img src="${imgPath}" alt="img" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;" onerror="this.outerHTML='<div style=\\'width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: #f0f0f0; border-radius: 4px; color: #999;\\'><i class=\\'fas fa-box\\'></i></div>'">`
-                    : `<div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: #f0f0f0; border-radius: 4px; color: #999;"><i class="fas fa-box"></i></div>`;
+                    ? `<img src="${imgPath}" alt="img" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;" onerror="this.outerHTML='<div style=\\'width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: var(--bg-light); border-radius: 4px; color: var(--text-muted);\\'><i class=\\'fas fa-box\\'></i></div>'">`
+                    : `<div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: var(--bg-light); border-radius: 4px; color: var(--text-muted);"><i class="fas fa-box"></i></div>`;
 
                 return `
                 <tr>
                     <td>${imgHtml}</td>
                     <td>
                         <div style="font-weight: bold;">${item.product.product_name}</div>
-                        <div style="font-size: 0.85em; color: #666;">${item.code}</div>
+                        <div style="font-size: 0.85em; color: var(--text-light);">${item.code}</div>
                     </td>
                     <td>${item.product.current_stock}</td>
                     <td>${item.sizeCm} cm</td>
@@ -1153,7 +1466,7 @@
                                onchange="updateItemQuantity(${item.id}, this.value)">
                     </td>
                     <td>
-                        <button class="btn-icon" onclick="removeFromQRList(${item.id})" style="color: #dc3545;">
+                        <button class="btn-icon" onclick="removeFromQRList(${item.id})" style="color: var(--danger-color);">
                             <i class="fas fa-trash"></i>
                         </button>
                     </td>
@@ -1271,7 +1584,7 @@
                     label.style.justifyContent = 'center';
                     label.style.boxSizing = 'border-box';
                     label.style.padding = '2px';
-                    label.style.border = '1px dotted #ccc'; // Guía de corte
+                    label.style.border = '1px dotted var(--border-color)'; // Guía de corte
                     label.style.pageBreakInside = 'avoid';
                     label.style.overflow = 'hidden';
                     label.style.margin = '0'; // Sin margen externo para aprovechar hoja
@@ -1357,7 +1670,7 @@
                     @media print {
                         @page { margin: 0.5cm; }
                         .qr-label { 
-                            border: 1px dotted #ddd; 
+                            border: 1px dotted var(--border-color); 
                         }
                     }
                 `);
@@ -1371,7 +1684,209 @@
                 }, 500);
             }, 500);
         }
+
+        /* ============================================================
+         * Modal de detalle de venta (reportes)
+         * ============================================================ */
+        function formatCurrency(n) {
+            // Delegar en FormatUtils (formato regional de la empresa).
+            if (window.FormatUtils) return window.FormatUtils.currency(n);
+            return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(Number(n) || 0);
+        }
+
+        function formatQuantity(qty) {
+            if (window.FormatUtils) return window.FormatUtils.qty(qty);
+            const n = Number(qty);
+            if (Number.isNaN(n)) return String(qty ?? '');
+            return Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, '');
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = String(str ?? '');
+            return div.innerHTML;
+        }
+
+        async function showSaleDetail(saleId) {
+            const modal = document.getElementById('saleDetailModal');
+            const body = document.getElementById('saleDetailBody');
+            const title = document.getElementById('saleDetailTitle');
+            if (!modal || !body) return;
+
+            title.textContent = `Venta #${saleId}`;
+            body.innerHTML = (typeof saleDetailSkeletonHTML === 'function')
+                ? saleDetailSkeletonHTML()
+                : '<div style="text-align:center; padding: 2rem;"><i class="fas fa-spinner fa-spin" style="font-size: 1.5rem; color: var(--text-muted);"></i><p>Cargando detalle...</p></div>';
+            if (typeof modal.showModal === 'function') {
+                modal.showModal();
+            } else {
+                modal.classList.add('show');
+            }
+
+            try {
+                const resp = await fetch(`../api/sales/sale_details.php?sale_id=${saleId}`);
+                const data = await resp.json();
+                if (!data.success || !data.data) {
+                    throw new Error(data.message || 'No se pudo cargar el detalle');
+                }
+                const d = data.data;
+
+                const fecha = window.FormatUtils ? window.FormatUtils.date(new Date(d.sale_date + ' UTC')) : new Date(d.sale_date + ' UTC').toLocaleString('es-MX', {
+                    day: '2-digit', month: '2-digit', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit'
+                });
+                const metodo = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', mixed: 'Mixto' }[d.payment_method] || d.payment_method;
+
+                let html = `
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 1rem; background: var(--bg-light); border-radius: 10px; padding: 0.9rem 1rem; margin-bottom: 1rem; font-size: 0.9rem;">
+                        <div><strong>Fecha:</strong> ${fecha}</div>
+                        <div><strong>Método:</strong> ${metodo}</div>
+                        <div><strong>Subtotal:</strong> ${formatCurrency(d.subtotal)}</div>
+                        <div><strong>Total:</strong> ${formatCurrency(d.total)}</div>
+                        ${d.discount > 0 ? `<div><strong>Descuento:</strong> -${formatCurrency(d.discount)}</div>` : ''}
+                        ${d.tax > 0 ? `<div><strong>Impuesto:</strong> ${formatCurrency(d.tax)}</div>` : ''}
+                    </div>
+                    <table class="dashboard-table" style="width:100%; font-size: 0.9rem;">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th style="text-align:center;">Cant.</th>
+                                <th style="text-align:right;">P. Unit.</th>
+                                <th style="text-align:right;">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                if (d.items && d.items.length) {
+                    d.items.forEach(it => {
+                        html += `
+                            <tr>
+                                <td data-label="Producto"><strong>${escapeHtml(it.product_name || 'Producto')}</strong>${it.category_name ? `<br><small style="color:var(--text-muted);">${escapeHtml(it.category_name)}</small>` : ''}</td>
+                                <td data-label="Cant." style="text-align:center;">${formatQuantity(it.quantity)}</td>
+                                <td data-label="P. Unit." style="text-align:right;">${formatCurrency(it.unit_price)}</td>
+                                <td data-label="Total" style="text-align:right; font-weight:bold;">${formatCurrency(it.total)}</td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    html += '<tr><td colspan="4" style="text-align:center; padding:1rem;">Sin productos registrados</td></tr>';
+                }
+                html += `</tbody></table>`;
+                body.innerHTML = html;
+            } catch (error) {
+                console.error('Error cargando detalle de venta:', error);
+                body.innerHTML = `<div style="text-align:center; padding: 2rem; color: var(--danger-color);"><i class="fas fa-exclamation-triangle"></i><p>${escapeHtml(error.message)}</p></div>`;
+            }
+        }
+
+        // Cerrar modal (botón X, clic fuera, Escape)
+        document.addEventListener('DOMContentLoaded', () => {
+            const modal = document.getElementById('saleDetailModal');
+            if (!modal) return;
+            const closeBtn = document.getElementById('saleDetailClose');
+            const closeModal = () => {
+                if (typeof modal.close === 'function') {
+                    modal.close();
+                } else {
+                    modal.classList.remove('show');
+                }
+            };
+            if (closeBtn) {
+                closeBtn.addEventListener('click', closeModal);
+            }
+            // Clic fuera del contenido cierra el diálogo
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) closeModal();
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && modal.open) closeModal();
+            });
+        });
+
+        /* ============================================================
+         * Cierre Z / Auditoría diaria
+         * ============================================================ */
+        function methodLabel(m) {
+            return { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', mixed: 'Mixto' }[m] || m;
+        }
+
+        function renderCloseZ(d) {
+            const resultsDiv = document.getElementById('reportResults');
+            if (!d) {
+                resultsDiv.innerHTML = '<div class="empty-state"><i class="fas fa-search"></i><p>No se encontraron datos para la fecha seleccionada</p></div>';
+                return;
+            }
+            const s = d.summary || {};
+            const fmt = n => window.FormatUtils ? window.FormatUtils.currency(n) : new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(Number(n) || 0);
+
+            let methodRows = '';
+            (d.by_payment_method || []).forEach(m => {
+                methodRows += `
+                    <tr>
+                        <td data-label="Método">${methodLabel(m.payment_method)}</td>
+                        <td data-label="Ventas" style="text-align:center;">${m.count}</td>
+                        <td data-label="Total" style="text-align:right;">${fmt(m.total)}</td>
+                    </tr>`;
+            });
+            if (!methodRows) {
+                methodRows = '<tr><td colspan="3" style="text-align:center; padding: 1rem;">Sin ventas en el periodo</td></tr>';
+            }
+
+            const cm = d.cash_movements || {};
+
+            resultsDiv.innerHTML = `
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 1.2rem;">
+                    <div class="closez-card" style="background: var(--info-color); color:#fff; border-radius:12px; padding:0.9rem 1rem;">
+                        <div style="font-size:0.8rem; color: var(--text-light);">VENTAS</div>
+                        <div style="font-size:1.3rem; font-weight:800; color: var(--text-color);">${fmt(s.total_sales)}</div>
+                        <div style="font-size:0.75rem; color: var(--text-muted);">${s.total_transactions || 0} transacciones</div>
+                    </div>
+                    <div class="closez-card" style="background: var(--success-color); color:#fff; border-radius:12px; padding:0.9rem 1rem;">
+                        <div style="font-size:0.8rem; color: var(--text-light);">GANANCIA</div>
+                        <div style="font-size:1.3rem; font-weight:800; color: var(--success-color);">${fmt(s.total_profit)}</div>
+                        <div style="font-size:0.75rem; color: var(--text-muted);">Ticket prom. ${fmt(s.avg_ticket)}</div>
+                    </div>
+                    <div class="closez-card" style="background: var(--warning-color); color:#fff; border-radius:12px; padding:0.9rem 1rem;">
+                        <div style="font-size:0.8rem; color: var(--text-light);">DEVOLUCIONES</div>
+                        <div style="font-size:1.3rem; font-weight:800; color: var(--warning-color);">${fmt(d.refunds?.total)}</div>
+                        <div style="font-size:0.75rem; color: var(--text-muted);">${d.refunds?.count || 0} devoluciones</div>
+                    </div>
+                    <div class="closez-card" style="background: var(--danger-color); color:#fff; border-radius:12px; padding:0.9rem 1rem;">
+                        <div style="font-size:0.8rem; color: var(--text-light);">CANCELADAS</div>
+                        <div style="font-size:1.3rem; font-weight:800; color: var(--danger-color);">${fmt(d.cancelled?.total)}</div>
+                        <div style="font-size:0.75rem; color: var(--text-muted);">${d.cancelled?.count || 0} cancelaciones</div>
+                    </div>
+                    <div class="closez-card" style="background: var(--primary-color); color:#fff; border-radius:12px; padding:0.9rem 1rem; grid-column: span 2;">
+                        <div style="font-size:0.8rem; color: var(--text-light);">EFECTIVO ESPERADO EN CAJA</div>
+                        <div style="font-size:1.5rem; font-weight:800; color: var(--primary-color);">${fmt(d.expected_cash)}</div>
+                        <div style="font-size:0.75rem; color: var(--text-muted);">Inicial + ventas efectivo − retiros + entradas − devoluciones</div>
+                    </div>
+                </div>
+
+                <h3 style="margin: 1rem 0 0.5rem; font-size: 1rem;"><i class="fas fa-credit-card"></i> Ventas por método de pago</h3>
+                <table class="dashboard-table" style="width:100%; font-size:0.9rem; margin-bottom: 1.2rem;">
+                    <thead><tr><th>Método</th><th style="text-align:center;">Ventas</th><th style="text-align:right;">Total</th></tr></thead>
+                    <tbody>${methodRows}</tbody>
+                </table>
+
+                <h3 style="margin: 1rem 0 0.5rem; font-size: 1rem;"><i class="fas fa-coins"></i> Movimientos de caja</h3>
+                <table class="dashboard-table" style="width:100%; font-size:0.9rem;">
+                    <thead><tr><th>Concepto</th><th style="text-align:right;">Monto</th></tr></thead>
+                    <tbody>
+                        <tr><td data-label="Concepto">Ventas en efectivo</td><td data-label="Monto" style="text-align:right;">${fmt(cm.cash_sales)}</td></tr>
+                        <tr><td data-label="Concepto">Retiros</td><td data-label="Monto" style="text-align:right; color: var(--danger-color);">− ${fmt(cm.withdrawals)}</td></tr>
+                        <tr><td data-label="Concepto">Entradas / gastos registrados</td><td data-label="Monto" style="text-align:right; color: var(--success-color);">+ ${fmt(cm.entries)}</td></tr>
+                    </tbody>
+                </table>
+
+                <div style="margin-top: 1rem; font-size: 0.8rem; color: var(--text-muted); text-align:center;">
+                    Auditoría del ${d.date} · Cierre Z · Tomodachi POS
+                </div>
+            `;
+        }
     </script>
+    <script src="lib/animejs/anime.min.js"></script>
+    <script src="js/design-system.js?v=5"></script>
 </body>
 
 </html>

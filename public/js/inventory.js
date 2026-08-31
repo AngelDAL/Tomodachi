@@ -61,10 +61,7 @@ const SEARCH_DEBOUNCE_DELAY = 500; // 500ms de espera después de dejar de escri
 // Inicializar cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', async function () {
     const session = await checkSession();
-    if (!session) {
-        window.location.href = 'login.html';
-        return;
-    }
+    if (!session) { requireSession(); return; }
     storeId = session.store_id || 1;
     initInventory();
 });
@@ -73,6 +70,10 @@ function initInventory() {
     bindEvents();
     loadCategories();
     loadProducts();
+
+    // Actualizar símbolo de moneda de los inputs según formato regional
+    const sym = window.FormatUtils ? (window.FormatUtils.getConfig().currency_symbol || '$') : '$';
+    document.querySelectorAll('.input-prefix .prefix').forEach(el => { el.textContent = sym; });
 
     // Inicializar picker de iconos para creación de categoría
         setupIconPicker({
@@ -210,6 +211,23 @@ function bindEvents() {
     }
 
     function startMiniScanner(target) {
+        // En la app nativa: cámara del sistema (fuera del HTML)
+        if (window.TomodachiNative && window.TomodachiNative.isNative) {
+            const input = target === scanBarcodeBtn ? barcodeInput : qrInput;
+            window.TomodachiNative.scanBarcode()
+                .then(code => {
+                    if (code && input) {
+                        input.value = code;
+                        input.style.backgroundColor = 'var(--primary-light)';
+                        setTimeout(() => input.style.backgroundColor = '', 1500);
+                    }
+                })
+                .catch(err => {
+                    console.error('Error escáner nativo:', err);
+                    if (window.showNotification) showNotification('No se pudo leer el código. Intente de nuevo.', 'error');
+                });
+            return;
+        }
         if (miniScannerInstance) stopMiniScanner();
         miniScanTarget = target;
         miniScannerContainer.classList.remove('hidden');
@@ -234,7 +252,7 @@ function bindEvents() {
                         const input = target === scanBarcodeBtn ? barcodeInput : qrInput;
                         if (input) {
                             input.value = decodedText;
-                            input.style.backgroundColor = '#e8f0fe';
+                            input.style.backgroundColor = 'var(--primary-light)';
                             setTimeout(() => input.style.backgroundColor = '', 1500);
                         }
                         stopMiniScanner();
@@ -303,17 +321,17 @@ function bindEvents() {
                         
                         const data = await response.json();
                         if (data.success) {
-                            showNotification('✓ Imagen actualizada correctamente', 'success');
+                            showNotification('Imagen actualizada correctamente', 'success');
                             // Actualizar lista de productos en segundo plano
                             loadProducts();
                         } else {
-                            showNotification('✗ Error al actualizar imagen: ' + (data.message || 'Desconocido'), 'error');
+                            showNotification('Error al actualizar imagen: ' + (data.message || 'Desconocido'), 'error');
                         }
                     };
                     base64Reader.readAsDataURL(file);
                 } catch (error) {
                     console.error('Error subiendo imagen:', error);
-                    showNotification('✗ Error de conexión al subir imagen', 'error');
+                    showNotification('Error de conexión al subir imagen', 'error');
                 }
             }
         });
@@ -609,7 +627,7 @@ async function submitAddProduct() {
                 await uploadImageForNewProduct(newProductId, imageInput.files[0]);
             }
 
-            showNotification('✓ Producto agregado correctamente', 'success');
+            showNotification('Producto agregado correctamente', 'success');
             closeAddProductModal();
 
             // Recargar productos
@@ -617,11 +635,11 @@ async function submitAddProduct() {
                 loadProducts();
             }, 500);
         } else {
-            showNotification('✗ Error: ' + (data.message || 'No se pudo agregar el producto'), 'error');
+            showNotification('Error: ' + (data.message || 'No se pudo agregar el producto'), 'error');
         }
     } catch (error) {
         console.error('Error:', error);
-        showNotification('✗ Error al agregar el producto', 'error');
+        showNotification('Error al agregar el producto', 'error');
     }
 }
 
@@ -690,7 +708,7 @@ async function uploadImageAuto(file) {
             const data = await response.json();
 
             if (data.success) {
-                showNotification('✓ Imagen subida correctamente', 'success');
+                showNotification('Imagen subida correctamente', 'success');
                 // Limpiar
                 document.getElementById('productImage').value = '';
                 selectedFile = null;
@@ -698,11 +716,11 @@ async function uploadImageAuto(file) {
                 // Recargar productos
                 setTimeout(() => loadProducts(), 800);
             } else {
-                showNotification('✗ Error: ' + (data.error?.image_base64 || data.message || 'No se pudo subir la imagen'), 'error');
+                showNotification('Error: ' + (data.error?.image_base64 || data.message || 'No se pudo subir la imagen'), 'error');
             }
         } catch (error) {
             console.error('Error:', error);
-            showNotification('✗ Error al subir la imagen', 'error');
+            showNotification('Error al subir la imagen', 'error');
         }
     };
     reader.readAsDataURL(file);
@@ -752,32 +770,50 @@ async function uploadImage() {
 }
 
 async function loadProducts() {
-    try {
-        // Eliminado store_id de los parámetros, el backend usa la sesión
-        const response = await fetch(`../api/inventory/products.php`);
-        const data = await response.json();
+    // Reintento: el SW o la red pueden fallar la primera vez al navegar.
+    for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+            // Eliminado store_id de los parámetros, el backend usa la sesión
+            const response = await fetch(`../api/inventory/products.php`);
+            if (!response.ok) {
+                if (attempt < 3) { await new Promise(r => setTimeout(r, 600 * attempt)); continue; }
+                return;
+            }
+            const data = await response.json();
 
-        if (data.success) {
-            products = data.data || [];
-            renderProducts(products);
-        } else {
-            console.error('Error:', data.error);
+            if (data.success) {
+                products = data.data || [];
+                renderProducts(products);
+            } else {
+                console.error('Error:', data.error);
+            }
+            return;
+        } catch (error) {
+            console.error('Error cargando productos (intento ' + attempt + '):', error);
+            if (attempt < 3) { await new Promise(r => setTimeout(r, 600 * attempt)); continue; }
         }
-    } catch (error) {
-        console.error('Error cargando productos:', error);
     }
 }
 
 async function loadCategories() {
-    try {
-        const response = await fetch('../api/inventory/categories.php');
-        const data = await response.json();
-        if (data.success) {
-            categories = data.data || [];
-            populateCategorySelects();
+    // Reintento: el SW o la red pueden fallar la primera vez al navegar.
+    for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+            const response = await fetch('../api/inventory/categories.php');
+            if (!response.ok) {
+                if (attempt < 3) { await new Promise(r => setTimeout(r, 600 * attempt)); continue; }
+                return;
+            }
+            const data = await response.json();
+            if (data.success) {
+                categories = data.data || [];
+                populateCategorySelects();
+            }
+            return;
+        } catch (error) {
+            console.error('Error cargando categorías (intento ' + attempt + '):', error);
+            if (attempt < 3) { await new Promise(r => setTimeout(r, 600 * attempt)); continue; }
         }
-    } catch (error) {
-        console.error('Error cargando categorías:', error);
     }
 }
 
@@ -818,7 +854,7 @@ function renderProducts(items) {
             : '<span class="no-image"><i class="fas fa-image"></i></span>';
 
         const stockClass = (product.current_stock <= product.min_stock) ? 'stock-low' : 'stock-ok';
-        const formattedPrice = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(product.price);
+        const formattedPrice = window.FormatUtils ? window.FormatUtils.currency(product.price) : new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(product.price);
 
         if (currentViewMode === 'list') {
              return `
@@ -831,7 +867,7 @@ function renderProducts(items) {
                      <div class="product-list-details">
                         <div class="product-list-price">${formattedPrice}</div>
                         <div class="product-list-stock ${stockClass}">
-                            <i class="fas fa-cubes"></i> ${product.current_stock !== null ? product.current_stock : 0}
+                            <i class="fas fa-cubes"></i> ${window.FormatUtils ? window.FormatUtils.qty(product.current_stock) : (product.current_stock !== null ? product.current_stock : 0)}
                         </div>
                     </div>
                 </div>
@@ -850,7 +886,7 @@ function renderProducts(items) {
                     <div class="product-meta">
                         <div class="meta-price">${formattedPrice}</div>
                         <div class="meta-stock ${stockClass}">
-                            <i class="fas fa-cubes"></i> ${product.current_stock !== null ? product.current_stock : 0}
+                            <i class="fas fa-cubes"></i> ${window.FormatUtils ? window.FormatUtils.qty(product.current_stock) : (product.current_stock !== null ? product.current_stock : 0)}
                         </div>
                     </div>
                 </div>
@@ -939,10 +975,10 @@ function updateProfitDisplay(price, cost) {
 
     const profitEl = document.getElementById('detailProfitDisplay');
 
-    document.getElementById('detailPriceDisplay').textContent = '$' + price.toFixed(2);
-    document.getElementById('detailCostDisplay').textContent = '$' + cost.toFixed(2);
+    document.getElementById('detailPriceDisplay').textContent = window.FormatUtils ? window.FormatUtils.currency(price) : '$' + price.toFixed(2);
+    document.getElementById('detailCostDisplay').textContent = window.FormatUtils ? window.FormatUtils.currency(cost) : '$' + cost.toFixed(2);
 
-    profitEl.textContent = '$' + profit.toFixed(2);
+    profitEl.textContent = window.FormatUtils ? window.FormatUtils.currency(profit) : '$' + profit.toFixed(2);
     profitEl.className = profit >= 0 ? 'profit-positive' : 'profit-negative';
 
     document.getElementById('detailMarginDisplay').textContent = margin.toFixed(1) + '%';
@@ -1007,10 +1043,10 @@ async function submitEditProduct() {
             if (!stockData.success) {
                 showNotification('Producto guardado, pero error al actualizar stock: ' + stockData.message, 'warning');
             } else {
-                showNotification('✓ Producto y stock actualizados', 'success');
+                showNotification('Producto y stock actualizados', 'success');
             }
         } else {
-            showNotification('✓ Cambios guardados', 'success');
+            showNotification('Cambios guardados', 'success');
         }
 
         closeProductDetails();
@@ -1018,7 +1054,7 @@ async function submitEditProduct() {
 
     } catch (error) {
         console.error('Error:', error);
-        showNotification('✗ Error: ' + error.message, 'error');
+        showNotification('Error: ' + error.message, 'error');
     }
 }
 
@@ -1041,7 +1077,7 @@ async function uploadImageFromDetails(file) {
             const data = await response.json();
 
             if (data.success) {
-                showNotification('✓ Imagen actualizada', 'success');
+                showNotification('Imagen actualizada', 'success');
                 // Actualizar vista previa en modal
                 const img = document.getElementById('detailImage');
                 img.src = e.target.result;
@@ -1049,11 +1085,11 @@ async function uploadImageFromDetails(file) {
                 // Recargar lista de fondo
                 loadProducts();
             } else {
-                showNotification('✗ Error al subir imagen', 'error');
+                showNotification('Error al subir imagen', 'error');
             }
         } catch (error) {
             console.error('Error:', error);
-            showNotification('✗ Error de conexión', 'error');
+            showNotification('Error de conexión', 'error');
         }
     };
     reader.readAsDataURL(file);
@@ -1128,18 +1164,18 @@ async function saveStock(input) {
         const data = await response.json();
 
         if (data.success) {
-            showNotification('✓ Stock actualizado', 'success');
+            showNotification('Stock actualizado', 'success');
             // Actualizar el producto en el array local
             const product = products.find(p => p.product_id == productId);
             if (product) product.current_stock = newStock;
         } else {
-            showNotification('✗ Error: ' + (data.message || 'No se pudo actualizar stock'), 'error');
+            showNotification('Error: ' + (data.message || 'No se pudo actualizar stock'), 'error');
             const product = products.find(p => p.product_id == productId);
             if (product) input.value = product.current_stock || 0;
         }
     } catch (error) {
         console.error('Error:', error);
-        showNotification('✗ Error al actualizar stock', 'error');
+        showNotification('Error al actualizar stock', 'error');
         const product = products.find(p => p.product_id == productId);
         if (product) input.value = product.current_stock || 0;
     }
@@ -1180,14 +1216,14 @@ function renderCategoriesList() {
     if (!list) return;
     
     if (categories.length === 0) {
-        list.innerHTML = '<li style="padding: 10px; text-align: center; color: #999;">No hay categorías registradas</li>';
+        list.innerHTML = '<li style="padding: 10px; text-align: center; color: var(--text-muted);">No hay categorías registradas</li>';
         return;
     }
     
     list.innerHTML = categories.map(cat => `
-        <li style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; gap: 15px;">
+        <li style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--border-color); gap: 15px;">
             <div style="display: flex; align-items: center; gap: 15px; flex: 1;">
-                <div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: #f8f9fa; border-radius: 8px; color: var(--primary-color); flex-shrink: 0;">
+                <div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: var(--bg-light); border-radius: 8px; color: var(--primary-color); flex-shrink: 0;">
                     <i class="fas ${cat.icon_class || 'fa-tag'}" style="font-size: 1.2rem;"></i>
                 </div>
                 <div style="font-weight: 600; font-size: 1rem;">${escapeHtml(cat.category_name)}</div>
@@ -1197,8 +1233,8 @@ function renderCategoriesList() {
                     <i class="fas fa-trash"></i>
                 </button>
                 <div id="confirm-del-${cat.category_id}" style="display: none; gap: 5px; align-items: center;">
-                    <span style="font-size: 0.8em; color: #d9534f; margin-right: 5px;">¿Borrar?</span>
-                    <button type="button" class="btn-danger" style="padding: 2px 6px; font-size: 0.8em; background: #d9534f;" onclick="executeDeleteCategory(${cat.category_id})" title="Sí, borrar">
+                    <span style="font-size: 0.8em; color: var(--danger-color); margin-right: 5px;">¿Borrar?</span>
+                    <button type="button" class="btn-danger" style="padding: 2px 6px; font-size: 0.8em; background: var(--danger-color);" onclick="executeDeleteCategory(${cat.category_id})" title="Sí, borrar">
                         <i class="fas fa-check"></i>
                     </button>
                     <button type="button" class="btn-secondary" style="padding: 2px 6px; font-size: 0.8em;" onclick="cancelDeleteCategory(${cat.category_id})" title="Cancelar">
@@ -1410,7 +1446,7 @@ window.fetchByCode = function(code) {
             if (barcodeInput) {
                 barcodeInput.value = code; // Usar código original
                 // Resaltar que se llenó automáticamente
-                barcodeInput.style.backgroundColor = '#e8f0fe';
+                barcodeInput.style.backgroundColor = 'var(--primary-light)';
                 setTimeout(() => barcodeInput.style.backgroundColor = '', 2000);
                 
                 // Enfocar nombre

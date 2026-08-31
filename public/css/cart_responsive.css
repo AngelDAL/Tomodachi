@@ -3,6 +3,8 @@
     flex: 1;
     overflow-y: auto;
     padding: 10px;
+    display: flex;
+    flex-direction: column;
 }
 
 .cart-list {
@@ -14,8 +16,8 @@
 .cart-item-card {
     display: flex;
     align-items: center;
-    background: #fff;
-    border: 1px solid #eee;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
     padding: 8px 12px;
     border-radius: 12px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.02);
@@ -35,7 +37,7 @@
     flex-shrink: 0;
     border-radius: 8px;
     overflow: hidden;
-    background: #f4f4f4;
+    background: var(--bg-light);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -49,7 +51,7 @@
 }
 
 .cart-item-img-placeholder {
-    color: #ccc;
+    color: var(--text-muted);
     font-size: 1.2rem;
 }
 
@@ -65,7 +67,7 @@
 
 .cart-item-title {
     font-weight: 600;
-    color: #333;
+    color: var(--text-color);
     font-size: 0.95rem;
     white-space: nowrap;
     overflow: hidden;
@@ -85,19 +87,19 @@
 
 .cart-orig-price {
     text-decoration: line-through;
-    color: #aaa;
+    color: var(--text-muted);
     font-weight: 400;
     font-size: 0.85rem;
     margin-right: 4px;
 }
 
 .cart-disc-price {
-    color: #dc3545;
+    color: var(--danger-color);
 }
 
 .cart-disc-badge {
     display: inline-block;
-    background: #dc3545;
+    background: var(--danger-color);
     color: #fff;
     font-size: 0.65rem;
     font-weight: 700;
@@ -118,7 +120,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    background: #f0f0f0;
+    background: var(--bg-light);
     border-radius: 20px;
     padding: 4px;
     width: fit-content;
@@ -129,8 +131,8 @@
     height: 32px;
     border-radius: 50%;
     border: none;
-    background: #fff;
-    color: #555;
+    background: var(--bg-card);
+    color: var(--text-medium);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -148,6 +150,18 @@
 
 .step-btn:active {
     transform: scale(0.9);
+}
+/* Hold en −: señal breve de eliminación completa, sin modal ni espera. */
+.step-btn.step-holding {
+    background: var(--danger-color);
+    color: var(--text-on-primary, #fff);
+    transform: scale(.88);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--danger-color) 18%, transparent);
+}
+.step-btn, .qty-display {
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: manipulation;
 }
 
 .qty-display {
@@ -231,14 +245,14 @@
 }
 
 .collapse-header-btn {
-    background: #fff;
-    border: 1px solid #e0e0e0;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
     border-top: none; /* Parecer pestaña colgante */
     border-radius: 0 0 10px 10px;
     padding: 0 24px;
     height: 20px;
     cursor: pointer;
-    color: #999;
+    color: var(--text-muted);
     box-shadow: 0 2px 3px rgba(0,0,0,0.05);
     transition: all 0.2s;
     display: flex;
@@ -248,7 +262,7 @@
 }
 
 .collapse-header-btn:hover {
-    background: #f5f5f5;
+    background: var(--bg-light);
     color: var(--primary-color, #333);
     height: 24px; /* Pequeña animación de estiramiento */
 }
@@ -269,8 +283,8 @@
 /* Estilos para la barra de búsqueda movida */
 .product-search-container {
     padding: 12px 16px;
-    background: #fff;
-    border-bottom: 1px solid #f0f0f0;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border-color);
     position: sticky; /* Sticky para que al scroll se quede arriba */
     top: 0;
     z-index: 20;
@@ -279,7 +293,7 @@
 .product-search-container .search-wrapper {
     display: flex;
     align-items: center;
-    background: #f4f6f8;
+    background: var(--bg-light);
     border-radius: 20px;
     padding: 6px 12px;
     border: 1px solid transparent;
@@ -287,13 +301,13 @@
 }
 
 .product-search-container .search-wrapper:focus-within {
-    background: #fff;
+    background: var(--bg-card);
     border-color: var(--primary-color, #4CAF50);
     box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
 }
 
 .product-search-container .search-icon {
-    color: #aaa;
+    color: var(--text-muted);
     margin-right: 8px;
 }
 
@@ -304,7 +318,7 @@
     height: 36px;
     outline: none;
     font-size: 1rem;
-    color: #333;
+    color: var(--text-color);
     min-width: 0;
 }
 
@@ -370,7 +384,7 @@
         flex-direction: column;
         height: 100%;
         overflow: hidden;
-        background: #fff;
+        background: var(--bg-card);
         border-radius: 12px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
@@ -378,9 +392,9 @@
     /* Barra de búsqueda (ahora parte de productos) fija arriba */
     .product-search-container {
         flex-shrink: 0;
-        border-bottom: 1px solid #eee;
+        border-bottom: 1px solid var(--border-color);
         padding: 12px;
-        background: #fff;
+        background: var(--bg-card);
         z-index: 10;
     }
     
@@ -388,8 +402,8 @@
     .product-filters {
         flex-shrink: 0;
         padding: 8px 12px;
-        border-bottom: 1px solid #f9f9f9;
-        background: #fff;
+        border-bottom: 1px solid var(--border-color);
+        background: var(--bg-card);
     }
 
     /* Galería scrolleable */
@@ -448,8 +462,8 @@
     height: 38px;
     border-radius: 50%;
     border: none;
-    background: #e0e0e0; /* Gris solicitado */
-    color: #555;
+    background: var(--bg-light); /* Gris solicitado */
+    color: var(--text-medium);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -461,8 +475,8 @@
 }
 
 .config-btn-circle:hover {
-    background: #d0d0d0;
-    color: #333;
+    background: var(--bg-light);
+    color: var(--text-color);
 }
 
 .config-menu-wrapper {
@@ -476,10 +490,10 @@
     top: 100%;
     right: 0;
     margin-top: 8px;
-    background: white;
+    background: var(--bg-card);
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    border: 1px solid #eee;
+    border: 1px solid var(--border-color);
     min-width: 200px;
     z-index: 1000;
     padding: 8px 0;
@@ -500,10 +514,10 @@
     padding: 8px 16px;
     font-size: 0.85rem;
     font-weight: 700;
-    color: #999;
+    color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    border-bottom: 1px solid #f5f5f5;
+    border-bottom: 1px solid var(--border-color);
     margin-bottom: 4px;
 }
 
@@ -515,7 +529,7 @@
     border: none;
     background: transparent;
     text-align: left;
-    color: #444;
+    color: var(--text-medium);
     font-size: 0.95rem;
     cursor: pointer;
     transition: background 0.15s;
@@ -523,14 +537,14 @@
 }
 
 .dropdown-item:hover {
-    background: #f8f9fa;
+    background: var(--bg-light);
     color: var(--primary-color);
 }
 
 .dropdown-item i {
     width: 20px;
     text-align: center;
-    color: #777;
+    color: var(--text-medium);
 }
 
 .dropdown-item:hover i {
@@ -575,7 +589,7 @@
         grid-template-columns: 100%;
         overflow: hidden; 
         flex: 1;
-        background: white;
+        background: var(--bg-card);
     }
 
     .mobile-view-controls {
@@ -583,8 +597,8 @@
         grid-column: 1;
         display: flex;
         flex-shrink: 0;
-        background: white;
-        border-bottom: 1px solid #eee;
+        background: var(--bg-card);
+        border-bottom: 1px solid var(--border-color);
         box-shadow: 0 2px 5px rgba(0,0,0,0.03);
         z-index: 50;
     }
@@ -602,7 +616,7 @@
         display: flex !important; /* Always display for transitions */
         flex-direction: column;
         transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1); /* Smooth Slide */
-        background: white;
+        background: var(--bg-card);
         opacity: 1 !important;
         animation: none !important;
         overflow: hidden;
@@ -661,7 +675,7 @@
         padding: 14px;
         font-size: 1rem;
         font-weight: 600;
-        color: #999;
+        color: var(--text-muted);
         border-bottom: 3px solid transparent;
         cursor: pointer;
         display: flex;
@@ -674,7 +688,7 @@
     .view-switch-btn.active {
         color: var(--primary-color);
         border-bottom-color: var(--primary-color);
-        background: #fcfcfc;
+        background: var(--bg-lightest);
     }
 
     .view-switch-btn i {
@@ -720,9 +734,9 @@
     /* Footer fijo visualmente al fondo */
     .cart-summary-footer {
         flex-shrink: 0;
-        background: #fff;
+        background: var(--bg-card);
         z-index: 50; /* Sobreponer contenido scrolleado */
-        border-top: 1px solid #eee;
+        border-top: 1px solid var(--border-color);
         box-shadow: 0 -4px 12px rgba(0,0,0,0.08); /* Sombra hacia arriba para destacar */
         padding-bottom: max(16px, env(safe-area-inset-bottom)); /* iPhone X fix */
     }
@@ -736,7 +750,7 @@
 /* Dropdown extras */
 .dropdown-divider {
     height: 1px;
-    background: #eee;
+    background: var(--bg-light);
     margin: 6px 12px;
 }
 
@@ -763,7 +777,7 @@
     border-radius: 6px;
     font-size: 0.8rem;
     font-family: inherit;
-    background: #fff;
+    background: var(--bg-card);
     color: var(--text-color);
     cursor: pointer;
 }
@@ -771,4 +785,50 @@
 .dropdown-select:focus {
     outline: none;
     border-color: var(--primary-color);
+}
+
+/* ============================================================
+   ALINEACIÓN AL DESIGN SYSTEM UNIFICADO (módulo VENTAS — carrito)
+   Solo visual. No renombra clases ni altera la lógica JS.
+   ============================================================ */
+
+.cart-item-card {
+  border-radius: var(--ds-radius-md);
+  box-shadow: var(--ds-shadow-sm);
+}
+.cart-item-card:hover {
+  box-shadow: var(--ds-shadow-md);
+}
+.cart-item-left,
+.cart-item-img,
+.cart-item-img-placeholder {
+  border-radius: var(--ds-radius-sm);
+}
+.cart-disc-badge {
+  border-radius: var(--ds-radius-pill);
+  padding: 1px 8px;
+}
+.scanner-btn-circle,
+.config-btn-circle {
+  box-shadow: 0 2px 8px -3px color-mix(in srgb, var(--text-color) 30%, transparent);
+}
+.config-dropdown-menu {
+  border-radius: var(--ds-radius-md);
+  box-shadow: var(--ds-shadow-md);
+}
+.dropdown-item {
+  border-radius: var(--ds-radius-sm);
+  margin: 1px 6px;
+  width: auto;
+}
+.collapse-header-btn {
+  border-radius: 0 0 var(--ds-radius-md) var(--ds-radius-md);
+}
+
+/* Backdrop con textura sutil para teclados/numpad/quantity modales del carrito */
+.quantity-modal,
+.numpad-drawer {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.10'%3E%3Cpath d='M0 30 30 0 60 30 30 60Z'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 60px 60px;
 }

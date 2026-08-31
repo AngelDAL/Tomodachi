@@ -43,9 +43,12 @@ try {
     if (!$img64) {
         Response::validationError(['image_base64' => 'Requerida']);
     }
-    $product = $db->selectOne('SELECT product_id FROM products WHERE product_id = ?', [$product_id]);
+    // Seguridad: el usuario solo puede subir imágenes de productos de su propia tienda
+    $currentUser = $auth->getCurrentUser();
+    $store_id = (int)$currentUser['store_id'];
+    $product = $db->selectOne('SELECT product_id FROM products WHERE product_id = ? AND store_id = ?', [$product_id, $store_id]);
     if (!$product) {
-        Response::notFound('Producto no existe');
+        Response::notFound('Producto no encontrado en esta tienda');
     }
 
     // Parse base64

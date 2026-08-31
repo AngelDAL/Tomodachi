@@ -30,13 +30,13 @@ html.sidebar-loading .main-content {
     }
 
     /* Specific styles for new structure */
-    .nav-icon {
+    .nav-item .nav-icon {
         font-size: 1.2rem; /* Icon size */
-        min-width: 24px;
+        min-width: 28px;
         display: inline-flex;
         justify-content: center;
         align-items: center;
-        margin-right: 10px; /* Space between icon and text */
+        margin-right: 18px; /* Space between icon and text */
     }
 
     .nav-text {
@@ -76,7 +76,7 @@ html.sidebar-loading .main-content {
         
         transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         overflow: hidden;
-        z-index: 1300;
+        z-index: 20000;
     }
 
     .sidebar-header {
@@ -213,4 +213,19 @@ html.sidebar-loading .main-content {
         top: auto;
         width: 200px;
     }
+}
+
+/* ============================================================
+ * Switcher rápido de tema (Claro / Oscuro / Automático)
+ * ============================================================ */
+.theme-quick-switcher {
+    padding: 8px 0 !important;
+    cursor: default !important;
+}
+.theme-quick-btn {
+    transition: all var(--transition-fast);
+}
+.theme-quick-btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.2);
 }

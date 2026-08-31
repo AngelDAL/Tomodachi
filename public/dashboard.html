@@ -6,14 +6,16 @@
     <meta name="view-transition" content="same-origin">
     <title>Dashboard - Tomodachi</title>
     <!-- Local Fonts -->
-    <link rel="stylesheet" href="css/fonts.css">
+    <link rel="stylesheet" href="css/fonts.css?v=4">
     <!-- FontAwesome -->
-    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
-    <link rel="stylesheet" href="css/main.css">
-    <link rel="stylesheet" href="css/sidebar-modern.css">
-    <link rel="stylesheet" href="css/mobile-nav.css">
-    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css?v=4">
+    <link rel="stylesheet" href="css/main.css?v=4">
+    <link rel="stylesheet" href="css/design-system.css?v=5">
+    <link rel="stylesheet" href="css/sidebar-modern.css?v=4">
+    <link rel="stylesheet" href="css/mobile-nav.css?v=4">
+    <link rel="stylesheet" href="css/dashboard.css?v=4">
     <script src="js/theme-init.js"></script>
+    <script src="js/format-utils.js"></script>
     <script src="lib/chartjs/chart.umd.js"></script>
 </head>
 <body>
@@ -27,7 +29,7 @@
             </div>
             
             <nav class="sidebar-nav">
-                <!-- Navigation Loaded by js/sidebar-loader.js -->
+                <!-- Navigation Loaded by js/sidebar-loader.js?v=5 -->
             </nav>
         </aside>
         
@@ -35,18 +37,19 @@
         <main class="main-content">
             
             <div class="dashboard-content">
-                <div class="stats-grid">
+                <!-- Fila superior: 2 cards (Ventas del Día + Transacciones) -->
+                <div class="stats-grid stats-grid-top">
                     <div class="stat-card">
                         <div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div>
                         <div class="stat-info">
                             <h3>Ventas del Día</h3>
                             <p class="stat-value" id="dailySales">$0.00</p>
-                            <p class="premium-locked" style="font-size: 0.85rem; color: #27ae60; margin-top: 5px;">
+                            <p class="premium-locked" style="font-size: 0.85rem; color: var(--success-color); margin-top: 5px;">
                                 <i class="fas fa-coins"></i> Ganancia: <span id="dailyProfit" style="font-weight: bold;">$0.00</span>
                             </p>
                         </div>
                     </div>
-                    
+
                     <div class="stat-card">
                         <div class="stat-icon"><i class="fas fa-receipt"></i></div>
                         <div class="stat-info">
@@ -54,7 +57,10 @@
                             <p class="stat-value" id="transactions">0</p>
                         </div>
                     </div>
+                </div>
 
+                <!-- Fila inferior: 3 cards -->
+                <div class="stats-grid stats-grid-bottom">
                     <div class="stat-card">
                         <div class="stat-icon"><i class="fas fa-boxes"></i></div>
                         <div class="stat-info">
@@ -86,7 +92,7 @@
                             <h3><i class="fas fa-chart-line" style="color: var(--primary-color);"></i> Ventas vs Ganancias</h3>
                             <div class="chart-controls" style="display: flex; align-items: center; gap: 10px;">
                                 <button id="prevWeekBtn" class="btn-icon" aria-label="Semana anterior"><i class="fas fa-chevron-left"></i></button>
-                                <span id="chartRangeLabel" style="font-weight: 500; color: #666;">Semana Actual</span>
+                                <span id="chartRangeLabel" style="font-weight: 500; color: var(--text-light);">Semana Actual</span>
                                 <button id="nextWeekBtn" class="btn-icon" aria-label="Semana siguiente"><i class="fas fa-chevron-right"></i></button>
                             </div>
                         </div>
@@ -98,7 +104,7 @@
 
                 <div class="lists-grid">
                     <div class="list-section">
-                        <h3><i class="fas fa-star" style="color: #f1c40f;"></i> Productos Más Vendidos</h3>
+                        <h3><i class="fas fa-star" style="color: var(--warning-color);"></i> Productos Más Vendidos</h3>
                         <div class="table-responsive">
                             <table class="dashboard-table">
                                 <thead>
@@ -106,7 +112,7 @@
                                         <th><i class="fas fa-image"></i> Imagen</th>
                                         <th><i class="fas fa-box"></i> Producto</th>
                                         <th><i class="fas fa-shopping-cart"></i> Vendidos</th>
-                                        <th><i class="fas fa-dollar-sign"></i> Ingresos</th>
+                                        <th><span class="currency-icon">$</span> Ingresos</th>
                                     </tr>
                                 </thead>
                                 <tbody id="topProductsList"></tbody>
@@ -115,7 +121,7 @@
                     </div>
 
                     <div class="list-section">
-                        <h3><i class="fas fa-exclamation-triangle" style="color: #e74c3c;"></i> Stock Bajo</h3>
+                        <h3><i class="fas fa-exclamation-triangle" style="color: var(--danger-color);"></i> Stock Bajo</h3>
                         <div class="table-responsive">
                             <table class="dashboard-table">
                                 <thead>
@@ -131,7 +137,7 @@
                     </div>
                     
                     <div class="list-section" style="grid-column: 1 / -1;">
-                        <h3><i class="fas fa-history" style="color: #3498db;"></i> Ventas Recientes</h3>
+                        <h3><i class="fas fa-history" style="color: var(--info-color);"></i> Ventas Recientes</h3>
                         <div class="table-responsive">
                             <table class="dashboard-table">
                                 <thead>
@@ -150,20 +156,30 @@
             </div>
         </main>
     </div>
+
+    <!-- Modal: Detalle de venta -->
+    <dialog id="saleDetailModal" class="sale-detail-dialog" aria-label="Detalle de venta">
+        <div class="modal-content" style="max-width: 560px; border: none;">
+            <div class="modal-header">
+                <h2 id="saleDetailTitle">Detalle de Venta</h2>
+                <button type="button" class="modal-close" id="saleDetailClose" aria-label="Cerrar">&times;</button>
+            </div>
+            <div class="modal-body" id="saleDetailBody" style="max-height: 60vh; overflow-y: auto;">
+                <!-- Contenido inyectado por JS -->
+            </div>
+        </div>
+    </dialog>
     
-    <script src="js/sidebar-loader.js"></script>
+    <script src="js/sidebar-loader.js?v=5"></script>
     <script src="js/app.js"></script>
     <script src="js/tour.js"></script>
-    <script src="js/dashboard.js"></script>
+    <script src="js/dashboard.js?v=2"></script>
     <script>
         // Verificar sesión al cargar
         document.addEventListener('DOMContentLoaded', async () => {
             const session = await checkSession();
             
-            if (!session) {
-                window.location.href = 'login.html';
-                return;
-            }
+            if (!session) { requireSession(); return; }
             
             // Iniciar Tour si corresponde
             if (window.TourSystem) {
@@ -180,5 +196,7 @@
         
         // Logout handled by sidebar-loader.js
     </script>
+    <script src="lib/animejs/anime.min.js"></script>
+    <script src="js/design-system.js?v=5"></script>
 </body>
 </html>

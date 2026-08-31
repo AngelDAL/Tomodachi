@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tomodachi — Perfil de Estilos</title>
+<link rel="stylesheet" href="css/variables.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<!-- anime.js (vendoreado en el proyecto) -->
+<script src="lib/animejs/anime.min.js"></script>
+<!-- Tipografías -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --font-heading: 'Sora', 'Inter', sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --dur: .28s cubic-bezier(.4,0,.2,1);
+  --dur-spring: .38s cubic-bezier(.34,1.56,.64,1);
+  --dur-soft: .5s cubic-bezier(.16,1,.3,1);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font-body); background: var(--bg-body); color: var(--text-color);
+  line-height: 1.6; -webkit-font-smoothing: antialiased; overflow-x: hidden;
+  /* Patrón SVG monocromático sutil (inspirado en svgmonster) sobre el fondo */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.35' stroke-width='1.2'%3E%3Cpath d='M0 40h80M40 0v80'/%3E%3Ccircle cx='40' cy='40' r='14'/%3E%3Ccircle cx='40' cy='40' r='6'/%3E%3Cpath d='M28 40h24M40 28v24'/%3E%3C/g%3E%3C/svg%3E");
+}
+[data-theme="dark"] body {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='none' stroke='%23000000' stroke-opacity='0.5' stroke-width='1.2'%3E%3Cpath d='M0 40h80M40 0v80'/%3E%3Ccircle cx='40' cy='40' r='14'/%3E%3Ccircle cx='40' cy='40' r='6'/%3E%3Cpath d='M28 40h24M40 28v24'/%3E%3C/g%3E%3C/svg%3E");
+}
+h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
+.page-wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px 160px; }
+
+.hero { padding: 64px 24px 44px; text-align: center; position: relative; border-bottom: 1px solid var(--border-lighter); background: radial-gradient(1100px 380px at 50% -10%, color-mix(in srgb, var(--primary-color) 18%, transparent), transparent 60%), var(--bg-body); }
+.hero .eyebrow { display: inline-block; padding: 5px 14px; border-radius: 100px; font-family: var(--font-heading); font-size: .72rem; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--primary-color); background: var(--primary-light); border: 1px solid color-mix(in srgb,var(--primary-color) 25%, transparent); }
+.hero h1 { font-size: clamp(2rem,5vw,3.3rem); font-weight: 800; letter-spacing: -.02em; margin: 14px 0 10px; }
+.hero h1 span { color: var(--primary-color); }
+.hero p { max-width: 680px; margin: 0 auto; color: var(--text-medium); font-size: 1.02rem; }
+.theme-toggle { margin: 20px auto 0; display: inline-flex; gap: 4px; padding: 4px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 100px; box-shadow: var(--shadow-sm); }
+.theme-toggle .seg { padding: 8px 20px; border-radius: 100px; color: var(--text-muted); transition: all var(--dur-spring); cursor: pointer; }
+.theme-toggle .seg.active { background: var(--primary-color); color: #fff; box-shadow: var(--shadow-primary); }
+
+/* ===== Pestañas de organización (Componentes / Modales y Drawers / Animaciones) ===== */
+.main-tabs { display: flex; justify-content: center; gap: 6px; padding: 14px 12px; position: sticky; top: 0; z-index: 60; background: color-mix(in srgb, var(--bg-body) 88%, transparent); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border-lighter); }
+.main-tab { font-family: var(--font-heading); font-size: .9rem; font-weight: 600; color: var(--text-medium); background: transparent; border: none; cursor: pointer; padding: 11px 24px; border-radius: 100px; display: inline-flex; align-items: center; gap: 9px; transition: all var(--dur-spring); }
+.main-tab i { font-size: .95em; }
+.main-tab:hover { color: var(--primary-color); background: var(--primary-light); }
+.main-tab.active { background: var(--primary-color); color: #fff; box-shadow: var(--shadow-primary); }
+
+.view-pane { display: none; }
+.view-pane.active { display: block; }
+
+/* ===== Secciones / grid / stage ===== */
+.section { margin-top: 48px; }
+.section-head { margin-bottom: 20px; }
+.section-head h2 { font-size: 1.4rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+.section-head h2 i { color: var(--primary-color); }
+.section-head p { color: var(--text-muted); font-size: .92rem; max-width: 780px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px,1fr)); gap: 18px; }
+.stage { position: relative; background: var(--bg-card); border: 1px solid var(--border-lighter); border-radius: 18px; padding: 20px; box-shadow: var(--shadow-sm); }
+.stage .cap { width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.stage .cap span { font-family: var(--font-heading); font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); }
+.stage .cap i { color: var(--text-muted); }
+.stage .body { display: flex; flex-direction: column; gap: 14px; }
+
+/* ===== BOTONES CÁPSULA ===== */
+.btn { position: relative; overflow: hidden; font-family: var(--font-heading); display: inline-flex; align-items: center; justify-content: center; gap: 9px; font-size: .9rem; font-weight: 600; padding: 12px 26px; border-radius: 100px; border: 1.5px solid transparent; cursor: pointer; text-decoration: none; white-space: nowrap; transform: translateZ(0); -webkit-tap-highlight-color: transparent; transition: transform var(--dur), box-shadow var(--dur-spring), background var(--dur), color var(--dur), border-color var(--dur); }
+.btn:active { transform: translateY(1px) scale(.97); box-shadow: none; }
+.btn i { font-size: .95em; }
+.btn-solid { background: var(--primary-color); color: #fff; box-shadow: var(--shadow-primary); }
+.btn-solid:hover { background: var(--primary-hover); box-shadow: var(--shadow-lg); }
+.btn-dark { background: var(--secondary-color); color: var(--secondary-contrast); }
+.btn-outline { background: transparent; color: var(--primary-color); border-color: var(--primary-color); }
+.btn-outline:hover { background: var(--primary-light); }
+.btn-soft { background: var(--primary-light); color: var(--primary-dark); }
+.btn-ghost { background: transparent; color: var(--text-medium); }
+.btn-ghost:hover { background: var(--bg-hover); color: var(--text-color); }
+.btn-danger-soft { background: color-mix(in srgb,var(--danger-color) 12%, transparent); color: var(--danger-dark); }
+.btn-success-soft { background: color-mix(in srgb,var(--success-color) 12%, transparent); color: var(--success-dark); }
+.btn-icon { padding: 12px; width: 46px; height: 46px; }
+.btn-lg { padding: 15px 34px; font-size: 1.02rem; }
+.btn-sm { padding: 9px 18px; font-size: .8rem; }
+.btn-block { width: 100%; }
+.btn .shine { display: none; }
+.btn .ripple { display: none; }
+@keyframes rip66 { to { transform: scale(3.2); opacity: 0; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+.btn.loading { pointer-events: none; opacity: .72; }
+.btn.loading i { animation: spin 1s linear infinite; }
+
+/* separador diagonal */
+.segment { display: inline-flex; align-items: center; gap: 0; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 100px; padding: 5px; box-shadow: var(--shadow-sm); }
+.segment .cap-btn { font-family: var(--font-heading); font-size: .82rem; font-weight: 600; color: var(--text-medium); background: transparent; border: none; cursor: pointer; padding: 9px 16px; border-radius: 100px; white-space: nowrap; transition: all var(--dur); position: relative; z-index: 1; }
+.segment .cap-btn:hover { color: var(--primary-color); }
+.segment .cap-btn.active { background: var(--primary-color); color: #fff; box-shadow: var(--shadow-primary); }
+.segment .vslash { display: inline-flex; align-items: center; justify-content: center; width: 10px; color: var(--border-color); font-size: .95rem; user-select: none; }
+.segment .vslash::before { content: "\002F"; font-weight: 300; transform: rotate(-8deg); display: inline-block; }
+
+/* ===== SELECTOR (menú fuera de la card) ===== */
+.ds-select { position: relative; width: 100%; }
+.ds-select .trigger { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; font-family: var(--font-heading); font-size: .9rem; font-weight: 500; color: var(--text-color); background: var(--bg-input); border: 1.5px solid var(--border-color); border-radius: 14px; padding: 13px 16px; cursor: pointer; text-align: left; transition: all var(--dur); }
+.ds-select .trigger:hover { border-color: color-mix(in srgb,var(--primary-color) 45%, var(--border-color)); }
+.ds-select.open .trigger { border-color: var(--primary-color); box-shadow: var(--primary-focus-ring); }
+.ds-select .trigger .arrow { color: var(--text-muted); transition: transform var(--dur-spring); }
+.ds-select.open .trigger .arrow { transform: rotate(180deg); }
+/* El menú se posiciona absoluto y puede salir de la card: z-index alto y sin overflow que lo recorte */
+.ds-select .menu { position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 1000; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; box-shadow: 0 20px 50px -12px color-mix(in srgb,var(--text-color) 35%, transparent); padding: 6px; opacity: 0; transform: translateY(-8px) scale(.98); pointer-events: none; transition: opacity var(--dur), transform var(--dur-spring); }
+.ds-select.open .menu { opacity: 1; transform: none; pointer-events: auto; }
+.ds-select .opt { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-radius: 11px; font-size: .9rem; color: var(--text-medium); cursor: pointer; opacity: 0; transform: translateY(-6px); transition: background var(--dur-soft), color var(--dur), opacity .3s var(--dur-spring), transform .3s var(--dur-spring); }
+.ds-select.open .opt { opacity: 1; transform: none; }
+.ds-select .opt:hover { background: var(--bg-hover); color: var(--text-color); }
+.ds-select .opt.selected { background: var(--primary-light); color: var(--primary-dark); font-weight: 600; }
+.ds-select .opt .d { margin-left: auto; color: var(--text-muted); font-size: .8rem; }
+
+/* ===== INPUTS ===== */
+.field { display: flex; flex-direction: column; gap: 7px; width: 100%; }
+.field .flabel { font-family: var(--font-heading); font-size: .8rem; font-weight: 600; color: var(--text-medium); }
+.ds-input { width: 100%; font-family: var(--font-body); font-size: .95rem; color: var(--text-color); background: var(--bg-input); border: 1.5px solid var(--border-color); border-radius: 14px; padding: 13px 15px; transition: all var(--dur); }
+.ds-input::placeholder { color: var(--text-muted); font-weight: 400; }
+.ds-input:hover { border-color: color-mix(in srgb,var(--primary-color) 40%, var(--border-color)); }
+.ds-input:focus { outline: none; border-color: var(--primary-color); box-shadow: var(--primary-focus-ring); }
+.input-wrap { position: relative; width: 100%; display: flex; align-items: center; }
+.input-wrap > i { position: absolute; left: 14px; color: var(--text-muted); font-size: .9rem; pointer-events: none; }
+.input-wrap .ds-input.with-icon { padding-left: 42px; }
+
+/* ===== TOGGLES ===== */
+.toggle-group { display: inline-flex; gap: 5px; background: var(--bg-light); padding: 5px; border-radius: 100px; border: 1px solid var(--border-lighter); }
+.toggle-opt { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-heading); font-size: .84rem; font-weight: 600; color: var(--text-medium); cursor: pointer; padding: 10px 18px; border-radius: 100px; border: none; background: transparent; transition: all var(--dur-spring); }
+.toggle-opt:hover { color: var(--text-color); }
+.toggle-opt.active { background: var(--bg-card); color: var(--primary-color); box-shadow: var(--shadow-md); }
+.switch { position: relative; display: inline-flex; align-items: center; gap: 12px; font-family: var(--font-heading); font-size: .88rem; font-weight: 500; cursor: pointer; }
+.switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+.switch .track { width: 52px; height: 30px; border-radius: 100px; background: var(--border-color); position: relative; transition: background var(--dur); flex-shrink: 0; }
+.switch .track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: var(--shadow-sm); transition: transform var(--dur-spring); }
+.switch input:checked + .track { background: var(--primary-color); }
+.switch input:checked + .track::after { transform: translateX(22px); }
+
+/* ===== TABS ===== */
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.tab { position: relative; font-family: var(--font-heading); font-size: .88rem; font-weight: 600; color: var(--text-medium); background: transparent; border: none; cursor: pointer; padding: 11px 20px; border-radius: 100px; transition: all var(--dur); opacity: 0; transform: translateY(10px); animation: tabIn .45s var(--dur-spring) forwards; }
+@keyframes tabIn { to { opacity: 1; transform: none; } }
+.tab:hover { color: var(--primary-color); background: var(--primary-light); }
+.tab::after { content: ""; position: absolute; left: 50%; bottom: -3px; height: 3px; width: 0; background: var(--primary-color); border-radius: 3px; transform: translateX(-50%); transition: width var(--dur-spring); }
+.tab.active { color: var(--primary-color); }
+.tab.active::after { width: 60%; }
+.tab-panel { display: none; animation: panelIn .45s var(--dur-soft); }
+.tab-panel.active { display: block; }
+@keyframes panelIn { from { opacity: 0; transform: translateY(12px); } }
+
+/* ===== BADGES ===== */
+.badge-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.badge { display: inline-flex; align-items: center; gap: 7px; font-family: var(--font-heading); font-size: .78rem; font-weight: 600; padding: 7px 14px; border-radius: 100px; border: 1.5px solid; transition: transform var(--dur-spring), box-shadow var(--dur); }
+.badge i { font-size: .85em; }
+.badge-primary { color: var(--primary-dark); background: var(--primary-light); border-color: color-mix(in srgb,var(--primary-color) 45%, transparent); }
+.badge-primary .dot { color: var(--primary-color); }
+.badge-outline { color: var(--primary-color); background: transparent; border-color: var(--primary-color); }
+.badge-success { color: var(--success-dark); background: color-mix(in srgb,var(--success-color) 14%, transparent); border-color: color-mix(in srgb,var(--success-color) 55%, transparent); }
+.badge-warning { color: var(--warning-dark); background: color-mix(in srgb,var(--warning-color) 16%, transparent); border-color: color-mix(in srgb,var(--warning-color) 55%, transparent); }
+.badge-danger { color: var(--danger-dark); background: color-mix(in srgb,var(--danger-color) 12%, transparent); border-color: color-mix(in srgb,var(--danger-color) 50%, transparent); }
+.badge:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+
+/* ===== CARDS (sin degradado superior) ===== */
+.card { background: var(--bg-card); border: 1px solid var(--border-lighter); border-radius: 20px; box-shadow: 0 10px 30px -12px color-mix(in srgb,var(--text-color) 18%, transparent); overflow: hidden; transition: transform var(--dur-soft), box-shadow var(--dur-soft); }
+.card:hover { transform: translateY(-3px); box-shadow: 0 18px 40px -14px color-mix(in srgb,var(--text-color) 26%, transparent); }
+.card-head { padding: 18px 24px; background: var(--bg-lightest); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.card-head h4 { font-size: 1rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+.card-head h4 i { color: var(--primary-color); }
+.card-head .hint { color: var(--text-muted); font-size: .78rem; }
+.card-body-x { padding: 20px 24px; }
+.card-body-x .kpis { display: flex; gap: 14px; flex-wrap: wrap; }
+.kpi { flex: 1; min-width: 88px; }
+.kpi .v { font-family: var(--font-heading); font-size: 1.4rem; font-weight: 700; }
+.kpi .v.small { font-size: 1.05rem; }
+.kpi .l { font-size: .76rem; color: var(--text-muted); }
+.card-divider { height: 1px; background: var(--border-lighter); margin: 0 24px; }
+.card-foot { padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
+/* Titular con textura SVG sutil */
+.card-head.textured { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Ccircle cx='20' cy='20' r='7' fill='none' stroke='%23ffffff' stroke-opacity='0.28'/%3E%3Cpath d='M20 6v28M6 20h28' stroke='%23ffffff' stroke-opacity='0.12'/%3E%3C/svg%3E"), var(--bg-lightest); }
+[data-theme="dark"] .card-head.textured { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Ccircle cx='20' cy='20' r='7' fill='none' stroke='%23000000' stroke-opacity='0.35'/%3E%3Cpath d='M20 6v28M6 20h28' stroke='%23000000' stroke-opacity='0.18'/%3E%3C/svg%3E"), var(--bg-lightest); }
+
+/* ===== MODAL ===== */
+/* Backdrop con patrón SVG sutil (textura monocromática) además del velo */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 1000; display: none; align-items: center; justify-content: center; padding: 20px;
+  background-color: rgba(0,0,0,.5);
+  perspective: 1200px;
+}
+[data-theme="dark"] .modal-overlay { background-color: rgba(0,0,0,.6); }
+.modal-overlay::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.10'%3E%3Cpath d='M0 30 30 0 60 30 30 60Z'/%3E%3C/g%3E%3C/svg%3E");
+  opacity: .6;
+}
+.modal-overlay.show { display: flex; animation: fadeIn .18s var(--dur) both; }
+@keyframes fadeIn { from { opacity: 0; } }
+/* Tres tamaños de modal */
+.modal { width: 100%; max-width: 480px; background: var(--bg-card); border-radius: 20px; box-shadow: 0 25px 60px -15px rgba(0,0,0,.4); overflow: hidden; position: relative; }
+.modal.sm { max-width: 360px; }
+.modal.md { max-width: 480px; }
+.modal.lg { max-width: 640px; }
+
+/* Titular con estructura marcada y separación */
+.modal-head {
+  padding: 22px 24px 16px; display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--border-lighter);
+}
+.modal-head h3 { font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+.modal-head h3 i { color: var(--primary-color); }
+.icon-btn { background: var(--bg-lightest); border: 1px solid var(--border-lighter); color: var(--text-muted); width: 38px; height: 38px; border-radius: 50%; display: grid; place-content: center; font-size: 1rem; cursor: pointer; transition: all var(--dur); }
+.icon-btn:hover { background: var(--bg-hover); border-color: var(--danger-color); color: var(--danger-color); transform: rotate(90deg); }
+.modal-body { padding: 22px 24px; }
+.modal-foot {
+  padding: 18px 24px 22px; display: flex; gap: 10px; justify-content: flex-end;
+  border-top: 1px solid var(--border-lighter); background: var(--bg-lightest);
+}
+
+/* La animación de ENTRADA y SALIDA del modal la maneja anime.js (ver JS),
+   con efecto propio por variante. El CSS base solo define apariencia. */
+/* ===== DRAWER — con rebote orgánico y más ancho ===== */
+.drawer-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,.5); display: flex; justify-content: flex-end; opacity: 0; visibility: hidden; transition: opacity .3s, visibility .3s; }
+.drawer-overlay.show { opacity: 1; visibility: visible; }
+.drawer { width: 540px; max-width: 96vw; height: 100%; background: var(--bg-card); box-shadow: -12px 0 40px rgba(0,0,0,.18); display: flex; flex-direction: column; overflow: hidden;
+  transform: translateX(110%);
+}
+/* Entrada con rebote (overshoot) no lineal; se dispara con .show
+   (sin estilo inline, para que la animación realmente corra). */
+.drawer-overlay.show .drawer { animation: drawerIn .5s cubic-bezier(.22,1.2,.35,1) forwards; }
+@keyframes drawerIn {
+  0% { transform: translateX(110%); }
+  60% { transform: translateX(-3%); }
+  80% { transform: translateX(0.8%); }
+  100% { transform: translateX(0); }
+}
+
+.drawer-head {
+  padding: 16px 24px; display: flex; justify-content: space-between; align-items: center;
+  background: var(--bg-lightest); border-bottom: 1px solid var(--border-lighter);
+}
+.drawer-head h3 { font-size: 1rem; font-weight: 700; display: flex; align-items: center; gap: 10px; font-family: var(--font-heading); }
+.drawer-head h3 i { color: var(--primary-color); }
+.drawer-tabs { display: flex; background: var(--bg-lightest); border-bottom: 1px solid var(--border-light); }
+.drawer-tab { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px; border: none; background: transparent; color: var(--text-light); font-family: var(--font-heading); font-size: .84rem; font-weight: 500; cursor: pointer; border-bottom: 3px solid transparent; transition: all .2s; }
+.drawer-tab:hover { color: var(--text-color); }
+.drawer-tab.active { color: var(--primary-color); border-bottom-color: var(--primary-color); background: color-mix(in srgb,var(--primary-color) 4%, transparent); }
+.drawer-body { flex: 1; overflow-y: auto; padding: 22px 28px; }
+.drawer-foot { padding: 16px 28px; border-top: 1px solid var(--border-lighter); display: flex; justify-content: flex-end; gap: 10px; }
+
+/* ===== CONTENEDORES DE ANIMACIÓN ===== */
+.anime-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 10px; }
+.anime-grid .cell { height: 54px; border-radius: 12px; background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); display: grid; place-content: center; color: #fff; font-family: var(--font-heading); font-size: .78rem; font-weight: 600; }
+.anime-table { width: 100%; border-collapse: collapse; }
+.anime-table td, .anime-table th { padding: 11px 14px; border-bottom: 1px solid var(--border-lighter); text-align: left; font-size: .86rem; }
+.anime-table th { color: var(--text-muted); font-size: .72rem; text-transform: uppercase; }
+.anime-cards { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
+.anime-cards .ac { background: var(--bg-card); border: 1px solid var(--border-lighter); border-radius: 14px; padding: 18px; box-shadow: var(--shadow-sm); }
+.anime-cards .ac h5 { font-size: .9rem; margin-bottom: 4px; }
+.anime-cards .ac p { font-size: .78rem; color: var(--text-muted); }
+.anim-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+.anim-row .btn { padding: 10px 18px; font-size: .82rem; }
+.demo-zone { background: var(--bg-light); border: 1px dashed var(--border-color); border-radius: 16px; padding: 22px; margin-top: 8px; }
+
+/* ===== ANIMACIONES DE CONTENIDO Y DATOS ===== */
+/* Contador / odómetro */
+.odometer { font-family: var(--font-heading); font-size: 3rem; font-weight: 800; line-height: 1; color: var(--primary-color); font-variant-numeric: tabular-nums; display: inline-block; }
+.total-label { color: var(--text-muted); font-size: .8rem; margin-top: 4px; }
+.ds-hud { display: inline-flex; flex-direction: column; align-items: center; gap: 6px; padding: 22px 30px; background: var(--bg-card); border: 1px solid var(--border-lighter); border-radius: 18px; box-shadow: var(--shadow-sm); }
+
+/* Número que crece (pulse) al sumar al carrito */
+.cart-total { display: inline-flex; align-items: center; gap: 12px; }
+.cart-total.bump .val { animation: bump .4s cubic-bezier(.34,1.56,.64,1); }
+@keyframes bump { 0%{transform:scale(1)} 40%{transform:scale(1.22)} 100%{transform:scale(1)} }
+.cart-amount { font-family: var(--font-heading); font-size: 2rem; font-weight: 700; color: var(--text-color); font-variant-numeric: tabular-nums; }
+
+/* Entrada de texto (palabras escalonadas) */
+.word-in { display: inline-block; transform: translateY(24px); opacity: 0; }
+.word-in.run { animation: wordUp .5s cubic-bezier(.16,1,.3,1) forwards; }
+@keyframes wordUp { to { transform: none; opacity: 1; } }
+
+/* Elementos internos de tarjeta escalonados */
+.card-in { opacity: 0; transform: translateY(16px); }
+.card-in.run { animation: cardIn .5s cubic-bezier(.16,1,.3,1) forwards; }
+@keyframes cardIn { to { opacity: 1; transform: none; } }
+
+/* Carrusel */
+.carousel { position: relative; overflow: hidden; border-radius: 16px; }
+.carousel-track { display: flex; transition: transform .5s cubic-bezier(.22,1,.36,1); }
+.carousel-slide { flex: 0 0 100%; min-height: 150px; display: grid; place-content: center; color: #fff; font-family: var(--font-heading); font-size: 1.5rem; font-weight: 700; text-align: center; padding: 20px; }
+.carousel-nav { display: flex; gap: 8px; justify-content: center; margin-top: 14px; }
+.carousel-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--border-color); border: none; cursor: pointer; transition: all .3s; }
+.carousel-dot.active { width: 26px; border-radius: 100px; background: var(--primary-color); }
+.carousel-arrow { position: absolute; top: 50%; transform: translateY(-50%); width: 38px; height: 38px; border-radius: 50%; border: none; background: rgba(255,255,255,.25); color: #fff; cursor: pointer; display: grid; place-content: center; backdrop-filter: blur(4px); transition: background .2s; z-index: 2; }
+.carousel-arrow:hover { background: rgba(255,255,255,.45); }
+.carousel-arrow.prev { left: 12px; }
+.carousel-arrow.next { right: 12px; }
+
+/* ===== Ejemplos orquestados con anime.js ===== */
+/* Letras con flip (títulos) */
+.flip-letters, .flip-word { display: inline-block; }
+.flip-letters .lt, .flip-word .lt { display: inline-block; opacity: 0; transform-origin: 50% 50%; }
+.flip-letters .sp, .flip-word .sp { display: inline-block; width: .4em; }
+
+/* Lista de compras que se despliega */
+.buy-list, .demo-list { list-style: none; padding: 0; margin: 0; }
+.buy-list li, .demo-list li {
+  display: flex; align-items: center; gap: 12px; padding: 13px 14px;
+  background: var(--bg-card); border: 1px solid var(--border-lighter); border-radius: 12px;
+  margin-bottom: 8px; font-size: .92rem; opacity: 0; transform: translateX(-18px);
+}
+.buy-list li .ic, .demo-list li .ic {
+  width: 34px; height: 34px; border-radius: 10px; display: grid; place-content: center;
+  background: var(--primary-light); color: var(--primary-color); font-size: .9rem;
+}
+.buy-list li .pr, .demo-list li .pr { margin-left: auto; font-family: var(--font-heading); font-weight: 600; color: var(--text-medium); }
+
+/* Compra exitosa */
+.success-check {
+  width: 92px; height: 92px; margin: 6px auto 14px; border-radius: 50%;
+  background: color-mix(in srgb, var(--success-color) 16%, transparent);
+  display: grid; place-content: center; position: relative;
+}
+.success-check .circ { position: absolute; inset: 0; border-radius: 50%; border: 3px solid var(--success-color); opacity: 0; transform: scale(.4); }
+.success-check .tick { font-size: 2.6rem; color: var(--success-dark); opacity: 0; }
+.flip-letters .lt { display: inline-block; opacity: 0; }
+
+/* ===== Micro-animaciones chill (reutilizables) ===== */
+/* filas/tarjetas en cascada suave (estilo lista de compras) */
+.chill-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.chill-item {
+  display: flex; align-items: center; gap: 12px; padding: 14px 16px;
+  background: var(--bg-card); border: 1px solid var(--border-lighter); border-radius: 14px;
+  opacity: 0; transform: translateY(14px);
+}
+.chill-item .ci { width: 40px; height: 40px; border-radius: 12px; display: grid; place-content: center; background: var(--primary-light); color: var(--primary-color); font-size: 1rem; }
+.chill-item h5 { font-size: .92rem; font-weight: 600; }
+.chill-item p { font-size: .78rem; color: var(--text-muted); }
+
+/* iconos con pop */
+.icon-chip { width: 52px; height: 52px; border-radius: 16px; display: grid; place-content: center; font-size: 1.2rem; background: var(--bg-card); border: 1px solid var(--border-lighter); color: var(--primary-color); opacity: 0; }
+.icon-chips { display: flex; gap: 12px; flex-wrap: wrap; }
+
+/* badge que brilla */
+.badge-shine { position: relative; overflow: hidden; }
+.badge-shine::after { content: ""; position: absolute; top: 0; left: -60%; width: 45%; height: 100%; background: linear-gradient(110deg, transparent, rgba(255,255,255,.5), transparent); transform: skewX(-20deg); }
+
+/* número con pulse suave */
+.big-num { font-family: var(--font-heading); font-size: 2.6rem; font-weight: 800; color: var(--primary-color); font-variant-numeric: tabular-nums; }
+
+/* ===== Ejemplos chill extra (barra de resumen y resumen de compra) ===== */
+.kpi-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.kpi-box { text-align: center; padding: 18px 10px; background: var(--bg-card); border: 1px solid var(--border-lighter); border-radius: 16px; opacity: 0; transform: translateY(16px); }
+.kpi-box .sv { font-family: var(--font-heading); font-size: 1.7rem; font-weight: 700; }
+.kpi-box .sl { font-size: .75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; }
+.kpi-box .ico { display: inline-block; font-size: 1rem; color: var(--primary-color); margin-bottom: 6px; opacity: 0; }
+
+.summary-table { width: 100%; border-collapse: collapse; }
+.summary-table td { padding: 9px 6px; border-bottom: 1px solid var(--border-lighter); font-size: .88rem; opacity: 0; }
+.summary-table td:last-child { text-align: right; font-weight: 600; }
+.summary-total { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 14px; border-top: 2px solid var(--border-color); opacity: 0; }
+.summary-total .lbl { font-family: var(--font-heading); font-weight: 700; font-size: 1rem; }
+.summary-total .amt { font-family: var(--font-heading); font-size: 1.6rem; font-weight: 800; color: var(--primary-color); }
+
+@media (max-width: 700px) { .grid { grid-template-columns: 1fr 1fr; } .anime-grid { grid-template-columns: repeat(4,1fr); } .anime-cards { grid-template-columns: repeat(2,1fr); } .hero { padding: 44px 16px 34px; } }
+</style>
+</head>
+<body>
+
+<!-- ===== HERO ===== -->
+<header class="hero">
+  <span class="eyebrow">Perfil de estilos · v1.3</span>
+  <h1>Tomodachi <span>Design Lab</span></h1>
+  <p>Componentes, modales, drawers y un catálogo de animaciones (con anime.js) para decidir la presentación de contenido. Organizado por pestañas.</p>
+  <div class="theme-toggle" role="group" aria-label="Tema">
+    <span class="seg active" data-theme-set="light">Claro</span>
+    <span class="seg" data-theme-set="dark">Oscuro</span>
+  </div>
+</header>
+
+<!-- ===== PESTAÑAS PRINCIPALES ===== -->
+<nav class="main-tabs" id="mainTabs">
+  <button class="main-tab active" data-pane="pane-componentes"><i class="fas fa-cubes"></i> Componentes</button>
+  <button class="main-tab" data-pane="pane-modales"><i class="fas fa-layer-group"></i> Modales y Drawers</button>
+  <button class="main-tab" data-pane="pane-animaciones"><i class="fas fa-wand-magic-sparkles"></i> Animaciones</button>
+</nav>
+
+<main class="page-wrap">
+
+<!-- ================================================================
+     PESTAÑA: COMPONENTES
+     ================================================================ -->
+<div class="view-pane active" id="pane-componentes">
+
+  <section class="section" id="comp-botones">
+    <div class="section-head"><h2><i class="fas fa-mouse-pointer"></i> Botones cápsula</h2><p>Con separación diagonal cuando van en fila.</p></div>
+    <div class="grid">
+      <div class="stage"><div class="cap"><span>Sólido</span></div><div class="body"><button class="btn btn-solid"><i class="fas fa-plus"></i> Nuevo</button></div></div>
+      <div class="stage"><div class="cap"><span>Oscuro</span></div><div class="body"><button class="btn btn-dark">Guardar</button></div></div>
+      <div class="stage"><div class="cap"><span>Contorno</span></div><div class="body"><button class="btn btn-outline">Cancelar</button></div></div>
+      <div class="stage"><div class="cap"><span>Suave</span></div><div class="body"><button class="btn btn-soft"><i class="fas fa-tag"></i> Promoción</button></div></div>
+      <div class="stage"><div class="cap"><span>Éxito</span></div><div class="body"><button class="btn btn-success-soft"><i class="fas fa-check"></i> Pagado</button></div></div>
+      <div class="stage"><div class="cap"><span>Peligro</span></div><div class="body"><button class="btn btn-danger-soft"><i class="fas fa-trash"></i> Eliminar</button></div></div>
+    </div>
+    <div class="stage" style="margin-top:18px">
+      <div class="cap"><span>Cápsulas con separador diagonal</span><span>/ /</span></div>
+      <div style="display:flex;flex-wrap:wrap;gap:22px">
+        <div class="segment">
+          <button class="cap-btn active">Hoy</button><span class="vslash"></span>
+          <button class="cap-btn">Semana</button><span class="vslash"></span>
+          <button class="cap-btn">Mes</button>
+        </div>
+        <div class="segment">
+          <button class="cap-btn active"><i class="fas fa-th-large"></i> Grilla</button><span class="vslash"></span>
+          <button class="cap-btn"><i class="fas fa-list"></i> Lista</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="comp-selector">
+    <div class="section-head"><h2><i class="fas fa-caret-down"></i> Selector</h2><p>El menú desplegado sale de la card sin recortarse; las opciones aparecen de una en una.</p></div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(280px,1fr))">
+      <div class="stage" style="overflow:visible">
+        <div class="cap"><span>Selector animado</span></div>
+        <div class="body">
+          <div class="ds-select" id="selDemo">
+            <button class="trigger" type="button"><span id="selLabel">Bebidas</span><i class="fas fa-chevron-down arrow"></i></button>
+            <div class="menu">
+              <div class="opt selected" data-v="Bebidas"><i class="fas fa-mug-hot"></i> Bebidas<span class="d">12</span></div>
+              <div class="opt" data-v="Snacks"><i class="fas fa-cookie-bite"></i> Snacks<span class="d">8</span></div>
+              <div class="opt" data-v="Despensa"><i class="fas fa-basket-shopping"></i> Despensa<span class="d">6</span></div>
+              <div class="opt" data-v="Lácteos"><i class="fas fa-cheese"></i> Lácteos<span class="d">4</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="comp-inputs">
+    <div class="section-head"><h2><i class="fas fa-edit"></i> Inputs</h2></div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(270px,1fr))">
+      <div class="stage"><div class="cap"><span>Texto</span></div><div class="body"><div class="field"><label class="flabel">Nombre</label><input class="ds-input" placeholder="Ej. Café Americano"></div></div></div>
+      <div class="stage"><div class="cap"><span>Con icono</span></div><div class="body"><div class="field"><label class="flabel">Buscar</label><div class="input-wrap"><i class="fas fa-search"></i><input class="ds-input with-icon" placeholder="Buscar..."></div></div></div></div>
+      <div class="stage"><div class="cap"><span>Moneda</span></div><div class="body"><div class="field"><label class="flabel">Precio</label><div class="input-wrap"><i class="fas fa-dollar-sign"></i><input class="ds-input with-icon" type="number" value="25.00"></div></div></div></div>
+    </div>
+  </section>
+
+  <section class="section" id="comp-toggles">
+    <div class="section-head"><h2><i class="fas fa-toggle-on"></i> Toggles</h2></div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(270px,1fr))">
+      <div class="stage"><div class="cap"><span>Pastilla</span></div><div class="body"><div class="toggle-group" data-toggle-group><button class="toggle-opt active"><i class="fas fa-th-large"></i> Grilla</button><button class="toggle-opt"><i class="fas fa-list"></i> Lista</button></div></div></div>
+      <div class="stage"><div class="cap"><span>Switch</span></div><div class="body" style="gap:16px"><label class="switch"><input type="checkbox" checked><span class="track"></span> Notificaciones</label><label class="switch"><input type="checkbox"><span class="track"></span> Ticket</label></div></div>
+    </div>
+  </section>
+
+  <section class="section" id="comp-tabs">
+    <div class="section-head"><h2><i class="fas fa-layer-group"></i> Tabs</h2></div>
+    <div class="stage">
+      <div class="tabs" id="tabsComp">
+        <button class="tab active" data-panel="ctp1">Productos</button>
+        <button class="tab" data-panel="ctp2">Carrito</button>
+        <button class="tab" data-panel="ctp3">Historial</button>
+      </div>
+      <div class="tab-panel active" id="ctp1"><p style="padding:16px 2px 0;color:var(--text-medium)">Panel de productos.</p></div>
+      <div class="tab-panel" id="ctp2"><p style="padding:16px 2px 0;color:var(--text-medium)">Panel del carrito.</p></div>
+      <div class="tab-panel" id="ctp3"><p style="padding:16px 2px 0;color:var(--text-medium)">Panel del historial.</p></div>
+    </div>
+  </section>
+
+  <section class="section" id="comp-patterns">
+    <div class="section-head"><h2><i class="fas fa-shapes"></i> Patrones SVG sutiles</h2><p>Texturas monocromáticas de bajo contraste (estilo svgmonster) para fondos, headers y secciones decorativas.</p></div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr))">
+      <div class="stage" style="padding:0;overflow:hidden">
+        <div style="height:110px;background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cg fill='none' stroke='%23c62828' stroke-opacity='0.25'%3E%3Cpath d='M0 40h80M40 0v80'/%3E%3Ccircle cx='40' cy='40' r='12'/%3E%3C/g%3E%3C/svg%3E&quot;);background-color:var(--bg-card)"></div>
+        <div style="padding:10px 14px;font-family:var(--font-heading);font-size:.78rem;font-weight:600;color:var(--text-muted)">Rejilla + círculo</div>
+      </div>
+      <div class="stage" style="padding:0;overflow:hidden">
+        <div style="height:110px;background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Cpath d='M0 30 30 0 60 30 30 60Z' fill='none' stroke='%231a237e' stroke-opacity='0.22'/%3E%3C/g%3E%3C/svg%3E&quot;);background-color:var(--bg-card)"></div>
+        <div style="padding:10px 14px;font-family:var(--font-heading);font-size:.78rem;font-weight:600;color:var(--text-muted)">Rombos</div>
+      </div>
+      <div class="stage" style="padding:0;overflow:hidden">
+        <div style="height:110px;background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='44'%3E%3Ccircle cx='22' cy='22' r='6' fill='none' stroke='%232e7d32' stroke-opacity='0.25'/%3E%3C/g%3E%3C/svg%3E&quot;);background-color:var(--bg-card)"></div>
+        <div style="padding:10px 14px;font-family:var(--font-heading);font-size:.78rem;font-weight:600;color:var(--text-muted)">Puntos</div>
+      </div>
+      <div class="stage" style="padding:0;overflow:hidden">
+        <div style="height:110px;background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='28'%3E%3Cpath d='M28 0 56 28H0Z' fill='none' stroke='%23f57c00' stroke-opacity='0.22'/%3E%3C/g%3E%3C/svg%3E&quot;);background-color:var(--bg-card)"></div>
+        <div style="padding:10px 14px;font-family:var(--font-heading);font-size:.78rem;font-weight:600;color:var(--text-muted)">Chevrones</div>
+      </div>
+      <div class="stage" style="padding:0;overflow:hidden">
+        <div style="height:110px;background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Cg fill='none' stroke='%23808080' stroke-opacity='0.3'%3E%3Crect x='4' y='4' width='16' height='16' rx='3'/%3E%3Crect x='20' y='20' width='16' height='16' rx='3'/%3E%3C/g%3E%3C/svg%3E&quot;);background-color:var(--bg-card)"></div>
+        <div style="padding:10px 14px;font-family:var(--font-heading);font-size:.78rem;font-weight:600;color:var(--text-muted)">Baldosa</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="comp-badges">
+    <div class="section-head"><h2><i class="fas fa-tag"></i> Badges</h2><p>Borde llamativo en colores primarios.</p></div>
+    <div class="stage"><div class="badge-row">
+      <span class="badge badge-primary"><i class="fas fa-circle dot"></i> En stock</span>
+      <span class="badge badge-success"><i class="fas fa-check"></i> Pagado</span>
+      <span class="badge badge-warning"><i class="fas fa-clock"></i> Pendiente</span>
+      <span class="badge badge-danger"><i class="fas fa-xmark"></i> Cancelado</span>
+      <span class="badge badge-outline"><i class="fas fa-circle"></i> Borrador</span>
+    </div></div>
+  </section>
+
+  <section class="section" id="comp-cards">
+    <div class="section-head"><h2><i class="fas fa-id-card"></i> Cards</h2><p>Sombra ligera, esquinas redondeadas, encabezado más claro y separación marcada. Sin degradado superior.</p></div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr))">
+      <div class="card">
+        <div class="card-head textured"><h4><i class="fas fa-chart-line"></i> Ventas del día</h4><span class="hint"><i class="fas fa-arrow-right"></i></span></div>
+        <div class="card-body-x"><div class="kpis"><div class="kpi"><div class="v">$1,240</div><div class="l">Total</div></div><div class="kpi"><div class="v small">12</div><div class="l">Ventas</div></div><div class="kpi"><div class="v small">$103</div><div class="l">Promedio</div></div></div></div>
+        <div class="card-divider"></div>
+        <div class="card-foot"><span class="badge badge-success"><i class="fas fa-arrow-up"></i> +18%</span></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h4><i class="fas fa-box"></i> Más vendidos</h4><span class="hint"><i class="fas fa-arrow-right"></i></span></div>
+        <div class="card-body-x"><div class="kpis"><div class="kpi"><div class="v small">Café</div><div class="l">48 u.</div></div><div class="kpi"><div class="v small">Capuchino</div><div class="l">32 u.</div></div><div class="kpi"><div class="v small">Brownie</div><div class="l">21 u.</div></div></div></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h4><i class="fas fa-wallet"></i> Estado de caja</h4><span class="hint"><i class="fas fa-arrow-right"></i></span></div>
+        <div class="card-body-x"><div class="kpis"><div class="kpi"><div class="v">$860</div><div class="l">En caja</div></div><div class="kpi"><div class="v small">$120</div><div class="l">Esperado</div></div></div></div>
+        <div class="card-divider"></div>
+        <div class="card-foot"><span class="badge badge-primary"><i class="fas fa-circle dot"></i> Abierta</span></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ================================================================
+     PESTAÑA: MODALES Y DRAWERS
+     ================================================================ -->
+<div class="view-pane" id="pane-modales">
+  <section class="section">
+    <div class="section-head"><h2><i class="fas fa-window-maximize"></i> Modales</h2><p>Cinco variantes de animación (entrada y salida espejadas). Elige también el tamaño: pequeño, mediano o grande.</p></div>
+    <div class="stage">
+      <div class="anim-row">
+        <button class="btn btn-soft" data-modal-open="zoom"><i class="fas fa-eye"></i> Zoom</button>
+        <button class="btn btn-soft" data-modal-open="slide-up"><i class="fas fa-arrow-up"></i> Slide up</button>
+        <button class="btn btn-soft" data-modal-open="drop"><i class="fas fa-angles-down"></i> Drop</button>
+        <button class="btn btn-soft" data-modal-open="flip"><i class="fas fa-rotate"></i> Flip</button>
+        <button class="btn btn-soft" data-modal-open="grow"><i class="fas fa-expand"></i> Grow</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><h2><i class="fas fa-expand-arrows-alt"></i> Tamaño del modal</h2></div>
+    <div class="stage">
+      <div class="anim-row">
+        <button class="btn btn-dark" data-modal-size="sm"><i class="fas fa-compress"></i> Pequeño</button>
+        <button class="btn btn-dark" data-modal-size="md"><i class="fas fa-expand"></i> Mediano</button>
+        <button class="btn btn-dark" data-modal-size="lg"><i class="fas fa-up-right-and-down-left-from-center"></i> Grande</button>
+      </div>
+      <p class="code-note" style="margin:14px 0 0">Haz clic en una variante (Zoom, Slide up…) con el que quieras abrir · los tamaños se aplican al modal</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><h2><i class="fas fa-outdent"></i> Drawer</h2><p>Panel lateral derecho real del sistema, con tabs.</p></div>
+    <div class="stage">
+      <button class="btn btn-dark" id="openDrawer"><i class="fas fa-chevron-left"></i> Abrir drawer</button>
+    </div>
+  </section>
+</div>
+
+<!-- ================================================================
+     PESTAÑA: ANIMACIONES (anime.js)
+     ================================================================ -->
+<div class="view-pane" id="pane-animaciones">
+  <section class="section">
+    <div class="section-head"><h2><i class="fas fa-wand-magic-sparkles"></i> Animaciones de Grid</h2><p>Elige el efecto de presentación de una cuadrícula de elementos.</p></div>
+    <div class="stage">
+      <div class="anim-row" id="gridAnimBtns">
+        <button class="btn btn-soft" data-grid="fade">Fade</button>
+        <button class="btn btn-soft" data-grid="pop">Pop</button>
+        <button class="btn btn-soft" data-grid="rise">Rise</button>
+        <button class="btn btn-soft" data-grid="cascade">Cascada</button>
+        <button class="btn btn-soft" data-grid="blur">Blur-in</button>
+        <button class="btn btn-soft" data-grid="ladder">Escalera</button>
+      </div>
+      <div class="demo-zone" id="gridZone"><div class="anime-grid" id="gridDemo"></div></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><h2><i class="fas fa-table"></i> Animaciones de Tabla</h2><p>Presentación de filas de una tabla (historial, ventas, inventario).</p></div>
+    <div class="stage">
+      <div class="anim-row" id="tableAnimBtns">
+        <button class="btn btn-soft" data-table="rows">Filas en cascada</button>
+        <button class="btn btn-soft" data-table="fade">Fundido</button>
+        <button class="btn btn-soft" data-table="slide">Deslizar</button>
+        <button class="btn btn-soft" data-table="stagger">Escalonado</button>
+      </div>
+      <div class="demo-zone"><table class="anime-table" id="tableDemo"><thead><tr><th>Producto</th><th>Categoría</th><th>Precio</th><th>Stock</th></tr></thead><tbody></tbody></table></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><h2><i class="fas fa-id-card"></i> Animación de Cards</h2><p>Presentación de tarjetas de producto / resumen.</p></div>
+    <div class="stage">
+      <div class="anim-row" id="cardAnimBtns">
+        <button class="btn btn-soft" data-cards="rise">Rise</button>
+        <button class="btn btn-soft" data-cards="scale">Scale</button>
+        <button class="btn btn-soft" data-cards="flip">Flip</button>
+        <button class="btn btn-soft" data-cards="blur">Blur</button>
+        <button class="btn btn-soft" data-cards="rotate">Rotate</button>
+      </div>
+      <div class="demo-zone" id="cardsZone"><div class="anime-cards" id="cardsDemo"></div></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><h2><i class="fas fa-chart-simple"></i> Animaciones de contenido y datos</h2><p>Números que se llenan, totales que crecen, entrada de texto, elementos internos de tarjeta y carruseles.</p></div>
+
+    <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr))">
+      <div class="stage">
+        <div class="cap"><span>Contador / odómetro</span></div>
+        <div class="body">
+          <div class="ds-hud"><span class="odometer" id="odo">$0</span><span class="total-label">Total vendido hoy</span></div>
+          <button class="btn btn-soft" id="odoGo"><i class="fas fa-play"></i> Animar</button>
+        </div>
+      </div>
+
+      <div class="stage">
+        <div class="cap"><span>Total que crece (carrito)</span></div>
+        <div class="body">
+          <div class="cart-total" id="cartTotal"><i class="fas fa-cart-shopping" style="color:var(--primary-color);font-size:1.4rem"></i><span class="cart-amount val" id="cartAmount">$0</span></div>
+          <div class="anim-row" style="margin-top:8px">
+            <button class="btn btn-soft btn-sm" id="cartAdd"><i class="fas fa-plus"></i> Agregar $25</button>
+            <button class="btn btn-soft btn-sm" id="cartReset"><i class="fas fa-rotate-left"></i> Reiniciar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="stage">
+        <div class="cap"><span>Entrada de texto</span></div>
+        <div class="body">
+          <h3 id="wordAnim" style="font-size:1.3rem;font-weight:700;line-height:1.4">Actualizado</h3>
+          <button class="btn btn-soft" id="wordGo"><i class="fas fa-play"></i> Animar texto</button>
+        </div>
+      </div>
+
+      <div class="stage" style="grid-column:1 / -1">
+        <div class="cap"><span>Carrusel</span></div>
+        <div class="body">
+          <div class="carousel" id="carousel">
+            <div class="carousel-track" id="carTrack">
+              <div class="carousel-slide" style="background:linear-gradient(135deg,var(--primary-color),var(--primary-dark))">Ofertas del día</div>
+              <div class="carousel-slide" style="background:linear-gradient(135deg,var(--secondary-color),var(--secondary-dark))">Nuevos productos</div>
+              <div class="carousel-slide" style="background:linear-gradient(135deg,var(--success-color),var(--success-dark))">Despacho ahora</div>
+              <div class="carousel-slide" style="background:linear-gradient(135deg,var(--warning-color),var(--warning-dark))">Promociones</div>
+            </div>
+            <button class="carousel-arrow prev" id="carPrev"><i class="fas fa-chevron-left"></i></button>
+            <button class="carousel-arrow next" id="carNext"><i class="fas fa-chevron-right"></i></button>
+          </div>
+          <div class="carousel-nav" id="carDots"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><h2><i class="fas fa-wand-sparkles"></i> Ejemplos orquestados (anime.js)</h2><p>Títulos con letras en flip, listas que se despliegan y la secuencia de una compra exitosa.</p></div>
+
+    <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr))">
+      <!-- Letras con flip -->
+      <div class="stage">
+        <div class="cap"><span>Título con letras flip</span></div>
+        <div class="body">
+          <h3 class="flip-letters" id="flipTitle" style="font-size:1.6rem;font-weight:700;line-height:1.4;min-height:2.4em">Gráfica de ventas</h3>
+          <button class="btn btn-soft" id="flipTitleGo"><i class="fas fa-play"></i> Animar título</button>
+        </div>
+      </div>
+
+      <!-- Lista de compras -->
+      <div class="stage">
+        <div class="cap"><span>Lista de compras</span></div>
+        <div class="body">
+          <ul class="buy-list" id="buyList">
+            <li><span class="ic"><i class="fas fa-mug-hot"></i></span> Café Americano <span class="pr">$25</span></li>
+            <li><span class="ic"><i class="fas fa-cheese"></i></span> Queso Manchego <span class="pr">$60</span></li>
+            <li><span class="ic"><i class="fas fa-cookie-bite"></i></span> Galletas <span class="pr">$30</span></li>
+            <li><span class="ic"><i class="fas fa-bottle-water"></i></span> Agua 1L <span class="pr">$18</span></li>
+          </ul>
+          <button class="btn btn-soft" id="buyListGo" style="margin-top:6px"><i class="fas fa-play"></i> Desplegar</button>
+        </div>
+      </div>
+
+      <!-- Compra exitosa -->
+      <div class="stage">
+        <div class="cap"><span>Compra exitosa</span></div>
+        <div class="body">
+          <div id="successWrap" style="position:relative;text-align:center;padding:6px 0;min-height:150px">
+            <div class="success-check" id="successCheck" style="display:none">
+              <span class="circ"></span>
+              <i class="fas fa-check tick"></i>
+            </div>
+            <p id="successMsg" style="color:var(--text-medium);font-size:.92rem">Pulsa para procesar la venta</p>
+          </div>
+          <button class="btn btn-success-soft" id="buyGo"><i class="fas fa-cash-register"></i> Procesar venta</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><h2><i class="fas fa-heart"></i> Micro-animaciones chill</h2><p>Efectos sutiles y suaves para darle vida a múltiples elementos: tarjetas en cascada, iconos con pop, numeros con pulse y textos suaves.</p></div>
+
+    <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(280px,1fr))">
+      <!-- Tarjetas chill en cascada -->
+      <div class="stage">
+        <div class="cap"><span>Tarjetas chill en cascada</span></div>
+        <div class="body">
+          <div class="chill-grid" id="chillGrid">
+            <div class="chill-item"><span class="ci"><i class="fas fa-cart-shopping"></i></span><div><h5>Carrito</h5><p>3 artículos</p></div></div>
+            <div class="chill-item"><span class="ci"><i class="fas fa-wallet"></i></span><div><h5>Caja</h5><p>$860</p></div></div>
+            <div class="chill-item"><span class="ci"><i class="fas fa-users"></i></span><div><h5>Clientes</h5><p>34 hoy</p></div></div>
+            <div class="chill-item"><span class="ci"><i class="fas fa-star"></i></span><div><h5>Favoritos</h5><p>8</p></div></div>
+          </div>
+          <button class="btn btn-soft" id="chillGridGo" style="margin-top:8px"><i class="fas fa-play"></i> Repro</button>
+        </div>
+      </div>
+
+      <!-- Iconos con pop -->
+      <div class="stage">
+        <div class="cap"><span>Iconos con pop</span></div>
+        <div class="body">
+          <div class="icon-chips" id="iconChips">
+            <span class="icon-chip"><i class="fas fa-bell"></i></span>
+            <span class="icon-chip"><i class="fas fa-bolt"></i></span>
+            <span class="icon-chip"><i class="fas fa-heart"></i></span>
+            <span class="icon-chip"><i class="fas fa-gift"></i></span>
+            <span class="icon-chip"><i class="fas fa-fire"></i></span>
+            <span class="icon-chip"><i class="fas fa-music"></i></span>
+          </div>
+          <button class="btn btn-soft" id="iconChipsGo" style="margin-top:8px"><i class="fas fa-play"></i> Pop</button>
+        </div>
+      </div>
+
+      <!-- Número con pulse -->
+      <div class="stage">
+        <div class="cap"><span>Número con pulse</span></div>
+        <div class="body">
+          <span class="big-num" id="bigNum" style="display:block;text-align:center">1,240</span>
+          <div class="anim-row" style="justify-content:center">
+            <button class="btn btn-soft btn-sm" id="bigNumGo"><i class="fas fa-play"></i> Pulse</button>
+            <button class="btn btn-soft btn-sm" id="bigNumCount"><i class="fas fa-plus"></i> Contar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Texto suave -->
+      <div class="stage">
+        <div class="cap"><span>Texto suave</span></div>
+        <div class="body">
+          <p class="soft-line" id="softLine" style="font-size:.95rem;color:var(--text-medium);min-height:3.2em">Todo en orden, que tengas un excelente día.</p>
+          <button class="btn btn-soft" id="softLineGo" style="margin-top:8px"><i class="fas fa-play"></i> Animar</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><h2><i class="fas fa-chart-column"></i> Resumen del día (KPIs)</h2><p>Cada indicador entra suave, los números suben con calma y respiran al llegar.</p></div>
+    <div class="stage">
+      <div class="kpi-strip" id="kpiStrip">
+        <div class="kpi-box"><span class="ico"><i class="fas fa-coins"></i></span><div class="sv" data-count="1240" data-prefix="$">$0</div><div class="sl">Ingresos</div></div>
+        <div class="kpi-box"><span class="ico"><i class="fas fa-basket-shopping"></i></span><div class="sv" data-count="18">0</div><div class="sl">Ventas</div></div>
+        <div class="kpi-box"><span class="ico"><i class="fas fa-users"></i></span><div class="sv" data-count="34">0</div><div class="sl">Clientes</div></div>
+      </div>
+      <button class="btn btn-soft" id="kpiGo" style="margin-top:16px"><i class="fas fa-play"></i> Iniciar resumen</button>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><h2><i class="fas fa-receipt"></i> Resumen de compra</h2><p>Los renglones se despliegan y el total se llena al final con un toque suave.</p></div>
+    <div class="stage">
+      <table class="summary-table" id="summaryTable">
+        <tr><td>Café Americano</td><td>$25.00</td></tr>
+        <tr><td>Capuchino</td><td>$38.00</td></tr>
+        <tr><td>Brownie</td><td>$30.00</td></tr>
+      </table>
+      <div class="summary-total" id="summaryTotal"><span class="lbl">Total</span><span class="amt" data-total="93">$0</span></div>
+      <button class="btn btn-soft" id="summaryGo" style="margin-top:16px"><i class="fas fa-play"></i> Mostrar resumen</button>
+    </div>
+  </section>
+</div>
+
+</main>
+
+<!-- ===== MODAL ===== -->
+<div class="modal-overlay" id="modalOverlay" data-anim="zoom">
+  <div class="modal md" id="modalBox">
+    <div class="modal-head">
+      <h3><i class="fas fa-info-circle"></i> Modal <span id="modalAnimLabel" style="font-size:.8rem;font-weight:500;color:var(--text-muted)">· Zoom</span></h3>
+      <button class="icon-btn" id="modalClose"><i class="fas fa-xmark"></i></button>
+    </div>
+    <div class="modal-body"><p style="color:var(--text-medium)">Este modal usa la animación <b id="modalAnimName">zoom</b>.</p></div>
+    <div class="modal-foot"><button class="btn btn-ghost" id="modalCancel">Cancelar</button><button class="btn btn-solid">Confirmar</button></div>
+  </div>
+</div>
+
+<!-- ===== DRAWER ===== -->
+<div class="drawer-overlay" id="drawerOverlay">
+  <div class="drawer">
+    <div class="drawer-head"><h3><i class="fas fa-box"></i> Detalle de Producto</h3><button class="icon-btn" id="drawerClose"><i class="fas fa-xmark"></i></button></div>
+    <div class="drawer-tabs">
+      <button class="drawer-tab active" data-dtab="dtab1"><i class="fas fa-info-circle"></i> Información</button>
+      <button class="drawer-tab" data-dtab="dtab2"><i class="fas fa-box"></i> Inventario</button>
+    </div>
+    <div class="drawer-body">
+      <div class="dtab-panel" id="dtab1" style="display:block">
+        <div class="field"><label class="flabel">Nombre</label><input class="ds-input" value="Café Americano"></div>
+        <div style="display:flex;gap:14px;margin-top:14px"><div class="field" style="flex:1"><label class="flabel">Precio</label><input class="ds-input" value="25.00"></div><div class="field" style="flex:1"><label class="flabel">Stock</label><input class="ds-input" value="48"></div></div>
+      </div>
+      <div class="dtab-panel" id="dtab2" style="display:none"><p style="color:var(--text-medium)">Historial de movimientos de inventario.</p></div>
+    </div>
+    <div class="drawer-foot"><button class="btn btn-soft" id="drawerClose2">Cerrar</button><button class="btn btn-solid">Guardar</button></div>
+  </div>
+</div>
+
+<script>
+/* ===== Tema ===== */
+document.querySelectorAll('[data-theme-set]').forEach(seg => seg.addEventListener('click', () => {
+  document.documentElement.setAttribute('data-theme', seg.dataset.themeSet);
+  document.querySelectorAll('[data-theme-set]').forEach(s => s.classList.toggle('active', s === seg));
+}));
+
+/* ===== Pestañas principales (transición con anime.js: dissolve + zoom) ===== */
+let paneBusy = false;
+document.querySelectorAll('.main-tab').forEach(tab => tab.addEventListener('click', () => {
+  if (paneBusy) return;
+  const targetId = tab.dataset.pane;
+  const current = document.querySelector('.view-pane.active');
+  if (current && current.id === targetId) return;
+  document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+  const target = document.getElementById(targetId);
+  if (!target) return;
+
+  paneBusy = true;
+  const finishSwitch = () => {
+    if (current) current.classList.remove('active');
+    target.classList.add('active');
+    target.style.opacity = '0'; target.style.transform = 'scale(1.03)';
+    anime({ targets: target, opacity:[0,1], scale:[1.03,1], duration: 400, easing:'easeOutCubic', begin: ()=>{ target.style.display='block'; } });
+    window.dispatchEvent(new Event('resize'));
+    paneBusy = false;
+  };
+  if (current) {
+    anime({ targets: current, opacity:[1,0], scale:[1,.97], duration: 200, easing:'easeInQuad', complete: () => {
+      current.style.display='none'; finishSwitch();
+    }});
+  } else {
+    finishSwitch();
+  }
+}));
+
+/* ===== Botones: presión limpia (sin ripple/shine) ===== */
+/* La reacción al clic es una compresión sutil vía :active (CSS) */
+
+/* ===== Segment (cápsulas diagonal) ===== */
+document.querySelectorAll('.segment').forEach(seg => seg.querySelectorAll('.cap-btn').forEach(b => b.addEventListener('click', () => {
+  seg.querySelectorAll('.cap-btn').forEach(x=>x.classList.remove('active')); b.classList.add('active');
+})));
+
+/* ===== Selector (menú fuera de card) ===== */
+document.querySelectorAll('.ds-select').forEach(sel => {
+  const trig = sel.querySelector('.trigger'), opts = sel.querySelectorAll('.opt');
+  const label = sel.querySelector('#selLabel, .trigger span');
+  trig.addEventListener('click', e => {
+    e.stopPropagation();
+    const was = sel.classList.contains('open');
+    document.querySelectorAll('.ds-select.open').forEach(o=>o.classList.remove('open'));
+    if (!was) {
+      opts.forEach((o,i)=>{ o.style.transitionDelay=(60+i*45)+'ms'; o.style.opacity=0; o.style.transform='translateY(-6px)'; });
+      sel.classList.add('open');
+      requestAnimationFrame(()=>opts.forEach(o=>{o.style.opacity=1;o.style.transform='none';}));
+    }
+  });
+  opts.forEach(o=>o.addEventListener('click', ()=>{
+    opts.forEach(x=>x.classList.remove('selected')); o.classList.add('selected');
+    if (label) label.textContent = o.dataset.v || o.textContent.trim();
+    sel.classList.remove('open');
+  }));
+});
+document.addEventListener('click', ()=>document.querySelectorAll('.ds-select.open').forEach(s=>s.classList.remove('open')));
+
+/* ===== Toggle group ===== */
+document.querySelectorAll('[data-toggle-group]').forEach(g => g.querySelectorAll('.toggle-opt').forEach(b => b.addEventListener('click', () => {
+  g.querySelectorAll('.toggle-opt').forEach(x=>x.classList.remove('active')); b.classList.add('active');
+})));
+
+/* ===== Tabs (componentes) ===== */
+document.querySelectorAll('.tab[data-panel]').forEach(tab => tab.addEventListener('click', () => {
+  document.querySelectorAll('.tab[data-panel]').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  tab.classList.add('active');
+  const p = document.getElementById(tab.dataset.panel);
+  if (p) { p.classList.remove('active'); void p.offsetWidth; p.classList.add('active'); }
+}));
+
+/* ===== Modal: sistema robusto de animación (anime.js) =====
+   Cada variante define propiedades NUMÉRICAS de anime.js (scale, translateY,
+   rotateX) para entrada y salida. El flip usa la propiedad 'translateY' + una
+   rotación en X sobre un contenedor con perspectiva. */
+const ov = document.getElementById('modalOverlay'), mbox = document.getElementById('modalBox');
+const animName = document.getElementById('modalAnimName');
+const animLabel = document.getElementById('modalAnimLabel');
+const anims = { zoom:'Zoom', 'slide-up':'Slide up', drop:'Drop', flip:'Flip', grow:'Grow' };
+
+const modalFx = {
+  zoom:      { enter:{ scale:[0.92,1] },           ease:'easeOutQuad', dur:300 },
+  'slide-up':{ enter:{ translateY:[40,0] },        ease:'easeOutQuad', dur:320 },
+  drop:      { enter:{ translateY:[-22,0], scale:[0.97,1] }, ease:'easeOutCubic', dur:320 },
+  flip:      { enter:{ rotateX:[24,0], translateZ:[0,0] },  ease:'easeOutQuad', dur:340 },
+  grow:      { enter:{ scale:[0.9,1] },            ease:'easeOutQuad', dur:300 },
+};
+let modalSize = 'md';
+
+function setModalSize(s){
+  modalSize = s;
+  mbox.classList.remove('sm','md','lg');
+  mbox.classList.add(s);
+  // abre (o re-abre) el modal con el tamaño elegido
+  openModal(ov.dataset.anim || 'zoom');
+}
+
+function openModal(a){
+  ov.dataset.anim = a;
+  if (animName) animName.textContent = anims[a] || a;
+  if (animLabel) animLabel.textContent = '· ' + (anims[a] || a);
+  const fx = modalFx[a] || modalFx.zoom;
+
+  ov.classList.add('show');
+
+  // 1) Llevar el modal a neutro absoluto (limpia cualquier flip/estado previo)
+  mbox.style.transition = 'none';
+  mbox.style.transform = 'none';
+  mbox.style.opacity = '1';
+
+  // 2) Fijar el ESTADO INICIAL de la variante de forma explícita (visible)
+  const start = {}; // primeras teclas (estado de entrada)
+  const endProps = {};
+  Object.keys(fx.enter).forEach(k => { start[k] = fx.enter[k][0]; endProps[k] = fx.enter[k][1]; });
+
+  // 3) Forzar reflow para que el estado inicial quede pintado antes de animar
+  void mbox.offsetWidth;
+  anime.set(mbox, Object.assign({ opacity: 0 }, start));
+
+  // 4) SEQUENCIA: esperar a que el fondo se hayan oscurecido (fade .18s)
+  //    y SOLO ENTONCES animar el modal. Así la transformación se lee sobre
+  //    fondo estable y no queda enmascarada por el fade simultáneo.
+  setTimeout(() => {
+    anime({ targets: mbox, ...endProps, opacity: 1, duration: fx.dur, easing: fx.ease });
+  }, 150);
+}
+function closeModal(){
+  if (!ov.classList.contains('show')) return;
+  const fx = modalFx[ov.dataset.anim] || modalFx.zoom;
+  // salida: espejo exacto, del estado normal (fin) de vuelta al inicial (inicio)
+  const to = {};
+  Object.keys(fx.enter).forEach(k => {
+    const a = fx.enter[k][0], b = fx.enter[k][1];
+    to[k] = [b, a];  // de b(fin) a a(inicio)
+  });
+  anime({ targets: mbox, ...to, opacity:[1,0], duration: Math.min(fx.dur, 260), easing: fx.ease,
+    complete: () => {
+      ov.classList.remove('show');
+      // Al terminar, limpiar TODOS los estilos inline para que el próximo
+      // modal no herede ni transformaciones (flip) ni opacidad.
+      mbox.style.transform = 'none';
+      mbox.style.opacity = '';
+      mbox.style.transition = '';
+    } });
+}
+document.querySelectorAll('[data-modal-open]').forEach(b=>b.addEventListener('click',()=>openModal(b.dataset.modalOpen)));
+document.querySelectorAll('[data-modal-size]').forEach(b=>b.addEventListener('click',()=>setModalSize(b.dataset.modalSize)));
+document.getElementById('modalClose').addEventListener('click', closeModal);
+document.getElementById('modalCancel').addEventListener('click', closeModal);
+ov.addEventListener('click', e=>{ if(e.target===ov) closeModal(); });
+
+/* ===== Drawer (con rebote) ===== */
+const dOverlay = document.getElementById('drawerOverlay');
+function openDrawer(){
+  // reiniciar la animación relanzando .show (sin estilos inline)
+  dOverlay.classList.remove('show'); void dOverlay.offsetWidth;
+  dOverlay.classList.add('show');
+}
+function closeDrawer(){ dOverlay.classList.remove('show'); }
+document.getElementById('openDrawer').addEventListener('click', openDrawer);
+document.getElementById('drawerClose').addEventListener('click', closeDrawer);
+document.getElementById('drawerClose2').addEventListener('click', closeDrawer);
+dOverlay.addEventListener('click', e=>{ if(e.target===dOverlay) closeDrawer(); });
+document.querySelectorAll('.drawer-tab').forEach(t=>t.addEventListener('click', ()=>{
+  document.querySelectorAll('.drawer-tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.dtab-panel').forEach(p=>{p.style.display='none';});
+  t.classList.add('active'); document.getElementById(t.dataset.dtab).style.display='block';
+}));
+
+/* ===== Esc ===== */
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeModal(); closeDrawer(); } });
+
+/* ================================================================
+   ANIMACIONES con anime.js
+   ================================================================ */
+function buildGrid() {
+  const g = document.getElementById('gridDemo'); g.innerHTML='';
+  for (let i=0;i<32;i++){ const c=document.createElement('div'); c.className='cell'; c.textContent=(i+1); g.appendChild(c); }
+}
+buildGrid();
+
+function runGrid(anim) {
+  const cells = document.querySelectorAll('#gridDemo .cell');
+  if (anim==='fade') {
+    anime({ targets: cells, opacity:[0,1], delay: anime.stagger(18), duration: 550, easing:'easeOutQuad' });
+  } else if (anim==='pop') {
+    anime({ targets: cells, scale:[0,1], opacity:[0,1], delay: anime.stagger(35,{start:80}), duration:500, easing:'easeOutBack' });
+  } else if (anim==='rise') {
+    anime({ targets: cells, translateY:[36,0], opacity:[0,1], delay: anime.stagger(14), duration:600, easing:'easeOutCubic' });
+  } else if (anim==='cascade') {
+    // cascada diagonal: primero filas cortas, se encadenan
+    anime({ targets: cells, translateY:[-14,0], opacity:[0,1], delay: anime.stagger(12,{grid:[8,4],from:'first'}), duration:500, easing:'easeOutQuad' });
+  } else if (anim==='blur') {
+    // aparece con desenfoque que se aclara (filtro), orgánico
+    anime({ targets: cells, opacity:[0,1], filter:['blur(10px)','blur(0px)'], delay: anime.stagger(20), duration:650, easing:'easeOutQuad' });
+  } else if (anim==='ladder') {
+    // suben de a una como una escalera (diagonal suave, sin rotación)
+    anime({ targets: cells, translateY:[40,0], opacity:[0,1], delay: anime.stagger(20,{grid:[8,4],from:'first'}), duration:550, easing:'easeOutCubic' });
+  }
+}
+
+/* Tabla */
+const trows = [
+  ['Café Americano','Bebidas','$25.00','48'],
+  ['Capuchino','Bebidas','$38.00','12'],
+  ['Té Verde','Bebidas','$22.00','30'],
+  ['Brownie','Snacks','$30.00','0'],
+  ['Sándwich','Snacks','$45.00','15'],
+  ['Jugo Naranja','Bebidas','$28.00','9'],
+];
+function buildTable() {
+  const tb = document.querySelector('#tableDemo tbody'); tb.innerHTML='';
+  trows.forEach(r => { const tr=document.createElement('tr'); r.forEach(cd=>{ const td=document.createElement('td'); td.textContent=cd; tr.appendChild(td); }); tb.appendChild(tr); });
+}
+buildTable();
+
+function runTable(anim) {
+  const rows = document.querySelectorAll('#tableDemo tbody tr');
+  if (anim==='rows') {
+    anime({ targets: rows, translateX:[-60,0], opacity:[0,1], delay: anime.stagger(90), duration:500, easing:'easeOutCubic' });
+  } else if (anim==='fade') {
+    anime({ targets: rows, opacity:[0,1], delay: anime.stagger(60), duration:500, easing:'easeOutQuad' });
+  } else if (anim==='slide') {
+    anime({ targets: rows, translateY:[-30,0], opacity:[0,1], delay: anime.stagger(70), duration:500, easing:'easeOutSine' });
+  } else if (anim==='stagger') {
+    anime({ targets: rows, scale:[.9,1], opacity:[0,1], delay: anime.stagger(100,{start:50,from:'center'}), duration:500, easing:'easeOutBack' });
+  }
+}
+
+/* Cards */
+const cardData = [
+  ['Ventas','$1,240'],['Productos','120'],['Caja','$860'],['Clientes','34']
+];
+function buildCards() {
+  const g = document.getElementById('cardsDemo'); g.innerHTML='';
+  cardData.forEach(([t,v]) => { const c=document.createElement('div'); c.className='ac'; c.innerHTML=`<h5>${t}</h5><p>${v}</p>`; g.appendChild(c); });
+}
+buildCards();
+function runCards(anim) {
+  const cards = document.querySelectorAll('#cardsDemo .ac');
+  if (anim==='rise') anime({ targets: cards, translateY:[80,0], opacity:[0,1], delay: anime.stagger(110), duration:600, easing:'easeOutCubic' });
+  else if (anim==='scale') anime({ targets: cards, scale:[.7,1], opacity:[0,1], delay: anime.stagger(90), duration:500, easing:'easeOutBack' });
+  else if (anim==='flip') anime({ targets: cards, rotateY:[70,0], opacity:[0,1], delay: anime.stagger(120), duration:600, easing:'easeOutCubic' });
+  else if (anim==='blur') anime({ targets: cards, opacity:[0,1], filter:['blur(8px)','blur(0px)'], translateY:[14,0], delay: anime.stagger(90), duration:600, easing:'easeOutQuad' });
+  else if (anim==='rotate') anime({ targets: cards, rotate:[-4,0], scale:[.9,1], opacity:[0,1], delay: anime.stagger(100), duration:550, easing:'easeOutBack' });
+}
+
+/* bind anim buttons */
+document.querySelectorAll('[data-grid]').forEach(b=>b.addEventListener('click',()=>{ buildGrid(); runGrid(b.dataset.grid); }));
+document.querySelectorAll('[data-table]').forEach(b=>b.addEventListener('click',()=>{ buildTable(); runTable(b.dataset.table); }));
+document.querySelectorAll('[data-cards]').forEach(b=>b.addEventListener('click',()=>{ buildCards(); runCards(b.dataset.cards); }));
+
+/* ===== Contador / odómetro ===== */
+const odoEl = document.getElementById('odo');
+document.getElementById('odoGo').addEventListener('click', ()=>{
+  odoEl.textContent = '$0';
+  anime({ targets: {v:0}, v:1240, round:1, duration:1200, easing:'easeOutCubic',
+    update: a => { odoEl.textContent = '$' + Math.round(a.animations[0].currentValue).toLocaleString('es-MX'); } });
+});
+
+/* ===== Total que crece (carrito) ===== */
+const cartBox = document.getElementById('cartTotal');
+const cartAmount = document.getElementById('cartAmount');
+let cartVal = 0;
+function fmtCart(v){ return '$' + v.toLocaleString('es-MX'); }
+document.getElementById('cartAdd').addEventListener('click', ()=>{
+  cartVal += 25;
+  cartAmount.textContent = fmtCart(cartVal);
+  cartBox.classList.remove('bump'); void cartBox.offsetWidth; cartBox.classList.add('bump');
+});
+document.getElementById('cartReset').addEventListener('click', ()=>{
+  cartVal = 0; cartAmount.textContent = '$0';
+  cartBox.classList.remove('bump');
+});
+
+/* ===== Entrada de texto (palabras escalonadas) ===== */
+const wordH = document.getElementById('wordAnim');
+const wordMsgs = ['Actualizado', '¡Venta registrada!', 'Total: $1,240', 'Listo para entregar'];
+let wi = 0;
+function wordRun(){
+  wi = (wi+1) % wordMsgs.length;
+  const t = wordMsgs[wi]; t.split(' ').length;
+  wordH.innerHTML = '';
+  const words = t.split(' ');
+  words.forEach((w, i) => { const s = document.createElement('span'); s.className='word-in'; s.style.marginRight='8px'; s.textContent=w; wordH.appendChild(s); });
+  const spans = wordH.querySelectorAll('.word-in');
+  anime({ targets: spans, opacity:[0,1], translateY:[26,0], delay: anime.stagger(90), duration:500, easing:'easeOutCubic' });
+}
+document.getElementById('wordGo').addEventListener('click', wordRun);
+wordRun();
+
+/* ===== Carrusel ===== */
+const track = document.getElementById('carTrack');
+const slides = track.children.length;
+const dotsHost = document.getElementById('carDots');
+let cur = 0;
+for (let i=0;i<slides;i++){ const d=document.createElement('button'); d.className='carousel-dot'+(i===0?' active':''); d.addEventListener('click',()=>goTo(i)); dotsHost.appendChild(d); }
+const dots = dotsHost.querySelectorAll('.carousel-dot');
+function goTo(i){
+  cur = (i + slides) % slides;
+  track.style.transform = `translateX(-${cur*100}%)`;
+  dots.forEach((d,k)=>d.classList.toggle('active', k===cur));
+}
+document.getElementById('carNext').addEventListener('click', ()=>goTo(cur+1));
+document.getElementById('carPrev').addEventListener('click', ()=>goTo(cur-1));
+setInterval(()=>goTo(cur+1), 3500);
+
+/* animar al entrar a la pestaña de animaciones */
+
+/* ===== Título con letras flip (anime.js) ===== */
+const flipTitles = ['Gráfica de ventas', 'Punto de venta', 'Tomodachi POS'];
+let fIdx = 0;
+function splitFlipLetters(el){
+  const txt = el.textContent; el.innerHTML = '';
+  [...txt].forEach(ch => {
+    const s = document.createElement('span');
+    s.className = ch === ' ' ? 'sp' : 'lt'; s.textContent = ch;
+    el.appendChild(s);
+  });
+}
+function runFlipTitle(){
+  fIdx = (fIdx + 1) % flipTitles.length;
+  const el = document.getElementById('flipTitle');
+  splitFlipLetters(el);
+  const lets = el.querySelectorAll('.lt');
+  el.querySelectorAll('.sp').forEach(s => { s.style.opacity = 1; });
+  anime({ targets: lets, rotateX: { value: [150, 0] }, opacity: [0,1], translateY: [5,0],
+    delay: anime.stagger(70), duration: 850, easing: 'easeOutCubic' });
+}
+document.getElementById('flipTitleGo').addEventListener('click', runFlipTitle);
+runFlipTitle();
+
+/* ===== Lista de compras que se despliega (anime.js) — relajada ===== */
+function runBuyList(){
+  const items = document.querySelectorAll('#buyList li');
+  items.forEach(it => { it.style.opacity = 0; it.style.transform = 'translateX(-18px)'; });
+  anime({ targets: items, opacity: [0,1], translateX: [-18,0],
+    delay: anime.stagger(160, {start: 60}), duration: 650, easing: 'easeOutCubic' });
+  // el ícono aparece con un pequeño pop suave dentro de cada fila
+  const ics = document.querySelectorAll('#buyList .ic');
+  anime({ targets: ics, scale: [0.7,1], delay: anime.stagger(210, {start: 260}), duration: 550, easing: 'easeOutQuad' });
+}
+document.getElementById('buyListGo').addEventListener('click', runBuyList);
+runBuyList();
+
+/* ===== Compra exitosa: secuencia orquestada (anime.js) ===== */
+const successEl = document.getElementById('successCheck');
+const successMsg = document.getElementById('successMsg');
+function runBuy(){
+  // 1) mostrar el check
+  successEl.style.display = 'grid';
+  successEl.querySelector('.tick').style.opacity = 0;
+  successEl.querySelector('.circ').style.opacity = 0;
+  // 2) anillo de onda
+  anime({ targets: successEl.querySelector('.circ'), scale: [.4, 1.6], opacity: [.9, 0], duration: 900, easing: 'easeOutQuad' });
+  // 3) el check aparece con pop elástico
+  anime({ targets: successEl.querySelector('.tick'), scale: [0, 1.1, 1], opacity: [0,1], duration: 600, delay: 200, easing: 'easeOutBack' });
+  // 4) mensaje
+  successMsg.textContent = '¡Venta procesada correctamente!';
+  anime({ targets: successMsg, opacity: [0,1], translateY: [8,0], duration: 500, delay: 350, easing: 'easeOutQuad' });
+  // 5) rearmar para la próxima
+  setTimeout(() => { successEl.style.display = 'none'; successMsg.textContent = 'Pulsa para procesar la venta'; }, 3800);
+}
+document.getElementById('buyGo').addEventListener('click', runBuy);
+
+/* ===== Micro-animaciones chill (anime.js) ===== */
+
+/* Tarjetas chill en cascada (estilo lista de compras) — curvas calmadas */
+function runChillGrid(){
+  const items = document.querySelectorAll('#chillGrid .chill-item');
+  items.forEach(it => { it.style.opacity = 0; it.style.transform = 'translateY(14px)'; });
+  anime({ targets: items, translateY: [14,0], opacity: [0,1],
+    delay: anime.stagger(110, {start: 40}), duration: 800, easing: 'easeOutCubic' });
+  const ics = document.querySelectorAll('#chillGrid .ci');
+  anime({ targets: ics, scale: [0.8,1], delay: anime.stagger(160, {start: 200}), duration: 700, easing: 'easeOutQuad' });
+}
+document.getElementById('chillGridGo').addEventListener('click', runChillGrid);
+runChillGrid();
+
+/* Iconos con pop suave */
+function runIconChips(){
+  const chips = document.querySelectorAll('#iconChips .icon-chip');
+  chips.forEach(c => { c.style.opacity = 0; });
+  anime({ targets: chips, scale: [0.7,1], opacity: [0,1], translateY: [8,0],
+    delay: anime.stagger(80, {start: 40}), duration: 700, easing: 'easeOutQuad' });
+}
+document.getElementById('iconChipsGo').addEventListener('click', runIconChips);
+runIconChips();
+
+/* Número con pulse lento y contador relajado */
+const bigNumEl = document.getElementById('bigNum');
+document.getElementById('bigNumGo').addEventListener('click', () => {
+  // pulse lento y suave: sube despacio y vuelve sin rebote brusco
+  anime({ targets: bigNumEl, scale: [1, 1.06, 1], duration: 1400, easing: 'easeInOutSine' });
+});
+let bigVal = 1240;
+document.getElementById('bigNumCount').addEventListener('click', () => {
+  bigVal += 25;
+  // contador lento y relajado
+  anime({ targets: {v: bigVal-25}, v: bigVal, round: 1, duration: 1500, easing: 'easeInOutQuad',
+    update: a => { bigNumEl.textContent = Math.round(a.animations[0].currentValue).toLocaleString('es-MX'); } });
+  // el número respira suave al llegar
+  anime({ targets: bigNumEl, scale: [1, 1.05, 1], duration: 1200, easing: 'easeInOutSine' });
+});
+
+/* Texto suave (palabras que se desvanecen tranquilo) */
+const softLines = ['Todo en orden, que tengas un excelente día.', 'Gracias por tu compra, vuelve pronto.', 'Buen trabajo, sigue así.'];
+let slIdx = 0;
+function runSoftLine(){
+  slIdx = (slIdx + 1) % softLines.length;
+  const el = document.getElementById('softLine');
+  el.textContent = softLines[slIdx];
+  const words = softLines[slIdx].split(' ');
+  el.innerHTML = '';
+  words.forEach(w => {
+    const s = document.createElement('span'); s.className = 'lt'; s.style.display='inline-block'; s.style.marginRight='6px'; s.textContent = w; el.appendChild(s);
+  });
+  const spans = el.querySelectorAll('.lt');
+  anime({ targets: spans, opacity: [0,1], translateY: [6,0], filter: ['blur(2px)','blur(0px)'],
+    delay: anime.stagger(60), duration: 500, easing: 'easeOutQuad' });
+}
+document.getElementById('softLineGo').addEventListener('click', runSoftLine);
+runSoftLine();
+
+/* ===== Resumen del día (KPIs) — entrada suave + contadores calmados ===== */
+function runKpis(){
+  const boxes = document.querySelectorAll('#kpiStrip .kpi-box');
+  boxes.forEach(b => { b.style.opacity = 0; b.style.transform = 'translateY(16px)'; });
+  // 1) las cajas entran suave en cascada
+  anime({ targets: boxes, translateY: [16,0], opacity: [0,1],
+    delay: anime.stagger(180, {start: 60}), duration: 700, easing: 'easeOutCubic' });
+  // 2) los iconos aparecen tranquilos
+  const ics = document.querySelectorAll('#kpiStrip .ico');
+  anime({ targets: ics, scale: [0.7,1], opacity: [0,1], delay: anime.stagger(240, {start: 300}), duration: 600, easing: 'easeOutQuad' });
+  // 3) los números suben lento y con calma
+  const sv = document.querySelectorAll('#kpiStrip .sv');
+  sv.forEach((el, i) => {
+    const target = parseFloat(el.dataset.count), prefix = el.dataset.prefix || '';
+    anime({ targets: {v:0}, v: target, round: 1, duration: 1500, delay: 400 + i*140, easing: 'easeInOutQuad',
+      update: a => { el.textContent = prefix + Math.round(a.animations[0].currentValue).toLocaleString('es-MX'); } });
+    // 4) el KPI respira suave al terminar
+    anime({ targets: el, scale: [1, 1.06, 1], duration: 1100, delay: 1900 + i*140, easing: 'easeInOutSine' });
+  });
+}
+document.getElementById('kpiGo').addEventListener('click', runKpis);
+runKpis();
+
+/* ===== Resumen de compra — renglones chill + total que se llena ===== */
+function runSummary(){
+  const rows = document.querySelectorAll('#summaryTable tr td');
+  rows.forEach(td => { td.style.opacity = 0; });
+  anime({ targets: rows, translateY: [8,0], opacity: [0,1],
+    delay: anime.stagger(140, {start: 80}), duration: 600, easing: 'easeOutQuad' });
+  const total = document.getElementById('summaryTotal');
+  total.style.opacity = 0;
+  const amt = total.querySelector('.amt');
+  const finalv = parseInt(amt.dataset.total, 10);
+  setTimeout(() => {
+    total.style.opacity = 1;
+    anime({ targets: {v:0}, v: finalv, round: 2, duration: 1300, easing: 'easeInOutQuad',
+      update: a => { amt.textContent = '$' + a.animations[0].currentValue.toFixed(2); } });
+    anime({ targets: amt, scale: [1, 1.05, 1], duration: 1000, delay: 1200, easing: 'easeInOutSine' });
+  }, rows.length * 140 + 300);
+}
+document.getElementById('summaryGo').addEventListener('click', runSummary);
+runSummary();
+
+new MutationObserver(()=>{}).observe ? 0 : 0;
+</script>
+</body>
+</html>

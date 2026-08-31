@@ -1,0 +1,12 @@
+{
+  "appId": "dev.tabtap.tomodachi",
+  "appName": "Tomodachi",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true,
+    "allowNavigation": [
+      "tomodachi.tabtap.dev"
+    ]
+  }
+}

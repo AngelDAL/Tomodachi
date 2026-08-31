@@ -1,12 +1,23 @@
 <?php
+require_once '../../config/database.php';
+require_once '../../config/constants.php';
+require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
-require_once 'config.php';
+require_once '../../includes/Auth.class.php';
 
 header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     Response::error('Método no permitido', 405);
 }
+
+// Seguridad: requiere sesión iniciada
+$db = new Database();
+$auth = new Auth($db);
+if (!$auth->isLoggedIn()) { Response::unauthorized(); }
+$currentUser = $auth->getCurrentUser();
+$storeId = (int)$currentUser['store_id'];
+if ($storeId <= 0) { Response::error('Tienda no identificada', 400); }
 
 if (!isset($_POST['image_url'])) {
     Response::error('Falta la URL de la imagen');
@@ -27,9 +38,7 @@ try {
         Response::error('El archivo temporal no existe');
     }
     
-    // Mover a carpeta permanente (simulada por ahora en 'saved')
-    // En un sistema real, usaríamos el ID de la tienda de la sesión
-    $storeId = 1; // Placeholder
+    // Mover a carpeta permanente de la tienda del usuario
     $targetDir = "../../public/assets/images/backgrounds/store_{$storeId}/";
     
     if (!file_exists($targetDir)) mkdir($targetDir, 0777, true);

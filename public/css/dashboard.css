@@ -15,7 +15,7 @@
 }
 
 .stat-card {
-    background-color: white;
+    background-color: var(--bg-card);
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -38,7 +38,7 @@
 
 .stat-info h3 {
     font-size: 0.9rem;
-    color: #666;
+    color: var(--text-light);
     margin-bottom: 5px;
 }
 
@@ -49,7 +49,7 @@
 }
 
 .welcome-message {
-    background-color: white;
+    background-color: var(--bg-card);
     padding: 40px;
     border-radius: 8px;
     text-align: center;
@@ -62,7 +62,7 @@
 }
 
 .welcome-message p {
-    color: #666;
+    color: var(--text-light);
 }
 
 /* Grids Layout */
@@ -77,7 +77,7 @@
 /* Cards Sections */
 .chart-section,
 .list-section {
-    background: white;
+    background: var(--bg-card);
     padding: 1.5rem;
     border-radius: 10px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
@@ -108,7 +108,7 @@
 }
 
 .report-card {
-    background: white;
+    background: var(--bg-card);
     border-radius: 10px;
     padding: 25px;
     text-align: center;
@@ -143,7 +143,7 @@
 
 .report-selection-container {
     display: none; /* Hidden by default, shown when a report is selected */
-    background: white;
+    background: var(--bg-card);
     padding: 20px;
     border-radius: 10px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
@@ -156,7 +156,7 @@
     justify-content: space-between;
     margin-bottom: 20px;
     padding-bottom: 15px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--border-color);
     min-height: 40px;
 }
 
@@ -164,8 +164,8 @@
     position: static;
     transform: none;
     background: transparent;
-    border: 1px solid #ddd;
-    color: #666;
+    border: 1px solid var(--border-color);
+    color: var(--text-light);
     font-size: 0.95rem;
     cursor: pointer;
     display: flex;
@@ -179,7 +179,7 @@
 }
 
 .btn-back-floating:hover {
-    background-color: white;
+    background-color: var(--bg-card);
     color: var(--primary-color);
     border-color: var(--primary-color);
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
@@ -216,15 +216,15 @@
 
 .dashboard-table th,
 #reportTable th {
-    border-bottom: 2px solid #f0f0f0;
+    border-bottom: 2px solid var(--border-color);
     font-weight: bold;
-    color: #333 !important;
+    color: var(--text-color) !important;
     white-space: nowrap;
-    background-color: #f5f5f5;
+    background-color: var(--bg-light);
 }
 
 .dashboard-table td {
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--border-color);
 }
 
 /* Mobile Responsiveness */
@@ -267,9 +267,9 @@
 
     .dashboard-table tr {
         margin-bottom: 1rem;
-        border: 1px solid #eee;
+        border: 1px solid var(--border-color);
         border-radius: 8px;
-        background: #fff;
+        background: var(--bg-card);
         box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         /* Separator between products/rows */
         border-left: 4px solid var(--primary-color); 
@@ -281,7 +281,7 @@
         align-items: center;
         text-align: right;
         padding: 0.75rem 1rem;
-        border-bottom: 1px solid #f5f5f5;
+        border-bottom: 1px solid var(--border-color);
         min-height: 40px;
     }
 
@@ -292,7 +292,7 @@
     .dashboard-table td::before {
         content: attr(data-label);
         font-weight: 600;
-        color: #666;
+        color: var(--text-light);
         margin-right: 1rem;
         text-align: left;
         flex: 1;
@@ -306,7 +306,7 @@
 
 .btn-icon {
     background: none;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border-color);
     border-radius: 4px;
     width: 32px;
     height: 32px;
@@ -314,12 +314,12 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    color: #666;
+    color: var(--text-light);
     transition: all 0.2s;
 }
 
 .btn-icon:hover:not(:disabled) {
-    background: #f5f5f5;
+    background: var(--bg-light);
     color: var(--primary-color);
     border-color: var(--primary-color);
 }
@@ -331,7 +331,7 @@
 
 /* Reports Module Styles */
 .reports-header {
-    background: white;
+    background: var(--bg-card);
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -340,7 +340,7 @@
 
 .reports-header h2 {
     font-weight: bold;
-    color: #333;
+    color: var(--text-color);
     margin-top: 0;
 }
 
@@ -361,7 +361,7 @@
     display: block;
     margin-bottom: 5px;
     font-weight: bold;
-    color: #333;
+    color: var(--text-color);
 }
 
 .report-actions {
@@ -372,7 +372,7 @@
 }
 
 .report-results {
-    background: white;
+    background: var(--bg-card);
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -387,7 +387,7 @@
     align-items: center;
     justify-content: center;
     height: 100%;
-    color: #999;
+    color: var(--text-muted);
     padding: 50px;
 }
 
@@ -429,12 +429,19 @@
 }
 
 .btn-secondary {
-    background-color: #6c757d;
-    color: white;
+    background-color: var(--secondary-color);
+    color: var(--secondary-contrast);
+    border: none;
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-weight: 600;
+    transition: all var(--transition-fast);
 }
 
 .btn-secondary:hover {
-    background-color: #5a6268;
+    background-color: var(--secondary-dark);
+    color: var(--secondary-contrast);
+    transform: translateY(-1px);
 }
 
 .btn-danger {
@@ -449,11 +456,11 @@
 .form-control {
     width: 100%;
     padding: 12px 20px;
-    border: 1px solid var(--border-input, #ddd);
+    border: 1px solid var(--border-color);
     border-radius: 30px; /* Más circular */
     font-size: 1rem;
     font-family: inherit;
-    background-color: white;
+    background-color: var(--bg-card);
     color: var(--text-color, #333);
     transition: all 0.2s ease;
     appearance: none;
@@ -501,8 +508,8 @@ body.plan-free .premium-locked::after {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background-color: #333;
-    color: #f7d794; /* Gold variant */
+    background-color: var(--text-color);
+    color: var(--warning-color); /* Gold variant */
     padding: 5px 10px;
     border-radius: 4px;
     font-size: 0.8rem;
@@ -523,7 +530,7 @@ body.plan-free a.premium-locked.btn::after {
     content: "\f023"; /* FontAwesome Lock Icon */
     font-family: "Font Awesome 5 Free";
     font-weight: 900;
-    color: #555;
+    color: var(--text-medium);
     background: none;
     box-shadow: none;
     font-size: 1.2rem;
@@ -531,4 +538,531 @@ body.plan-free a.premium-locked.btn::after {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
+}
+
+/* ============================================================
+ * Formulario inline de movimientos (finanzas) — move-form
+ * ============================================================ */
+.move-form {
+    background: var(--bg-light);
+    padding: 16px;
+    border-radius: 12px;
+    margin-bottom: 15px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.move-form-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--primary-color);
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed var(--border-color);
+}
+
+.move-form-row {
+    margin-bottom: 14px;
+}
+
+.move-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-light);
+    margin-bottom: 7px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.move-label i {
+    color: var(--primary-color);
+    font-size: 0.85rem;
+}
+
+/* Switch tipo: Entrada / Retiro */
+.move-type-switch {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 4px;
+}
+
+.move-type-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 10px 8px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    background: transparent;
+    color: var(--text-light);
+    transition: all 0.2s ease;
+}
+
+.move-type-btn i { font-size: 0.95rem; }
+
+.move-type-btn.entry.active {
+    background: var(--success-color);
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(46, 125, 50, 0.35);
+}
+
+.move-type-btn.withdrawal.active {
+    background: var(--danger-color);
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(211, 47, 47, 0.35);
+}
+
+/* Monto grande con símbolo */
+.move-amount-wrap {
+    display: flex;
+    align-items: center;
+    background: var(--bg-card);
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: border-color 0.2s ease;
+}
+
+.move-amount-wrap:focus-within {
+    border-color: var(--primary-color);
+}
+
+.move-amount-symbol {
+    padding: 0 14px;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    background: var(--bg-light);
+    border-right: 1px solid var(--border-color);
+    line-height: 48px;
+    user-select: none;
+}
+
+.move-amount-wrap input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    padding: 12px 14px;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-color);
+    min-width: 0;
+}
+
+.move-amount-wrap input::placeholder { color: var(--text-muted); font-weight: 400; font-size: 1rem; }
+
+/* Descripción con icono */
+.move-desc-wrap {
+    display: flex;
+    align-items: center;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: border-color 0.2s ease;
+}
+
+.move-desc-wrap:focus-within { border-color: var(--primary-color); }
+
+.move-desc-wrap > i {
+    padding: 0 13px;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+}
+
+.move-desc-wrap input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    padding: 11px 12px 11px 0;
+    font-size: 0.95rem;
+    color: var(--text-color);
+    min-width: 0;
+}
+
+.move-desc-wrap input::placeholder { color: var(--text-muted); }
+
+/* Acciones: cancelar izquierda, registrar derecha */
+.move-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--border-color);
+}
+
+.move-cancel {
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.move-submit {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 170px;
+    justify-content: center;
+}
+
+/* ============================================================
+   ALINEACIÓN AL DESIGN SYSTEM UNIFICADO (añadido por agente)
+   ============================================================
+   Sobrescrituras de pulido para Dashboard y Reportes.
+   NO renombra clases ni cambia IDs — solo refina forma, sombras,
+   texto y transiciones con las variables del design system
+   (--ds-* de design-system.css) y color-mix.
+   ============================================================ */
+
+/* ---------- STAT CARDS / KPIs ---------- */
+.stat-card {
+    border-radius: var(--ds-radius-lg, 22px);
+    box-shadow: var(--ds-shadow-md, var(--shadow-md));
+    gap: 18px;
+    padding: 24px 22px;
+    transition: transform .3s cubic-bezier(.4,0,.2,1), box-shadow .3s ease;
+    position: relative;
+    overflow: hidden;
+}
+.stat-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--primary-color) 9%, transparent), transparent 60%),
+        linear-gradient(145deg, color-mix(in srgb, var(--bg-lightest, #fff) 85%, transparent), transparent);
+    pointer-events: none;
+}
+.stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--ds-shadow-lg, var(--shadow-lg));
+}
+.stat-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 58px;
+    height: 58px;
+    flex: 0 0 auto;
+    font-size: 1.6rem;
+    color: var(--primary-color);
+    background: color-mix(in srgb, var(--primary-color) 10%, transparent);
+    border: 1.5px solid color-mix(in srgb, var(--primary-color) 22%, transparent);
+    border-radius: var(--ds-radius-md, 14px);
+    opacity: 1;
+    transition: transform .3s ease, box-shadow .3s ease;
+}
+.stat-card:hover .stat-icon {
+    transform: scale(1.06) rotate(-4deg);
+    box-shadow: 0 8px 18px -8px color-mix(in srgb, var(--primary-color) 45%, transparent);
+}
+.stat-info h3 {
+    font-size: .82rem;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    color: var(--text-light);
+}
+.stat-value {
+    font-size: 1.9rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    background: linear-gradient(120deg, var(--text-color), color-mix(in srgb, var(--primary-color) 55%, var(--text-color)));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+/* ---------- SECTION / CHART / LIST CARDS ---------- */
+.chart-section,
+.list-section,
+.reports-header,
+.report-results,
+.report-selection-container {
+    background: var(--bg-card);
+    border-radius: var(--ds-radius-lg, 20px);
+    box-shadow: var(--ds-shadow-md, var(--shadow-md));
+    border: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent);
+}
+.chart-section .chart-header,
+.list-section > h3 {
+    gap: 10px;
+}
+.chart-section h3,
+.list-section h3 {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+/* Encabezado con textura sutil (heredado del design system) */
+.reports-header {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='44'%3E%3Ccircle cx='22' cy='22' r='8' fill='none' stroke='%23000000' stroke-opacity='0.05'/%3E%3Cpath d='M22 4v36M4 22h36' stroke='%23000000' stroke-opacity='0.03'/%3E%3C/svg%3E");
+    background-color: var(--bg-lightest, var(--bg-card));
+}
+.reports-header h2 {
+    font-family: var(--font-heading);
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    margin: 0;
+}
+
+/* ---------- CHART CONTAINER (solo el contenedor, no los gráficos) ---------- */
+.chart-container {
+    height: 300px;
+    position: relative;
+    width: 100%;
+    background: color-mix(in srgb, var(--bg-lightest, #fff) 60%, transparent);
+    border: 1px solid var(--border-light);
+    border-radius: var(--ds-radius-md, 14px);
+    padding: 10px;
+}
+
+/* ---------- REPORT CARDS (Selector de reportes) ---------- */
+.report-card {
+    background: var(--bg-card);
+    border-radius: var(--ds-radius-lg, 20px);
+    box-shadow: var(--ds-shadow-sm, var(--shadow-sm));
+    border: 1.5px solid transparent;
+    padding: 28px 20px;
+    transition: transform .3s cubic-bezier(.4,0,.2,1), box-shadow .3s ease, border-color .3s ease;
+}
+.report-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--ds-shadow-lg, var(--shadow-lg));
+    border-color: color-mix(in srgb, var(--primary-color) 55%, transparent);
+}
+.report-card-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
+    font-size: 1.6rem;
+    color: var(--primary-color);
+    background: color-mix(in srgb, var(--primary-color) 10%, transparent);
+    border-radius: var(--ds-radius-pill, 100px);
+    margin-bottom: 16px;
+    transition: transform .3s ease, box-shadow .3s ease;
+}
+.report-card:hover .report-card-icon {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 10px 22px -10px color-mix(in srgb, var(--primary-color) 55%, transparent);
+}
+.report-card-title {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+/* ---------- REPORT SELECTION / FILTERS ---------- */
+.report-selection-header {
+    min-height: 44px;
+    border-bottom: 1.5px solid var(--border-light);
+}
+.report-selection-title {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 1.25rem;
+    color: var(--primary-color);
+    gap: 10px;
+}
+.report-company-badge {
+    gap: 8px;
+    padding: 6px 12px;
+    background: color-mix(in srgb, var(--bg-light) 70%, transparent);
+    border: 1px solid var(--border-light);
+    border-radius: var(--ds-radius-pill, 100px);
+}
+.btn-back-floating {
+    border-radius: var(--ds-radius-pill, 100px);
+    font-family: var(--font-heading);
+    font-weight: 600;
+    box-shadow: var(--ds-shadow-sm, var(--shadow-sm));
+}
+
+/* ---------- FILTROS ---------- */
+.report-filters {
+    gap: 16px;
+    align-items: flex-end;
+}
+.filter-group label {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: .8rem;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    color: var(--text-light);
+    margin-bottom: 7px;
+}
+.filter-group .form-control {
+    min-height: 46px;
+    border-radius: var(--ds-radius-md, 14px);
+    background-color: var(--bg-card);
+    box-shadow: var(--ds-shadow-sm, var(--shadow-sm));
+}
+
+/* ---------- BOTONES (píldora + design system) ---------- */
+.btn-primary, .btn-secondary, .btn-save, .btn-danger {
+    border-radius: var(--ds-radius-pill, 100px);
+    font-family: var(--font-heading);
+    font-weight: 600;
+    padding: 12px 24px;
+    box-shadow: var(--ds-shadow-sm, var(--shadow-sm));
+    position: relative;
+    overflow: hidden;
+    transition: transform .22s cubic-bezier(.4,0,.2,1), box-shadow .3s ease,
+                background .22s ease, color .22s ease, filter .22s ease;
+}
+.btn-primary:hover, .btn-save:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 22px -8px color-mix(in srgb, var(--primary-color) 70%, transparent);
+    filter: brightness(1.04);
+}
+.btn-secondary:hover, .btn-danger:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--ds-shadow-md, var(--shadow-md));
+    filter: brightness(1.04);
+}
+.btn-primary:active, .btn-secondary:active,
+.btn-save:active, .btn-danger:active {
+    transform: translateY(1px) scale(.97);
+    box-shadow: none;
+}
+.btn-primary, .btn-save {
+    background-color: var(--primary-color);
+    color: var(--text-on-primary, #fff);
+}
+.btn-danger {
+    background-color: var(--danger-color);
+    color: #fff;
+    border: none;
+}
+.btn-secondary {
+    background-color: var(--bg-light);
+    color: var(--text-color);
+    border: 1.5px solid var(--border-color);
+}
+.btn-secondary:hover {
+    background-color: var(--bg-hover);
+    color: var(--primary-color);
+    border-color: color-mix(in srgb, var(--primary-color) 45%, transparent);
+}
+
+/* ---------- BOTONES DE ICONO (controles de gráfico) ---------- */
+.btn-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--ds-radius-pill, 100px);
+    background: var(--bg-card);
+    border: 1.5px solid var(--border-color);
+    box-shadow: var(--ds-shadow-sm, var(--shadow-sm));
+    color: var(--text-medium);
+    transition: all .25s cubic-bezier(.4,0,.2,1);
+}
+.btn-icon:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--primary-color) 10%, var(--bg-card));
+    color: var(--primary-color);
+    border-color: color-mix(in srgb, var(--primary-color) 55%, transparent);
+    transform: translateY(-1px);
+}
+
+/* ---------- TABLAS ---------- */
+.dashboard-table {
+    border-radius: var(--ds-radius-md, 14px);
+    overflow: hidden;
+}
+.dashboard-table th,
+#reportTable th {
+    border-bottom: 2px solid color-mix(in srgb, var(--primary-color) 18%, var(--border-color));
+    background-color: color-mix(in srgb, var(--bg-light) 80%, transparent);
+    color: var(--text-color) !important;
+    font-weight: 700;
+    letter-spacing: .04em;
+    font-size: .76rem;
+}
+.dashboard-table td {
+    border-bottom: 1px solid var(--border-light);
+}
+#reportTable tfoot,
+.dashboard-table tr[style*="background-color: var(--bg-light)"] {
+    background-color: color-mix(in srgb, var(--primary-color) 5%, var(--bg-light)) !important;
+}
+
+/* ---------- EMPTY STATE ---------- */
+.empty-state {
+    background: color-mix(in srgb, var(--bg-lightest, #fff) 50%, transparent);
+    border: 1.5px dashed var(--border-light);
+    border-radius: var(--ds-radius-md, 14px);
+}
+.empty-state i {
+    color: var(--primary-color);
+    opacity: .55;
+}
+
+/* ---------- REPORT RESULT TABLES dentro de report-results ---------- */
+.report-results {
+    overflow-x: auto;
+}
+
+@media (max-width: 768px) {
+    .stat-value { font-size: 1.55rem; }
+    .stat-icon { width: 50px; height: 50px; font-size: 1.35rem; }
+    .chart-container { height: 350px; }
+}
+
+/* ============================================================
+   AJUSTE FINAL DASHBOARD (KPI cards): sin opacidad, sin hover,
+   titular con contraste, grid 2 arriba / 3 abajo.
+   ============================================================ */
+.stats-grid-top { grid-template-columns: repeat(2, 1fr); margin-bottom: 20px; }
+.stats-grid-bottom { grid-template-columns: repeat(3, 1fr); margin-bottom: 30px; }
+
+/* Quitar el ::before translúcido que aclaraba/delavaba las cards */
+.stat-card { background-color: var(--bg-card); }
+.stat-card::before { display: none; }
+
+/* Sin hover que eleve/delave las cards KPI */
+.stat-card:hover { transform: none; box-shadow: var(--ds-shadow-md, var(--shadow-md)); }
+.stat-card:hover .stat-icon { transform: none; box-shadow: none; }
+
+/* Titular con contraste real sobre el fondo de la card */
+.stat-info h3 {
+    color: var(--text-color);
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    opacity: 1;
+    font-weight: 700;
+}
+.stat-icon { opacity: 1; }
+
+/* Responsive: las filas colapsan a 1 columna en pantallas chicas */
+@media (max-width: 720px) {
+    .stats-grid-bottom { grid-template-columns: 1fr; }
+    .stats-grid-top { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 520px) {
+    .stats-grid-top { grid-template-columns: 1fr; }
 }

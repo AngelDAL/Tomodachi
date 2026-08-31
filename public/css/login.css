@@ -1,6 +1,10 @@
 :root {
-    --primary-color: #E3057A;
-    --primary-dark: #B0045F;
+    --primary-color: #C62828;
+    --primary-dark: #9E1B1B;
+    --primary-darker: #6E1212;
+    --primary-light: #FBE9E9;
+    --primary-lighter: #FDF4F4;
+    --primary-shadow: rgba(198, 40, 40, 0.22);
     --secondary-color: #6c757d;
     --success-color: #48bb78;
     --error-color: #f56565;
@@ -45,6 +49,19 @@ body {
     overflow: hidden;
 }
 
+/* Patrón SVG original inspirado en patrones de ola/art déco de Pattern Monster:
+   abanicos curvos repetibles, elegante y distinto a la retícula anterior. */
+.left-pane::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.17' stroke-width='1.25'%3E%3Cpath d='M0 48Q24 0 48 48T96 48'/%3E%3Cpath d='M0 72Q24 24 48 72T96 72'/%3E%3Cpath d='M0 24Q24-24 48 24T96 24'/%3E%3Cpath d='M24 0Q48 24 72 0M24 96Q48 72 72 96'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: 96px 96px;
+    background-position: center;
+}
+
 .bg-image {
     position: absolute;
     top: 0;
@@ -69,7 +86,11 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(135deg, rgba(227, 5, 122, 0.9), rgba(176, 4, 95, 0.8));
+    background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--primary-color) 92%, #000000),
+        color-mix(in srgb, var(--primary-darker) 86%, #000000)
+    );
     z-index: -1;
 }
 
@@ -162,8 +183,7 @@ dialog.privacy-modal {
 }
 
 dialog.privacy-modal::backdrop {
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(4px);
+    background-color: rgba(0, 0, 0, 0.6);
     opacity: 0;
     transition: opacity 0.3s ease;
 }
@@ -173,7 +193,7 @@ dialog.privacy-modal[open]::backdrop {
 }
 
 .modal-wrapper {
-    background: var(--white);
+    background: var(--bg-card);
     border-radius: 16px;
     overflow: hidden;
     opacity: 0;
@@ -346,7 +366,7 @@ dialog.privacy-modal.close .modal-wrapper {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--white);
+    background: var(--bg-card);
     position: relative;
 }
 
@@ -410,7 +430,7 @@ dialog.privacy-modal.close .modal-wrapper {
     font-size: 1rem;
     color: var(--text-color);
     border: none;
-    border-bottom: 2px solid #e2e8f0;
+    border-bottom: 2px solid var(--border-color);
     outline: none;
     background: transparent;
     transition: border-color 0.3s;
@@ -530,7 +550,7 @@ dialog.privacy-modal.close .modal-wrapper {
 }
 
 .error-message {
-    background-color: #fff5f5;
+    background-color: var(--bg-card);
     color: var(--error-color);
     padding: 0.75rem;
     border-radius: 6px;
@@ -539,7 +559,7 @@ dialog.privacy-modal.close .modal-wrapper {
     align-items: center;
     gap: 0.5rem;
     font-size: 0.9rem;
-    border: 1px solid #feb2b2;
+    border: 1px solid var(--error-color);
 }
 
 .error-message.show {
@@ -604,7 +624,7 @@ dialog.privacy-modal.close .modal-wrapper {
         flex-direction: column;
         align-items: center; /* Align to center horizontally */
         justify-content: flex-start;
-        background: var(--white);
+        background: var(--bg-card);
         border-top-left-radius: 20px;
         border-top-right-radius: 20px;
         margin-top: -40px; /* Overlap slightly */
@@ -650,7 +670,7 @@ dialog.privacy-modal.close .modal-wrapper {
 
     .privacy-link-mobile {
         background: transparent;
-        border: 1px solid #cbd5e0;
+        border: 1px solid var(--border-color);
         color: var(--text-light);
         padding: 0.6rem 1.2rem;
         border-radius: 50px;

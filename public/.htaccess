@@ -1,0 +1,7 @@
+# Tomodachi POS - Control de caché para assets y páginas
+# Evita que Cloudflare/navegadores sirvan versiones viejas de JS/CSS/HTML
+<IfModule mod_headers.c>
+    <FilesMatch "\.(js|css|html)$">
+        Header set Cache-Control "no-cache, must-revalidate"
+    </FilesMatch>
+</IfModule>

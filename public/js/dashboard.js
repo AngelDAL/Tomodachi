@@ -22,33 +22,75 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function loadDashboardStats() {
-    try {
-        const response = await fetch('../api/reports/dashboard_stats.php');
-        const result = await response.json();
-        if (result.success) {
-            const data = result.data;
-            
-            // Update cards
-            if (document.getElementById('dailySales')) document.getElementById('dailySales').textContent = formatCurrency(data.dailySales);
-            if (document.getElementById('dailyProfit')) document.getElementById('dailyProfit').textContent = formatCurrency(data.dailyProfit);
-            if (document.getElementById('transactions')) document.getElementById('transactions').textContent = data.transactions;
+    // Reintento: el SW o la red pueden fallar la primera vez al navegar.
+    for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+            const response = await fetch('../api/reports/dashboard_stats.php');
+            if (!response.ok) {
+                if (attempt < 3) { await new Promise(r => setTimeout(r, 600 * attempt)); continue; }
+                return;
+            }
+            const result = await response.json();
+            if (result.success) {
+                const data = result.data;
+                
+                // Update cards — con animación de "llenado" tipo odómetro (anime.js)
+                    const dashSpan = (elId, toText, delay = 0) => {
+                        const el = document.getElementById(elId);
+                        if (!el) return;
+                        // Asignar primero el texto final; anime.js solo anima su entrada.
+                        el.textContent = toText;
+                        if (typeof anime === 'undefined') return;
+                        anime({ targets: el, opacity: [0, 1], scale: [0.9, 1], duration: 450, delay, easing: 'easeOutCubic' });
+                    };
+                    const dashNumber = (elId, toVal, opts = {}) => {
+                        const el = document.getElementById(elId);
+                        if (!el) return;
+                        const { isCurrency = false, delay = 0, duration = 900 } = opts;
+                        if (typeof anime === 'undefined') {
+                            el.textContent = isCurrency ? formatCurrency(toVal) : String(toVal);
+                            return;
+                        }
+                        // objeto animable numérico con formato moneda o entero
+                        const obj = { v: 0, scale: 0.9 };
+                        anime({
+                            targets: obj, v: [0, toVal],
+                            duration, delay, easing: 'easeOutQuad',
+                            update: () => {
+                                el.textContent = isCurrency ? formatCurrency(obj.v) : String(Math.round(obj.v));
+                            },
+                            complete: () => {
+                                el.textContent = isCurrency ? formatCurrency(toVal) : String(Math.round(toVal));
+                            }
+                        });
+                        anime({ targets: el, scale: [0.9, 1], opacity: [0, 1], duration: 400, delay, easing: 'easeOutCubic' });
+                    };
 
-            // New cards
-            if (document.getElementById('inventoryValue')) document.getElementById('inventoryValue').textContent = formatCurrency(data.inventoryValue || 0);
-            if (document.getElementById('lowStockCount')) document.getElementById('lowStockCount').textContent = data.lowStockCount || 0;
-            if (document.getElementById('topCategory')) document.getElementById('topCategory').textContent = data.topCategory || '-';
+                    if (document.getElementById('dailySales')) dashNumber('dailySales', parseFloat(data.dailySales || 0), { isCurrency: true, delay: 0 });
+                    if (document.getElementById('dailyProfit')) dashNumber('dailyProfit', parseFloat(data.dailyProfit || 0), { isCurrency: true, delay: 60 });
+                    if (document.getElementById('transactions')) dashNumber('transactions', parseInt(data.transactions || 0, 10), { delay: 120 });
 
-            // Render Lists
-            renderLowStockList(data.lowStockList);
-            renderTopProductsList(data.topProducts);
-            renderRecentSalesList(data.recentSales);
+                    // New cards
+                    if (document.getElementById('inventoryValue')) dashNumber('inventoryValue', parseFloat(data.inventoryValue || 0), { isCurrency: true, delay: 180 });
+                    if (document.getElementById('lowStockCount')) dashNumber('lowStockCount', parseInt(data.lowStockCount || 0, 10), { delay: 240 });
+                    if (document.getElementById('topCategory')) dashSpan('topCategory', data.topCategory || '-', 300);
+
+                // Render Lists
+                renderLowStockList(data.lowStockList);
+                renderTopProductsList(data.topProducts);
+                renderRecentSalesList(data.recentSales);
+            }
+            return;
+        } catch (error) {
+            console.error('Error fetching dashboard stats (intento ' + attempt + '):', error);
+            if (attempt < 3) { await new Promise(r => setTimeout(r, 600 * attempt)); continue; }
         }
-    } catch (error) {
-        console.error('Error fetching dashboard stats:', error);
     }
 }
 
 async function loadChartData() {
+    // Reintento: el SW o la red pueden fallar la primera vez al navegar.
+    for (let attempt = 1; attempt <= 3; attempt++) {
     try {
         // Calculate dates based on offset
         // Offset 0 = Current week (last 7 days)
@@ -59,7 +101,7 @@ async function loadChartData() {
         startDate.setDate(startDate.getDate() - 6);
         
         const formatDate = (d) => d.toISOString().split('T')[0];
-        const formatDisplay = (d) => d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
+        const formatDisplay = (d) => { const loc = (window.FormatUtils && window.FormatUtils.getConfig().locale) || 'es-MX'; return d.toLocaleDateString(loc, { day: 'numeric', month: 'short' }); };
         
         const rangeLabel = document.getElementById('chartRangeLabel');
         if (rangeLabel) {
@@ -74,21 +116,26 @@ async function loadChartData() {
 
         const url = `../api/reports/get_chart_data.php?start_date=${formatDate(startDate)}&end_date=${formatDate(endDate)}`;
         const response = await fetch(url);
+        if (!response.ok) {
+            if (attempt < 3) { await new Promise(r => setTimeout(r, 600 * attempt)); continue; }
+            return;
+        }
         const result = await response.json();
         
         if (result.success) {
             renderSalesChart(result.data);
         }
+        return;
     } catch (error) {
-        console.error('Error loading chart data:', error);
+        console.error('Error loading chart data (intento ' + attempt + '):', error);
+        if (attempt < 3) { await new Promise(r => setTimeout(r, 600 * attempt)); continue; }
+    }
     }
 }
 
 function formatCurrency(amount) {
-    return new Intl.NumberFormat('es-MX', {
-        style: 'currency',
-        currency: 'MXN'
-    }).format(amount);
+    if (window.FormatUtils) return window.FormatUtils.currency(amount);
+    return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
 }
 
 function renderTopProductsList(list) {
@@ -104,21 +151,21 @@ function renderTopProductsList(list) {
     
     list.forEach(item => {
         const tr = document.createElement('tr');
-        tr.style.borderBottom = '1px solid #eee';
+        tr.style.borderBottom = '1px solid var(--border-color)';
         
         let imgHtml = '';
         const imagePath = getRelativeImagePath(item.image_path);
         if (imagePath) {
-            imgHtml = `<img src="${imagePath}" alt="${item.product_name}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;" onerror="this.outerHTML='<div style=\\'width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: #f0f0f0; border-radius: 4px; color: #999;\\'><i class=\\'fas fa-box\\'></i></div>'">`;
+            imgHtml = `<img src="${imagePath}" alt="${item.product_name}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;" onerror="this.outerHTML='<div style=\\'width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: var(--bg-light); border-radius: 4px; color: var(--text-muted);\\'><i class=\\'fas fa-box\\'></i></div>'">`;
         } else {
-            imgHtml = `<div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: #f0f0f0; border-radius: 4px; color: #999;"><i class="fas fa-box"></i></div>`;
+            imgHtml = `<div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: var(--bg-light); border-radius: 4px; color: var(--text-muted);"><i class="fas fa-box"></i></div>`;
         }
 
         tr.innerHTML = `
             <td style="padding: 0.75rem;" data-label="Imagen">${imgHtml}</td>
             <td style="padding: 0.75rem;" data-label="Producto">${item.product_name}</td>
-            <td style="padding: 0.75rem; font-weight: bold;" data-label="Vendidos">${item.total_sold}</td>
-            <td style="padding: 0.75rem; color: #27ae60;" data-label="Ingresos">${formatCurrency(item.revenue)}</td>
+            <td style="padding: 0.75rem; font-weight: bold;" data-label="Vendidos">${window.FormatUtils ? window.FormatUtils.qty(item.total_sold) : item.total_sold}</td>
+            <td style="padding: 0.75rem; color: var(--success-color);" data-label="Ingresos">${formatCurrency(item.revenue)}</td>
         `;
         tbody.appendChild(tr);
     });
@@ -137,11 +184,11 @@ function renderLowStockList(list) {
 
     list.forEach(item => {
         const tr = document.createElement('tr');
-        tr.style.borderBottom = '1px solid #eee';
+        tr.style.borderBottom = '1px solid var(--border-color)';
         tr.innerHTML = `
             <td style="padding: 0.75rem;" data-label="Producto">${item.product_name}</td>
-            <td style="padding: 0.75rem; color: #e74c3c; font-weight: bold;" data-label="Stock">${item.current_stock}</td>
-            <td style="padding: 0.75rem; color: #7f8c8d;" data-label="Mínimo">${item.min_stock}</td>
+            <td style="padding: 0.75rem; color: var(--danger-color); font-weight: bold;" data-label="Stock">${window.FormatUtils ? window.FormatUtils.qty(item.current_stock) : item.current_stock}</td>
+            <td style="padding: 0.75rem; color: var(--text-light);" data-label="Mínimo">${window.FormatUtils ? window.FormatUtils.qty(item.min_stock) : item.min_stock}</td>
         `;
         tbody.appendChild(tr);
     });
@@ -160,8 +207,8 @@ function renderRecentSalesList(list) {
     
     list.forEach(item => {
         const dateObj = new Date(item.sale_date);
-        const dateStr = dateObj.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit' });
-        const timeStr = dateObj.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+        const dateStr = window.FormatUtils ? window.FormatUtils.dateOnly(dateObj) : dateObj.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit' });
+        const timeStr = window.FormatUtils ? window.FormatUtils.timeOnly(dateObj) : dateObj.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
         const fullDate = `${dateStr} ${timeStr}`;
         
         // Products icons
@@ -171,19 +218,21 @@ function renderRecentSalesList(list) {
         item.products.slice(0, 5).forEach(prod => { // Limit to 5 icons to prevent overflow
             const imagePath = getRelativeImagePath(prod.image);
             if (imagePath) {
-                productsHtml += `<img src="${imagePath}" alt="${prod.name}" title="${prod.name}" style="width: 30px; height: 30px; object-fit: cover; border-radius: 4px; border: 1px solid #eee;" onerror="this.outerHTML='<div title=\\'${prod.name}\\' style=\\'width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; background: #f0f0f0; border-radius: 4px; color: #999;\\'><i class=\\'fas fa-box\\'></i></div>'">`;
+                productsHtml += `<img src="${imagePath}" alt="${prod.name}" title="${prod.name}" style="width: 30px; height: 30px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border-color);" onerror="this.outerHTML='<div title=\\'${prod.name}\\' style=\\'width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; background: var(--bg-light); border-radius: 4px; color: var(--text-muted);\\'><i class=\\'fas fa-box\\'></i></div>'">`;
             } else {
-                productsHtml += `<div title="${prod.name}" style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; background: #f0f0f0; border-radius: 4px; color: #999;"><i class="fas fa-box"></i></div>`;
+                productsHtml += `<div title="${prod.name}" style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; background: var(--bg-light); border-radius: 4px; color: var(--text-muted);"><i class="fas fa-box"></i></div>`;
             }
         });
         
         if (item.products.length > 5) {
-            productsHtml += `<div title="${item.products.length - 5} más..." style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; background: #e0e0e0; border-radius: 4px; color: #666; font-size: 0.8rem;">+${item.products.length - 5}</div>`;
+            productsHtml += `<div title="${item.products.length - 5} más..." style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; background: var(--bg-light); border-radius: 4px; color: var(--text-light); font-size: 0.8rem;">+${item.products.length - 5}</div>`;
         }
         productsHtml += '</div>';
 
         const tr = document.createElement('tr');
-        tr.style.borderBottom = '1px solid #eee';
+        tr.style.borderBottom = '1px solid var(--border-color)';
+        tr.style.cursor = 'pointer';
+        tr.title = `Clic para ver detalle de la venta #${item.sale_id}`;
         tr.innerHTML = `
             <td style="padding: 0.75rem; white-space: nowrap;" data-label="Fecha">${fullDate}</td>
             <td style="padding: 0.75rem;" data-label="Productos">
@@ -192,10 +241,105 @@ function renderRecentSalesList(list) {
                 </div>
             </td>
             <td style="padding: 0.75rem; font-weight: bold;" data-label="Total">${formatCurrency(item.total)}</td>
-            <td class="premium-locked" style="padding: 0.75rem; color: #27ae60; font-weight: bold;" data-label="Ganancia">${formatCurrency(item.profit)}</td>
+            <td class="premium-locked" style="padding: 0.75rem; color: var(--success-color); font-weight: bold;" data-label="Ganancia">${formatCurrency(item.profit)}</td>
         `;
+        // Clic en la fila -> detalle completo de la venta
+        tr.addEventListener('click', () => showSaleDetail(item.sale_id));
         tbody.appendChild(tr);
     });
+}
+
+/**
+ * Abre el modal con el detalle completo de una venta
+ * (productos, cantidades, precios) usando la API.
+ */
+async function showSaleDetail(saleId) {
+    const modal = document.getElementById('saleDetailModal');
+    const body = document.getElementById('saleDetailBody');
+    const title = document.getElementById('saleDetailTitle');
+    if (!modal || !body) return;
+
+    title.textContent = `Venta #${saleId}`;
+    body.innerHTML = (typeof saleDetailSkeletonHTML === 'function')
+        ? saleDetailSkeletonHTML()
+        : '<div style="text-align:center; padding: 2rem;"><i class="fas fa-spinner fa-spin" style="font-size: 1.5rem; color: var(--text-muted);"></i><p>Cargando detalle...</p></div>';
+    if (typeof modal.showModal === 'function') {
+        modal.showModal();
+    } else {
+        modal.classList.add('show');
+    }
+
+    try {
+        const resp = await fetch(`../api/sales/sale_details.php?sale_id=${saleId}`);
+        const data = await resp.json();
+        if (!data.success || !data.data) {
+            throw new Error(data.message || 'No se pudo cargar el detalle');
+        }
+        const d = data.data;
+
+        // Encabezado de la venta
+        const fecha = window.FormatUtils ? window.FormatUtils.date(new Date(d.sale_date + ' UTC')) : new Date(d.sale_date + ' UTC').toLocaleString('es-MX', {
+            day: '2-digit', month: '2-digit', year: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        });
+        const metodo = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', mixed: 'Mixto' }[d.payment_method] || d.payment_method;
+
+        let html = `
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 1rem; background: var(--bg-light); border-radius: 10px; padding: 0.9rem 1rem; margin-bottom: 1rem; font-size: 0.9rem;">
+                <div><strong>Fecha:</strong> ${fecha}</div>
+                <div><strong>Método:</strong> ${metodo}</div>
+                <div><strong>Subtotal:</strong> ${formatCurrency(d.subtotal)}</div>
+                <div><strong>Total:</strong> ${formatCurrency(d.total)}</div>
+                ${d.discount > 0 ? `<div><strong>Descuento:</strong> -${formatCurrency(d.discount)}</div>` : ''}
+                ${d.tax > 0 ? `<div><strong>Impuesto:</strong> ${formatCurrency(d.tax)}</div>` : ''}
+            </div>
+            <table class="dashboard-table" style="width:100%; font-size: 0.9rem;">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th style="text-align:center;">Cant.</th>
+                        <th style="text-align:right;">P. Unit.</th>
+                        <th style="text-align:right;">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        if (d.items && d.items.length) {
+            d.items.forEach(it => {
+                html += `
+                    <tr>
+                        <td data-label="Producto"><strong>${escapeHtml(it.product_name || 'Producto')}</strong>${it.category_name ? `<br><small style="color:var(--text-muted);">${escapeHtml(it.category_name)}</small>` : ''}</td>
+                        <td data-label="Cant." style="text-align:center;">${formatQuantity(it.quantity)}</td>
+                        <td data-label="P. Unit." style="text-align:right;">${formatCurrency(it.unit_price)}</td>
+                        <td data-label="Total" style="text-align:right; font-weight:bold;">${formatCurrency(it.total)}</td>
+                    </tr>
+                `;
+            });
+        } else {
+            html += '<tr><td colspan="4" style="text-align:center; padding:1rem;">Sin productos registrados</td></tr>';
+        }
+        html += `</tbody></table>`;
+        body.innerHTML = html;
+    } catch (error) {
+        console.error('Error cargando detalle de venta:', error);
+        body.innerHTML = `<div style="text-align:center; padding: 2rem; color: var(--danger-color);"><i class="fas fa-exclamation-triangle"></i><p>${escapeHtml(error.message)}</p></div>`;
+    }
+}
+
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = String(str ?? '');
+    return div.innerHTML;
+}
+
+/**
+ * Formatea cantidades: si no tienen decimales, las muestra como
+ * número entero (5 en vez de 5.000); si tienen, con hasta 2 decimales.
+ */
+function formatQuantity(qty) {
+    const n = Number(qty);
+    if (Number.isNaN(n)) return String(qty ?? '');
+    return Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, '');
 }
 
 let salesChart = null;
@@ -211,6 +355,7 @@ function renderSalesChart(chartData) {
     // Get colors from CSS variables
     const styles = getComputedStyle(document.documentElement);
     const primaryColor = styles.getPropertyValue('--primary-color').trim();
+    const gridColor = styles.getPropertyValue('--border-color').trim() || '#f0f0f0';
     const secondaryColor = styles.getPropertyValue('--secondary-color').trim();
 
     // Helper to convert hex to rgba
@@ -286,10 +431,10 @@ function renderSalesChart(chartData) {
             scales: {
                 y: {
                     beginAtZero: true,
-                    grid: { borderDash: [2, 4], color: '#f0f0f0' },
+                    grid: { borderDash: [2, 4], color: gridColor },
                     ticks: {
                         callback: function (value) {
-                            return new Intl.NumberFormat('es-MX', {
+                            return window.FormatUtils ? window.FormatUtils.currency(value) : new Intl.NumberFormat('es-MX', {
                                 style: 'currency',
                                 currency: 'MXN',
                                 maximumSignificantDigits: 3
@@ -302,3 +447,27 @@ function renderSalesChart(chartData) {
         }
     });
 }
+
+// Cerrar modal de detalle de venta (botón X, clic fuera, Escape)
+document.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById('saleDetailModal');
+    if (!modal) return;
+    const closeBtn = document.getElementById('saleDetailClose');
+    const closeModal = () => {
+        if (typeof modal.close === 'function') {
+            modal.close();
+        } else {
+            modal.classList.remove('show');
+        }
+    };
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeModal);
+    }
+    // Clic fuera del contenido cierra el diálogo (solo con dialog nativo)
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.open) closeModal();
+    });
+});

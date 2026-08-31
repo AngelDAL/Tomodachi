@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Integraciones - Tomodachi</title>
+    <link rel="stylesheet" href="css/fonts.css?v=4">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css?v=4">
+    <link rel="stylesheet" href="css/main.css?v=4">
+    <link rel="stylesheet" href="css/design-system.css?v=5">
+    <link rel="stylesheet" href="css/sidebar-modern.css?v=4">
+    <link rel="stylesheet" href="css/mobile-nav.css?v=4">
+    <style>
+        .integrations-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        .integrations-header {
+            margin-bottom: 2rem;
+        }
+        .integrations-header h1 {
+            font-size: 1.8rem;
+            margin-bottom: 0.4rem;
+            color: var(--text-color);
+        }
+        .integrations-header p {
+            color: var(--text-muted);
+            max-width: 700px;
+        }
+        .card {
+            background: var(--bg-card);
+            border-radius: var(--ds-radius-lg, 20px);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--ds-shadow-sm, 0 2px 8px rgba(0,0,0,0.06));
+            border: 1px solid var(--border-light);
+            transition: box-shadow .3s ease, transform .25s cubic-bezier(.4,0,.2,1);
+        }
+        .card:hover {
+            box-shadow: var(--ds-shadow-md, 0 2px 8px rgba(0,0,0,0.06));
+        }
+        .card h3 {
+            margin-bottom: 0.4rem;
+        }
+        .card .subtitle {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 1.2rem;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.4rem;
+            font-size: 0.9rem;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.95rem;
+        }
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+        .scopes-group {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .scope-check {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--bg-light);
+            padding: 8px 14px;
+            border-radius: var(--ds-radius-pill, 100px);
+            border: 1.5px solid transparent;
+            cursor: pointer;
+            transition: border-color .2s ease, background .2s ease, transform .2s ease;
+        }
+        .scope-check:hover {
+            border-color: color-mix(in srgb, var(--primary-color) 40%, transparent);
+            transform: translateY(-1px);
+        }
+        .scope-check:has(input:checked) {
+            background: color-mix(in srgb, var(--primary-color) 10%, var(--bg-light));
+            border-color: color-mix(in srgb, var(--primary-color) 45%, transparent);
+        }
+        .scope-check input {
+            width: auto;
+            accent-color: var(--primary-color);
+        }
+        .token-list {
+            margin-top: 0.5rem;
+        }
+        .token-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--ds-radius-md, 14px);
+            margin-bottom: 10px;
+            background: var(--bg-lightest);
+            flex-wrap: wrap;
+            gap: 10px;
+            transition: border-color .2s ease, box-shadow .2s ease;
+        }
+        .token-item:hover {
+            border-color: color-mix(in srgb, var(--primary-color) 35%, var(--border-color));
+            box-shadow: var(--ds-shadow-sm, 0 1px 3px rgba(0,0,0,0.08));
+        }
+        .token-item .token-info {
+            flex: 1;
+            min-width: 220px;
+        }
+        .token-item .token-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .token-item .token-meta {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        .badge {
+            display: inline-block;
+            padding: 3px 12px;
+            border-radius: var(--ds-radius-pill, 100px);
+            font-size: 0.7rem;
+            font-weight: 600;
+            border: 1.5px solid;
+        }
+        .badge-scope {
+            background: color-mix(in srgb, var(--primary-color) 10%, var(--bg-card));
+            color: var(--primary-dark, var(--primary-color));
+            border-color: color-mix(in srgb, var(--primary-color) 40%, transparent);
+        }
+        .badge-active {
+            background: color-mix(in srgb, var(--success-color) 12%, var(--bg-card));
+            color: var(--success-color);
+            border-color: color-mix(in srgb, var(--success-color) 45%, transparent);
+        }
+        .badge-revoked {
+            background: color-mix(in srgb, var(--danger-color) 12%, var(--bg-card));
+            color: var(--danger-color);
+            border-color: color-mix(in srgb, var(--danger-color) 45%, transparent);
+        }
+        .badge-expired {
+            background: color-mix(in srgb, var(--warning-color) 12%, var(--bg-card));
+            color: var(--warning-dark, var(--warning-color));
+            border-color: color-mix(in srgb, var(--warning-color) 45%, transparent);
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 18px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: var(--primary-color);
+            color: #fff;
+        }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-danger {
+            background: transparent;
+            color: var(--danger-color);
+            border: 1px solid var(--danger-color);
+        }
+        .btn-danger:hover { background: var(--danger-color); }
+        .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+        .msg {
+            margin-top: 1rem;
+            padding: 10px 14px;
+            border-radius: var(--ds-radius-md, 14px);
+            display: none;
+            font-size: 0.9rem;
+        }
+        .msg.error {
+            background: color-mix(in srgb, var(--danger-color) 14%, var(--bg-card));
+            color: var(--danger-color);
+            border: 1.5px solid color-mix(in srgb, var(--danger-color) 45%, transparent);
+            display: block;
+        }
+        .msg.success {
+            background: color-mix(in srgb, var(--success-color) 14%, var(--bg-card));
+            color: var(--success-color);
+            border: 1.5px solid color-mix(in srgb, var(--success-color) 45%, transparent);
+            display: block;
+        }
+        .token-reveal {
+            background: var(--dark-color);
+            color: var(--success-color);
+            padding: 12px 16px;
+            border-radius: var(--ds-radius-md, 14px);
+            font-family: monospace;
+            font-size: 0.85rem;
+            word-break: break-all;
+            margin: 12px 0;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 2.5rem;
+            color: var(--text-muted);
+        }
+        .empty-state i {
+            font-size: 2.5rem;
+            margin-bottom: 0.8rem;
+            color: var(--text-muted);
+        }
+        .api-doc-hint {
+            background: var(--bg-light);
+            border-left: 4px solid var(--primary-color);
+            padding: 12px 16px;
+            border-radius: 0 8px 8px 0;
+            font-size: 0.85rem;
+            color: var(--text-medium);
+            margin-top: 1rem;
+        }
+        .api-doc-hint code {
+            background: rgba(0,0,0,0.06);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+        @media (max-width: 700px) {
+            .form-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <button class="sidebar-close" id="sidebarClose"><i class="fas fa-times"></i></button>
+                <h2>Tomodachi</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <!-- Navigation Loaded by js/sidebar-loader.js?v=5 -->
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="integrations-container">
+                <div class="integrations-header">
+                    <h1><i class="fas fa-plug"></i> Integraciones</h1>
+                    <p>Crea claves de acceso para conectar tus asistentes y herramientas a este sistema.
+                       Cada clave pertenece a esta empresa y puedes revocarla cuando quieras.</p>
+                </div>
+
+                <!-- Formulario de creación -->
+                <div class="card">
+                    <h3><i class="fas fa-key"></i> Nueva clave de acceso</h3>
+                    <p class="subtitle">Define qué puede hacer esta clave y por cuánto tiempo.</p>
+                    <form id="createTokenForm">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="tokenName">Nombre</label>
+                                <input type="text" id="tokenName" required placeholder="ej. mi-agente-ia">
+                            </div>
+                            <div class="form-group">
+                                <label for="tokenExpiry">Expiración</label>
+                                <select id="tokenExpiry">
+                                    <option value="0">Nunca expira</option>
+                                    <option value="7">7 días</option>
+                                    <option value="30" selected>30 días</option>
+                                    <option value="90">90 días</option>
+                                    <option value="365">1 año</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Permisos</label>
+                            <div class="scopes-group">
+                                <label class="scope-check">
+                                    <input type="checkbox" name="scopes" value="read" checked>
+                                    <span><i class="fas fa-eye"></i> Solo lectura</span>
+                                </label>
+                                <label class="scope-check">
+                                    <input type="checkbox" name="scopes" value="write">
+                                    <span><i class="fas fa-pen"></i> Leer y editar</span>
+                                </label>
+                                <label class="scope-check">
+                                    <input type="checkbox" name="scopes" value="custom">
+                                    <span><i class="fas fa-palette"></i> Personalizar apariencia</span>
+                                </label>
+                            </div>
+                            <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">
+                                Solo lectura: consultar datos · Leer y editar: crear y modificar ventas,
+                                inventario, etc. · Personalizar apariencia: tema y colores de la tienda.
+                            </p>
+                        </div>
+                        <button type="submit" class="btn btn-primary" id="createBtn">
+                            <i class="fas fa-plus"></i> Generar clave
+                        </button>
+                        <div class="msg" id="createMsg"></div>
+                        <div class="token-reveal" id="tokenReveal" style="display: none;"></div>
+                    </form>
+                </div>
+
+                <!-- Lista de tokens -->
+                <div class="card">
+                    <h3><i class="fas fa-list"></i> Claves existentes</h3>
+                    <p class="subtitle">Las claves se muestran solo al crearlas. Aquí puedes ver su estado y revocarlas.</p>
+                    <div id="tokenList">
+                        <div class="empty-state">
+                            <i class="fas fa-key"></i>
+                            <p>Cargando claves...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="api-doc-hint">
+                    <i class="fas fa-book"></i> <strong>¿Para conectar un asistente o herramienta?</strong> La
+                    documentación técnica completa está en el repositorio del proyecto (<code>docs/API.md</code>).
+                    La clave se envía en el encabezado de cada petición que haga tu herramienta.
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/sidebar-loader.js?v=5"></script>
+    <script src="js/app.js"></script>
+    <script>
+        // Verificar sesión (modal de re-login si caducó y pidió sesión permanente)
+        (async () => {
+            const session = await requireSession();
+            if (!session) return;
+            initSidebar();
+            loadTokens();
+        })();
+
+        // Crear token
+        document.getElementById('createTokenForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const msg = document.getElementById('createMsg');
+            const reveal = document.getElementById('tokenReveal');
+            msg.className = 'msg';
+            reveal.style.display = 'none';
+
+            const scopes = Array.from(document.querySelectorAll('input[name="scopes"]:checked')).map(c => c.value);
+            if (scopes.length === 0) {
+                msg.className = 'msg error';
+                msg.textContent = 'Selecciona al menos un permiso.';
+                return;
+            }
+
+            const btn = document.getElementById('createBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
+
+            try {
+                const res = await fetch('../api/api_tokens/create.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        name: document.getElementById('tokenName').value.trim(),
+                        scopes: scopes,
+                        expires_in_days: parseInt(document.getElementById('tokenExpiry').value, 10)
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    msg.className = 'msg success';
+                    msg.textContent = 'Clave generada. ¡Cópiala ahora, no se mostrará de nuevo!';
+                    reveal.style.display = 'block';
+                    reveal.textContent = data.data.token;
+                    e.target.reset();
+                    loadTokens();
+                } else {
+                    msg.className = 'msg error';
+                    msg.textContent = data.message || 'Error al generar la clave';
+                }
+            } catch (err) {
+                msg.className = 'msg error';
+                msg.textContent = 'Error de conexión. Intente nuevamente.';
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-plus"></i> Generar clave';
+            }
+        });
+
+        // Cargar tokens
+        async function loadTokens() {
+            const list = document.getElementById('tokenList');
+            try {
+                const res = await fetch('../api/api_tokens/read.php', { credentials: 'include' });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.message);
+
+                if (!data.data || data.data.length === 0) {
+                    list.innerHTML = '<div class="empty-state"><i class="fas fa-key"></i><p>Aún no tienes claves. Crea una arriba.</p></div>';
+                    return;
+                }
+
+                list.innerHTML = data.data.map(t => {
+                    const scopeLabels = { read: 'Solo lectura', write: 'Leer y editar', custom: 'Personalizar' };
+                    const scopes = (t.scopes || '').split(',').filter(Boolean)
+                        .map(s => `<span class="badge badge-scope">${scopeLabels[s] || s}</span>`).join(' ');
+                    let stateBadge = '<span class="badge badge-active">Activa</span>';
+                    if (t.revoked == 1) stateBadge = '<span class="badge badge-revoked">Revocada</span>';
+                    else if (t.is_expired) stateBadge = '<span class="badge badge-expired">Expirada</span>';
+
+                    const exp = t.expires_at
+                        ? 'Expira: ' + t.expires_at.replace('T', ' ').slice(0, 16)
+                        : 'Sin expiración';
+                    const lastUsed = t.last_used_at
+                        ? 'Último uso: ' + t.last_used_at.replace('T', ' ').slice(0, 16)
+                        : 'Sin uso aún';
+
+                    const canRevoke = t.revoked != 1 && !t.is_expired;
+                    return `
+                        <div class="token-item">
+                            <div class="token-info">
+                                <div class="token-name">
+                                    <i class="fas fa-key" style="color: var(--primary-color);"></i>
+                                    ${escapeHtml(t.name)}
+                                    ${stateBadge}
+                                </div>
+                                <div class="token-meta">
+                                    <code>${escapeHtml(t.token_prefix)}...</code> · ${scopes} · ${exp} · ${lastUsed}
+                                </div>
+                            </div>
+                            ${canRevoke ? `<button class="btn btn-danger btn-sm" onclick="revokeToken(${t.token_id}, '${escapeHtml(t.name)}')">
+                                <i class="fas fa-ban"></i> Revocar</button>` : ''}
+                        </div>`;
+                }).join('');
+            } catch (err) {
+                list.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error al cargar claves.</p></div>';
+            }
+        }
+
+        function revokeToken(id, name) {
+            if (!confirm('¿Revocar la clave "' + name + '"? Ya no podrá usarse.')) return;
+            fetch('../api/api_tokens/revoke.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ token_id: id })
+            }).then(r => r.json()).then(d => {
+                if (d.success) loadTokens();
+                else alert(d.message || 'Error al revocar');
+            });
+        }
+
+        function escapeHtml(s) {
+            return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+    </script>
+    <script src="lib/animejs/anime.min.js"></script>
+    <script src="js/design-system.js?v=5"></script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 /* Kawaii Voice Mode Styles */
 :root {
     --voice-bg: rgba(255, 255, 255, 0.92);
-    --voice-primary: var(--primary-color, #E3057A);
+    --voice-primary: var(--primary-color, #C62828);
     --voice-secondary: #ffb6c1; /* Pastel Pink */
     --voice-text: #555;
     --pulse-color: rgba(227, 5, 122, 0.4);
@@ -38,7 +38,7 @@
     width: 120px;
     height: 120px;
     border-radius: 50%;
-    background: white;
+    background: var(--bg-card);
     box-shadow: 0 10px 25px rgba(227, 5, 122, 0.2);
     display: flex;
     align-items: center;
@@ -120,7 +120,7 @@
     left: 0;
     width: 200%;
     height: 100%;
-    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 88.7'%3E%3Cpath d='M800 56.9c-155.5 0-204.9-50-405.5-49.9-200 0-250 49.9-394.5 49.9v31.8h800v-.2-31.6z' fill='%23E3057A'/%3E%3C/svg%3E");
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 88.7'%3E%3Cpath d='M800 56.9c-155.5 0-204.9-50-405.5-49.9-200 0-250 49.9-394.5 49.9v31.8h800v-.2-31.6z' fill='%23C62828'/%3E%3C/svg%3E");
     background-size: 50% 100%;
     animation: wave-slide 10s linear infinite;
     opacity: 0.8;
@@ -162,4 +162,30 @@
 @keyframes spin-icon {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+/* ==========================================================================
+   DESIGN SYSTEM ALIGNMENT — Kawaii Voice Mode
+   Alinea el overlay de voz con la identidad (tipografías Sora/Inter y
+   radios del design system). No altera lógica.
+   ========================================================================== */
+.jarvis-overlay {
+    font-family: var(--font-body, 'Inter', system-ui, sans-serif);
+}
+.jarvis-status {
+    font-family: var(--font-heading, 'Sora', 'Inter', sans-serif);
+    border-radius: var(--ds-radius-pill, 100px);
+    background: color-mix(in srgb, var(--bg-card) 80%, transparent);
+    padding: 6px 20px;
+    box-shadow: var(--ds-shadow-md, 0 8px 22px -10px rgba(0,0,0,.2));
+}
+.voice-avatar {
+    border: 2px solid color-mix(in srgb, var(--voice-primary) 45%, transparent);
+    box-shadow: 0 12px 30px -10px color-mix(in srgb, var(--voice-primary) 45%, transparent);
+}
+.pulse-ring {
+    background: color-mix(in srgb, var(--voice-primary) 60%, transparent);
+}
+.voice-wave {
+    filter: saturate(1.15);
 }

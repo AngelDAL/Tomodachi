@@ -6,6 +6,24 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     Response::error('Método no permitido', 405);
 }
 
+// Rate limit simple por IP: máx. 5 mensajes por hora para evitar spam/relay
+$ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+$rateFile = sys_get_temp_dir() . '/tomodachi_support_' . md5($ip) . '.lock';
+$window = 3600; // 1 hora
+$max = 5;
+
+$now = time();
+$hits = [];
+if (file_exists($rateFile)) {
+    $hits = @json_decode(file_get_contents($rateFile), true) ?: [];
+    $hits = array_filter($hits, function ($t) use ($now, $window) { return $t > $now - $window; });
+}
+if (count($hits) >= $max) {
+    Response::error('Demasiados mensajes. Intente más tarde.', 429);
+}
+$hits[] = $now;
+@file_put_contents($rateFile, json_encode($hits), LOCK_EX);
+
 // Get JSON input
 $input = json_decode(file_get_contents('php://input'), true);
 

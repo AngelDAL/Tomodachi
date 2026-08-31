@@ -7,9 +7,11 @@ require_once '../../config/database.php';
 require_once '../../config/constants.php';
 require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
+require_once '../../includes/FormatHelper.class.php';
 
 require_once '../../includes/Validator.class.php';
 require_once '../../includes/Auth.class.php';
+require_once '../../includes/ApiAuth.class.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
@@ -19,22 +21,47 @@ try {
     $db = new Database();
     $auth = new Auth($db);
 
-    if (!$auth->isLoggedIn()) { Response::unauthorized(); }
-    if (!$auth->hasRole([ROLE_ADMIN,ROLE_MANAGER,ROLE_CASHIER])) { Response::error('Permisos insuficientes',403); }
+    $apiAuth = new ApiAuth($db);
+    $actor = $apiAuth->requireActor($auth);
+    if ($actor['via'] === 'session') {
+        if (!$auth->hasRole([ROLE_ADMIN,ROLE_MANAGER,ROLE_CASHIER])) { Response::error('Permisos insuficientes',403); }
+    } else {
+        $apiAuth->requireScope($actor, 'write');
+    }
 
     $data = json_decode(file_get_contents('php://input'), true);
     if (!$data) { Response::validationError(['body'=>'JSON inválido']); }
 
+    $currentUser = $actor;
+
     $register_id = isset($data['register_id']) ? (int)$data['register_id'] : 0;
     $counted_amount = isset($data['counted_amount']) ? (float)$data['counted_amount'] : null;
     $notes = isset($data['notes']) ? substr(trim($data['notes']),0,255) : null;
+    // Arqueo por denominaciones (B7): [{denomination: 100, count: 5}, ...]
+    $denominations = isset($data['denominations']) ? $data['denominations'] : null;
 
     $errors = [];
     if ($register_id <= 0) { $errors['register_id'] = 'Requerido'; }
+    // Si vienen denominaciones, counted_amount se calcula; si no, debe venir explícito
+    $denominationTotal = 0.0;
+    if (is_array($denominations) && count($denominations) > 0) {
+        foreach ($denominations as $d) {
+            $denom = (float)($d['denomination'] ?? 0);
+            $cnt = (int)($d['count'] ?? 0);
+            if ($denom <= 0) { $errors['denominations'] = 'Denominación inválida'; break; }
+            $denominationTotal += $denom * $cnt;
+        }
+        $counted_amount = round($denominationTotal, 2);
+    }
     if ($counted_amount === null || $counted_amount < 0) { $errors['counted_amount'] = 'Monto contado inválido'; }
     if ($errors) { Response::validationError($errors); }
 
-    $register = $db->selectOne('SELECT register_id, initial_amount, status FROM cash_registers WHERE register_id=?',[ $register_id ]);
+    // Seguridad: el usuario solo puede cerrar cajas de su propia tienda
+    $register = $db->selectOne('SELECT register_id, store_id, initial_amount, status FROM cash_registers WHERE register_id=?',[ $register_id ]);
+    if (!$register) { Response::notFound('Caja no existe'); }
+    if ((int)$register['store_id'] !== (int)$currentUser['store_id']) {
+        Response::error('No autorizado para cerrar cajas de otra tienda', 403);
+    }
     if (!$register) { Response::error('Caja no encontrada',404); }
     if ($register['status'] !== REGISTER_OPEN) { Response::error('La caja ya está cerrada',409); }
 
@@ -55,7 +82,7 @@ try {
     // --- INICIO LÓGICA DE CORREO ---
     try {
         // 1. Obtener datos de la tienda y usuario actual
-        $currentUser = $auth->getCurrentUser();
+        $currentUser = $actor;
         $store_id = $currentUser['store_id'];
         
         $store = $db->selectOne("SELECT store_name FROM stores WHERE store_id = ?", [$store_id]);
@@ -117,7 +144,7 @@ try {
                 $adminUser['email'], 
                 $adminUser['full_name'] ?: 'Administrador', 
                 $storeName, 
-                date('d/m/Y H:i'), 
+                \FormatHelper::date(date('Y-m-d H:i:s'), \FormatHelper::getFormat($db, $store_id)), 
                 $stats
             );
         }

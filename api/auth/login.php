@@ -10,6 +10,7 @@ require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
 require_once '../../includes/Validator.class.php';
 require_once '../../includes/Auth.class.php';
+require_once '../../includes/LoginRateLimiter.class.php';
 
 header('Access-Control-Allow-Origin: *');
 header('Content-Type: application/json; charset=utf-8');
@@ -45,10 +46,30 @@ try {
     // Autenticar usuario
     $db = new Database();
     $auth = new Auth($db);
-    
+
+    // === Anti fuerza bruta: comprobar bloqueo de la IP antes de validar ===
+    $rateLimiter = new LoginRateLimiter($db);
+    $rlCheck = $rateLimiter->check();
+    if (!$rlCheck['allowed']) {
+        http_response_code(429);
+        header('Content-Type: application/json; charset=utf-8');
+        header('Retry-After: ' . (int)$rlCheck['retry_after']);
+        echo json_encode([
+            'success'    => false,
+            'message'    => $rlCheck['message'],
+            'data'       => null,
+            'error'      => 'rate_limited',
+            'retry_after'=> (int)$rlCheck['retry_after']
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     $user = $auth->login($username, $password);
     
     if ($user) {
+        // Login exitoso: limpiar el contador de la IP
+        $rateLimiter->recordSuccess();
+
         // Handle Remember Me
         if (isset($data['remember']) && $data['remember'] === true) {
             $params = session_get_cookie_params();
@@ -68,6 +89,8 @@ try {
             'session' => $auth->getCurrentUser()
         ], 'Inicio de sesión exitoso');
     } else {
+        // Credenciales incorrectas: registrar el fallo para el rate limiter
+        $rateLimiter->recordFailure($username);
         Response::error('Usuario o contraseña incorrectos', 401);
     }
     

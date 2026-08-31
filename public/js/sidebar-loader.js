@@ -1,4 +1,4 @@
-function initSidebar() {
+async function initSidebar() {
     // 0. Load Modern Sidebar CSS only if not already present in the head
     if (!document.querySelector('link[href="css/sidebar-modern.css"]')) {
         const link = document.createElement('link');
@@ -15,17 +15,33 @@ function initSidebar() {
         document.head.appendChild(mobileLink);
     }
 
+    // Cargar el puente con la app nativa (si existe) en todas las vistas
+    if (!document.querySelector('script[src="js/capacitor-bridge.js"]')) {
+        const bridgeScript = document.createElement('script');
+        bridgeScript.src = 'js/capacitor-bridge.js';
+        document.head.appendChild(bridgeScript);
+    }
+
+    // Cargar navegación por teclado (atajos Alt+1..7 y modo POS) en todas las vistas
+    if (!document.querySelector('script[src="js/keyboard-nav.js"]')) {
+        const kbScript = document.createElement('script');
+        kbScript.src = 'js/keyboard-nav.js';
+        document.head.appendChild(kbScript);
+    }
+
     const sidebarNav = document.querySelector('.sidebar-nav');
     if (!sidebarNav) return;
 
     // Define menu items
+    // roles: opcional — si existe, solo esos roles ven el item (permisos granulares B4)
     const menuItems = [
         { href: 'dashboard.html', icon: 'fa-chart-line', text: 'Dashboard' },
         { href: 'sales.html', icon: 'fa-cash-register', text: 'Punto de Venta' },
         { href: 'inventory.html', icon: 'fa-box', text: 'Inventario' },
+        { href: 'customers.html', icon: 'fa-users', text: 'Clientes' },
         { href: 'promotions.html', icon: 'fa-tags', text: 'Promociones' },
-        { href: 'finance.html', icon: 'fa-wallet', text: 'Finanzas' },
-        { href: 'reports.html', icon: 'fa-chart-bar', text: 'Reportes', className: 'desktop-only-nav' } // Keeping reports desktop-only for now as per original
+        { href: 'finance.html', icon: 'fa-wallet', text: 'Finanzas', roles: ['admin', 'manager', 'super_admin'] },
+        { href: 'reports.html', icon: 'fa-chart-bar', text: 'Reportes', roles: ['admin', 'manager', 'super_admin'], className: 'desktop-only-nav' }
     ];
 
     // Current page detection
@@ -35,7 +51,21 @@ function initSidebar() {
     // Helper to generate menu HTML
     let menuHTML = '';
     
+    // Obtener rol del usuario para permisos granulares (B4)
+    let currentRole = null;
+    try {
+        const sessRes = await fetch('../api/auth/verify_session.php');
+        const sessData = await sessRes.json();
+        if (sessData.success && sessData.data && sessData.data.user) {
+            currentRole = sessData.data.user.role || null;
+        }
+    } catch (e) { console.warn('No se pudo obtener el rol:', e); }
+
     menuItems.forEach(item => {
+        // Permisos granulares: ocultar items restringidos según rol
+        if (item.roles && currentRole && !item.roles.includes(currentRole)) {
+            return; // no renderizar
+        }
         // Active state logic
         // Simple check: active if href matches current page
         // Handling special cases if needed (e.g. index.html -> dashboard.html mapping?)
@@ -86,19 +116,23 @@ function initSidebar() {
     `;
 
     // Bottom group: pushed to the bottom on desktop
+    // (El selector de tema se movió a Configuración → Interfaz en profile.html;
+    //  aquí queda el toggle rápido de tema + logout)
     const bottomGroupHTML = `
         <div class="nav-bottom-group">
+            <a href="#" class="nav-item" id="tempThemeToggle" aria-label="Alternar tema">
+                <span class="nav-icon"><i class="fas ${isDarkChecked() ? 'fa-moon' : 'fa-sun'}"></i></span>
+                <span class="nav-text" id="tempThemeLabel">Tema ${isDarkChecked() ? 'oscuro' : 'claro'}</span>
+            </a>
             <a href="#" class="nav-item" id="logoutBtn">
                 <span><i class="fas fa-sign-out-alt"></i></span> <span class="nav-text">Cerrar Sesión</span>
             </a>
-
-            <div class="nav-separator" style="margin: 10px 0; border-top: 1px solid rgba(255,255,255,0.1);"></div>
-
-            <a href="#" class="nav-item desktop-only-nav js-support-btn" id="supportBtn" style="color: #aaa; font-size: 0.9em;">
-                <span><i class="fas fa-headset"></i></span> <span class="nav-text">Soporte/Sugerencias</span>
-            </a>
         </div>
     `;
+
+    function isDarkChecked() {
+        return document.documentElement.getAttribute('data-theme') === 'dark';
+    }
 
     sidebarNav.innerHTML = menuHTML + profileHTML + bottomGroupHTML;
 
@@ -204,6 +238,32 @@ function initSidebar() {
 
     const logoutTooltipBtn = document.getElementById('logoutTooltipBtn');
     if (logoutTooltipBtn) logoutTooltipBtn.addEventListener('click', handleLogout);
+
+    // Botón temporal de tema (claro/oscuro) — usa ThemeSystem si existe
+    const tempThemeBtn = document.getElementById('tempThemeToggle');
+    const tempThemeLbl = document.getElementById('tempThemeLabel');
+    const syncThemeBtn = () => {
+        const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+        if (tempThemeBtn) {
+            const icon = tempThemeBtn.querySelector('.nav-icon i');
+            if (icon) icon.className = `fas ${dark ? 'fa-moon' : 'fa-sun'}`;
+        }
+        if (tempThemeLbl) tempThemeLbl.textContent = `Tema ${dark ? 'oscuro' : 'claro'}`;
+    };
+    if (tempThemeBtn) {
+        tempThemeBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            if (window.ThemeSystem && ThemeSystem.setMode) {
+                ThemeSystem.setMode(isDark ? 'light' : 'dark');
+            } else {
+                document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
+            }
+            setTimeout(syncThemeBtn, 40);
+        });
+    }
+    document.addEventListener('tomodachi:themechange', syncThemeBtn);
+    syncThemeBtn();
 
     // Profile Menu Toggle Logic (Consolidated from app.js)
     // If app.js handles this, we might have duplicate listeners if we add it here too.

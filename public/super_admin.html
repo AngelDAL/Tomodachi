@@ -5,15 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Super Admin - Tomodachi</title>
     <!-- Local Fonts -->
-    <link rel="stylesheet" href="css/fonts.css">
+    <link rel="stylesheet" href="css/fonts.css?v=4">
     <!-- FontAwesome -->
-    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
-    <link rel="stylesheet" href="css/main.css">
-    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css?v=4">
+    <link rel="stylesheet" href="css/main.css?v=4">
+    <link rel="stylesheet" href="css/dashboard.css?v=4">
     <script src="js/theme-init.js"></script>
+    <script src="js/format-utils.js"></script>
     <style>
         .admin-header {
-            background: #2c3e50;
+            background: var(--dark-color);
             color: white;
             padding: 20px;
             border-radius: 8px;
@@ -27,7 +28,7 @@
             font-size: 1.5rem;
         }
         .store-badge {
-            background: #3498db;
+            background: var(--info-color);
             color: white;
             padding: 2px 8px;
             border-radius: 12px;
@@ -50,9 +51,12 @@
         .backup-status {
             margin-top: 12px;
             font-size: 0.92rem;
-            color: #555;
+            color: var(--text-medium);
         }
     </style>
+    <link rel="stylesheet" href="css/design-system.css?v=6">
+    <script src="lib/animejs/anime.min.js" defer></script>
+    <script src="js/design-system.js?v=6" defer></script>
 </head>
 <body>
     <div class="app-container">
@@ -60,7 +64,7 @@
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <h2>Tomodachi</h2>
-                <small style="color: #aaa; display: block; margin-top: 5px;">Super Admin</small>
+                <small style="color: var(--text-muted); display: block; margin-top: 5px;">Super Admin</small>
             </div>
             
             <nav class="sidebar-nav">

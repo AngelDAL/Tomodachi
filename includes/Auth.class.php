@@ -17,7 +17,15 @@ class Auth {
     private function initSession() {
         if (session_status() === PHP_SESSION_NONE) {
             session_name(SESSION_NAME);
-            
+
+            // CRÍTICO: el recolector de basura de sesiones de PHP borra los
+            // archivos de sesión del servidor según session.gc_maxlifetime
+            // (por defecto ~24 min). Aunque la cookie del cliente dure 1 año
+            // (recordarme), si el archivo del servidor se borra, el usuario
+            // "pierde la sesión" sin motivo. Lo subimos a 1 año para que las
+            // sesiones con recordarme persistan de verdad.
+            ini_set('session.gc_maxlifetime', 365 * 24 * 60 * 60);
+
             // Configurar parámetros de cookie para que sea accesible en todo el proyecto
             session_set_cookie_params([
                 'lifetime' => SESSION_LIFETIME,
@@ -177,8 +185,12 @@ class Auth {
     /**
      * Verifica si se requiere acceso Premium y detiene la ejecución si no lo tiene.
      * Útil para proteger endpoints API.
+     * En modo OPEN_SOURCE nunca bloquea (todas las features desbloqueadas).
      */
     public function requirePremium() {
+        if (APP_MODE === 'OPEN_SOURCE') {
+            return true;
+        }
         if (!$this->isPremium()) {
             http_response_code(403);
             echo json_encode(['success' => false, 'message' => 'Esta función requiere un plan Premium.']);

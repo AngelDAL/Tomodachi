@@ -4,396 +4,1251 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tomodachi POS - El futuro de tu negocio</title>
+    <title>Tomodachi POS - Sistema de Punto de Venta Open Source</title>
 
-    <!-- Check Session -->
+    <!-- Check Session + Onboarding -->
     <script>
+        // La presentación de bienvenida se muestra UNA sola vez por navegador.
+        // Si ya hay sesión -> dashboard. Si ya vio el onboarding -> login directo.
         fetch('../api/auth/verify_session.php')
             .then(response => response.json())
             .then(data => {
                 if (data.success && data.data.logged_in) {
                     window.location.href = 'dashboard.html';
+                } else if (localStorage.getItem('tomodachi_onboarding_done') === '1') {
+                    window.location.href = 'login.html';
                 }
             })
             .catch(console.error);
     </script>
-    
+
     <!-- Local Fonts -->
-    <link rel="stylesheet" href="css/fonts.css">
+    <link rel="stylesheet" href="css/fonts.css?v=4">
     <!-- FontAwesome -->
-    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
-    <!-- Landing CSS -->
-    <link rel="stylesheet" href="css/landing.css">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css?v=4">
+    <style>
+        @import url('css/variables.css');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+
+        body {
+            font-family: 'Google Sans Flex', sans-serif;
+            color: var(--text-color);
+            background: #0f0f1a;
+            overflow: hidden;
+            overflow-x: hidden;
+            height: 100vh;
+            width: 100%;
+        }
+
+        /* ===== Carrusel ===== */
+        .carousel {
+            position: relative;
+            height: 100vh;
+            width: 100%;
+            max-width: 100%;
+            overflow: hidden;
+        }
+
+        .slides {
+            height: 100%;
+            display: flex;
+            max-width: 100%;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .slide {
+            min-width: 100%;
+            max-width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            position: relative;
+            flex-shrink: 0;
+            overflow: hidden;
+            overflow-x: hidden;
+        }
+
+        /* Fondos alternados */
+        .slide:nth-child(1) { background: linear-gradient(135deg, #1a0b2e 0%, #2d1b4e 100%); }
+        .slide:nth-child(2) { background: linear-gradient(135deg, #0f1a2e 0%, #1b2f52 100%); }
+        .slide:nth-child(3) { background: linear-gradient(135deg, #1a0b2e 0%, #3a1052 100%); }
+        .slide:nth-child(4) { background: linear-gradient(135deg, #10261c 0%, #1d4a35 100%); }
+        .slide:nth-child(5) { background: linear-gradient(135deg, #2e1408 0%, #4e2a10 100%); }
+        .slide:nth-child(6) { background: linear-gradient(135deg, #0f1a2e 0%, #233a63 100%); }
+        .slide:nth-child(7) { background: linear-gradient(135deg, #1a0b2e 0%, #2d1b4e 100%); }
+        .slide:nth-child(8) { background: linear-gradient(135deg, #101018 0%, #1e1e30 100%); }
+
+        .slide-content {
+            max-width: 900px;
+            text-align: center;
+            color: #fff;
+            z-index: 2;
+        }
+
+        .slide-icon {
+            font-size: 4rem;
+            color: var(--primary-color);
+            margin-bottom: 24px;
+            display: block;
+            filter: drop-shadow(0 4px 16px rgba(227, 5, 122, 0.35));
+        }
+
+        .slide-content h2 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            line-height: 1.15;
+        }
+
+        .slide-content p {
+            font-size: 1.2rem;
+            line-height: 1.7;
+            color: rgba(255, 255, 255, 0.85);
+            max-width: 720px;
+            margin: 0 auto 12px;
+        }
+
+        .slide-content ul {
+            list-style: none;
+            margin: 20px auto 0;
+            max-width: 640px;
+            text-align: left;
+            display: inline-block;
+        }
+
+        .slide-content ul li {
+            padding: 8px 0;
+            font-size: 1.05rem;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .slide-content ul li i {
+            color: var(--primary-color);
+            margin-right: 12px;
+        }
+
+        .slide-kicker {
+            display: inline-block;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            font-size: 0.8rem;
+            color: var(--primary-color);
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+
+        .badge-open-source {
+            display: inline-block;
+            background: rgba(76, 175, 80, 0.2);
+            border: 1px solid rgba(76, 175, 80, 0.5);
+            color: #7ce08a;
+            padding: 6px 16px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            margin-top: 20px;
+            letter-spacing: 0.5px;
+        }
+
+        /* Logo */
+        .logo-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            margin-bottom: 28px;
+        }
+
+        .logo-row svg {
+            width: 52px;
+            height: 52px;
+            fill: var(--primary-color);
+        }
+
+        .logo-row .logo-name {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 0.5px;
+        }
+
+        /* ===== Hero animado (slide 1) ===== */
+        .hero-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .hero-logo-wrap {
+            margin-bottom: 26px;
+            filter: drop-shadow(0 0 24px rgba(227, 5, 122, 0.45));
+        }
+
+        #heroLogo {
+            width: 92px;
+            height: 92px;
+            overflow: visible;
+        }
+
+        #heroLogo .logo-stroke {
+            fill: none;
+            stroke: var(--primary-color);
+            stroke-width: 10;
+            stroke-linecap: butt;
+            stroke-linejoin: round;
+            /* invisible hasta que JS defina el dash real */
+            stroke-dasharray: 0 9999;
+        }
+
+        #heroLogo .logo-fill {
+            fill: var(--primary-color);
+            stroke: none;
+            fill-opacity: 0;
+        }
+
+        /* Fallback: si WAAPI no está disponible, el relleno queda visible
+           (solo tras la intro; el trazo sigue dibujándose por dash). */
+        #heroLogo.filled .logo-fill {
+            fill-opacity: 1;
+        }
+
+        .hero-title {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 22px;
+            width: 100%;
+        }
+
+        .title-svg {
+            overflow: visible;
+            height: auto;
+        }
+
+        .title-svg .letter {
+            fill: #ffffff;      /* relleno sólido; por-título ajusta el color */
+            stroke-width: 3;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill-opacity: 0;    /* invisible hasta que fillGroup lo anime */
+        }
+
+        .title-svg.filled .letter {
+            fill-opacity: 1;
+        }
+
+        #titleBienvenido {
+            width: min(430px, 82vw);
+            filter: drop-shadow(0 0 14px rgba(227, 5, 122, 0.35));
+        }
+        #titleBienvenido .letter { stroke: var(--primary-color); fill: var(--primary-color); }
+
+        #titleTomodachi {
+            width: min(540px, 90vw);
+            filter: drop-shadow(0 4px 30px rgba(227, 5, 122, 0.4));
+        }
+        #titleTomodachi .letter { stroke: #ffffff; fill: #ffffff; }
+
+        .hero-kicker,
+        .hero-sub,
+        .hero-badge {
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.7s ease, transform 0.7s ease;
+        }
+
+        .hero-content.ready .hero-kicker,
+        .hero-content.ready .hero-sub,
+        .hero-content.ready .hero-badge {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .hero-kicker {
+            margin-bottom: 14px;
+        }
+
+        .hero-sub {
+            max-width: 680px;
+            margin: 0 auto 0;
+        }
+
+        /* Pista de deslizamiento / navegación */
+        .swipe-hint {
+            position: absolute;
+            bottom: 88px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            color: rgba(255, 255, 255, 0.65);
+            font-size: 0.85rem;
+            letter-spacing: 0.4px;
+            opacity: 0;
+            transition: opacity 0.6s ease;
+            z-index: 8;
+            pointer-events: none;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .swipe-hint.visible {
+            opacity: 1;
+        }
+
+        .swipe-hint .swipe-chevrons {
+            display: flex;
+            gap: 18px;
+            font-size: 1rem;
+            animation: swipePulse 1.8s ease-in-out infinite;
+        }
+
+        .swipe-hint .swipe-chevrons i {
+            color: var(--primary-color);
+            text-shadow: 0 0 12px rgba(227, 5, 122, 0.6);
+        }
+
+        .swipe-hint .swipe-chevrons i:first-child {
+            animation: chevronLeft 1.8s ease-in-out infinite;
+        }
+        .swipe-hint .swipe-chevrons i:last-child {
+            animation: chevronRight 1.8s ease-in-out infinite;
+        }
+
+        @keyframes chevronLeft {
+            0%, 100% { transform: translateX(4px); opacity: 0.4; }
+            50% { transform: translateX(-6px); opacity: 1; }
+        }
+        @keyframes chevronRight {
+            0%, 100% { transform: translateX(-4px); opacity: 0.4; }
+            50% { transform: translateX(6px); opacity: 1; }
+        }
+        @keyframes swipePulse {
+            0%, 100% { opacity: 0.55; }
+            50% { opacity: 1; }
+        }
+
+        /* ===== Navegación ===== */
+        .nav-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #fff;
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            font-size: 1.2rem;
+            cursor: pointer;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            backdrop-filter: blur(8px);
+        }
+
+        .nav-arrow:hover {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+            transform: translateY(-50%) scale(1.05);
+        }
+
+        .nav-arrow.prev { left: 24px; }
+        .nav-arrow.next { right: 24px; }
+
+        .dots {
+            position: absolute;
+            bottom: 28px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.25);
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s;
+            padding: 0;
+        }
+
+        .dot.active {
+            background: var(--primary-color);
+            width: 28px;
+            border-radius: 5px;
+        }
+
+        /* Contador de diapositiva */
+        .slide-counter {
+            position: absolute;
+            bottom: 28px;
+            right: 32px;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.9rem;
+            z-index: 10;
+            letter-spacing: 2px;
+        }
+
+        /* Barra de progreso */
+        .progress-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: var(--primary-color);
+            z-index: 20;
+            transition: width 0.6s ease;
+        }
+
+        /* ===== Botón Omitir ===== */
+        .skip-btn {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            z-index: 30;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 18px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: rgba(255, 255, 255, 0.85);
+            border-radius: 50px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            transition: all 0.3s;
+        }
+
+        .skip-btn:hover {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+            color: #fff;
+            transform: translateY(-1px);
+        }
+
+        .skip-btn i {
+            font-size: 0.85rem;
+        }
+
+        /* ===== Slide final: Login / Registro ===== */
+        .auth-slide {
+            background: linear-gradient(135deg, #101018 0%, #1e1e30 100%);
+        }
+
+        .auth-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(12px);
+            border-radius: 20px;
+            padding: 36px 40px;
+            width: 100%;
+            max-width: 440px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+        }
+
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 24px;
+            border-radius: 10px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.06);
+            padding: 4px;
+        }
+
+        .auth-tab {
+            flex: 1;
+            padding: 10px 0;
+            text-align: center;
+            border: none;
+            background: transparent;
+            color: rgba(255, 255, 255, 0.6);
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .auth-tab.active {
+            background: var(--primary-color);
+            color: #fff;
+        }
+
+        .auth-panel {
+            display: none;
+        }
+
+        .auth-panel.active {
+            display: block;
+        }
+
+        .auth-panel h3 {
+            color: #fff;
+            font-size: 1.4rem;
+            margin-bottom: 6px;
+        }
+
+        .auth-panel .subtitle {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+
+        .auth-panel .subtitle strong {
+            color: var(--primary-color);
+        }
+
+        .auth-field {
+            margin-bottom: 14px;
+            text-align: left;
+        }
+
+        .auth-field label {
+            display: block;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.8rem;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .auth-field input {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.07);
+            color: #fff;
+            font-family: inherit;
+            font-size: 0.95rem;
+            transition: border 0.3s;
+        }
+
+        .auth-field input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .auth-field input::placeholder {
+            color: rgba(255, 255, 255, 0.35);
+        }
+
+        .auth-row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .auth-row .auth-field {
+            flex: 1;
+        }
+
+        .auth-btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            background: var(--primary-color);
+            color: #fff;
+            font-family: inherit;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 6px;
+            transition: all 0.3s;
+        }
+
+        .auth-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .auth-btn:disabled {
+            opacity: 0.7;
+            cursor: wait;
+        }
+
+        .auth-msg {
+            margin-top: 12px;
+            font-size: 0.85rem;
+            display: none;
+            text-align: center;
+        }
+
+        .auth-msg.error {
+            color: #ff6b6b;
+            display: block;
+        }
+
+        .auth-msg.success {
+            color: #7ce08a;
+            display: block;
+        }
+
+        .auth-hint {
+            margin-top: 16px;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.45);
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        .auth-hint code {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 8px;
+            border-radius: 6px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            html,
+            body {
+                overflow-x: hidden;
+            }
+            .slide {
+                padding: 24px;
+                overflow-x: hidden;
+            }
+            .slide-content {
+                max-width: 100%;
+            }
+            .slide-content h2 { font-size: 1.9rem; }
+            .slide-content p { font-size: 1rem; }
+            .slide-content ul {
+                display: block;
+                max-width: 100%;
+            }
+            .slide-content h2,
+            .slide-content p,
+            .slide-content ul li,
+            .auth-card h3,
+            .auth-card .subtitle,
+            .auth-hint {
+                overflow-wrap: break-word;
+                word-break: break-word;
+            }
+            .slide-content ul li code {
+                overflow-wrap: anywhere;
+                word-break: break-all;
+            }
+            .nav-arrow {
+                display: flex;
+                width: 42px;
+                height: 42px;
+                top: auto;
+                bottom: 76px;
+                font-size: 0.95rem;
+                background: rgba(255, 255, 255, 0.06);
+            }
+            .nav-arrow.prev { left: 14px; }
+            .nav-arrow.next { right: 14px; }
+            .auth-card { padding: 24px 20px; max-width: 100%; }
+            .auth-row { flex-direction: column; gap: 0; }
+            /* La tarjeta de login puede exceder la altura en móviles pequeños:
+               centrar con margin:auto y permitir scroll vertical dentro de la slide */
+            .auth-slide {
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            .auth-slide .auth-card {
+                margin: auto;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="css/design-system.css?v=6">
+    <script src="lib/animejs/anime.min.js" defer></script>
+    <script src="js/design-system.js?v=6" defer></script>
 </head>
 
 <body>
 
-    <!-- Header -->
-    <header class="header">
-        <div class="container navbar">
-            <a href="index.html" class="logo">
-                <svg viewBox="0 0 978 978" version="1.1" xmlns="http://www.w3.org/2000/svg"
-                    style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2; fill: var(--primary-color);">
-                    <g transform="matrix(1,0,0,1,-640.505536,-1753.937008)">
-                        <g transform="matrix(3.479065,0,0,3.479065,-4010.290738,-1296.905436)">
-                            <path
-                                d="M1439.144,903.435C1445.042,887.496 1460.24,876.915 1477.235,876.915C1494.231,876.915 1509.429,887.496 1515.327,903.435L1535.807,958.783L1591.155,979.263C1607.094,985.161 1617.676,1000.36 1617.676,1017.355C1617.676,1034.35 1607.094,1049.548 1591.155,1055.446L1535.807,1075.927L1515.327,1131.275C1509.429,1147.214 1494.231,1157.795 1477.235,1157.795C1460.24,1157.795 1445.042,1147.214 1439.144,1131.275L1418.663,1075.927L1363.316,1055.446C1347.377,1049.548 1336.795,1034.35 1336.795,1017.355C1336.795,1000.36 1347.377,985.161 1363.316,979.263L1418.663,958.783L1439.144,903.435ZM1477.235,958.616C1444.817,958.616 1418.497,984.936 1418.497,1017.355C1418.497,1049.774 1444.817,1076.093 1477.235,1076.093C1509.654,1076.093 1535.974,1049.774 1535.974,1017.355C1535.974,984.936 1509.654,958.616 1477.235,958.616ZM1477.235,987.986C1493.445,987.986 1506.605,1001.145 1506.605,1017.355C1506.605,1033.564 1493.445,1046.724 1477.235,1046.724C1461.026,1046.724 1447.866,1033.564 1447.866,1017.355C1447.866,1001.145 1461.026,987.986 1477.235,987.986Z" />
-                        </g>
-                    </g>
-                </svg>
-                Tomodachi
-            </a>
-            <button class="hamburger" id="hamburger" aria-label="Menú">
-                <span></span>
-                <span></span>
-                <span></span>
-            </button>
-            <nav class="nav-links" id="navLinks">
-                <a href="#features">Características</a>
-                <a href="#works">Cómo funciona</a>
-                <a href="#gallery">Galería</a>
-                <a href="#pricing">Precios</a>
-                <div class="nav-links-auth">
-                    <a href="login.html" class="btn btn-outline btn-sm"><span class="btn-text">Iniciar</span><i
-                            class="fas fa-sign-in-alt btn-icon"></i></a>
-                    <a href="register.html" class="btn btn-primary btn-sm"><span class="btn-text">Registro</span><i
-                            class="fas fa-user-plus btn-icon"></i></a>
-                </div>
-            </nav>
-            <div class="auth-buttons">
-                <a href="login.html" class="btn btn-outline"><span class="btn-text">Iniciar</span><i
-                        class="fas fa-sign-in-alt btn-icon"></i></a>
-                <a href="register.html" class="btn btn-primary"><span class="btn-text">Registro</span><i
-                        class="fas fa-user-plus btn-icon"></i></a>
-            </div>
-        </div>
-    </header>
+    <div class="carousel" id="carousel">
+        <div class="progress-bar" id="progressBar"></div>
 
-    <!-- Hero Section with Video Background -->
-    <section class="hero">
-        <div class="hero-video-wrapper">
-            <!-- Video background with fallback poster -->
-            <video autoplay muted loop playsinline poster="assets/images/frontPage/UI1.jpg">
-                <source src="assets/video/hero_bg.mp4" type="video/mp4">
-            </video>
-        </div>
-        <div class="hero-overlay"></div>
+        <button class="skip-btn" id="skipBtn" aria-label="Omitir presentación e ir al inicio de sesión">
+            <i class="fas fa-forward"></i> Omitir
+        </button>
 
-        <div class="container hero-content fade-up">
-            <h1>Gestión inteligente para tu negocio</h1>
-            <p>El punto de venta moderno que simplifica tus ventas, controla tu inventario y te ayuda a crecer. Sin
-                complicaciones, sin hardware costoso.</p>
-            <div class="hero-btns">
-                <a href="register.html" class="btn btn-primary btn-lg">Registrarse</a>
-                <a href="#features" class="btn btn-outline btn-lg">Mas información</a>
-            </div>
-        </div>
+        <div class="slides" id="slides">
 
-        <div class="scroll-down">
-            <i class="fas fa-chevron-down"></i>
-        </div>
-    </section>
-
-    <!-- Features Section -->
-    <section id="features" class="section">
-        <div class="container">
-            <h2 class="fade-up">Todo lo necesario para el éxito</h2>
-            <p class="section-subtitle fade-up">Herramientas diseñadas pensando en la eficiencia y la simplicidad</p>
-
-            <div class="features-grid">
-                <div class="feature-card fade-up">
-                    <div class="feature-icon"><i class="fas fa-cash-register"></i></div>
-                    <h3>Ventas Rápidas</h3>
-                    <p>Procesa transacciones en segundos con una interfaz intuitiva diseñada para agilidad.</p>
-                </div>
-                <div class="feature-card fade-up">
-                    <div class="feature-icon"><i class="fas fa-mobile-alt"></i></div>
-                    <h3>Acceso Móvil</h3>
-                    <p>Lleva tu negocio contigo. Accede a ventas y reportes desde tu celular o tablet en cualquier
-                        lugar.</p>
-                </div>
-                <div class="feature-card fade-up">
-                    <div class="feature-icon"><i class="fas fa-chart-pie"></i></div>
-                    <h3>Analíticas</h3>
-                    <p>Toma decisiones basadas en datos reales con reportes detallados de ventas y rendimiento.</p>
-                </div>
-                <div class="feature-card fade-up">
-                    <div class="feature-icon"><i class="fas fa-qrcode"></i></div>
-                    <h3>Inventario</h3>
-                    <p>Control total de tu stock, creación de etiquetas y alertas de reabastecimiento.</p>
-                </div>
-                <div class="feature-card fade-up">
-                    <div class="feature-icon"><i class="fas fa-users"></i></div>
-                    <h3>Equipo</h3>
-                    <p>Gestiona roles y permisos para todo tu personal de forma segura y sencilla.</p>
-                </div>
-                <div class="feature-card fade-up">
-                    <div class="feature-icon"><i class="fas fa-cloud"></i></div>
-                    <h3>Cloud Based</h3>
-                    <p>Accede a tu negocio desde cualquier lugar y dispositivo, siempre sincronizado.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Showcase Section 1 -->
-    <section id="works" class="section showcase">
-        <div class="container showcase-content fade-up">
-            <div class="showcase-image-wrapper">
-                <div class="showcase-image">
-                    <img src="assets/images/frontPage/UI2.jpg" alt="Tomodachi Desktop View"
-                        style="width:100%; height: auto;">
-                </div>
-            </div>
-            <div class="showcase-text">
-                <h3>Interfaz Moderna y Limpia</h3>
-                <p>Olvídate de sistemas complicados y antiguos. Tomodachi ofrece una experiencia de usuario fluida y
-                    agradable.</p>
-                <ul style="margin-top: 20px;">
-                    <li style="margin-bottom: 10px;"><i class="fas fa-check text-primary"></i> Punto de venta optimizado
-                    </li>
-                    <li style="margin-bottom: 10px;"><i class="fas fa-check text-primary"></i> Personalizable a tu marca
-                    </li>
-                    <li style="margin-bottom: 10px;"><i class="fas fa-check text-primary"></i> Diseño intuitivo para
-                        fácil aprendizaje</li>
-                </ul>
-            </div>
-        </div>
-    </section>
-
-    <!-- Showcase Section 2 -->
-    <section class="section">
-        <div class="container showcase-content reverse fade-up">
-            <div class="showcase-image-wrapper">
-                <div class="showcase-image">
-                    <img src="assets/images/frontPage/Movil.png" alt="Tomodachi Mobile View"
-                        style="width:100%; height: auto;">
-                </div>
-            </div>
-            <div class="showcase-text">
-                <h3>Control Total desde Cualquier Lugar</h3>
-                <p>No necesitas estar en la tienda para saber qué está pasando. Gestiona tu negocio de forma remota.</p>
-                <br>
-                <ul>
-                    <li style="margin-bottom: 15px;">
-                        <strong class="text-primary">Monitorización en Vivo</strong>
-                        <p>Consulta las ventas y el estado de la caja registradora en tiempo real desde tu dispositivo
-                            móvil.</p>
-                    </li>
-                    <li style="margin-bottom: 15px;">
-                        <strong class="text-primary">Gestión Multi-Sucursal</strong>
-                        <p>Administra inventarios y ventas de todas tus tiendas desde un solo panel centralizado.</p>
-                    </li>
-                </ul>
-            </div>
-    </section>
-
-    <!-- Gallery / Screenshots Section -->
-    <section id="gallery" class="section gallery-section">
-        <div class="container">
-            <h2 class="fade-up">Explora la Plataforma</h2>
-            <p class="section-subtitle fade-up">Un vistazo a las poderosas herramientas que tendrás en tus manos</p>
-
-            <div class="screenshots-grid">
-                <div class="screenshot-item fade-up">
-                    <div class="screenshot-placeholder"
-                        style="background-image: url('assets/images/frontPage/Reporting.png');"></div>
-                    <div class="screenshot-content">
-                        <h3>Reportes y Analíticas</h3>
-                        <p>Obtén insights valiosos sobre tus ventas diarias, productos más vendidos y rendimiento
-                            mensual con gráficos interactivos.</p>
-                    </div>
-                </div>
-                <div class="screenshot-item fade-up">
-                    <div class="screenshot-placeholder"
-                        style="background-image: url('assets/images/frontPage/Inventory.png');"></div>
-                    <div class="screenshot-content">
-                        <h3>Control de Inventario</h3>
-                        <p>Mantén tu stock sincronizado en tiempo real. Recibe alertas de escasez y gestiona proveedores
-                            desde un solo lugar.</p>
-                    </div>
-                </div>
-                <div class="screenshot-item fade-up">
-                    <div class="screenshot-placeholder"
-                        style="background-image: url('assets/images/frontPage/QRGenerator.png');"></div>
-                    <div class="screenshot-content">
-                        <h3>Etiquetado Inteligente</h3>
-                        <p>Genera e imprime etiquetas con códigos QR automáticamente para agilizar el proceso de cobro y
-                            organización.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Pricing Section -->
-    <section id="pricing" class="section" style="background-color: #f9f9f9;">
-        <div class="container">
-            <h2 class="fade-up">Planes a tu medida</h2>
-            <p class="section-subtitle fade-up">Comienza gratis y mejora tu experiencia con funciones premium</p>
-
-            <div class="pricing-grid fade-up">
-                <!-- Free Plan -->
-                <div class="pricing-card">
-                    <div class="plan-header">
-                        <h3>Gratuito</h3>
-                        <div class="price">$0<span>/mes</span></div>
-                    </div>
-                    <ul class="plan-features">
-                        <li><i class="fas fa-check"></i> Ventas e Inventario</li>
-                        <li><i class="fas fa-check"></i> Reportes Básicos</li>
-                        <li><i class="fas fa-check"></i> 1 Usuario Administrador</li>
-                        <li><i class="fas fa-check"></i> Soporte Comunitario</li>
-                    </ul>
-                    <a href="register.html" class="btn btn-outline">Comenzar Gratis</a>
-                </div>
-
-                <!-- Premium Plan -->
-                <div class="pricing-card popular">
-                    <div class="badge">Recomendado</div>
-                    <div class="plan-header">
-                        <h3>Premium</h3>
-                        <div class="price">$120<span>/mes</span></div>
-                    </div>
-                    <ul class="plan-features">
-                        <li><i class="fas fa-check"></i> <strong>Todo lo del plan gratuito</strong></li>
-                        <li><i class="fas fa-check"></i> Personalización (Web y Reportes)</li>
-                        <li><i class="fas fa-check"></i> Personalización del Ticket</li>
-                        <li><i class="fas fa-check"></i> Modo Kiosko</li>
-                        <li><i class="fas fa-check"></i> Dictado en Punto de Venta</li>
-                        <li><i class="fas fa-check"></i> Hasta 3 Usuarios (inc. admin)</li>
-                    </ul>
-                    <a href="register.html" class="btn btn-primary">Obtener Premium</a>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- CTA Section -->
-    <section class="section cta fade-up">
-        <div class="container">
-            <h2>Lleva tu negocio al siguiente nivel</h2>
-            <p>Únete hoy y experimenta la diferencia. Sin costos.</p>
-            <a href="register.html" class="btn btn-lg">Crear Cuenta</a>
-        </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-grid">
-                <div class="footer-brand">
-                    <div class="logo">
-                        <!-- Logo SVG White -->
-                        <svg viewBox="0 0 978 978" version="1.1" xmlns="http://www.w3.org/2000/svg"
-                            style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2; fill: white;">
+            <!-- ===== Slide 1: Hero animado (bienvenida) ===== -->
+            <section class="slide" id="slideHero">
+                <div class="slide-content hero-content" id="heroContent">
+                    <div class="hero-logo-wrap">
+                        <svg id="heroLogo" viewBox="0 0 978 978" version="1.1" xmlns="http://www.w3.org/2000/svg"
+                            style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+                            <defs>
+                                <!-- Recorte para revelar el relleno de abajo hacia arriba -->
+                                <clipPath id="logoFillClip">
+                                    <rect id="logoFillRect" x="0" y="0" width="978" height="978"/>
+                                </clipPath>
+                            </defs>
                             <g transform="matrix(1,0,0,1,-640.505536,-1753.937008)">
                                 <g transform="matrix(3.479065,0,0,3.479065,-4010.290738,-1296.905436)">
-                                    <path
-                                        d="M1439.144,903.435C1445.042,887.496 1460.24,876.915 1477.235,876.915C1494.231,876.915 1509.429,887.496 1515.327,903.435L1535.807,958.783L1591.155,979.263C1607.094,985.161 1617.676,1000.36 1617.676,1017.355C1617.676,1034.35 1607.094,1049.548 1591.155,1055.446L1535.807,1075.927L1515.327,1131.275C1509.429,1147.214 1494.231,1157.795 1477.235,1157.795C1460.24,1157.795 1445.042,1147.214 1439.144,1131.275L1418.663,1075.927L1363.316,1055.446C1347.377,1049.548 1336.795,1034.35 1336.795,1000.36 1347.377,985.161 1363.316,979.263L1418.663,958.783L1439.144,903.435ZM1477.235,958.616C1444.817,958.616 1418.497,984.936 1418.497,1017.355C1418.497,1049.774 1444.817,1076.093 1477.235,1076.093C1509.654,1076.093 1535.974,1049.774 1535.974,1017.355C1535.974,984.936 1509.654,958.616 1477.235,958.616ZM1477.235,987.986C1493.445,987.986 1506.605,1001.145 1506.605,1017.355C1506.605,1033.564 1493.445,1046.724 1477.235,1046.724C1461.026,1046.724 1447.866,1033.564 1447.866,1017.355C1447.866,1001.145 1461.026,987.986 1477.235,987.986Z" />
+                                    <path class="logo-stroke"
+                                        d="M1439.144,903.435C1445.042,887.496 1460.24,876.915 1477.235,876.915C1494.231,876.915 1509.429,887.496 1515.327,903.435L1535.807,958.783L1591.155,979.263C1607.094,985.161 1617.676,1000.36 1617.676,1017.355C1617.676,1034.35 1607.094,1049.548 1591.155,1055.446L1535.807,1075.927L1515.327,1131.275C1509.429,1147.214 1494.231,1157.795 1477.235,1157.795C1460.24,1157.795 1445.042,1147.214 1439.144,1131.275L1418.663,1075.927L1363.316,1055.446C1347.377,1049.548 1336.795,1034.35 1336.795,1017.355C1336.795,1000.36 1347.377,985.161 1363.316,979.263L1418.663,958.783L1439.144,903.435ZM1477.235,958.616C1444.817,958.616 1418.497,984.936 1418.497,1017.355C1418.497,1049.774 1444.817,1076.093 1477.235,1076.093C1509.654,1076.093 1535.974,1049.774 1535.974,1017.355C1535.974,984.936 1509.654,958.616 1477.235,958.616ZM1477.235,987.986C1493.445,987.986 1506.605,1001.145 1506.605,1017.355C1506.605,1033.564 1493.445,1046.724 1477.235,1046.724C1461.026,1046.724 1447.866,1033.564 1447.866,1017.355C1447.866,1001.145 1461.026,987.986 1477.235,987.986Z" />
+                                </g>
+                            </g>
+                            <g clip-path="url(#logoFillClip)">
+                                <g transform="matrix(1,0,0,1,-640.505536,-1753.937008)">
+                                    <g transform="matrix(3.479065,0,0,3.479065,-4010.290738,-1296.905436)">
+                                        <path class="logo-fill"
+                                            d="M1439.144,903.435C1445.042,887.496 1460.24,876.915 1477.235,876.915C1494.231,876.915 1509.429,887.496 1515.327,903.435L1535.807,958.783L1591.155,979.263C1607.094,985.161 1617.676,1000.36 1617.676,1017.355C1617.676,1034.35 1607.094,1049.548 1591.155,1055.446L1535.807,1075.927L1515.327,1131.275C1509.429,1147.214 1494.231,1157.795 1477.235,1157.795C1460.24,1157.795 1445.042,1147.214 1439.144,1131.275L1418.663,1075.927L1363.316,1055.446C1347.377,1049.548 1336.795,1034.35 1336.795,1017.355C1336.795,1000.36 1347.377,985.161 1363.316,979.263L1418.663,958.783L1439.144,903.435ZM1477.235,958.616C1444.817,958.616 1418.497,984.936 1418.497,1017.355C1418.497,1049.774 1444.817,1076.093 1477.235,1076.093C1509.654,1076.093 1535.974,1049.774 1535.974,1017.355C1535.974,984.936 1509.654,958.616 1477.235,958.616ZM1477.235,987.986C1493.445,987.986 1506.605,1001.145 1506.605,1017.355C1506.605,1033.564 1493.445,1046.724 1477.235,1046.724C1461.026,1046.724 1447.866,1033.564 1447.866,1017.355C1447.866,1001.145 1461.026,987.986 1477.235,987.986Z" />
+                                    </g>
                                 </g>
                             </g>
                         </svg>
-                        Tomodachi
                     </div>
-                    <p style="color: #999;">Sistema de gestión empresarial diseñado para la era digital.</p>
+                    <div class="hero-title">
+                        <svg id="titleBienvenido" class="title-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+                        <svg id="titleTomodachi" class="title-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+                    </div>
+                    <span class="slide-kicker hero-kicker">Punto de Venta Open Source</span>
+                    <p class="hero-sub">Ventas, inventario, cajas, promociones y reportes en un solo lugar. Instálalo
+                        en tu propio servidor, sin suscripciones ni cobros.</p>
+                    <div class="badge-open-source hero-badge"><i class="fas fa-code-branch"></i> Self-hosted · Open Source · Apache 2.0</div>
                 </div>
-                <div class="footer-col">
-                    <h4>Producto</h4>
+                <div class="swipe-hint" id="swipeHint">
+                    <div class="swipe-chevrons"><i class="fas fa-chevron-left"></i><i class="fas fa-chevron-right"></i></div>
+                    <span>Desliza o usa los botones para explorar</span>
+                </div>
+            </section>
+
+            <!-- ===== Slide 2: Ventas ===== -->
+            <section class="slide">
+                <div class="slide-content">
+                    <i class="fas fa-cash-register slide-icon"></i>
+                    <span class="slide-kicker">Caja rápida</span>
+                    <h2>Ventas en segundos</h2>
+                    <p>Interfaz de caja intuitiva pensada para agilidad: productos por código de barras, QR o búsqueda
+                        instantánea. Ventas a granel, descuentos y múltiples métodos de pago.</p>
                     <ul>
-                        <li><a href="#features">Características</a></li>
-                        <li><a href="#gallery">Galería</a></li>
-                        <li><a href="#pricing">Precios</a></li>
-                        <li><a href="register.html">Registro</a></li>
+                        <li><i class="fas fa-check"></i> Caja rápida con teclado o lector</li>
+                        <li><i class="fas fa-check"></i> Códigos de barras y QR generados automáticamente</li>
+                        <li><i class="fas fa-check"></i> Pago en efectivo, tarjeta, transferencia o mixto</li>
+                        <li><i class="fas fa-check"></i> Display para cliente en tiempo real</li>
                     </ul>
                 </div>
-                <div class="footer-col">
-                    <h4>Soporte</h4>
+            </section>
+
+            <!-- ===== Slide 3: Inventario ===== -->
+            <section class="slide">
+                <div class="slide-content">
+                    <i class="fas fa-boxes-stacked slide-icon"></i>
+                    <span class="slide-kicker">Control total</span>
+                    <h2>Inventario que se actualiza solo</h2>
+                    <p>Cada venta descuenta stock automáticamente. Categorías, alertas de reabastecimiento, ajustes y
+                        movimientos con historial completo.</p>
                     <ul>
-                        <li><a href="support.html">Ayuda</a></li>
-                        <li><a href="support.html">Contacto</a></li>
+                        <li><i class="fas fa-check"></i> Stock en tiempo real por producto</li>
+                        <li><i class="fas fa-check"></i> Alertas de mínimo y reabastecimiento</li>
+                        <li><i class="fas fa-check"></i> Importación de productos desde CSV/Excel</li>
+                        <li><i class="fas fa-check"></i> Historial de movimientos (entradas, salidas, ajustes)</li>
                     </ul>
                 </div>
-                <div class="footer-col">
-                    <h4>Legal</h4>
+            </section>
+
+            <!-- ===== Slide 4: Multi-empresa ===== -->
+            <section class="slide">
+                <div class="slide-content">
+                    <i class="fas fa-building-columns slide-icon"></i>
+                    <span class="slide-kicker">Multi-empresa</span>
+                    <h2>Varias empresas, un solo sistema</h2>
+                    <p>Cada cuenta es una empresa independiente, con sus tiendas, usuarios y datos aislados. Crea tu
+                        empresa, agrega sucursales y asigna tu equipo con roles específicos.</p>
                     <ul>
-                        <li><a href="terms.html">Términos y Condiciones</a></li>
-                        <li><a href="privacy.html">Política de Privacidad</a></li>
-                        <li><a href="#">Cookies</a></li>
+                        <li><i class="fas fa-check"></i> Múltiples tiendas por empresa</li>
+                        <li><i class="fas fa-check"></i> Usuarios con roles: Admin, Gerente, Cajero</li>
+                        <li><i class="fas fa-check"></i> Datos 100% aislados entre empresas</li>
+                        <li><i class="fas fa-check"></i> Terminales y cajas por sucursal</li>
                     </ul>
                 </div>
-            </div>
-            <div class="footer-bottom">
-                <p>&copy; 2024 Tomodachi POS. Todos los derechos reservados.</p>
-            </div>
+            </section>
+
+            <!-- ===== Slide 5: Cajas y dinero ===== -->
+            <section class="slide">
+                <div class="slide-content">
+                    <i class="fas fa-coins slide-icon"></i>
+                    <span class="slide-kicker">Dinero bajo control</span>
+                    <h2>Cajas registradoras con arqueo</h2>
+                    <p>Abre y cierra cajas, registra movimientos de entrada y salida, y detecta diferencias al
+                        instante.</p>
+                    <ul>
+                        <li><i class="fas fa-check"></i> Apertura y cierre de caja por usuario</li>
+                        <li><i class="fas fa-check"></i> Movimientos: entradas, retiros, ventas</li>
+                        <li><i class="fas fa-check"></i> Arqueo con diferencia calculada</li>
+                        <li><i class="fas fa-check"></i> Cancelación de ventas con devolución de stock</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- ===== Slide 6: Promociones y reportes ===== -->
+            <section class="slide">
+                <div class="slide-content">
+                    <i class="fas fa-chart-line slide-icon"></i>
+                    <span class="slide-kicker">Crece con datos</span>
+                    <h2>Promociones y reportes que venden</h2>
+                    <p>Crea descuentos, paquetes y ofertas por cantidad. Consulta reportes y gráficas para tomar
+                        decisiones informadas.</p>
+                    <ul>
+                        <li><i class="fas fa-check"></i> Promociones: descuento simple, por cantidad, paquete o cuenta</li>
+                        <li><i class="fas fa-check"></i> Reportes diarios de ventas y ganancias</li>
+                        <li><i class="fas fa-check"></i> Productos más vendidos y categorías top</li>
+                        <li><i class="fas fa-check"></i> Dashboard con estadísticas en tiempo real</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- ===== Slide 7: Open source / self-hosted ===== -->
+            <section class="slide">
+                <div class="slide-content">
+                    <i class="fas fa-server slide-icon"></i>
+                    <span class="slide-kicker">Tus datos, tu servidor</span>
+                    <h2>Self-hosted y open source</h2>
+                    <p>Instálalo con Docker en tu propio servidor en minutos. Sin suscripciones, sin límites, sin que
+                        nadie más toque tus datos.</p>
+                    <ul>
+                        <li><i class="fas fa-check"></i> Docker: <code style="background:rgba(255,255,255,0.1);padding:2px 8px;border-radius:6px;">docker compose up -d</code></li>
+                        <li><i class="fas fa-check"></i> Todas las funciones desbloqueadas</li>
+                        <li><i class="fas fa-check"></i> API REST documentada para agentes e integraciones</li>
+                        <li><i class="fas fa-check"></i> Código en GitHub bajo licencia Apache 2.0</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- ===== Slide 8: Login / Registro ===== -->
+            <section class="slide auth-slide">
+                <div class="auth-card">
+                    <div class="logo-row" style="margin-bottom: 16px;">
+                        <svg viewBox="0 0 978 978" version="1.1" xmlns="http://www.w3.org/2000/svg"
+                            style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2; width:36px; height:36px; fill:var(--primary-color);">
+                            <g transform="matrix(1,0,0,1,-640.505536,-1753.937008)">
+                                <g transform="matrix(3.479065,0,0,3.479065,-4010.290738,-1296.905436)">
+                                    <path
+                                        d="M1439.144,903.435C1445.042,887.496 1460.24,876.915 1477.235,876.915C1494.231,876.915 1509.429,887.496 1515.327,903.435L1535.807,958.783L1591.155,979.263C1607.094,985.161 1617.676,1000.36 1617.676,1017.355C1617.676,1034.35 1607.094,1049.548 1591.155,1055.446L1535.807,1075.927L1515.327,1131.275C1509.429,1147.214 1494.231,1157.795 1477.235,1157.795C1460.24,1157.795 1445.042,1147.214 1439.144,1131.275L1418.663,1075.927L1363.316,1055.446C1347.377,1049.548 1336.795,1034.35 1336.795,1017.355C1336.795,1000.36 1347.377,985.161 1363.316,979.263L1418.663,958.783L1439.144,903.435ZM1477.235,958.616C1444.817,958.616 1418.497,984.936 1418.497,1017.355C1418.497,1049.774 1444.817,1076.093 1477.235,1076.093C1509.654,1076.093 1535.974,1049.774 1535.974,1017.355C1535.974,984.936 1509.654,958.616 1477.235,958.616ZM1477.235,987.986C1493.445,987.986 1506.605,1001.145 1506.605,1017.355C1506.605,1033.564 1493.445,1046.724 1477.235,1046.724C1461.026,1046.724 1447.866,1033.564 1447.866,1017.355C1447.866,1001.145 1461.026,987.986 1477.235,987.986Z" />
+                                </g>
+                            </g>
+                        </svg>
+                        <span class="logo-name" style="font-size:1.4rem;">Tomodachi</span>
+                    </div>
+
+                    <div class="auth-tabs">
+                        <button class="auth-tab active" data-tab="login" onclick="switchTab('login')"><i class="fas fa-sign-in-alt"></i> Iniciar sesión</button>
+                        <button class="auth-tab" data-tab="register" onclick="switchTab('register')"><i class="fas fa-building"></i> Crear empresa</button>
+                    </div>
+
+                    <!-- Panel Login -->
+                    <div class="auth-panel active" id="panel-login">
+                        <h3>Bienvenido de nuevo</h3>
+                        <p class="subtitle">Accede a la empresa que ya creaste</p>
+                        <form id="loginForm">
+                            <div class="auth-field">
+                                <label for="login_username">Usuario</label>
+                                <input type="text" id="login_username" required placeholder="tu_usuario" autocomplete="username">
+                            </div>
+                            <div class="auth-field">
+                                <label for="login_password">Contraseña</label>
+                                <input type="password" id="login_password" required placeholder="••••••••" autocomplete="current-password">
+                            </div>
+                            <button type="submit" class="auth-btn" id="loginBtn"><i class="fas fa-sign-in-alt"></i> Iniciar sesión</button>
+                            <div class="auth-msg" id="loginMsg"></div>
+                        </form>
+                        <p class="auth-hint">Demo: <code>admin</code> / <code>admin123</code> · <code>demo</code> / <code>demo123</code></p>
+                    </div>
+
+                    <!-- Panel Registro (nueva empresa) -->
+                    <div class="auth-panel" id="panel-register">
+                        <h3>Crear tu nueva empresa</h3>
+                        <p class="subtitle">Al registrarte se crea una <strong>empresa nueva</strong> para ti, con su
+                            propio inventario, ventas y equipo.</p>
+                        <form id="registerForm">
+                            <div class="auth-field">
+                                <label for="reg_store_name">Nombre de tu empresa *</label>
+                                <input type="text" id="reg_store_name" required placeholder="Ej. Cafetería El Árbol">
+                            </div>
+                            <div class="auth-field">
+                                <label for="reg_full_name">Tu nombre *</label>
+                                <input type="text" id="reg_full_name" required placeholder="Nombre completo">
+                            </div>
+                            <div class="auth-field">
+                                <label for="reg_email">Correo electrónico *</label>
+                                <input type="email" id="reg_email" required placeholder="correo@ejemplo.com">
+                            </div>
+                            <div class="auth-row">
+                                <div class="auth-field">
+                                    <label for="reg_username">Usuario *</label>
+                                    <input type="text" id="reg_username" required placeholder="Para iniciar sesión">
+                                </div>
+                                <div class="auth-field">
+                                    <label for="reg_password">Contraseña *</label>
+                                    <input type="password" id="reg_password" required minlength="6" placeholder="Mínimo 6 caracteres">
+                                </div>
+                            </div>
+                            <button type="submit" class="auth-btn" id="registerBtn"><i class="fas fa-building"></i> Crear mi empresa</button>
+                            <div class="auth-msg" id="registerMsg"></div>
+                        </form>
+                        <p class="auth-hint">Incluye todo: ventas, inventario, cajas, reportes. Sin tarjeta, sin costo.</p>
+                    </div>
+                </div>
+            </section>
+
         </div>
-    </footer>
 
+        <button class="nav-arrow prev" id="prevBtn" aria-label="Anterior"><i class="fas fa-chevron-left"></i></button>
+        <button class="nav-arrow next" id="nextBtn" aria-label="Siguiente"><i class="fas fa-chevron-right"></i></button>
+
+        <div class="dots" id="dots"></div>
+        <div class="slide-counter" id="slideCounter">1 / 8</div>
+    </div>
+
+    <script src="js/title-paths.js"></script>
     <script>
-        // Mobile hamburger menu
-        const hamburger = document.getElementById('hamburger');
-        const navLinks = document.getElementById('navLinks');
+        // ===== Carrusel =====
+        const slides = document.querySelectorAll('.slide');
+        const dotsContainer = document.getElementById('dots');
+        const counter = document.getElementById('slideCounter');
+        const progressBar = document.getElementById('progressBar');
+        const carouselEl = document.getElementById('carousel');
+        const skipBtn = document.getElementById('skipBtn');
+        const total = slides.length;
+        let current = 0;
+        let autoTimer = null;
+        let isHovering = false;
+        let touchStartX = 0;
+        let introDone = false;
 
-        hamburger.addEventListener('click', () => {
-            hamburger.classList.toggle('active');
-            navLinks.classList.toggle('open');
-            document.body.classList.toggle('no-scroll');
+        slides.forEach((_, i) => {
+            const dot = document.createElement('button');
+            dot.className = 'dot' + (i === 0 ? ' active' : '');
+            dot.setAttribute('aria-label', 'Ir a diapositiva ' + (i + 1));
+            dot.addEventListener('click', () => goTo(i));
+            dotsContainer.appendChild(dot);
         });
 
-        navLinks.querySelectorAll('a').forEach(link => {
-            link.addEventListener('click', () => {
-                hamburger.classList.remove('active');
-                navLinks.classList.remove('open');
-                document.body.classList.remove('no-scroll');
-            });
-        });
+        const dots = document.querySelectorAll('.dot');
 
-        // Smooth scroll
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const targetId = this.getAttribute('href');
-                if (targetId && targetId !== '#') {
-                    document.querySelector(targetId).scrollIntoView({
-                        behavior: 'smooth'
-                    });
-                }
-            });
-        });
+        function stopAutoTimer() {
+            if (autoTimer !== null) {
+                clearInterval(autoTimer);
+                autoTimer = null;
+            }
+        }
 
-        // Header transparency on scroll
-        const header = document.querySelector('.header');
-        window.addEventListener('scroll', () => {
-            if (window.scrollY > 50) {
-                header.style.backgroundColor = "rgba(255, 255, 255, 0.95)";
-                header.style.boxShadow = "0 2px 20px rgba(0,0,0,0.1)";
+        function startAutoTimer() {
+            // En escritorio, pausa mientras el ratón está encima
+            if (isHovering) return;
+            stopAutoTimer();
+            const delay = (current === 0 && !introDone) ? 16000 : 8000;
+            autoTimer = setInterval(() => {
+                if (current < total - 1) goTo(current + 1);
+            }, delay);
+        }
+
+        // Omitir: visible desde la 2da diapositiva, o en la 1ra tras la intro;
+        // oculto en la última (login)
+        function updateSkipVisibility() {
+            if (!skipBtn) return;
+            if (current === 0) {
+                skipBtn.style.display = introDone ? 'inline-flex' : 'none';
+            } else if (current < total - 1) {
+                skipBtn.style.display = 'inline-flex';
             } else {
-                header.style.backgroundColor = "rgba(255, 255, 255, 0.95)";
+                skipBtn.style.display = 'none';
+            }
+        }
+
+        function goTo(index) {
+            current = Math.max(0, Math.min(total - 1, index));
+            document.getElementById('slides').style.transform = 'translateX(-' + (current * 100) + '%)';
+            dots.forEach((d, i) => d.classList.toggle('active', i === current));
+            counter.textContent = (current + 1) + ' / ' + total;
+            progressBar.style.width = (((current + 1) / total) * 100) + '%';
+            updateSkipVisibility();
+            // Ocultar la pista de deslizamiento al navegar
+            const hint = document.getElementById('swipeHint');
+            if (hint) hint.classList.remove('visible');
+            // Al llegar al login (última slide) la presentación ya se vio:
+            // la próxima visita irá directo a login.html
+            if (current >= total - 1) markOnboardingDone();
+            // Toda interacción manual reinicia el auto-avance: nunca queda muerto
+            startAutoTimer();
+        }
+
+        function markOnboardingDone() {
+            try { localStorage.setItem('tomodachi_onboarding_done', '1'); } catch (e) { /* privado */ }
+        }
+
+        // Botón Omitir: salta directo al login (última diapositiva) y marca
+        // la presentación como vista (próxima vez -> login directo)
+        if (skipBtn) skipBtn.addEventListener('click', () => {
+            markOnboardingDone();
+            goTo(total - 1);
+        });
+
+        document.getElementById('prevBtn').addEventListener('click', () => goTo(current - 1));
+        document.getElementById('nextBtn').addEventListener('click', () => goTo(current + 1));
+
+        // Teclado
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight') goTo(current + 1);
+            if (e.key === 'ArrowLeft') goTo(current - 1);
+        });
+
+        // Swipe táctil
+        document.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; }, { passive: true });
+        document.addEventListener('touchend', (e) => {
+            const touches = e.changedTouches;
+            if (touches && touches.length > 0) {
+                const diff = touches[0].clientX - touchStartX;
+                if (Math.abs(diff) > 60) {
+                    if (diff < 0) goTo(current + 1);
+                    else goTo(current - 1);
+                }
+            }
+            // Reset del punto de partida para el siguiente gesto (siempre)
+            touchStartX = 0;
+        }, { passive: true });
+        document.addEventListener('touchcancel', () => {
+            touchStartX = 0;
+        }, { passive: true });
+
+        // Pausa por hover SOLO en dispositivos con ratón: en móvil un tap dispara
+        // mouseenter espurio que dejaría el auto-avance muerto si mouseleave no llega
+        if (window.matchMedia('(hover: hover)').matches) {
+            carouselEl.addEventListener('mouseenter', () => {
+                isHovering = true;
+                stopAutoTimer();
+            });
+            carouselEl.addEventListener('mouseleave', () => {
+                isHovering = false;
+                startAutoTimer();
+            });
+        }
+
+        // ===== Tabs auth =====
+        function switchTab(tab) {
+            document.querySelectorAll('.auth-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+            document.getElementById('panel-login').classList.toggle('active', tab === 'login');
+            document.getElementById('panel-register').classList.toggle('active', tab === 'register');
+        }
+
+        // ===== Login =====
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const msg = document.getElementById('loginMsg');
+            const btn = document.getElementById('loginBtn');
+            msg.className = 'auth-msg';
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+            try {
+                const res = await fetch('../api/auth/login.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        username: document.getElementById('login_username').value,
+                        password: document.getElementById('login_password').value,
+                        remember: false
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    markOnboardingDone();
+                    msg.className = 'auth-msg success';
+                    msg.textContent = '¡Bienvenido! Entrando a tu empresa...';
+                    setTimeout(() => {
+                        window.location.href = (data.data.user.role === 'super_admin') ? 'super_admin.html' : 'dashboard.html';
+                    }, 600);
+                } else {
+                    msg.className = 'auth-msg error';
+                    msg.textContent = data.message || 'Credenciales incorrectas';
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Iniciar sesión';
+                }
+            } catch (err) {
+                msg.className = 'auth-msg error';
+                msg.textContent = 'Error de conexión. Intente nuevamente.';
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Iniciar sesión';
             }
         });
 
-        // Intersection Observer for Animations
-        const observerOptions = {
-            threshold: 0.1,
-            rootMargin: "0px 0px -50px 0px"
-        };
-
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('visible');
-                    observer.unobserve(entry.target);
+        // ===== Registro (nueva empresa) =====
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const msg = document.getElementById('registerMsg');
+            const btn = document.getElementById('registerBtn');
+            msg.className = 'auth-msg';
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando tu empresa...';
+            try {
+                const res = await fetch('../api/auth/register.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        store_name: document.getElementById('reg_store_name').value,
+                        full_name: document.getElementById('reg_full_name').value,
+                        email: document.getElementById('reg_email').value,
+                        username: document.getElementById('reg_username').value,
+                        password: document.getElementById('reg_password').value
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    markOnboardingDone();
+                    msg.className = 'auth-msg success';
+                    msg.textContent = '¡Empresa creada! Entrando al dashboard...';
+                    setTimeout(() => { window.location.href = 'dashboard.html'; }, 800);
+                } else {
+                    msg.className = 'auth-msg error';
+                    msg.textContent = data.message || 'Error al crear la empresa';
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-building"></i> Crear mi empresa';
                 }
-            });
-        }, observerOptions);
-
-        document.querySelectorAll('.fade-up, .fade-in').forEach(el => {
-            observer.observe(el);
+            } catch (err) {
+                msg.className = 'auth-msg error';
+                msg.textContent = 'Error de conexión. Intente nuevamente.';
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-building"></i> Crear mi empresa';
+            }
         });
 
-        // Year
-        document.querySelector('.footer-bottom p').innerHTML =
-            `&copy; ${new Date().getFullYear()} Tomodachi POS. Todos los derechos reservados.`;
+        // ===== Intro animada (slide 1): logo + título con trazo =====
+        const SVG_NS = 'http://www.w3.org/2000/svg';
+
+        function buildTitle(el, data) {
+            el.setAttribute('viewBox', '0 ' + data.yMin + ' ' + data.width + ' ' + data.height);
+            data.letters.forEach((l) => {
+                const p = document.createElementNS(SVG_NS, 'path');
+                p.setAttribute('d', l.d);
+                p.classList.add('letter');
+                el.appendChild(p);
+            });
+        }
+
+        function drawPath(p, delay, dur) {
+            const len = p.getTotalLength();
+            p.style.strokeDasharray = len;
+            p.style.strokeDashoffset = len;
+            // Web Animations API. fill:'both' es CLAVE: aplica el primer
+            // keyframe (invisible) DURANTE el delay; con 'forwards' el
+            // elemento se vería completo mientras espera su turno.
+            p.animate(
+                [{ strokeDashoffset: len }, { strokeDashoffset: 0 }],
+                { duration: dur, delay: delay, easing: 'ease', fill: 'both' }
+            );
+        }
+
+        function fillGroup(el, delay) {
+            const paths = el.querySelectorAll('path');
+            paths.forEach((p, i) => {
+                if (p.animate) {
+                    p.animate(
+                        [{ fillOpacity: 0 }, { fillOpacity: 1 }],
+                        { duration: 500, delay: delay + i * 40, easing: 'ease', fill: 'both' }
+                    );
+                }
+            });
+            // Estado final garantizado también por CSS (fallback)
+            el.classList.add('filled');
+        }
+
+        // Relleno del logo de ABAJO HACIA ARRIBA: el rect del clipPath sube
+        // (translateY 978 -> 0) mientras el fill aparece.
+        function fillLogoUp(el, delay, dur) {
+            const rect = document.getElementById('logoFillRect');
+            const fillPath = el.querySelector('.logo-fill');
+            if (rect && rect.animate) {
+                rect.animate(
+                    [{ transform: 'translateY(978px)' }, { transform: 'translateY(0px)' }],
+                    { duration: dur, delay: delay, easing: 'ease-in-out', fill: 'both' }
+                );
+            }
+            if (fillPath && fillPath.animate) {
+                fillPath.animate(
+                    [{ fillOpacity: 0 }, { fillOpacity: 1 }],
+                    { duration: dur * 0.7, delay: delay, easing: 'ease', fill: 'both' }
+                );
+            }
+            el.classList.add('filled');
+        }
+
+        function runIntro() {
+            if (!window.TITLE_PATHS) return;
+            const heroContent = document.getElementById('heroContent');
+            const hint = document.getElementById('swipeHint');
+
+            // Títulos desde paths generados (Quicksand Bold)
+            buildTitle(document.getElementById('titleBienvenido'), window.TITLE_PATHS.bienvenido);
+            buildTitle(document.getElementById('titleTomodachi'), window.TITLE_PATHS.tomodachi);
+
+            // 1. Logo: EMPIEZA VACÍO (fill="none" + fill-opacity 0). Se dibuja
+            //    el trazo y, al terminar, el fill sube de abajo hacia arriba.
+            const strokePath = document.querySelector('#heroLogo .logo-stroke');
+            const heroLogo = document.getElementById('heroLogo');
+            if (strokePath) {
+                drawPath(strokePath, 400, 1500);
+                fillLogoUp(heroLogo, 2050, 800);
+            }
+
+            // 2. "Bienvenido a" letra por letra. Stagger 100ms (0.1s): la
+            //    siguiente letra arranca antes de que termine la anterior.
+            const bien = document.querySelectorAll('#titleBienvenido .letter');
+            bien.forEach((p, i) => drawPath(p, 1350 + i * 100, 600));
+
+            // 3. "Tomodachi" letra por letra (más grande, arranca después)
+            const tomo = document.querySelectorAll('#titleTomodachi .letter');
+            tomo.forEach((p, i) => drawPath(p, 2450 + i * 100, 650));
+
+            // 4. Relleno de letras + resto del contenido + pista + botón Omitir
+            fillGroup(document.getElementById('titleBienvenido'), 3000);
+            fillGroup(document.getElementById('titleTomodachi'), 4000);
+            setTimeout(() => {
+                heroContent.classList.add('ready');
+                if (hint) hint.classList.add('visible');
+                introDone = true;
+                updateSkipVisibility();
+                // Reinicia el auto-avance con el delay normal (8s) ahora que la intro terminó
+                startAutoTimer();
+            }, 4300);
+        }
+
+        if (document.getElementById('slideHero')) {
+            runIntro();
+        }
+
+        // Avance automático cada 8s (pausa en la última slide).
+        // Unificado en startAutoTimer()/stopAutoTimer(): se reinicia en cada
+        // interacción (goTo, swipe, dots, teclado, Omitir) y nunca se queda muerto.
+        startAutoTimer();
     </script>
 </body>
 

@@ -79,13 +79,13 @@ function showConfirmModal(title, message, onConfirm) {
         closeConfirmModal();
     });
 
-    modal.classList.add('show');
+    if (typeof modal.showModal === 'function') { modal.showModal(); }
     document.body.classList.add('modal-open');
 }
 
 function closeConfirmModal() {
     const modal = document.getElementById('confirmModal');
-    if (modal) modal.classList.remove('show');
+    if (modal && typeof modal.close === 'function') modal.close();
     document.body.classList.remove('modal-open');
     confirmCallback = null;
 }
@@ -210,8 +210,17 @@ function openPromoModal(promoId = null, isReadOnly = false) {
     }
 
     if (promoModal) {
-        promoModal.classList.add("show");
+        if (typeof promoModal.showModal === 'function') { promoModal.showModal(); }
         document.body.classList.add("modal-open");
+        // Animación de ENTRADA del modal (espejo: escala .92 -> 1) con anime.js
+        const mc = promoModal.querySelector('.modal-content');
+        if (mc) {
+            if (typeof anime !== 'undefined') {
+                mc.style.transform = 'scale(0.92)';
+                mc.style.opacity = '0';
+                anime({ targets: mc, scale: [0.92, 1], opacity: [0, 1], duration: 320, easing: 'easeOutQuad' });
+            }
+        }
         // Ensure products are loaded (sometimes loadedPromotions happens before loadProductsForGrid is ready)
         if (allProducts.length === 0) {
              loadProductsForGrid().then(() => {
@@ -230,13 +239,22 @@ function openPromoModal(promoId = null, isReadOnly = false) {
 }
 
 function closePromoModal() {
-    if (promoModal) {
-        promoModal.classList.remove("show");
+    if (!promoModal) return;
+    // Animación de SALIDA (espejo de la entrada: escala 1 -> .92) antes de cerrar
+    const mc = promoModal.querySelector('.modal-content');
+    const doClose = () => {
+        if (typeof promoModal.close === 'function') { promoModal.close(); }
+        document.body.classList.remove("modal-open");
+        const form = document.getElementById("promoForm");
+        if (form) form.reset();
+        selectedTargets = [];
+    };
+    if (mc && typeof anime !== 'undefined') {
+        anime({ targets: mc, scale: [1, 0.92], opacity: [1, 0], duration: 220, easing: 'easeInQuad',
+            complete: doClose });
+    } else {
+        doClose();
     }
-    document.body.classList.remove("modal-open");
-    const form = document.getElementById("promoForm");
-    if (form) form.reset();
-    selectedTargets = [];
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -334,30 +352,25 @@ async function loadProductsForGrid() {
 function renderProductsGrid(products) {
     const grid = document.getElementById("productsGrid");
     if (products.length === 0) {
-        grid.innerHTML = "<div style='grid-column: 1/-1; text-align:center; padding: 20px; color:#64748b;'>No se encontraron productos</div>";
+        grid.innerHTML = "<div style='grid-column: 1/-1; text-align:center; padding: 20px; color:var(--text-light);'>No se encontraron productos</div>";
         return;
     }
     grid.innerHTML = products.map(p => {
         const isSelected = selectedTargets.some(t => t.id == p.product_id);
-
-        let imgSrc = getRelativeImagePath(p.image_path);
-        if (!imgSrc) {
-            // Fallback default
-            imgSrc = 'assets/images/products/default-product.svg';
-        }
-
-        // Manejar error de carga con onerror
-        const onErrorParams = "this.onerror=null;this.src='assets/images/products/default-product.svg';";
+        const imgPath = getRelativeImagePath(p.image_path);
+        const imgHtml = imgPath
+            ? `<img src="${imgPath}" alt="${p.product_name}" loading="lazy" onerror="this.outerHTML='<div class=&quot;product-item-noimg&quot;><i class=&quot;fas fa-box&quot;></i></div>'">`
+            : '<div class="product-item-noimg"><i class="fas fa-box"></i></div>';
 
         return `
             <div class="product-item-card ${isSelected ? "selected" : ""}" onclick="toggleProductSelection(${p.product_id})" title="${p.product_name}">
                 <div class="product-item-img-wrapper">
-                    <img src="${imgSrc}" alt="${p.product_name}" onerror="${onErrorParams}">
+                    ${imgHtml}
                     ${isSelected ? '<div class="selected-indicator"><i class="fas fa-check"></i></div>' : ''}
                 </div>
                 <div class="product-item-content">
                     <div class="product-item-name">${p.product_name}</div>
-                    <div class="product-item-price">$${parseFloat(p.price).toFixed(2)}</div>
+                    <div class="product-item-price">${window.FormatUtils ? window.FormatUtils.currency(p.price) : `$${parseFloat(p.price).toFixed(2)}`}</div>
                 </div>
             </div>
         `;
@@ -383,13 +396,8 @@ function renderSelectedProductsList() {
     section.style.display = 'block';
 
     list.innerHTML = selectedTargets.map(t => {
-        let imgTag = '';
-        if (t.image_path) {
-            const imgPath = getRelativeImagePath(t.image_path);
-            imgTag = `<img src="${imgPath}" alt="img">`;
-        } else {
-            imgTag = `<div style="width:24px;height:24px;background:#334155;border-radius:50%;margin-right:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-box" style="font-size:10px;color:#cbd5e1;"></i></div>`;
-        }
+        // Vector siempre (sin imagen del producto)
+        const imgTag = `<div style="width:24px;height:24px;background:var(--dark-color);border-radius:50%;margin-right:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-box" style="font-size:10px;color:var(--text-muted);"></i></div>`;
 
         return `
             <div class="selected-chip">
@@ -538,11 +546,11 @@ function calculateProfit() {
     const newProfit = newTotalRevenue - currentTotalCost;
     const diff = newProfit - currentProfit;
 
-    document.getElementById("currentProfit").innerText = `$${currentProfit.toFixed(2)}`;
-    document.getElementById("newProfit").innerText = `$${newProfit.toFixed(2)}`;
+    document.getElementById("currentProfit").innerText = window.FormatUtils ? window.FormatUtils.currency(currentProfit) : `$${currentProfit.toFixed(2)}`;
+    document.getElementById("newProfit").innerText = window.FormatUtils ? window.FormatUtils.currency(newProfit) : `$${newProfit.toFixed(2)}`;
 
     const diffEl = document.getElementById("profitDiff");
-    diffEl.innerText = `${diff >= 0 ? "+" : ""}$${diff.toFixed(2)}`;
+    diffEl.innerText = (diff >= 0 ? "+" : "") + (window.FormatUtils ? window.FormatUtils.currency(Math.abs(diff)) : `$${diff.toFixed(2)}`);
 
     const diffRow = document.getElementById("profitDiffRow");
     diffRow.className = `profit-row profit-diff ${diff >= 0 ? "positive" : "negative"}`;
@@ -551,15 +559,26 @@ function calculateProfit() {
 async function loadPromotions() {
     const list = document.getElementById("promotionsList");
     if (!list) return;
-    try {
-        const res = await fetch("../api/promotions/read.php");
-        const data = await res.json();
-        if (data && data.success) {
-            loadedPromotionsData = data.data; // Store global
-            renderPromotions(loadedPromotionsData);
+    // Reintento: el SW o la red pueden fallar la primera vez al navegar.
+    for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+            const res = await fetch("../api/promotions/read.php");
+            if (!res.ok) {
+                if (attempt < 3) { await new Promise(r => setTimeout(r, 600 * attempt)); continue; }
+                list.innerHTML = "Error de conexión";
+                return;
+            }
+            const data = await res.json();
+            if (data && data.success) {
+                loadedPromotionsData = data.data; // Store global
+                renderPromotions(loadedPromotionsData);
+                return;
+            }
+            if (attempt < 3) { await new Promise(r => setTimeout(r, 600 * attempt)); continue; }
+        } catch (e) {
+            list.innerHTML = "Error de conexión";
+            if (attempt < 3) { await new Promise(r => setTimeout(r, 600 * attempt)); continue; }
         }
-    } catch (e) {
-        list.innerHTML = "Error de conexión";
     }
 }
 
@@ -679,10 +698,12 @@ const PROMO_PER_PAGE = 9;
 let currentPage = 1;
 
 function formatCurrency(amount) {
+    if (window.FormatUtils) return window.FormatUtils.currency(amount);
     return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount || 0);
 }
 
 function formatNumber(num) {
+    if (window.FormatUtils) return window.FormatUtils.number(num);
     return new Intl.NumberFormat('es-MX').format(num || 0);
 }
 
@@ -749,7 +770,7 @@ function renderPromotions(promotions) {
     list.className = "promotions-grid";
 
     if (!promotions || promotions.length === 0) {
-        list.innerHTML = "<p style='text-align:center; color:#888; padding:40px 0; grid-column: 1 / -1;'><i class='fas fa-tags' style='font-size:2rem; color:#ddd; margin-bottom:10px; display:block;'></i>No hay promociones activas.<br><small style='color:#aaa;'>Crea una nueva para empezar</small></p>";
+        list.innerHTML = "<p style='text-align:center; color:var(--text-muted); padding:40px 0; grid-column: 1 / -1;'><i class='fas fa-tags' style='font-size:2rem; color:var(--text-muted); margin-bottom:10px; display:block;'></i>No hay promociones activas.<br><small style='color:var(--text-muted);'>Crea una nueva para empezar</small></p>";
         document.getElementById('promoPagination').style.display = 'none';
         return;
     }
@@ -789,8 +810,10 @@ function renderPromotions(promotions) {
         }
 
         const discountValue = p.type === "bundle"
-            ? "$" + parseFloat(p.discount_value).toFixed(2)
-            : parseFloat(p.discount_value) + (p.discount_type === "percentage" ? "%" : "$");
+            ? (window.FormatUtils ? window.FormatUtils.currency(p.discount_value) : "$" + parseFloat(p.discount_value).toFixed(2))
+            : (p.discount_type === "percentage"
+                ? parseFloat(p.discount_value) + "%"
+                : (window.FormatUtils ? window.FormatUtils.currency(p.discount_value) : "$" + parseFloat(p.discount_value).toFixed(2)));
 
         return `
             <div class="promo-card-v2 ${status.class} ${isDone ? 'promo-done' : ''}">
@@ -815,9 +838,9 @@ function renderPromotions(promotions) {
                         <div class="promo-timeline-progress ${status.class}" style="width: ${progress.percent}%"></div>
                     </div>
                     <div class="promo-timeline-labels">
-                        <span><i class="fas fa-play"></i> ${new Date(p.start_date).toLocaleDateString()}</span>
+                        <span><i class="fas fa-play"></i> ${window.FormatUtils ? window.FormatUtils.dateOnly(p.start_date) : new Date(p.start_date).toLocaleDateString()}</span>
                         <span class="promo-timeline-center">${progress.label}</span>
-                        <span>${new Date(p.end_date).toLocaleDateString()} <i class="fas fa-flag-checkered"></i></span>
+                        <span>${window.FormatUtils ? window.FormatUtils.dateOnly(p.end_date) : new Date(p.end_date).toLocaleDateString()} <i class="fas fa-flag-checkered"></i></span>
                     </div>
                     ${dateBadgeText ? `<div class="promo-date-badge ${status.class}">${dateBadgeText}</div>` : ''}
                 </div>
@@ -838,7 +861,7 @@ function renderPromotions(promotions) {
                         </div>
                     </div>
                     <div class="promo-stat">
-                        <i class="fas fa-dollar-sign"></i>
+                        <span class="currency-icon">${window.FormatUtils ? (window.FormatUtils.getConfig().currency_symbol || '$') : '$'}</span>
                         <div>
                             <span class="promo-stat-value">${formatCurrency(stats.revenue)}</span>
                             <span class="promo-stat-label">Ingresos</span>
@@ -1040,7 +1063,7 @@ function updateDrawerFields() {
                     <i class="fas fa-cubes"></i>
                     <input type="number" name="min_quantity" class="form-control" value="2" min="1" required>
                 </div>
-                <small style="font-size:0.75rem; color:#888;">Suma total de productos para el paquete.</small>
+                <small style="font-size:0.75rem; color:var(--text-muted);">Suma total de productos para el paquete.</small>
             </div>
         `;
     } else {
@@ -1052,7 +1075,7 @@ function updateDrawerFields() {
                 <div class="form-group">
                     <label>Monto Mínimo de Compra</label>
                     <div class="input-icon-wrapper">
-                        <i class="fas fa-dollar-sign"></i>
+                        <span class="currency-icon">${window.FormatUtils ? (window.FormatUtils.getConfig().currency_symbol || '$') : '$'}</span>
                         <input type="number" name="min_purchase_amount" class="form-control" value="0">
                     </div>
                 </div>
@@ -1117,10 +1140,10 @@ function calculateDrawerProfit() {
     const newProfit = newTotalRevenue - currentTotalCost;
     const diff = newProfit - currentProfit;
 
-    document.getElementById("drawerCurrentProfit").innerText = "$" + currentProfit.toFixed(2);
-    document.getElementById("drawerNewProfit").innerText = "$" + newProfit.toFixed(2);
+    document.getElementById("drawerCurrentProfit").innerText = window.FormatUtils ? window.FormatUtils.currency(currentProfit) : "$" + currentProfit.toFixed(2);
+    document.getElementById("drawerNewProfit").innerText = window.FormatUtils ? window.FormatUtils.currency(newProfit) : "$" + newProfit.toFixed(2);
     const diffEl = document.getElementById("drawerProfitDiff");
-    diffEl.innerText = (diff >= 0 ? "+" : "") + "$" + diff.toFixed(2);
+    diffEl.innerText = (diff >= 0 ? "+" : "") + (window.FormatUtils ? window.FormatUtils.currency(Math.abs(diff)) : "$" + diff.toFixed(2));
     const diffRow = document.getElementById("drawerProfitDiffRow");
     diffRow.className = "profit-row profit-diff " + (diff >= 0 ? "positive" : "negative");
 }
@@ -1143,23 +1166,20 @@ async function loadProductsForDrawer() {
 function renderDrawerProducts(products) {
     const grid = document.getElementById("drawerProductsGrid");
     if (products.length === 0) {
-        grid.innerHTML = "<div style='grid-column:1/-1; text-align:center; padding:20px; color:#64748b;'>No se encontraron productos</div>";
+        grid.innerHTML = "<div style='grid-column:1/-1; text-align:center; padding:20px; color:var(--text-light);'>No se encontraron productos</div>";
         return;
     }
     grid.innerHTML = products.map(p => {
         const isSelected = selectedTargets.some(t => t.id == p.product_id);
-        let imgSrc = getRelativeImagePath(p.image_path);
-        if (!imgSrc) imgSrc = 'assets/images/products/default-product.svg';
-        const onErrorParams = "this.onerror=null;this.src='assets/images/products/default-product.svg';";
         return `
             <div class="product-item-card ${isSelected ? 'selected' : ''}" onclick="toggleDrawerProduct(${p.product_id})" title="${p.product_name}">
                 <div class="product-item-img-wrapper">
-                    <img src="${imgSrc}" alt="${p.product_name}" onerror="${onErrorParams}">
+                    <div class="product-item-noimg"><i class="fas fa-box"></i></div>
                     ${isSelected ? '<div class="selected-indicator"><i class="fas fa-check"></i></div>' : ''}
                 </div>
                 <div class="product-item-content">
                     <div class="product-item-name">${p.product_name}</div>
-                    <div class="product-item-price">$${parseFloat(p.price).toFixed(2)}</div>
+                    <div class="product-item-price">${window.FormatUtils ? window.FormatUtils.currency(p.price) : `$${parseFloat(p.price).toFixed(2)}`}</div>
                 </div>
             </div>
         `;
@@ -1201,13 +1221,8 @@ function renderDrawerSelected() {
     }
     section.style.display = 'block';
     list.innerHTML = selectedTargets.map(t => {
-        let imgTag = '';
-        if (t.image_path) {
-            const imgPath = getRelativeImagePath(t.image_path);
-            imgTag = `<img src="${imgPath}" alt="img">`;
-        } else {
-            imgTag = `<div style="width:24px;height:24px;background:#334155;border-radius:50%;margin-right:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-box" style="font-size:10px;color:#cbd5e1;"></i></div>`;
-        }
+        // Vector siempre (sin imagen del producto)
+        const imgTag = `<div style="width:24px;height:24px;background:var(--dark-color);border-radius:50%;margin-right:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-box" style="font-size:10px;color:var(--text-muted);"></i></div>`;
         return `
             <div class="selected-chip">
                 ${imgTag}

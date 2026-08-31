@@ -4,19 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pantalla de Cliente - Tomodachi</title>
-    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
-    <link rel="stylesheet" href="css/fonts.css">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css?v=4">
+    <link rel="stylesheet" href="css/fonts.css?v=4">
+    <link rel="stylesheet" href="css/variables.css?v=4">
     <script src="js/theme-init.js"></script>
+    <script src="js/format-utils.js"></script>
     <style>
         :root {
-            /* Default Theme (Mexican Pink) matching variables.css */
-            --primary-color: #E3057A;
+            /* Fallback semántico: theme-init / themeConfig lo reemplaza por tienda. */
+            --primary-color: #C62828;
             --secondary-color: #4a4a4a;
             --bg-body: #f4f7f6;
+            --bg-card: #ffffff;
+            --bg-light: #eef2f7;
             --text-color: #333333;
+            --text-light: #718096;
+            --text-muted: #718096;
+            --border-color: #dce3ec;
             --success-color: #4CAF50;
             --danger-color: #f44336;
-            --white: #ffffff;
+            --text-on-primary: #ffffff;
             --dark-color: #333333;
         }
 
@@ -43,8 +50,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            color: var(--white);
+            box-shadow: 0 2px 10px color-mix(in srgb, var(--dark-color) 18%, transparent);
+            color: var(--text-on-primary);
         }
 
         .logo {
@@ -58,20 +65,20 @@
             height: 50px;
             border-radius: 8px;
             object-fit: contain;
-            background: white;
+            background: var(--bg-card);
             padding: 2px;
         }
 
         .store-name {
             font-size: 1.8rem;
             font-weight: 700;
-            color: var(--white);
-            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            color: var(--text-on-primary);
+            text-shadow: 0 2px 4px color-mix(in srgb, var(--dark-color) 18%, transparent);
         }
 
         .welcome-msg {
             font-size: 1.2rem;
-            color: rgba(255,255,255,0.9);
+            color: color-mix(in srgb, var(--text-on-primary) 90%, transparent);
         }
 
         /* Main Content */
@@ -86,10 +93,10 @@
         /* Products List */
         .products-section {
             flex: 1;
-            background: white;
+            background: var(--bg-card);
             border-radius: 15px;
             padding: 20px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 4px 15px color-mix(in srgb, var(--dark-color) 10%, transparent);
             overflow: hidden;
             display: flex;
             flex-direction: column;
@@ -102,7 +109,7 @@
             font-weight: 700;
             margin-bottom: 15px;
             padding-bottom: 10px;
-            border-bottom: 2px solid #eee;
+            border-bottom: 2px solid var(--border-color);
             display: flex;
             align-items: center;
             gap: 10px;
@@ -123,7 +130,7 @@
         }
 
         .products-list::-webkit-scrollbar-track {
-            background: #f1f1f1;
+            background: var(--bg-light);
         }
 
         .products-list::-webkit-scrollbar-thumb {
@@ -132,8 +139,8 @@
         }
 
         .product-item {
-            background: #fff;
-            border-bottom: 1px solid #eee;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
             padding: 15px 10px;
             display: grid;
             grid-template-columns: auto auto 1fr auto;
@@ -157,26 +164,26 @@
             height: 60px;
             border-radius: 8px;
             object-fit: cover;
-            background: #f8f9fa;
-            border: 1px solid #eee;
+            background: var(--bg-light);
+            border: 1px solid var(--border-color);
         }
 
         .product-image-icon {
             width: 60px;
             height: 60px;
             border-radius: 8px;
-            background: #f8f9fa;
-            border: 1px solid #eee;
+            background: var(--bg-light);
+            border: 1px solid var(--border-color);
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #ccc;
+            color: var(--text-muted);
             font-size: 1.8rem;
         }
 
         .product-quantity {
             background: var(--primary-color);
-            color: white;
+            color: var(--text-on-primary);
             min-width: 40px;
             height: 40px;
             padding: 0 10px;
@@ -186,7 +193,7 @@
             justify-content: center;
             font-size: 1.2rem;
             font-weight: 700;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 5px color-mix(in srgb, var(--dark-color) 16%, transparent);
         }
 
         .product-info {
@@ -201,13 +208,13 @@
         }
 
         .product-unit-price {
-            color: #666;
+            color: var(--text-light);
             font-size: 0.95rem;
         }
 
         .price-original {
             text-decoration: line-through;
-            color: #999;
+            color: var(--text-muted);
             margin-right: 8px;
             font-size: 0.9rem;
         }
@@ -230,7 +237,7 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            color: #ccc;
+            color: var(--text-muted);
             text-align: center;
             height: 100%;
         }
@@ -256,10 +263,10 @@
         }
 
         .summary-card {
-            background: white;
+            background: var(--bg-card);
             border-radius: 15px;
             padding: 25px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 4px 15px color-mix(in srgb, var(--dark-color) 10%, transparent);
             border-top: 4px solid var(--secondary-color);
         }
 
@@ -268,8 +275,8 @@
             justify-content: space-between;
             align-items: center;
             padding: 12px 0;
-            border-bottom: 1px solid #f0f0f0;
-            color: #555;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-medium);
         }
 
         .summary-row:last-child {
@@ -296,31 +303,31 @@
             margin-top: 15px;
             padding: 25px;
             border-radius: 0 0 15px 15px;
-            color: white;
-            box-shadow: 0 -4px 10px rgba(0,0,0,0.05);
+            color: var(--text-on-primary);
+            box-shadow: 0 -4px 10px color-mix(in srgb, var(--dark-color) 10%, transparent);
         }
 
         .total-row .summary-label {
             font-size: 1.5rem;
             font-weight: 700;
-            color: white;
+            color: var(--text-on-primary);
         }
 
         .total-row .summary-value {
             font-size: 2.2rem;
             font-weight: 700;
-            color: white;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            color: var(--text-on-primary);
+            text-shadow: 0 2px 4px color-mix(in srgb, var(--dark-color) 18%, transparent);
         }
 
         /* Info Card */
         .info-card {
-            background: white;
+            background: var(--bg-card);
             border-radius: 15px;
             padding: 20px;
             text-align: center;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-            color: #666;
+            box-shadow: 0 4px 15px color-mix(in srgb, var(--dark-color) 10%, transparent);
+            color: var(--text-light);
         }
 
         .info-card i {
@@ -339,7 +346,7 @@
         
         .promo-pill {
             background-color: var(--secondary-color);
-            color: white;
+            color: var(--text-on-primary);
             font-size: 0.75rem;
             padding: 3px 8px;
             border-radius: 12px;
@@ -351,7 +358,7 @@
         
         .discount-tag {
             background-color: var(--primary-color);
-            color: white;
+            color: var(--text-on-primary);
             font-size: 0.75rem;
             padding: 3px 6px;
             border-radius: 6px;
@@ -366,7 +373,7 @@
             border-radius: 8px;
             border: 2px solid var(--secondary-color);
             overflow: hidden;
-            background: #fff;
+            background: var(--bg-card);
         }
 
         .bundle-image-container img {
@@ -393,12 +400,12 @@
             border-radius: 4px;
             margin-right: 4px;
             vertical-align: middle;
-            background: #e0e0e0;
-            color: #666;
+            background: var(--bg-light);
+            color: var(--text-light);
         }
         .cart-tab-badge.active {
             background: var(--primary-color);
-            color: white;
+            color: var(--text-on-primary);
         }
         .product-item.tab-active {
             border-left: 3px solid var(--primary-color);
@@ -412,24 +419,24 @@
             font-size: 0.8rem;
             padding: 4px 12px;
             border-radius: 12px;
-            background: rgba(255,255,255,0.15);
-            color: rgba(255,255,255,0.8);
+            background: color-mix(in srgb, var(--text-on-primary) 15%, transparent);
+            color: color-mix(in srgb, var(--text-on-primary) 80%, transparent);
             white-space: nowrap;
         }
         .conn-status.connected {
-            background: rgba(76,175,80,0.3);
-            color: #81c784;
+            background: color-mix(in srgb, var(--success-color) 30%, transparent);
+            color: var(--success-color);
         }
         .conn-status.disconnected {
-            background: rgba(244,67,54,0.3);
-            color: #ef9a9a;
+            background: color-mix(in srgb, var(--danger-color) 30%, transparent);
+            color: var(--danger-color);
         }
 
         /* QR toggle */
         .qr-toggle-btn {
-            background: rgba(255,255,255,0.15);
+            background: color-mix(in srgb, var(--text-on-primary) 15%, transparent);
             border: none;
-            color: white;
+            color: var(--text-on-primary);
             width: 38px;
             height: 38px;
             border-radius: 10px;
@@ -441,7 +448,7 @@
             transition: background 0.2s;
         }
         .qr-toggle-btn:hover {
-            background: rgba(255,255,255,0.3);
+            background: color-mix(in srgb, var(--text-on-primary) 30%, transparent);
         }
 
         /* QR Panel */
@@ -451,7 +458,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.5);
+            background: color-mix(in srgb, var(--dark-color) 72%, transparent);
             z-index: 999;
             display: flex;
             align-items: center;
@@ -459,7 +466,7 @@
         }
         .qr-panel.hidden { display: none; }
         .qr-panel-content {
-            background: white;
+            background: var(--bg-card);
             padding: 30px;
             border-radius: 16px;
             max-width: 420px;
@@ -477,28 +484,28 @@
             top: 12px;
             right: 16px;
             font-size: 1.2rem;
-            color: #999;
+            color: var(--text-muted);
             cursor: pointer;
         }
-        .qr-close:hover { color: #333; }
+        .qr-close:hover { color: var(--text-color); }
         .qr-title {
             font-size: 1.2rem;
             font-weight: 700;
-            color: #333;
+            color: var(--text-color);
             margin-bottom: 8px;
         }
         .qr-desc {
             font-size: 0.9rem;
-            color: #666;
+            color: var(--text-light);
             margin-bottom: 16px;
         }
         .qr-url-box {
-            background: #f5f5f5;
-            border: 1px solid #ddd;
+            background: var(--bg-light);
+            border: 1px solid var(--border-color);
             border-radius: 8px;
             padding: 12px 14px;
             font-size: 0.85rem;
-            color: #333;
+            color: var(--text-color);
             word-break: break-all;
             margin-bottom: 12px;
             user-select: all;
@@ -507,7 +514,7 @@
             padding: 8px 20px;
             border: 1px solid var(--primary-color);
             border-radius: 8px;
-            background: white;
+            background: var(--bg-card);
             color: var(--primary-color);
             cursor: pointer;
             font-weight: 600;
@@ -516,11 +523,11 @@
         }
         .qr-copy-btn:hover {
             background: var(--primary-color);
-            color: white;
+            color: var(--text-on-primary);
         }
         .qr-note {
             font-size: 0.8rem;
-            color: #999;
+            color: var(--text-muted);
         }
 
         /* Responsive */
@@ -734,7 +741,7 @@
 
             .summary-card {
                 padding: 12px;
-                box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
+                box-shadow: 0 -4px 15px color-mix(in srgb, var(--dark-color) 16%, transparent);
             }
 
             .info-card {
@@ -830,6 +837,9 @@
             }
         }
     </style>
+    <link rel="stylesheet" href="css/design-system.css?v=6">
+    <script src="lib/animejs/anime.min.js" defer></script>
+    <script src="js/design-system.js?v=6" defer></script>
 </head>
 <body>
     <!-- Header -->
@@ -943,7 +953,10 @@
         let lastJson = '';
 
         function startPolling() {
-            if (!SESSION_UUID) return;
+            if (!SESSION_UUID) {
+                setConnStatus('ready');
+                return;
+            }
             setConnStatus('connecting');
             pollOnce();
             pollTimer = setInterval(pollOnce, 2000);
@@ -987,6 +1000,7 @@
                 broadcastChannel.onmessage = (event) => {
                     if (event.data.type === 'cart_update') {
                         updateDisplay(event.data.cart, event.data.totals, event.data.storeInfo, event.data.activeTab);
+                        setConnStatus('connected');
                     }
                 };
                 setTimeout(() => {
@@ -1003,6 +1017,7 @@
                     try {
                         const data = JSON.parse(e.newValue || '{}');
                         updateDisplay(data.cart, data.totals, data.storeInfo, data.activeTab);
+                        setConnStatus('connected');
                     } catch (_) {}
                 }
             });
@@ -1011,6 +1026,7 @@
                 if (stored) {
                     const data = JSON.parse(stored);
                     updateDisplay(data.cart, data.totals, data.storeInfo, data.activeTab);
+                        setConnStatus('connected');
                 }
             } catch (_) {}
         }
@@ -1025,6 +1041,9 @@
                 connStatus.className = 'conn-status connected';
             } else if (status === 'connecting') {
                 connStatus.textContent = 'Conectando...';
+                connStatus.className = 'conn-status';
+            } else if (status === 'ready') {
+                connStatus.textContent = 'Listo para conectar';
                 connStatus.className = 'conn-status';
             } else {
                 connStatus.textContent = 'Desconectado';
@@ -1054,13 +1073,27 @@
             qrCopyBtn.addEventListener('click', () => {
                 const url = getDisplayUrl();
                 navigator.clipboard.writeText(url).then(() => {
-                    qrCopyBtn.textContent = '✓ Copiado';
+                    qrCopyBtn.innerHTML = '<i class="fas fa-check"></i> Copiado';
                     setTimeout(() => { qrCopyBtn.innerHTML = '<i class="fas fa-copy"></i> Copiar enlace'; }, 2000);
                 }).catch(() => {
                     qrUrlBox.select();
                     document.execCommand('copy');
                 });
             });
+        }
+
+        // ============================================================
+        // Tema de tienda: el display puede estar en una tablet sin localStorage.
+        // Aplica la paleta que recibe desde POS/polling, sin colores fijos.
+        // ============================================================
+        function applyDisplayTheme(storeInfo) {
+            const cfg = storeInfo?.theme_config;
+            const cfgDark = storeInfo?.theme_config_dark || null;
+            if (!cfg || !window.ThemeColorUtils) return;
+            const mode = storeInfo?.theme_mode || cfg.theme_mode || 'light';
+            const dark = mode === 'dark' || (mode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+            window.ThemeColorUtils.apply(cfg, dark, cfgDark);
         }
 
         // ============================================================
@@ -1071,6 +1104,7 @@
             window._activeTab = activeTab;
             // Actualizar info de tienda si viene en los datos
             if (storeInfo) {
+                applyDisplayTheme(storeInfo);
                 if (storeInfo.name) document.getElementById('storeName').textContent = storeInfo.name;
                 if (storeInfo.logo) document.getElementById('storeLogo').src = storeInfo.logo;
             }
@@ -1169,14 +1203,14 @@
                     }
 
                     const productsListHtml = item.items.map(p => 
-                        `<div style="font-size: 0.85rem; color: #666; display: flex; align-items: center; gap: 5px; margin-top: 2px;">
+                        `<div style="font-size: 0.85rem; color: var(--text-light); display: flex; align-items: center; gap: 5px; margin-top: 2px;">
                            <i class="fas fa-check-circle" style="font-size: 0.7rem; color: var(--success-color);"></i> 
                            ${formatQuantity(p.qty)}x ${escapeHtml(p.name)}
                          </div>`
                     ).join('');
 
                     return `
-                    <div class="product-item" style="background: #fdfbff; border-left: 4px solid var(--secondary-color);">
+                    <div class="product-item" style="background: var(--bg-card); border-left: 4px solid var(--secondary-color);">
                         ${imgHtml}
                         <div class="product-quantity" style="background: var(--secondary-color);">${item.count}</div>
                         <div class="product-info">
@@ -1254,6 +1288,7 @@
 
         // Formatear moneda
         function formatCurrency(amount) {
+            if (window.FormatUtils) return window.FormatUtils.currency(amount);
             return new Intl.NumberFormat('es-MX', {
                 style: 'currency',
                 currency: 'MXN'
@@ -1262,6 +1297,7 @@
 
         // Formatear cantidad
         function formatQuantity(qty) {
+            if (window.FormatUtils) return window.FormatUtils.qty(qty);
             const num = parseFloat(qty);
             return Number.isInteger(num) ? num : num.toFixed(3);
         }

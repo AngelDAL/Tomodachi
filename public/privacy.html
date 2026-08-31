@@ -6,11 +6,11 @@
     <title>Política de Privacidad - Tomodachi POS</title>
     
     <!-- Local Fonts -->
-    <link rel="stylesheet" href="css/fonts.css">
+    <link rel="stylesheet" href="css/fonts.css?v=4">
     <!-- FontAwesome -->
-    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css?v=4">
     <!-- Landing CSS -->
-    <link rel="stylesheet" href="css/landing.css">
+    <link rel="stylesheet" href="css/landing.css?v=4">
     
     <style>
         .legal-content h3 {
@@ -20,7 +20,7 @@
         }
         .legal-content p, .legal-content ul {
             margin-bottom: 1.2rem;
-            color: #555;
+            color: var(--text-medium);
             font-size: 1.1rem;
         }
         .legal-content ul {
@@ -28,11 +28,14 @@
             padding-left: 2rem;
         }
         .page-header {
-            background: linear-gradient(135deg, var(--primary-lighter) 0%, #fff 100%);
+            background: linear-gradient(135deg, var(--primary-lighter) 0%, var(--bg-card) 100%);
             padding-top: 160px;
             padding-bottom: 60px;
         }
     </style>
+    <link rel="stylesheet" href="css/design-system.css?v=6">
+    <script src="lib/animejs/anime.min.js" defer></script>
+    <script src="js/design-system.js?v=6" defer></script>
 </head>
 <body>
 
@@ -128,7 +131,7 @@
                         </svg>
                         Tomodachi
                     </div>
-                    <p style="color: #999;">Sistema de gestión empresarial diseñado para la era digital.</p>
+                    <p style="color: var(--text-muted);">Sistema de gestión empresarial diseñado para la era digital.</p>
                 </div>
                  <div class="footer-col">
                     <h4>Producto</h4>

@@ -10,6 +10,7 @@ require_once '../../includes/Response.class.php';
 
 require_once '../../includes/Validator.class.php';
 require_once '../../includes/Auth.class.php';
+require_once '../../includes/ApiAuth.class.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
@@ -19,19 +20,29 @@ try {
     $db = new Database();
     $auth = new Auth($db);
 
-    if (!$auth->isLoggedIn()) { Response::unauthorized(); }
-    if (!$auth->hasRole([ROLE_ADMIN,ROLE_MANAGER])) { Response::error('Permisos insuficientes',403); }
+    $apiAuth = new ApiAuth($db);
+    $actor = $apiAuth->requireActor($auth);
+    if ($actor['via'] === 'session') {
+        if (!$auth->hasRole([ROLE_ADMIN,ROLE_MANAGER])) { Response::error('Permisos insuficientes',403); }
+    } else {
+        $apiAuth->requireScope($actor, 'write');
+    }
 
-    $currentUser = $auth->getCurrentUser();
+    $currentUser = $actor;
 
     $data = json_decode(file_get_contents('php://input'), true);
     if (!$data) { Response::validationError(['body'=>'JSON inválido']); }
     $sale_id = isset($data['sale_id']) ? (int)$data['sale_id'] : 0;
     if ($sale_id<=0) { Response::validationError(['sale_id'=>'Requerido']); }
 
-    $sale = $db->selectOne('SELECT sale_id, store_id, register_id, payment_method, status, total FROM sales WHERE sale_id = ?',[$sale_id]);
+    $sale = $db->selectOne('SELECT sale_id, store_id, register_id, payment_method, status, total, customer_id, amount_paid FROM sales WHERE sale_id = ?',[$sale_id]);
     if (!$sale) { Response::notFound('Venta no existe'); }
     if ($sale['status'] !== SALE_COMPLETED) { Response::error('Solo ventas completadas pueden cancelarse',409); }
+
+    // Seguridad: el usuario solo puede cancelar ventas de su propia tienda
+    if ((int)$sale['store_id'] !== (int)$currentUser['store_id']) {
+        Response::error('No autorizado para cancelar ventas de otra tienda', 403);
+    }
 
     $items = $db->select('SELECT product_id, quantity FROM sale_details WHERE sale_id = ?',[$sale_id]);
     if (!$items) { Response::error('Venta sin detalles',409); }
@@ -51,6 +62,13 @@ try {
         }
         // Actualizar estado venta
         $db->update('UPDATE sales SET status = ? WHERE sale_id = ?',[SALE_CANCELLED,$sale_id]);
+        // Si la venta era apartado, revertir el balance del cliente
+        if ($sale['payment_method'] === PAYMENT_CREDIT && $sale['customer_id'] > 0) {
+            $debtAmount = (float)$sale['total'] - (float)$sale['amount_paid'];
+            if ($debtAmount > 0) {
+                $db->update('UPDATE customers SET balance = GREATEST(balance - ?, 0) WHERE customer_id = ?', [$debtAmount, $sale['customer_id']]);
+            }
+        }
         // Movimiento caja negativo si fue en efectivo
         if (in_array($sale['payment_method'],[PAYMENT_CASH,PAYMENT_MIXED])) {
             $db->insert('INSERT INTO cash_movements (register_id, user_id, movement_type, amount, description, created_at) VALUES (?,?,?,?,?,NOW())',[ $sale['register_id'], $currentUser['user_id'], 'withdrawal', $sale['total'], 'Cancelación Venta #'.$sale_id ]);

@@ -874,6 +874,9 @@
             // Ocultar la pista de deslizamiento al navegar
             const hint = document.getElementById('swipeHint');
             if (hint) hint.classList.remove('visible');
+            // Flechas: la izquierda no aplica en la primera, la derecha en la última
+            document.getElementById('prevBtn').style.visibility = (current === 0) ? 'hidden' : 'visible';
+            document.getElementById('nextBtn').style.visibility = (current >= total - 1) ? 'hidden' : 'visible';
             // Al llegar al login (última slide) la presentación ya se vio:
             // la próxima visita irá directo a login.html
             if (current >= total - 1) markLandingSeen();

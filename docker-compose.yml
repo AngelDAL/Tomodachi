@@ -31,7 +31,7 @@ services:
       DB_USER: ${DB_USER:-tomodachi}
       DB_PASS: ${DB_PASS:-tomodachi_secret}
       APP_MODE: ${APP_MODE:-OPEN_SOURCE}
-      SEED_DEMO: ${SEED_DEMO:-true}
+      SEED_DEMO: ${SEED_DEMO:-false}
       TZ: ${TZ:-America/Mexico_City}
     ports:
       - "127.0.0.1:${PORT:-8091}:80"

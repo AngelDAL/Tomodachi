@@ -566,22 +566,21 @@ INSERT INTO stores (store_name, address, phone, status, theme_config, theme_conf
 INSERT INTO terminals (store_id, terminal_name) VALUES
 (1, 'Caja Principal');
 
--- Insertar categorías de ejemplo
-INSERT INTO categories (store_id, category_name, description, icon_class) VALUES
-(1, 'Bebidas', 'Bebidas frías y calientes', 'fa-mug-hot'),
-(1, 'Snacks', 'Botanas y dulces', 'fa-cookie-bite'),
-(1, 'Abarrotes', 'Productos de despensa', 'fa-basket-shopping'),
-(1, 'Lácteos', 'Productos lácteos y derivados', 'fa-cheese');
+-- Instalación limpia: no se siembran categorías ni productos de ejemplo.
+-- El catálogo comienza vacío; el usuario los crea desde Inventario o al
+-- registrarse con su propia empresa.
+-- (Comentado para no crear datos demo)
+-- INSERT INTO categories (store_id, category_name, description, icon_class) VALUES
+-- (1, 'Bebidas', 'Bebidas frías y calientes', 'fa-mug-hot'),
+-- (1, 'Snacks', 'Botanas y dulces', 'fa-cookie-bite'),
+-- (1, 'Abarrotes', 'Productos de despensa', 'fa-basket-shopping'),
+-- (1, 'Lácteos', 'Productos lácteos y derivados', 'fa-cheese');
 
 -- Insertar usuario administrador (password: admin123)
 INSERT INTO users (store_id, username, password_hash, full_name, email, role, status) VALUES
 (1, 'admin', '$2y$10$rDGCkOinf6RJ2ywtMU6QYeeTNkqq4/soMpsxdF4wO9lqIRTrjfP2a', 'Administrador', 'admin@tomodachi.com', 'admin', 'active');
 
--- Productos de ejemplo
-INSERT INTO products (store_id, category_id, product_name, description, barcode, price, cost, current_stock, min_stock, status) VALUES
-(1, 1, 'Coca Cola 600ml', 'Refresco de cola', '7501234567890', 15.50, 10.00, 50, 20, 'active'),
-(1, 1, 'Agua Natural 1L', 'Agua purificada', '7501234567891', 10.00, 6.00, 60, 30, 'active'),
-(1, 2, 'Sabritas Original 45g', 'Papas fritas', '7501234567892', 18.00, 12.00, 40, 25, 'active'),
-(1, 2, 'Galletas Marías', 'Galletas tradicionales', '7501234567893', 12.00, 8.00, 35, 20, 'active'),
-(1, 3, 'Arroz 1kg', 'Arroz blanco', '7501234567894', 25.00, 18.00, 30, 15, 'active'),
-(1, 4, 'Leche Entera 1L', 'Leche pasteurizada', '7501234567895', 22.00, 16.00, 45, 20, 'active');
+-- Productos de ejemplo: eliminados para una instalación completamente limpia.
+-- El catálogo nace vacío (0 productos). La empresa se crea vía registro y sus
+-- productos se añaden desde Inventario.
+-- INSERT INTO products (...) VALUES (...);

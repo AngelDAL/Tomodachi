@@ -534,8 +534,7 @@
             margin: 0 auto 22px;
         }
 
-        .start-btn,
-        .demo-btn {
+        .start-btn {
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -557,8 +556,7 @@
             box-shadow: 0 10px 26px color-mix(in srgb, var(--primary-color) 30%, transparent);
         }
 
-        .start-btn:hover,
-        .demo-btn:hover {
+        .start-btn:hover {
             transform: translateY(-2px);
         }
 
@@ -568,53 +566,6 @@
             margin: 11px 0 0;
             color: rgba(255, 255, 255, 0.54);
             font-size: 0.82rem;
-        }
-
-        .demo-section {
-            margin-top: 25px;
-            padding-top: 21px;
-            border-top: 1px solid rgba(255, 255, 255, 0.12);
-        }
-
-        .demo-section h3 {
-            color: #fff;
-            font-size: 1rem;
-            margin: 0 0 5px;
-        }
-
-        .demo-section > p {
-            color: rgba(255, 255, 255, 0.62);
-            font-size: 0.86rem;
-            margin: 0 auto 13px;
-        }
-
-        .demo-list {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 10px;
-        }
-
-        .demo-btn {
-            min-height: 46px;
-            padding: 10px 12px;
-            border: 1px solid rgba(255, 255, 255, 0.18);
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.06);
-            color: rgba(255, 255, 255, 0.88);
-            font-size: 0.9rem;
-        }
-
-        .demo-btn:hover {
-            border-color: var(--primary-color);
-            background: color-mix(in srgb, var(--primary-color) 18%, transparent);
-            color: #fff;
-        }
-
-        .demo-note {
-            margin: 12px 0 0;
-            color: rgba(255, 255, 255, 0.48);
-            font-size: 0.76rem;
-            line-height: 1.45;
         }
 
         /* Responsive */
@@ -640,8 +591,7 @@
             .slide-content p,
             .slide-content ul li,
             .auth-card h2,
-            .final-copy,
-            .demo-section p {
+            .final-copy {
                 overflow-wrap: break-word;
                 word-break: break-word;
             }
@@ -661,7 +611,6 @@
             .nav-arrow.prev { left: 14px; }
             .nav-arrow.next { right: 14px; }
             .auth-card { padding: 24px 20px; max-width: 100%; }
-            .demo-list { grid-template-columns: 1fr; }
             /* La tarjeta final puede exceder la altura en móviles pequeños:
                centrar con margin:auto y permitir scroll vertical dentro de la slide */
             .auth-slide {
@@ -847,16 +796,6 @@
                     <p class="final-copy">Si es tu primera vez, empieza creando tu empresa. Te acompañaremos desde el primer paso, sin necesidad de iniciar sesión antes.</p>
                     <a class="start-btn" href="register.html" onclick="markLandingSeen()"><i class="fas fa-building-circle-check"></i> Crear mi primera empresa <i class="fas fa-arrow-right"></i></a>
                     <p class="reassurance">Solo necesitas elegir el nombre de tu negocio y crear tu acceso.</p>
-
-                    <div class="demo-section">
-                        <h3>¿Quieres conocer Tomodachi primero?</h3>
-                        <p>Ya hay dos empresas preparadas para que puedas ver cómo se siente el sistema en marcha.</p>
-                        <div class="demo-list">
-                            <a class="demo-btn" href="login.html?company=Sakuya%20Shop&amp;username=Sakuya" onclick="markLandingSeen()"><i class="fas fa-store"></i> Ver Sakuya Shop</a>
-                            <a class="demo-btn" href="login.html?company=Genso%20Cafe&amp;username=GensoCafe" onclick="markLandingSeen()"><i class="fas fa-mug-hot"></i> Ver Genso Cafe</a>
-                        </div>
-                        <p class="demo-note">Elige una empresa y te llevaremos directo a su acceso.</p>
-                    </div>
                 </div>
             </section>
 

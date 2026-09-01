@@ -55,7 +55,7 @@ regístrate para crear tu negocio.
 | `DB_USER` | `tomodachi` | Usuario de la BD |
 | `DB_PASS` | `tomodachi_secret` | Contraseña de la BD |
 | `APP_MODE` | `OPEN_SOURCE` | `OPEN_SOURCE` = todo habilitado; `SAAS` = planes freemium |
-| `SEED_DEMO` | `false` | `true` = datos de ejemplo al primer arranque; `false` (default) = limpia |
+| `SEED_DEMO` | `false` | `true` = carga semilla inicial de prueba; `false` (default) = catálogo vacío |
 | `TZ` | `America/Mexico_City` | Zona horaria |
 
 Tu información (base de datos e imágenes) vive en los volúmenes Docker

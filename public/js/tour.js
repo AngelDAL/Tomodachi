@@ -52,7 +52,7 @@ window.TourSystem = {
         const pageName = window.location.pathname.split('/').pop();
         if (pageName.includes('dashboard.html')) {
             return [
-                { element: '.stats-grid', popover: { title: 'Esto es Tomodachi', description: 'Este es tu panel principal: un resumen de tu negocio en tiempo real.' } },
+                { element: '.stats-grid', popover: { title: 'Bienvenido a Tomodachi', description: 'Este es tu panel principal: un resumen de tu negocio en tiempo real.' } },
                 { element: '.charts-grid', popover: { title: 'Ventas y ganancias', description: 'Aquí visualizas la evolución de ventas y ganancias.' } },
                 { element: '.lists-grid', popover: { title: 'Información clave', description: 'Revisa productos más vendidos y el stock bajo para actuar al instante.' } }
             ];

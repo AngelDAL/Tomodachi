@@ -556,6 +556,12 @@
   function focusInput(id) {
     const el = document.getElementById(id);
     if (!el) return;
+
+    // Transición de contexto: Ctrl+M/Ctrl+... puede venir desde el modo
+    // carrito. El foco real del input siempre tiene prioridad sobre los
+    // controles del carrito (números, Backspace, +/-).
+    if (cartMode) exitCartMode();
+
     // Si el campo vive en la pestaña Ajustes (oculta por defecto),
     // activar esa pestaña primero — focus() en display:none no funciona
     const adjTab = el.closest('#tab-adjustments');
@@ -741,6 +747,14 @@
 
   function handleCartKeys(e) {
     if (!cartMode) return false;
+
+    // Defensa de estado: si un input obtuvo foco por clic, Tab o cualquier
+    // atajo, el modo carrito ya no representa el control activo. Nunca
+    // secuestrar números o Backspace de un campo que el usuario está editando.
+    if (isEditableFocus()) {
+      exitCartMode();
+      return false;
+    }
 
     if (e.key === 'Escape') {
       e.preventDefault();
@@ -1181,6 +1195,8 @@
 
   function ensureHelpMenuItem() {
     if (helpMenuItemInjected) return;
+    // No inyectar ayuda de atajos en móvil (no hay teclado)
+    if (window.innerWidth < 1025) return;
     helpMenuItemInjected = true;
 
     // 9.1 En el menú del engranaje del POS (configDropdown)

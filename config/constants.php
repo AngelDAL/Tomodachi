@@ -45,6 +45,17 @@ define('MOVEMENT_RETURN', 'return');
 define('REGISTER_OPEN', 'open');
 define('REGISTER_CLOSED', 'closed');
 
+// Tipos de inventario (tracking_type)
+define('TRACKING_STOCK', 'stock');     // producto final (existencia escalar)
+define('TRACKING_RECIPE', 'recipe');   // receta/ensamblado (stock derivado de la receta)
+define('TRACKING_COMPONENT', 'component'); // componente/materia prima con presentaciones (lotes)
+define('TRACKING_NONE', 'none');       // servicio, sin inventario
+
+// Modo de consumo de presentaciones de un componente (consume_mode)
+define('CONSUME_FIFO', 'fifo');     // consumir la presentación más antigua primero (default)
+define('CONSUME_LIFO', 'lifo');     // consumir la presentación más reciente primero
+define('CONSUME_MANUAL', 'manual'); // requiere selección explícita de presentación al vender
+
 // Paginación
 define('RECORDS_PER_PAGE', 20);
 

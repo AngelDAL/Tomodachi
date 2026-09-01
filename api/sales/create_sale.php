@@ -22,6 +22,7 @@ require_once '../../includes/Validator.class.php';
 require_once '../../includes/Auth.class.php';
 require_once '../../includes/ApiAuth.class.php';
 require_once '../../includes/Pricing.class.php';
+require_once '../../includes/BomHelper.class.php';
 
 $db = new Database();
 $auth = new Auth($db);
@@ -130,6 +131,7 @@ try {
     // (products.price) + promociones activas mediante Pricing.class.php.
     $pricing = new Pricing($db);
     $pricingResult = $pricing->calculate($store_id, $items, $allowNegativeStock);
+    $bom = new BomHelper($db);
 
     // Descuento manual del cajero (opcional, validado): solo puede reducir,
     // nunca superar el subtotal ya calculado por el servidor.
@@ -173,9 +175,18 @@ try {
             'unit_cost' => $line['unit_cost'],
             'discount' => $line['discount'],
             'promotion_id' => $line['promotion_id'],
+            'tracking_type' => $line['tracking_type'],
             'previous_stock' => $line['current_stock'],
             'new_stock' => $line['current_stock'] - $line['quantity']
         ];
+    }
+
+    // Selección manual de presentación (modo 'manual'): map product_id => lot_id por línea.
+    $lotOverrides = [];
+    foreach ($items as $it) {
+        if (isset($it['lot_id']) && isset($it['product_id']) && (int)$it['lot_id'] > 0) {
+            $lotOverrides[(int)$it['product_id']] = (int)$it['lot_id'];
+        }
     }
 
     // Transacción
@@ -200,12 +211,25 @@ try {
         }
 
         foreach ($productsToUpdate as $p) {
-            // Actualizar inventario en tabla products
-            $db->update('UPDATE products SET current_stock = ?, updated_at = NOW() WHERE product_id = ?',[$p['new_stock'],$p['product_id']]);
-            // Movimiento inventario tipo sale
-            $db->insert('INSERT INTO inventory_movements (store_id, product_id, user_id, movement_type, quantity, previous_stock, new_stock, notes, created_at) VALUES (?,?,?,?,?,?,?,?,NOW())',[
-                $store_id,$p['product_id'],$user['user_id'],MOVEMENT_SALE,$p['quantity'],$p['previous_stock'],$p['new_stock'],'Venta #'.$sale_id
-            ]);
+            // Actualizar inventario según el tipo:
+            //   'stock' → se descuenta del propio producto (bloque no compuesto).
+            //   'recipe' → se consumen los ingredientes-hoja de la receta.
+            //   'none'   → sin inventario, no se toca.
+            if ($p['tracking_type'] === TRACKING_STOCK) {
+                $db->update('UPDATE products SET current_stock = ?, updated_at = NOW() WHERE product_id = ?',[$p['new_stock'],$p['product_id']]);
+                // Movimiento inventario tipo sale
+                $db->insert('INSERT INTO inventory_movements (store_id, product_id, user_id, movement_type, quantity, previous_stock, new_stock, notes, created_at) VALUES (?,?,?,?,?,?,?,?,NOW())',[
+                    $store_id,$p['product_id'],$user['user_id'],MOVEMENT_SALE,$p['quantity'],$p['previous_stock'],$p['new_stock'],'Venta #'.$sale_id
+                ]);
+            } elseif ($p['tracking_type'] === TRACKING_RECIPE) {
+                $bom->consumeForSale($db, $store_id, $user['user_id'], $sale_id, $p['product_id'], $p['quantity'], $lotOverrides);
+            } elseif ($p['tracking_type'] === TRACKING_COMPONENT) {
+                // Componente vendido directo: consume de sus presentaciones (manual → lote elegido).
+                $bom->consumeForSale($db, $store_id, $user['user_id'], $sale_id, $p['product_id'], $p['quantity'], $lotOverrides);
+            } elseif ($p['tracking_type'] === TRACKING_NONE) {
+                // Servicio: consume sus componentes si tiene composición definida (no-op si es puro).
+                $bom->consumeForSale($db, $store_id, $user['user_id'], $sale_id, $p['product_id'], $p['quantity'], $lotOverrides);
+            }
             // Detalle venta (con costo histórico y promoción aplicada)
             $lineSubtotal = $p['quantity'] * $p['price'];
             $lineDiscount = round($p['quantity'] * $p['discount'], 2);

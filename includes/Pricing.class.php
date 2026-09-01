@@ -20,9 +20,11 @@
 class Pricing {
 
     private $db;
+    private $bom;
 
     public function __construct($db) {
         $this->db = $db;
+        $this->bom = new BomHelper($db);
     }
 
     /**
@@ -75,7 +77,8 @@ class Pricing {
         $placeholders = implode(',', array_fill(0, count($lines), '?'));
         $params = array_merge([$store_id], array_keys($lines));
         $rows = $this->db->select(
-            "SELECT product_id, product_name, category_id, price, cost, current_stock, status
+            "SELECT product_id, product_name, category_id, price, cost, current_stock, status,
+                    tracking_type, pieces_per_box
              FROM products WHERE store_id = ? AND product_id IN ($placeholders) AND status = 'active'",
             $params
         );
@@ -97,16 +100,61 @@ class Pricing {
             $line['product_name'] = $p['product_name'];
             $line['category_id'] = $p['category_id'] !== null ? (int)$p['category_id'] : null;
             $line['original_price'] = (float)$p['price'];
-            $line['unit_cost'] = (float)($p['cost'] ?? 0);
-            $line['current_stock'] = (float)$p['current_stock'];
             $line['unit_price'] = $line['original_price'];
             $line['discount'] = 0.0;
             $line['promotion_id'] = null;
             $line['promotion_name'] = null;
 
-            // Validar stock
-            if (!$allowNegativeStock && $line['current_stock'] < $line['quantity']) {
-                throw new Exception("Stock insuficiente para el producto '{$line['product_name']}'. Disponible: {$line['current_stock']}", 409);
+            // Tipo de inventario del producto.
+            $type = $this->bom->normalizeType($p['tracking_type'] ?? 'stock');
+            $line['tracking_type'] = $type;
+            $line['pieces_per_box'] = (int)($p['pieces_per_box'] ?? 0);
+
+            if ($type === TRACKING_RECIPE) {
+                // Inventario derivado: disponibilidad y costo se calculan de la receta.
+                $av = $this->bom->availability($store_id, $pid);
+                $line['current_stock'] = $av['available'];
+                $line['unit_cost'] = $av['unit_cost'];
+                $line['derived_available'] = $av['available'];
+                if (!$allowNegativeStock && $av['available'] < $line['quantity']) {
+                    throw new Exception(
+                        "Stock insuficiente para '{$line['product_name']}' (faltan ingredientes" .
+                        ($av['limiting'] ? " de {$av['limiting']}" : '') . "). Disponible: {$av['available']}",
+                        409
+                    );
+                }
+            } elseif ($type === TRACKING_COMPONENT) {
+                // Componente/materia prima: disponible = Σ presentaciones; costo = promedio ponderado.
+                $cav = $this->bom->availability($store_id, $pid);
+                $line['current_stock'] = $cav['available'];
+                $line['unit_cost'] = $cav['unit_cost'];
+                $line['derived_available'] = $cav['available'];
+                if (!$allowNegativeStock && $cav['available'] < $line['quantity']) {
+                    throw new Exception(
+                        "Stock insuficiente para el componente '{$line['product_name']}'. Disponible: {$cav['available']}",
+                        409
+                    );
+                }
+            } elseif ($type === TRACKING_NONE) {
+                // Servicio: sin límite salvo que tenga composición (p. ej. un pulido consume cera).
+                $avNone = $this->bom->availability($store_id, $pid);
+                $line['current_stock'] = $avNone['available'];
+                $line['unit_cost'] = $avNone['unit_cost'];
+                if (!$allowNegativeStock && $avNone['available'] !== PHP_INT_MAX && $avNone['available'] < $line['quantity']) {
+                    throw new Exception(
+                        "Stock insuficiente para el servicio '{$line['product_name']}'" .
+                        ($avNone['limiting'] ? " (faltan ingredientes de {$avNone['limiting']})" : '') .
+                        ". Disponible: {$avNone['available']}",
+                        409
+                    );
+                }
+            } else {
+                // stock (clásico).
+                $line['unit_cost'] = (float)($p['cost'] ?? 0);
+                $line['current_stock'] = (float)$p['current_stock'];
+                if (!$allowNegativeStock && $line['current_stock'] < $line['quantity']) {
+                    throw new Exception("Stock insuficiente para el producto '{$line['product_name']}'. Disponible: {$line['current_stock']}", 409);
+                }
             }
 
             $finalLines[$pid] = $line;

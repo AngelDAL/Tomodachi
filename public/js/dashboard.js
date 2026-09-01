@@ -1,6 +1,10 @@
 let currentWeekOffset = 0;
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // En primera visita no existe tema en localStorage. Esperamos a que la
+    // tienda aplique sus variables antes de construir gráficas/estadísticas.
+    // Así Chart.js no queda con una paleta de un paint anterior.
+    await (window.TomodachiThemeReady || Promise.resolve());
     loadDashboardStats();
     loadChartData();
     
@@ -343,8 +347,16 @@ function formatQuantity(qty) {
 }
 
 let salesChart = null;
+let latestChartData = null;
+
+// Chart.js no observa variables CSS por sí solo; al alternar claro/oscuro
+// lo reconstruimos con la misma data y la paleta vigente de la tienda.
+document.addEventListener('tomodachi:themechange', () => {
+    if (latestChartData) renderSalesChart(latestChartData);
+});
 
 function renderSalesChart(chartData) {
+    latestChartData = chartData;
     const ctx = document.getElementById('salesChart');
     if (!ctx) return;
 
@@ -357,6 +369,7 @@ function renderSalesChart(chartData) {
     const primaryColor = styles.getPropertyValue('--primary-color').trim();
     const gridColor = styles.getPropertyValue('--border-color').trim() || '#f0f0f0';
     const secondaryColor = styles.getPropertyValue('--secondary-color').trim();
+    const textColor = styles.getPropertyValue('--text-color').trim() || '#1a1a2e';
 
     // Helper to convert hex to rgba
     const hexToRgba = (hex, alpha) => {
@@ -412,7 +425,7 @@ function renderSalesChart(chartData) {
                 intersect: false,
             },
             plugins: {
-                legend: { display: true, position: 'top' },
+                legend: { display: true, position: 'top', labels: { color: textColor } },
                 tooltip: {
                     callbacks: {
                         label: function (context) {
@@ -433,6 +446,7 @@ function renderSalesChart(chartData) {
                     beginAtZero: true,
                     grid: { borderDash: [2, 4], color: gridColor },
                     ticks: {
+                        color: textColor,
                         callback: function (value) {
                             return window.FormatUtils ? window.FormatUtils.currency(value) : new Intl.NumberFormat('es-MX', {
                                 style: 'currency',
@@ -442,7 +456,7 @@ function renderSalesChart(chartData) {
                         }
                     }
                 },
-                x: { grid: { display: false } }
+                x: { grid: { display: false }, ticks: { color: textColor } }
             }
         }
     });

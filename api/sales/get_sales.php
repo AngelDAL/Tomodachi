@@ -39,14 +39,14 @@ try {
         Response::success([], 'No se identificó tienda activa');
     }
 
-    $date = isset($_GET['date']) ? $_GET['date'] : date('Y-m-d');
+    $date = isset($_GET['date']) ? $_GET['date'] : null;
+    $limit = isset($_GET['limit']) ? min((int)$_GET['limit'], 200) : 50;
 
-    $params=[];
-    $sql='SELECT s.sale_id, s.store_id, s.user_id, s.customer_id, c.full_name AS customer_name, s.register_id, s.sale_date, s.total, s.amount_paid, s.refunded_amount, s.status, s.payment_method, s.created_via, (SELECT COALESCE(SUM(quantity), 0) FROM sale_details sd WHERE sd.sale_id = s.sale_id) as total_items FROM sales s LEFT JOIN customers c ON c.customer_id = s.customer_id WHERE DATE(s.sale_date) = ? AND s.store_id = ?';
-    $params[]=$date;
-    $params[]=$store_id;
-    $sql.=' ORDER BY sale_date DESC LIMIT 200';
+    $params = [$store_id];
+    $sql = 'SELECT s.sale_id, s.store_id, s.user_id, s.customer_id, c.full_name AS customer_name, s.register_id, s.sale_date, s.total, s.amount_paid, s.refunded_amount, s.status, s.payment_method, s.created_via, (SELECT COALESCE(SUM(quantity), 0) FROM sale_details sd WHERE sd.sale_id = s.sale_id) as total_items FROM sales s LEFT JOIN customers c ON c.customer_id = s.customer_id WHERE s.store_id = ?';
+    if ($date) { $sql .= ' AND DATE(s.sale_date) = ?'; $params[] = $date; }
+    $sql .= ' ORDER BY sale_date DESC LIMIT ' . $limit;
 
-    $rows=$db->select($sql,$params);
-    Response::success($rows,'Listado de ventas');
+    $rows = $db->select($sql, $params);
+    Response::success($rows, 'Listado de ventas');
 } catch (Exception $e) { Response::error('Error servidor: '.$e->getMessage(),500); }

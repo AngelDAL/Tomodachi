@@ -1,15 +1,17 @@
 /**
- * Sistema de Tour / Onboarding para Tomodachi POS
- * Usa driver.js
+ * Bienvenida inicial de Tomodachi POS (Driver.js).
+ *
+ * Regla invariable: la ve únicamente un administrador y una sola vez por
+ * tienda. El estado vive en `stores.onboarding_seen`, no en localStorage, por
+ * lo que abrir el sistema desde otro equipo o con otro usuario jamás repite la
+ * bienvenida. El servidor reclama el único pase de forma atómica.
  */
 
-// Cargar estilos de Driver.js
 const link = document.createElement('link');
 link.rel = 'stylesheet';
 link.href = 'https://cdn.jsdelivr.net/npm/driver.js@1.0.1/dist/driver.css';
 document.head.appendChild(link);
 
-// Cargar script de Driver.js
 const script = document.createElement('script');
 script.src = 'https://cdn.jsdelivr.net/npm/driver.js@1.0.1/dist/driver.js.iife.js';
 document.head.appendChild(script);
@@ -17,93 +19,72 @@ document.head.appendChild(script);
 window.TourSystem = {
     driver: null,
     user: null,
-    
-    init: function(user) {
-        console.log('TourSystem init. User onboarding:', user ? user.show_onboarding : 'no user');
+
+    async init(user) {
         this.user = user;
-        // Si el usuario desactivó el onboarding, no hacemos nada
-        if (!user || !user.show_onboarding || user.show_onboarding == 0) return;
-        
-        // Esperar a que driver.js cargue
-        script.onload = () => {
-            this.driver = window.driver.js.driver;
-            // Pequeño delay para asegurar que el DOM esté listo y renderizado
-            setTimeout(() => this.startTour(), 1000);
-        };
-        
-        // Si ya estaba cargado (navegación SPA o cache)
-        if (window.driver) {
-            this.driver = window.driver.js.driver;
-            setTimeout(() => this.startTour(), 1000);
+        if (!user || String(user.role || '').trim().toLowerCase() !== 'admin') return;
+
+        try {
+            // El UPDATE del servidor usa `WHERE onboarding_seen = 0`: si dos
+            // navegadores abren a la vez, solo uno recibe el único pase.
+            const response = await fetch('../api/users/complete_onboarding.php', {
+                method: 'POST',
+                credentials: 'include'
+            });
+            const result = await response.json();
+            if (!response.ok || !result.success || !result.data || !result.data.show) return;
+        } catch (error) {
+            // Ante un error de red no se muestra una copia no controlada.
+            console.error('No se pudo reclamar la bienvenida inicial:', error);
+            return;
         }
+
+        const launch = () => {
+            this.driver = window.driver && window.driver.js ? window.driver.js.driver : null;
+            if (this.driver) setTimeout(() => this.startTour(), 300);
+        };
+
+        if (window.driver && window.driver.js) launch();
+        else script.addEventListener('load', launch, { once: true });
     },
 
-    startTour: function() {
-        const path = window.location.pathname;
-        const pageName = path.split('/').pop();
-        const storageKey = 'tomodachi_tour_seen_' + pageName;
-
-        // Verificar si ya se vio este tutorial específico
-        if (localStorage.getItem(storageKey)) return;
-
-        let steps = [];
-
+    stepsForCurrentPage() {
+        const pageName = window.location.pathname.split('/').pop();
         if (pageName.includes('dashboard.html')) {
-            steps = [
-                { element: '.welcome-header', popover: { title: 'Bienvenido a Tomodachi', description: 'Este es tu panel principal donde verás un resumen de tu negocio.' } },
-                { element: '.stats-grid', popover: { title: 'Estadísticas en tiempo real', description: 'Visualiza ventas, ganancias y productos bajos en stock al instante.' } },
-                { element: '.quick-actions', popover: { title: 'Accesos Rápidos', description: 'Botones para las tareas más comunes: Vender, Inventario, etc.' } },
+            return [
+                { element: '.stats-grid', popover: { title: 'Bienvenido a Tomodachi', description: 'Este es tu panel principal: un resumen de tu negocio en tiempo real.' } },
+                { element: '.charts-grid', popover: { title: 'Ventas y ganancias', description: 'Aquí visualizas la evolución de ventas y ganancias.' } },
+                { element: '.lists-grid', popover: { title: 'Información clave', description: 'Revisa productos más vendidos y el stock bajo para actuar al instante.' } }
             ];
-        } else if (pageName.includes('sales.html')) {
-             steps = [
-                { element: '.search-box', popover: { title: 'Este es tu Punto de venta', description: 'Escanea el código de barras o escribe el nombre del producto aquí para agregarlo al carrito.' } },
-                { element: '#productGallery', popover: { title: 'Catálogo de productos', description: 'En esta sección podrás ver tus productos, registralos y los podrás ver aqui' } },
-                { element: '#cartHandle', popover: { title: 'Ver Carrito', description: 'Haz clic aquí para ver los productos agregados, cambiar cantidades o aplicar descuentos.' } },
-                { element: '#btnCheckout', popover: { title: 'Finalizar Venta', description: 'Presiona este botón para procesar el pago y completar la venta.' } }
-            ];
-        } else if (pageName.includes('inventory.html')) {
-            steps = [
-               { element: '.inventory-header', popover: { title: 'Gestión de Inventario', description: 'Aquí administras todo tu catálogo de productos.' } },
-               { element: '#addProductBtn', popover: { title: 'Paso 1: Registrar Producto', description: 'Haz clic aquí para abrir el formulario y crear un nuevo producto.' } },
-               { element: '.inventory-table-container', popover: { title: 'Paso 2: Administrar Lista', description: 'Tus productos aparecerán aquí. Usa los botones de Editar (lápiz) para modificar precios o stock.' } },
-               { element: '#btnImportExcel', popover: { title: 'Opción: Importación Masiva', description: 'Si tienes muchos productos, usa esta opción para cargarlos desde un archivo Excel. (Esta en Configuracion de empresa)' } }
-           ];
-       }
-
-        if (steps.length > 0 && this.driver) {
-            const driverObj = this.driver({
-                showProgress: true,
-                steps: steps,
-                nextBtnText: 'Siguiente',
-                prevBtnText: 'Anterior',
-                doneBtnText: 'Entendido',
-                onDestroyed: () => {
-                    // Marcar este tutorial específico como visto
-                    localStorage.setItem(storageKey, 'true');
-
-                    // Verificar si se han completado los 3 tutoriales principales
-                    const seenDashboard = localStorage.getItem('tomodachi_tour_seen_dashboard.html');
-                    const seenSales = localStorage.getItem('tomodachi_tour_seen_sales.html');
-                    const seenInventory = localStorage.getItem('tomodachi_tour_seen_inventory.html');
-
-                    if (seenDashboard && seenSales && seenInventory) {
-                        // Solo si los 3 están vistos, desactivar en base de datos globalmente
-                        fetch('../api/users/complete_onboarding.php', { method: 'POST' })
-                            .then(res => res.json())
-                            .then(data => {
-                                if(data.success) {
-                                    console.log('Todos los tutoriales completados. Onboarding desactivado en BD');
-                                    if (this.user) this.user.show_onboarding = false;
-                                }
-                            })
-                            .catch(err => console.error('Error desactivando onboarding', err));
-                    } else {
-                        console.log('Tutorial completado. Faltan otros para desactivar onboarding global.');
-                    }
-                }
-            });
-
-            driverObj.drive();
         }
+        if (pageName.includes('sales.html')) {
+            return [
+                { element: '#searchInput', popover: { title: 'Punto de venta', description: 'Escanea un código o escribe el nombre de un producto para agregarlo al carrito.' } },
+                { element: '#productGallery', popover: { title: 'Catálogo', description: 'Aquí ves los productos disponibles para vender.' } },
+                { element: '#cartColumn', popover: { title: 'Carrito', description: 'Revisa productos, cantidades y descuentos antes de cobrar.' } },
+                { element: '#finalizeSaleBtn', popover: { title: 'Finalizar venta', description: 'Procesa el pago y completa la venta.' } }
+            ];
+        }
+        if (pageName.includes('inventory.html')) {
+            return [
+                { element: '.inv-controls', popover: { title: 'Inventario', description: 'Desde aquí administras tu catálogo.' } },
+                { element: '#addProductBtn', popover: { title: 'Registrar producto', description: 'Abre el formulario para crear un producto.' } },
+                { element: '#invResults', popover: { title: 'Administrar lista', description: 'Consulta y edita los productos ya registrados.' } }
+            ];
+        }
+        return [];
+    },
+
+    startTour() {
+        const steps = this.stepsForCurrentPage();
+        if (!steps.length || !this.driver) return;
+
+        this.driver({
+            showProgress: true,
+            steps,
+            nextBtnText: 'Siguiente',
+            prevBtnText: 'Anterior',
+            doneBtnText: 'Entendido'
+        }).drive();
     }
 };

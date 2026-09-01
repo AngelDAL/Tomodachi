@@ -27,6 +27,7 @@ require_once '../../includes/Response.class.php';
 require_once '../../includes/Validator.class.php';
 require_once '../../includes/Auth.class.php';
 require_once '../../includes/ApiAuth.class.php';
+require_once '../../includes/BomHelper.class.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 if ($method !== 'POST') { Response::error('Método no permitido', 405); }
@@ -126,22 +127,34 @@ try {
             [$sale_id, $store_id, $currentUser['user_id'], $reason, $totalRefund]
         );
 
+        $bom = new BomHelper($db);
+
         foreach ($refundItems as $ri) {
             $db->insert(
                 'INSERT INTO sale_refund_items (refund_id, sale_id, product_id, quantity, unit_price, total) VALUES (?,?,?,?,?,?)',
                 [$refund_id, $sale_id, $ri['product_id'], $ri['quantity'], $ri['unit_price'], $ri['total']]
             );
 
-            // Reingresar stock
-            $prod = $db->selectOne('SELECT product_id, current_stock FROM products WHERE product_id = ? AND store_id = ?', [$ri['product_id'], $store_id]);
-            if ($prod) {
-                $new_stock = (float)$prod['current_stock'] + $ri['quantity'];
-                $db->update('UPDATE products SET current_stock = ?, updated_at = NOW() WHERE product_id = ?', [$new_stock, $ri['product_id']]);
-                $db->insert(
-                    'INSERT INTO inventory_movements (store_id, product_id, user_id, movement_type, quantity, previous_stock, new_stock, notes, created_at) VALUES (?,?,?,?,?,?,?,?,NOW())',
-                    [$store_id, $ri['product_id'], $currentUser['user_id'], MOVEMENT_RETURN, $ri['quantity'], $prod['current_stock'], $new_stock, 'Devolución venta #' . $sale_id]
-                );
+            // Reingresar stock según el tipo de inventario
+            $prod = $db->selectOne('SELECT product_id, current_stock, tracking_type FROM products WHERE product_id = ? AND store_id = ?', [$ri['product_id'], $store_id]);
+            if (!$prod) { continue; }
+            $type = $bom->normalizeType($prod['tracking_type'] ?? 'stock');
+            // Ensamblado: restituir ingredientes-hoja
+            if ($type === TRACKING_RECIPE) {
+                $bom->restoreForSale($db, $store_id, $currentUser['user_id'], $sale_id, $ri['product_id'], $ri['quantity'], 'Devolución');
+                continue;
             }
+            if ($type === TRACKING_NONE) {
+                // Servicio: restituye sus componentes si tiene composición (no-op si es puro).
+                $bom->restoreForSale($db, $store_id, $currentUser['user_id'], $sale_id, $ri['product_id'], $ri['quantity'], 'Devolución');
+                continue;
+            }
+            $new_stock = (float)$prod['current_stock'] + $ri['quantity'];
+            $db->update('UPDATE products SET current_stock = ?, updated_at = NOW() WHERE product_id = ?', [$new_stock, $ri['product_id']]);
+            $db->insert(
+                'INSERT INTO inventory_movements (store_id, product_id, user_id, movement_type, quantity, previous_stock, new_stock, notes, created_at) VALUES (?,?,?,?,?,?,?,?,NOW())',
+                [$store_id, $ri['product_id'], $currentUser['user_id'], MOVEMENT_RETURN, $ri['quantity'], $prod['current_stock'], $new_stock, 'Devolución venta #' . $sale_id]
+            );
         }
 
         // Acumular refunded_amount

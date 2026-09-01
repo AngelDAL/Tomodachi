@@ -22,7 +22,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         exif \
         zip \
         gd \
-    && a2enmod rewrite headers \
+    && a2enmod rewrite headers proxy proxy_wstunnel \
     && rm -rf /var/lib/apt/lists/*
 
 # Composer (para dependencias PHP)

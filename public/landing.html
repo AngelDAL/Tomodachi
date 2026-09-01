@@ -4,22 +4,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tomodachi POS - Sistema de Punto de Venta Open Source</title>
+    <title>Tomodachi — Punto de Venta</title>
 
-    <!-- Check Session + Onboarding -->
+    <!-- Decisión previa al render: nunca pintamos la presentación para luego redirigir. -->
     <script>
-        // La presentación de bienvenida se muestra UNA sola vez por navegador.
-        // Si ya hay sesión -> dashboard. Si ya vio el onboarding -> login directo.
-        fetch('../api/auth/verify_session.php')
-            .then(response => response.json())
-            .then(data => {
-                if (data.success && data.data.logged_in) {
-                    window.location.href = 'dashboard.html';
-                } else if (localStorage.getItem('tomodachi_onboarding_done') === '1') {
-                    window.location.href = 'login.html';
-                }
-            })
-            .catch(console.error);
+        (() => {
+            // Migración única: la versión anterior de la presentación guardaba
+            // exactamente '1' en la clave que hoy pertenece al tour interno.
+            // No migramos el valor 'true' del tour administrativo.
+            const legacyLandingSeen = localStorage.getItem('tomodachi_onboarding_done') === '1';
+            const landingSeen = localStorage.getItem('tomodachi_landing_seen') === '1' || legacyLandingSeen;
+            if (legacyLandingSeen) localStorage.setItem('tomodachi_landing_seen', '1');
+
+            // Ruta ya conocida: salir ANTES de construir/pintar el carrusel.
+            if (landingSeen) {
+                window.location.replace('login.html');
+                return;
+            }
+
+            // Primera visita: mantener la página invisible hasta saber si hay
+            // una sesión activa. Así tampoco hay un flash para usuarios logueados.
+            document.documentElement.classList.add('landing-session-check');
+            fetch('../api/auth/verify_session.php')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.data.logged_in) {
+                        window.location.replace('dashboard.html');
+                    } else {
+                        document.documentElement.classList.remove('landing-session-check');
+                    }
+                })
+                .catch(() => document.documentElement.classList.remove('landing-session-check'));
+        })();
     </script>
 
     <!-- Local Fonts -->
@@ -33,6 +49,10 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+        }
+
+        html.landing-session-check body {
+            visibility: hidden;
         }
 
         html,
@@ -81,15 +101,15 @@
             overflow-x: hidden;
         }
 
-        /* Fondos alternados */
-        .slide:nth-child(1) { background: linear-gradient(135deg, #1a0b2e 0%, #2d1b4e 100%); }
-        .slide:nth-child(2) { background: linear-gradient(135deg, #0f1a2e 0%, #1b2f52 100%); }
-        .slide:nth-child(3) { background: linear-gradient(135deg, #1a0b2e 0%, #3a1052 100%); }
-        .slide:nth-child(4) { background: linear-gradient(135deg, #10261c 0%, #1d4a35 100%); }
-        .slide:nth-child(5) { background: linear-gradient(135deg, #2e1408 0%, #4e2a10 100%); }
-        .slide:nth-child(6) { background: linear-gradient(135deg, #0f1a2e 0%, #233a63 100%); }
-        .slide:nth-child(7) { background: linear-gradient(135deg, #1a0b2e 0%, #2d1b4e 100%); }
-        .slide:nth-child(8) { background: linear-gradient(135deg, #101018 0%, #1e1e30 100%); }
+        /* Fondos alternados — la misma familia cian de Tomodachi */
+        .slide:nth-child(1) { background: linear-gradient(135deg, #071F23 0%, #0C3A3D 100%); }
+        .slide:nth-child(2) { background: linear-gradient(135deg, #0D2431 0%, #124455 100%); }
+        .slide:nth-child(3) { background: linear-gradient(135deg, #10282A 0%, #1C4E4E 100%); }
+        .slide:nth-child(4) { background: linear-gradient(135deg, #122630 0%, #254A58 100%); }
+        .slide:nth-child(5) { background: linear-gradient(135deg, #1C2B2A 0%, #31534C 100%); }
+        .slide:nth-child(6) { background: linear-gradient(135deg, #10263A 0%, #1B4762 100%); }
+        .slide:nth-child(7) { background: linear-gradient(135deg, #0C2526 0%, #1A4A49 100%); }
+        .slide:nth-child(8) { background: linear-gradient(135deg, #111C22 0%, #243C46 100%); }
 
         .slide-content {
             max-width: 900px;
@@ -194,7 +214,7 @@
 
         .hero-logo-wrap {
             margin-bottom: 26px;
-            filter: drop-shadow(0 0 24px rgba(227, 5, 122, 0.45));
+            filter: drop-shadow(0 0 24px color-mix(in srgb, var(--primary-color) 45%, transparent));
         }
 
         #heroLogo {
@@ -251,15 +271,27 @@
             fill-opacity: 1;
         }
 
-        #titleBienvenido {
-            width: min(430px, 82vw);
-            filter: drop-shadow(0 0 14px rgba(227, 5, 122, 0.35));
+        .hero-intro {
+            color: var(--primary-color);
+            font-family: var(--font-heading, 'Sora', sans-serif);
+            font-size: clamp(1.35rem, 3vw, 2rem);
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            text-shadow: 0 0 18px color-mix(in srgb, var(--primary-color) 45%, transparent);
+            opacity: 0;
+            transform: translateY(8px);
         }
-        #titleBienvenido .letter { stroke: var(--primary-color); fill: var(--primary-color); }
+        .hero-content.ready .hero-intro {
+            animation: introReveal 0.65s ease-out 0.9s forwards;
+        }
+        @keyframes introReveal {
+            to { opacity: 1; transform: translateY(0); }
+        }
 
         #titleTomodachi {
             width: min(540px, 90vw);
-            filter: drop-shadow(0 4px 30px rgba(227, 5, 122, 0.4));
+            filter: drop-shadow(0 4px 30px color-mix(in srgb, var(--primary-color) 40%, transparent));
         }
         #titleTomodachi .letter { stroke: #ffffff; fill: #ffffff; }
 
@@ -458,7 +490,7 @@
             font-size: 0.85rem;
         }
 
-        /* ===== Slide final: Login / Registro ===== */
+        /* ===== Slide final: una bienvenida que lleva de la mano ===== */
         .auth-slide {
             background: linear-gradient(135deg, #101018 0%, #1e1e30 100%);
         }
@@ -468,162 +500,121 @@
             border: 1px solid rgba(255, 255, 255, 0.12);
             backdrop-filter: blur(12px);
             border-radius: 20px;
-            padding: 36px 40px;
+            padding: 34px 40px;
             width: 100%;
-            max-width: 440px;
+            max-width: 600px;
+            text-align: center;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
         }
 
-        .auth-tabs {
-            display: flex;
-            margin-bottom: 24px;
-            border-radius: 10px;
-            overflow: hidden;
-            background: rgba(255, 255, 255, 0.06);
-            padding: 4px;
-        }
-
-        .auth-tab {
-            flex: 1;
-            padding: 10px 0;
-            text-align: center;
-            border: none;
-            background: transparent;
-            color: rgba(255, 255, 255, 0.6);
-            font-family: inherit;
-            font-size: 0.95rem;
-            font-weight: 600;
-            cursor: pointer;
-            border-radius: 8px;
-            transition: all 0.3s;
-        }
-
-        .auth-tab.active {
-            background: var(--primary-color);
-            color: #fff;
-        }
-
-        .auth-panel {
-            display: none;
-        }
-
-        .auth-panel.active {
-            display: block;
-        }
-
-        .auth-panel h3 {
-            color: #fff;
-            font-size: 1.4rem;
-            margin-bottom: 6px;
-        }
-
-        .auth-panel .subtitle {
-            color: rgba(255, 255, 255, 0.6);
-            font-size: 0.9rem;
-            margin-bottom: 20px;
-        }
-
-        .auth-panel .subtitle strong {
+        .final-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
             color: var(--primary-color);
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 10px;
         }
 
-        .auth-field {
-            margin-bottom: 14px;
-            text-align: left;
-        }
-
-        .auth-field label {
-            display: block;
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 0.8rem;
-            margin-bottom: 6px;
-            font-weight: 500;
-        }
-
-        .auth-field input {
-            width: 100%;
-            padding: 12px 14px;
-            border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            background: rgba(255, 255, 255, 0.07);
+        .auth-card h2 {
             color: #fff;
+            font-size: clamp(1.7rem, 4vw, 2.25rem);
+            line-height: 1.15;
+            margin: 0 0 10px;
+        }
+
+        .final-copy {
+            color: rgba(255, 255, 255, 0.76);
+            font-size: 1rem;
+            line-height: 1.55;
+            max-width: 470px;
+            margin: 0 auto 22px;
+        }
+
+        .start-btn,
+        .demo-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
             font-family: inherit;
-            font-size: 0.95rem;
-            transition: border 0.3s;
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
+            transition: transform 0.25s ease, background 0.25s ease, border-color 0.25s ease;
         }
 
-        .auth-field input:focus {
-            outline: none;
-            border-color: var(--primary-color);
-        }
-
-        .auth-field input::placeholder {
-            color: rgba(255, 255, 255, 0.35);
-        }
-
-        .auth-row {
-            display: flex;
-            gap: 12px;
-        }
-
-        .auth-row .auth-field {
-            flex: 1;
-        }
-
-        .auth-btn {
-            width: 100%;
-            padding: 14px;
-            border: none;
-            border-radius: 10px;
+        .start-btn {
+            width: min(100%, 390px);
+            min-height: 54px;
+            padding: 14px 22px;
+            border-radius: 12px;
             background: var(--primary-color);
             color: #fff;
-            font-family: inherit;
+            box-shadow: 0 10px 26px color-mix(in srgb, var(--primary-color) 30%, transparent);
+        }
+
+        .start-btn:hover,
+        .demo-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .start-btn:hover { background: var(--primary-dark); }
+
+        .reassurance {
+            margin: 11px 0 0;
+            color: rgba(255, 255, 255, 0.54);
+            font-size: 0.82rem;
+        }
+
+        .demo-section {
+            margin-top: 25px;
+            padding-top: 21px;
+            border-top: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .demo-section h3 {
+            color: #fff;
             font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 6px;
-            transition: all 0.3s;
+            margin: 0 0 5px;
         }
 
-        .auth-btn:hover {
-            background: var(--primary-dark);
-            transform: translateY(-1px);
+        .demo-section > p {
+            color: rgba(255, 255, 255, 0.62);
+            font-size: 0.86rem;
+            margin: 0 auto 13px;
         }
 
-        .auth-btn:disabled {
-            opacity: 0.7;
-            cursor: wait;
+        .demo-list {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
         }
 
-        .auth-msg {
-            margin-top: 12px;
-            font-size: 0.85rem;
-            display: none;
-            text-align: center;
+        .demo-btn {
+            min-height: 46px;
+            padding: 10px 12px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.06);
+            color: rgba(255, 255, 255, 0.88);
+            font-size: 0.9rem;
         }
 
-        .auth-msg.error {
-            color: #ff6b6b;
-            display: block;
+        .demo-btn:hover {
+            border-color: var(--primary-color);
+            background: color-mix(in srgb, var(--primary-color) 18%, transparent);
+            color: #fff;
         }
 
-        .auth-msg.success {
-            color: #7ce08a;
-            display: block;
-        }
-
-        .auth-hint {
-            margin-top: 16px;
-            font-size: 0.8rem;
-            color: rgba(255, 255, 255, 0.45);
-            text-align: center;
-            line-height: 1.5;
-        }
-
-        .auth-hint code {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 2px 8px;
-            border-radius: 6px;
+        .demo-note {
+            margin: 12px 0 0;
+            color: rgba(255, 255, 255, 0.48);
+            font-size: 0.76rem;
+            line-height: 1.45;
         }
 
         /* Responsive */
@@ -648,9 +639,9 @@
             .slide-content h2,
             .slide-content p,
             .slide-content ul li,
-            .auth-card h3,
-            .auth-card .subtitle,
-            .auth-hint {
+            .auth-card h2,
+            .final-copy,
+            .demo-section p {
                 overflow-wrap: break-word;
                 word-break: break-word;
             }
@@ -670,8 +661,8 @@
             .nav-arrow.prev { left: 14px; }
             .nav-arrow.next { right: 14px; }
             .auth-card { padding: 24px 20px; max-width: 100%; }
-            .auth-row { flex-direction: column; gap: 0; }
-            /* La tarjeta de login puede exceder la altura en móviles pequeños:
+            .demo-list { grid-template-columns: 1fr; }
+            /* La tarjeta final puede exceder la altura en móviles pequeños:
                centrar con margin:auto y permitir scroll vertical dentro de la slide */
             .auth-slide {
                 overflow-y: auto;
@@ -698,7 +689,7 @@
 
         <div class="slides" id="slides">
 
-            <!-- ===== Slide 1: Hero animado (bienvenida) ===== -->
+            <!-- ===== Slide 1: Presentación ===== -->
             <section class="slide" id="slideHero">
                 <div class="slide-content hero-content" id="heroContent">
                     <div class="hero-logo-wrap">
@@ -727,13 +718,12 @@
                         </svg>
                     </div>
                     <div class="hero-title">
-                        <svg id="titleBienvenido" class="title-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+                        <span class="hero-intro">Esto es</span>
                         <svg id="titleTomodachi" class="title-svg" xmlns="http://www.w3.org/2000/svg"></svg>
                     </div>
-                    <span class="slide-kicker hero-kicker">Punto de Venta Open Source</span>
-                    <p class="hero-sub">Ventas, inventario, cajas, promociones y reportes en un solo lugar. Instálalo
-                        en tu propio servidor, sin suscripciones ni cobros.</p>
-                    <div class="badge-open-source hero-badge"><i class="fas fa-code-branch"></i> Self-hosted · Open Source · Apache 2.0</div>
+                    <span class="slide-kicker hero-kicker">Tu punto de venta</span>
+                    <p class="hero-sub">Ventas, inventario, caja, promociones y reportes en un solo lugar para que tu negocio siga su ritmo.</p>
+                    <div class="badge-open-source hero-badge"><i class="fas fa-sparkles"></i> Ventas · Inventario · Reportes</div>
                 </div>
                 <div class="swipe-hint" id="swipeHint">
                     <div class="swipe-chevrons"><i class="fas fa-chevron-left"></i><i class="fas fa-chevron-right"></i></div>
@@ -775,19 +765,18 @@
                 </div>
             </section>
 
-            <!-- ===== Slide 4: Multi-empresa ===== -->
+            <!-- ===== Slide 4: Equipo y permisos ===== -->
             <section class="slide">
                 <div class="slide-content">
                     <i class="fas fa-building-columns slide-icon"></i>
-                    <span class="slide-kicker">Multi-empresa</span>
-                    <h2>Varias empresas, un solo sistema</h2>
-                    <p>Cada cuenta es una empresa independiente, con sus tiendas, usuarios y datos aislados. Crea tu
-                        empresa, agrega sucursales y asigna tu equipo con roles específicos.</p>
+                    <span class="slide-kicker">Tu negocio, tu equipo</span>
+                    <h2>Acceso para cada persona</h2>
+                    <p>Tu información se mantiene separada de otros negocios. Añade usuarios y asigna permisos según la labor que realizan.</p>
                     <ul>
-                        <li><i class="fas fa-check"></i> Múltiples tiendas por empresa</li>
+                        <li><i class="fas fa-check"></i> Usuarios administrados desde tu perfil</li>
                         <li><i class="fas fa-check"></i> Usuarios con roles: Admin, Gerente, Cajero</li>
                         <li><i class="fas fa-check"></i> Datos 100% aislados entre empresas</li>
-                        <li><i class="fas fa-check"></i> Terminales y cajas por sucursal</li>
+                        <li><i class="fas fa-check"></i> Terminales y cajas para operar tu punto de venta</li>
                     </ul>
                 </div>
             </section>
@@ -826,95 +815,47 @@
                 </div>
             </section>
 
-            <!-- ===== Slide 7: Open source / self-hosted ===== -->
+            <!-- ===== Slide 7: Listo para trabajar ===== -->
             <section class="slide">
                 <div class="slide-content">
-                    <i class="fas fa-server slide-icon"></i>
-                    <span class="slide-kicker">Tus datos, tu servidor</span>
-                    <h2>Self-hosted y open source</h2>
-                    <p>Instálalo con Docker en tu propio servidor en minutos. Sin suscripciones, sin límites, sin que
-                        nadie más toque tus datos.</p>
+                    <i class="fas fa-wand-magic-sparkles slide-icon"></i>
+                    <span class="slide-kicker">Todo en orden</span>
+                    <h2>Listo para tu negocio</h2>
+                    <p>Tomodachi ya está preparado. Personaliza tu espacio, organiza tu catálogo y empieza a vender cuando quieras.</p>
                     <ul>
-                        <li><i class="fas fa-check"></i> Docker: <code style="background:rgba(255,255,255,0.1);padding:2px 8px;border-radius:6px;">docker compose up -d</code></li>
-                        <li><i class="fas fa-check"></i> Todas las funciones desbloqueadas</li>
-                        <li><i class="fas fa-check"></i> API REST documentada para agentes e integraciones</li>
-                        <li><i class="fas fa-check"></i> Código en GitHub bajo licencia Apache 2.0</li>
+                        <li><i class="fas fa-check"></i> Tema claro, oscuro o automático</li>
+                        <li><i class="fas fa-check"></i> Logo, datos de negocio y usuarios desde Perfil</li>
+                        <li><i class="fas fa-check"></i> Catálogo, clientes, promociones y caja en el mismo sistema</li>
+                        <li><i class="fas fa-check"></i> Tus datos se mantienen separados por negocio</li>
                     </ul>
                 </div>
             </section>
 
-            <!-- ===== Slide 8: Login / Registro ===== -->
+            <!-- ===== Slide 8: llamada a la acción ===== -->
             <section class="slide auth-slide">
                 <div class="auth-card">
-                    <div class="logo-row" style="margin-bottom: 16px;">
+                    <div class="logo-row" style="margin-bottom: 14px;">
                         <svg viewBox="0 0 978 978" version="1.1" xmlns="http://www.w3.org/2000/svg"
                             style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2; width:36px; height:36px; fill:var(--primary-color);">
-                            <g transform="matrix(1,0,0,1,-640.505536,-1753.937008)">
-                                <g transform="matrix(3.479065,0,0,3.479065,-4010.290738,-1296.905436)">
-                                    <path
-                                        d="M1439.144,903.435C1445.042,887.496 1460.24,876.915 1477.235,876.915C1494.231,876.915 1509.429,887.496 1515.327,903.435L1535.807,958.783L1591.155,979.263C1607.094,985.161 1617.676,1000.36 1617.676,1017.355C1617.676,1034.35 1607.094,1049.548 1591.155,1055.446L1535.807,1075.927L1515.327,1131.275C1509.429,1147.214 1494.231,1157.795 1477.235,1157.795C1460.24,1157.795 1445.042,1147.214 1439.144,1131.275L1418.663,1075.927L1363.316,1055.446C1347.377,1049.548 1336.795,1034.35 1336.795,1017.355C1336.795,1000.36 1347.377,985.161 1363.316,979.263L1418.663,958.783L1439.144,903.435ZM1477.235,958.616C1444.817,958.616 1418.497,984.936 1418.497,1017.355C1418.497,1049.774 1444.817,1076.093 1477.235,1076.093C1509.654,1076.093 1535.974,1049.774 1535.974,1017.355C1535.974,984.936 1509.654,958.616 1477.235,958.616ZM1477.235,987.986C1493.445,987.986 1506.605,1001.145 1506.605,1017.355C1506.605,1033.564 1493.445,1046.724 1477.235,1046.724C1461.026,1046.724 1447.866,1033.564 1447.866,1017.355C1447.866,1001.145 1461.026,987.986 1477.235,987.986Z" />
-                                </g>
-                            </g>
+                            <g transform="matrix(1,0,0,1,-640.505536,-1753.937008)"><g transform="matrix(3.479065,0,0,3.479065,-4010.290738,-1296.905436)"><path d="M1439.144,903.435C1445.042,887.496 1460.24,876.915 1477.235,876.915C1494.231,876.915 1509.429,887.496 1515.327,903.435L1535.807,958.783L1591.155,979.263C1607.094,985.161 1617.676,1000.36 1617.676,1017.355C1617.676,1034.35 1607.094,1049.548 1591.155,1055.446L1535.807,1075.927L1515.327,1131.275C1509.429,1147.214 1494.231,1157.795 1477.235,1157.795C1460.24,1157.795 1445.042,1147.214 1439.144,1131.275L1418.663,1075.927L1363.316,1055.446C1347.377,1049.548 1336.795,1034.35 1336.795,1017.355C1336.795,1000.36 1347.377,985.161 1363.316,979.263L1418.663,958.783L1439.144,903.435ZM1477.235,958.616C1444.817,958.616 1418.497,984.936 1418.497,1017.355C1418.497,1049.774 1444.817,1076.093 1477.235,1076.093C1509.654,1076.093 1535.974,1049.774 1535.974,1017.355C1535.974,984.936 1509.654,958.616 1477.235,958.616ZM1477.235,987.986C1493.445,987.986 1506.605,1001.145 1506.605,1017.355C1506.605,1033.564 1493.445,1046.724 1477.235,1046.724C1461.026,1046.724 1447.866,1033.564 1447.866,1017.355C1447.866,1001.145 1461.026,987.986 1477.235,987.986Z" /></g></g>
                         </svg>
                         <span class="logo-name" style="font-size:1.4rem;">Tomodachi</span>
                     </div>
 
-                    <div class="auth-tabs">
-                        <button class="auth-tab active" data-tab="login" onclick="switchTab('login')"><i class="fas fa-sign-in-alt"></i> Iniciar sesión</button>
-                        <button class="auth-tab" data-tab="register" onclick="switchTab('register')"><i class="fas fa-building"></i> Crear empresa</button>
-                    </div>
+                    <div class="final-kicker"><i class="fas fa-sparkles"></i> Todo listo para comenzar</div>
+                    <h2>Hagamos espacio para tu negocio</h2>
+                    <p class="final-copy">Si es tu primera vez, empieza creando tu empresa. Te acompañaremos desde el primer paso, sin necesidad de iniciar sesión antes.</p>
+                    <a class="start-btn" href="register.html" onclick="markLandingSeen()"><i class="fas fa-building-circle-check"></i> Crear mi primera empresa <i class="fas fa-arrow-right"></i></a>
+                    <p class="reassurance">Solo necesitas elegir el nombre de tu negocio y crear tu acceso.</p>
 
-                    <!-- Panel Login -->
-                    <div class="auth-panel active" id="panel-login">
-                        <h3>Bienvenido de nuevo</h3>
-                        <p class="subtitle">Accede a la empresa que ya creaste</p>
-                        <form id="loginForm">
-                            <div class="auth-field">
-                                <label for="login_username">Usuario</label>
-                                <input type="text" id="login_username" required placeholder="tu_usuario" autocomplete="username">
-                            </div>
-                            <div class="auth-field">
-                                <label for="login_password">Contraseña</label>
-                                <input type="password" id="login_password" required placeholder="••••••••" autocomplete="current-password">
-                            </div>
-                            <button type="submit" class="auth-btn" id="loginBtn"><i class="fas fa-sign-in-alt"></i> Iniciar sesión</button>
-                            <div class="auth-msg" id="loginMsg"></div>
-                        </form>
-                        <p class="auth-hint">Demo: <code>admin</code> / <code>admin123</code> · <code>demo</code> / <code>demo123</code></p>
-                    </div>
-
-                    <!-- Panel Registro (nueva empresa) -->
-                    <div class="auth-panel" id="panel-register">
-                        <h3>Crear tu nueva empresa</h3>
-                        <p class="subtitle">Al registrarte se crea una <strong>empresa nueva</strong> para ti, con su
-                            propio inventario, ventas y equipo.</p>
-                        <form id="registerForm">
-                            <div class="auth-field">
-                                <label for="reg_store_name">Nombre de tu empresa *</label>
-                                <input type="text" id="reg_store_name" required placeholder="Ej. Cafetería El Árbol">
-                            </div>
-                            <div class="auth-field">
-                                <label for="reg_full_name">Tu nombre *</label>
-                                <input type="text" id="reg_full_name" required placeholder="Nombre completo">
-                            </div>
-                            <div class="auth-field">
-                                <label for="reg_email">Correo electrónico *</label>
-                                <input type="email" id="reg_email" required placeholder="correo@ejemplo.com">
-                            </div>
-                            <div class="auth-row">
-                                <div class="auth-field">
-                                    <label for="reg_username">Usuario *</label>
-                                    <input type="text" id="reg_username" required placeholder="Para iniciar sesión">
-                                </div>
-                                <div class="auth-field">
-                                    <label for="reg_password">Contraseña *</label>
-                                    <input type="password" id="reg_password" required minlength="6" placeholder="Mínimo 6 caracteres">
-                                </div>
-                            </div>
-                            <button type="submit" class="auth-btn" id="registerBtn"><i class="fas fa-building"></i> Crear mi empresa</button>
-                            <div class="auth-msg" id="registerMsg"></div>
-                        </form>
-                        <p class="auth-hint">Incluye todo: ventas, inventario, cajas, reportes. Sin tarjeta, sin costo.</p>
+                    <div class="demo-section">
+                        <h3>¿Quieres conocer Tomodachi primero?</h3>
+                        <p>Ya hay dos empresas preparadas para que puedas ver cómo se siente el sistema en marcha.</p>
+                        <div class="demo-list">
+                            <a class="demo-btn" href="login.html?company=Sakuya%20Shop&amp;username=Sakuya" onclick="markLandingSeen()"><i class="fas fa-store"></i> Ver Sakuya Shop</a>
+                            <a class="demo-btn" href="login.html?company=Genso%20Cafe&amp;username=GensoCafe" onclick="markLandingSeen()"><i class="fas fa-mug-hot"></i> Ver Genso Cafe</a>
+                        </div>
+                        <p class="demo-note">Elige una empresa y te llevaremos directo a su acceso.</p>
                     </div>
                 </div>
             </section>
@@ -996,19 +937,19 @@
             if (hint) hint.classList.remove('visible');
             // Al llegar al login (última slide) la presentación ya se vio:
             // la próxima visita irá directo a login.html
-            if (current >= total - 1) markOnboardingDone();
+            if (current >= total - 1) markLandingSeen();
             // Toda interacción manual reinicia el auto-avance: nunca queda muerto
             startAutoTimer();
         }
 
-        function markOnboardingDone() {
-            try { localStorage.setItem('tomodachi_onboarding_done', '1'); } catch (e) { /* privado */ }
+        function markLandingSeen() {
+            try { localStorage.setItem('tomodachi_landing_seen', '1'); } catch (e) { /* privado */ }
         }
 
         // Botón Omitir: salta directo al login (última diapositiva) y marca
         // la presentación como vista (próxima vez -> login directo)
         if (skipBtn) skipBtn.addEventListener('click', () => {
-            markOnboardingDone();
+            markLandingSeen();
             goTo(total - 1);
         });
 
@@ -1051,95 +992,6 @@
                 startAutoTimer();
             });
         }
-
-        // ===== Tabs auth =====
-        function switchTab(tab) {
-            document.querySelectorAll('.auth-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
-            document.getElementById('panel-login').classList.toggle('active', tab === 'login');
-            document.getElementById('panel-register').classList.toggle('active', tab === 'register');
-        }
-
-        // ===== Login =====
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const msg = document.getElementById('loginMsg');
-            const btn = document.getElementById('loginBtn');
-            msg.className = 'auth-msg';
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
-            try {
-                const res = await fetch('../api/auth/login.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({
-                        username: document.getElementById('login_username').value,
-                        password: document.getElementById('login_password').value,
-                        remember: false
-                    })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    markOnboardingDone();
-                    msg.className = 'auth-msg success';
-                    msg.textContent = '¡Bienvenido! Entrando a tu empresa...';
-                    setTimeout(() => {
-                        window.location.href = (data.data.user.role === 'super_admin') ? 'super_admin.html' : 'dashboard.html';
-                    }, 600);
-                } else {
-                    msg.className = 'auth-msg error';
-                    msg.textContent = data.message || 'Credenciales incorrectas';
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Iniciar sesión';
-                }
-            } catch (err) {
-                msg.className = 'auth-msg error';
-                msg.textContent = 'Error de conexión. Intente nuevamente.';
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Iniciar sesión';
-            }
-        });
-
-        // ===== Registro (nueva empresa) =====
-        document.getElementById('registerForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const msg = document.getElementById('registerMsg');
-            const btn = document.getElementById('registerBtn');
-            msg.className = 'auth-msg';
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando tu empresa...';
-            try {
-                const res = await fetch('../api/auth/register.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({
-                        store_name: document.getElementById('reg_store_name').value,
-                        full_name: document.getElementById('reg_full_name').value,
-                        email: document.getElementById('reg_email').value,
-                        username: document.getElementById('reg_username').value,
-                        password: document.getElementById('reg_password').value
-                    })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    markOnboardingDone();
-                    msg.className = 'auth-msg success';
-                    msg.textContent = '¡Empresa creada! Entrando al dashboard...';
-                    setTimeout(() => { window.location.href = 'dashboard.html'; }, 800);
-                } else {
-                    msg.className = 'auth-msg error';
-                    msg.textContent = data.message || 'Error al crear la empresa';
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-building"></i> Crear mi empresa';
-                }
-            } catch (err) {
-                msg.className = 'auth-msg error';
-                msg.textContent = 'Error de conexión. Intente nuevamente.';
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-building"></i> Crear mi empresa';
-            }
-        });
 
         // ===== Intro animada (slide 1): logo + título con trazo =====
         const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -1206,8 +1058,8 @@
             const heroContent = document.getElementById('heroContent');
             const hint = document.getElementById('swipeHint');
 
-            // Títulos desde paths generados (Quicksand Bold)
-            buildTitle(document.getElementById('titleBienvenido'), window.TITLE_PATHS.bienvenido);
+            // El nombre Tomodachi conserva el trazo SVG; "Esto es" es texto
+            // directo, más claro para una instancia ya instalada.
             buildTitle(document.getElementById('titleTomodachi'), window.TITLE_PATHS.tomodachi);
 
             // 1. Logo: EMPIEZA VACÍO (fill="none" + fill-opacity 0). Se dibuja
@@ -1219,18 +1071,12 @@
                 fillLogoUp(heroLogo, 2050, 800);
             }
 
-            // 2. "Bienvenido a" letra por letra. Stagger 100ms (0.1s): la
-            //    siguiente letra arranca antes de que termine la anterior.
-            const bien = document.querySelectorAll('#titleBienvenido .letter');
-            bien.forEach((p, i) => drawPath(p, 1350 + i * 100, 600));
-
-            // 3. "Tomodachi" letra por letra (más grande, arranca después)
+            // 2. "Tomodachi" letra por letra (más grande)
             const tomo = document.querySelectorAll('#titleTomodachi .letter');
-            tomo.forEach((p, i) => drawPath(p, 2450 + i * 100, 650));
+            tomo.forEach((p, i) => drawPath(p, 1500 + i * 100, 650));
 
-            // 4. Relleno de letras + resto del contenido + pista + botón Omitir
-            fillGroup(document.getElementById('titleBienvenido'), 3000);
-            fillGroup(document.getElementById('titleTomodachi'), 4000);
+            // 3. Relleno de letras + resto del contenido + pista + botón Omitir
+            fillGroup(document.getElementById('titleTomodachi'), 3000);
             setTimeout(() => {
                 heroContent.classList.add('ready');
                 if (hint) hint.classList.add('visible');
@@ -1238,7 +1084,7 @@
                 updateSkipVisibility();
                 // Reinicia el auto-avance con el delay normal (8s) ahora que la intro terminó
                 startAutoTimer();
-            }, 4300);
+            }, 3400);
         }
 
         if (document.getElementById('slideHero')) {

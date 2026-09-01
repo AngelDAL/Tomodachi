@@ -16,6 +16,7 @@ CREATE TABLE stores (
     settings TEXT NULL,
     logo_url VARCHAR(255) NULL,
     subscription_plan ENUM('free', 'premium') DEFAULT 'free',
+    onboarding_seen TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'La bienvenida inicial global ya fue reclamada',
     status ENUM('active', 'inactive') DEFAULT 'active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -74,6 +75,10 @@ CREATE TABLE products (
     status ENUM('active', 'inactive') DEFAULT 'active',
     is_bulk TINYINT(1) DEFAULT 0 COMMENT 'Indica si el producto se vende a granel (por peso/volumen)',
     bulk_unit VARCHAR(20) DEFAULT 'kg' COMMENT 'Unidad de medida para granel: kg, g, L, mL, etc.',
+    tracking_type ENUM('stock','recipe','component','none') NOT NULL DEFAULT 'stock' COMMENT 'stock=producto final, recipe=ensamblado (stock derivado de receta), component=materia prima con presentaciones, none=sin inventario',
+    consume_mode ENUM('fifo','lifo','manual') NOT NULL DEFAULT 'fifo' COMMENT 'Orden de consumo de presentaciones: fifo (mas antiguo), lifo (mas reciente), manual (seleccion explicita)',
+    pieces_per_box INT UNSIGNED NULL DEFAULT NULL COMMENT 'Piezas por unidad comercial (caja/lote). NULL o 0 = sin seguimiento por lotes',
+    is_ingredient TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Puede usarse como ingrediente de recetas',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE,
@@ -104,6 +109,40 @@ CREATE TABLE inventory_movements (
     INDEX idx_store_date (store_id, created_at),
     INDEX idx_product (product_id),
     INDEX idx_movement_type (movement_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: product_ingredients (Recetas / BOM)
+-- Relaciona un producto ensamblado (tracking_type='recipe') con los ingredientes
+-- que lo componen y la cantidad de cada uno por UNA unidad del ensamblado.
+CREATE TABLE IF NOT EXISTS product_ingredients (
+    recipe_id INT AUTO_INCREMENT PRIMARY KEY,
+    product_id INT NOT NULL COMMENT 'Producto ensamblado (tracking_type=recipe)',
+    component_id INT NOT NULL COMMENT 'Ingrediente que compone el producto',
+    quantity DECIMAL(12,3) NOT NULL DEFAULT 1.000 COMMENT 'Cantidad del ingrediente por UNA unidad ensamblada',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_recipe_component (product_id, component_id),
+    KEY idx_recipe_product (product_id),
+    KEY idx_recipe_component (component_id),
+    FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE CASCADE,
+    FOREIGN KEY (component_id) REFERENCES products(product_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: product_lots (Presentaciones / lotes de un componente)
+-- Cada fila es una compra/presentación del componente con su cantidad (en la
+-- unidad del componente) y su costo unitario propio. Disponible = Σ cantidades;
+-- costo unitario = promedio ponderado (Σ qty×costo ÷ Σ qty); se consume FIFO.
+CREATE TABLE IF NOT EXISTS product_lots (
+    lot_id INT AUTO_INCREMENT PRIMARY KEY,
+    store_id INT NOT NULL,
+    product_id INT NOT NULL COMMENT 'Componente dueño de la presentación',
+    label VARCHAR(120) NULL COMMENT 'Etiqueta de la presentación (p.ej. Granel 3kg, Bolsa 5kg)',
+    quantity DECIMAL(12,3) NOT NULL DEFAULT 0.000 COMMENT 'Cantidad actual en la unidad del componente',
+    unit_cost DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT 'Costo por unidad de este lote (valor pagado ÷ cantidad)',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_lot_product (product_id),
+    KEY idx_lot_store (store_id),
+    FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE CASCADE,
+    FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabla: terminals (Terminales / Puntos de Venta)
@@ -506,20 +545,20 @@ INSERT INTO stores (store_name, address, phone, status, theme_config, theme_conf
 (
     'Tienda Principal', 'Calle Principal #123, Ciudad', '555-1234', 'active',
     JSON_OBJECT(
-        'primary_color', '#4C77AF', 'secondary_color', '#2196F3',
+        'primary_color', '#39C5BB', 'secondary_color', '#0E86A6',
         'success_color', '#4CAF50', 'danger_color', '#F44336',
-        'warning_color', '#FF9800', 'info_color', '#2196F3',
+        'warning_color', '#FF9800', 'info_color', '#0E86A6',
         'dark_color', '#1A1A2E', 'bg_body', '#F4F7F6',
         'text_color', '#1A1A2E', 'bg_card', '#FFFFFF',
         'border_color', '#E0E0E0', 'theme_mode', 'light', 'dark_mode', FALSE
     ),
     JSON_OBJECT(
-        'primary_color', '#C62828', 'secondary_color', '#E53935',
+        'primary_color', '#4FDDD2', 'secondary_color', '#61C2E8',
         'success_color', '#66BB6A', 'danger_color', '#EF5350',
-        'warning_color', '#FFB74D', 'info_color', '#EF5350',
-        'dark_color', '#1A080B', 'bg_body', '#120609',
-        'text_color', '#FCE4EC', 'bg_card', '#241015',
-        'border_color', '#5C1E2A'
+        'warning_color', '#FFB74D', 'info_color', '#61C2E8',
+        'dark_color', '#0C2B29', 'bg_body', '#0E2220',
+        'text_color', '#E0F2F0', 'bg_card', '#16322F',
+        'border_color', '#2A4D49'
     )
 );
 

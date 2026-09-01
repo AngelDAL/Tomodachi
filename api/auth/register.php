@@ -52,8 +52,8 @@ try {
     if (!Validator::required($store_name)) { $errors['store_name'] = 'Nombre de empresa requerido'; }
     if (!Validator::required($full_name)) { $errors['full_name'] = 'Nombre requerido'; }
     if (!Validator::required($username)) { $errors['username'] = 'Usuario requerido'; }
-    if (!Validator::required($email)) { $errors['email'] = 'Email requerido'; }
-    if (!Validator::validateEmail($email)) { $errors['email'] = 'Email inválido'; }
+    // El correo electrónico es OPCIONAL: solo se valida si viene relleno
+    if (!empty($email) && !Validator::validateEmail($email)) { $errors['email'] = 'Email inválido'; }
     if (!Validator::required($password)) { $errors['password'] = 'Contraseña requerida'; }
     if (strlen($password) < 6) { $errors['password'] = 'Mínimo 6 caracteres'; }
 
@@ -61,10 +61,16 @@ try {
         Response::validationError($errors);
     }
 
-    // Verificar duplicados
-    $existsUser = $db->selectOne('SELECT user_id FROM users WHERE username = ? OR email = ?', [$username, $email]);
+    // Verificar duplicados: usuario siempre; email solo si fue proporcionado
+    $existsUser = $db->selectOne('SELECT user_id FROM users WHERE username = ?', [$username]);
     if ($existsUser) {
-        Response::error('El usuario o email ya está registrado', 409);
+        Response::error('El usuario ya está registrado', 409);
+    }
+    if (!empty($email)) {
+        $existsEmail = $db->selectOne('SELECT user_id FROM users WHERE email = ?', [$email]);
+        if ($existsEmail) {
+            Response::error('El correo electrónico ya está registrado', 409);
+        }
     }
 
     $db->beginTransaction();
@@ -105,13 +111,15 @@ try {
 
         $db->commit();
 
-        // Enviar correo de bienvenida
-        try {
-            $mailer = new Mail();
-            $mailer->sendWelcomeEmail($email, $full_name, $store_name, $username);
-        } catch (Throwable $e) {
-            // No interrumpir el flujo si falla el correo o la librería no está instalada
-            error_log("Error enviando correo de bienvenida: " . $e->getMessage());
+        // Enviar correo de bienvenida (solo si el usuario dio un correo)
+        if (!empty($email)) {
+            try {
+                $mailer = new Mail();
+                $mailer->sendWelcomeEmail($email, $full_name, $store_name, $username);
+            } catch (Throwable $e) {
+                // No interrumpir el flujo si falla el correo o la librería no está instalada
+                error_log("Error enviando correo de bienvenida: " . $e->getMessage());
+            }
         }
 
         // Iniciar sesión automáticamente

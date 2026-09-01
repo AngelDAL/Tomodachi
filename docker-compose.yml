@@ -43,6 +43,15 @@ services:
       # Persistir sesiones PHP (sobreviven a rebuilds del contenedor)
       - app_sessions:/var/lib/php/sessions
 
+  ws:
+    build:
+      context: ./docker
+      dockerfile: Dockerfile.customer-display-ws
+    restart: unless-stopped
+    environment:
+      WS_HOST: 0.0.0.0
+      WS_PORT: 8765
+
 volumes:
   db_data:
   app_uploads:

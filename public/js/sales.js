@@ -20,6 +20,7 @@ let PARKED_SALES = []; // Nueva variable para ventas suspendidas
 
 // Variables globales para elementos DOM
 let searchInput, searchResults, cartBody, emptyCartMsg;
+let cartNewId = null; // product_id del ítem recién agregado (solo un elemento a la vez)
 let totalBadge, cartBadge, discountInput, taxInput, paymentMethodSelect;
 let checkoutReceivedInput, checkoutChangeDisplay, finalizeSaleBtn;
 let cartToggle, cartPanel, closeCartBtn, productGallery, cartHandleBtn, panelTotalEl;
@@ -67,7 +68,7 @@ function buildProductCard(p) {
          title="${esc(p.product_name)}">
       <div class="img-wrap">
         ${imagePath
-          ? `<img src="${imagePath}" loading="lazy" alt="${esc(p.product_name)}" onerror="this.parentNode.innerHTML='<i class=\\'fas fa-box\\'></i>'">`
+          ? `<img src="${imagePath}" loading="lazy" decoding="async" alt="${esc(p.product_name)}" onerror="this.parentNode.innerHTML='<i class=\\'fas fa-box\\'></i>'">`
           : '<i class="fas fa-box" style="color:var(--text-light); font-size:1.5rem;"></i>'}
         ${stockBadge}
       </div>
@@ -136,10 +137,15 @@ function bindFastProductCards(root) {
         bulk_unit: el.getAttribute('data-bulk_unit') || 'kg',
         category_id: el.getAttribute('data-category') || undefined
       });
-      // Sólo una señal visual minúscula; no hay delay, overlay ni bloqueo.
-      el.classList.remove('pos-quick-press');
-      void el.offsetWidth;
-      el.classList.add('pos-quick-press');
+      // Sólo una señal visual minúscula; pulso vía Web Animations API (sin
+      // reflow síncrono en el camino del agregado — el old `void offsetWidth`
+      // forzaba layout en cada clic y sumaba lag al agregar rápido).
+      try {
+        el.animate(
+          [{ transform: 'scale(1)' }, { transform: 'scale(0.985)' }, { transform: 'scale(1)' }],
+          { duration: 90, easing: 'ease-out' }
+        );
+      } catch (err) { /* fallback: sin animación */ }
     };
 
     el.addEventListener('pointerdown', (e) => {
@@ -810,6 +816,9 @@ function _addToCartInternal(prod) {
     });
   }
   playSound('Sound2.mp3');
+  // Solo cuando se agrega un ítem NUEVO se registra para animar su tarjeta;
+  // los cambios de cantidad/precio no re-animan el carrito.
+  if (!existing) cartNewId = prod.product_id;
   renderCart();
 }
 
@@ -980,9 +989,9 @@ function renderCart() {
     cartBadge.style.display = '';
   }
 
-    // Generate HTML (Optimized Layout requested)
-    // Orden Inverso: Mostrar el último item agregado primero (LIFO visual)
-    const displayCart = [...CART].reverse();
+    // Optimized Layout
+  // Orden natural de carrito: el ÚLTIMO agregado aparece ABAJO.
+  const displayCart = [...CART];
 
     // [Image] [Center: Name + Price below] [Right: Stepper]
     cartBody.innerHTML = displayCart.map(item => {
@@ -990,7 +999,7 @@ function renderCart() {
       const imagePath = getRelativeImagePath(item.image_path);
       
       if (imagePath) {
-        imgHtml = `<img src="${imagePath}" alt="img" class="cart-item-img" onerror="this.outerHTML='<div class=\\'cart-item-img-placeholder\\'><i class=\\'fas fa-box\\'></i></div>'">`;
+        imgHtml = `<img src="${imagePath}" alt="img" class="cart-item-img" decoding="async" loading="lazy" onerror="this.outerHTML='<div class=\\'cart-item-img-placeholder\\'><i class=\\'fas fa-box\\'></i></div>'">`;
       }
 
       // Price logic with discount indicator
@@ -1011,7 +1020,7 @@ function renderCart() {
       const unitLabel = item.is_bulk == 1 ? ` ${item.bulk_unit || 'kg'}` : '';
 
       return `
-      <div class="cart-item-card">
+      <div class="cart-item-card${item.product_id === cartNewId ? ' cart-new' : ''}">
           <!-- Left: Image -->
           <div class="cart-item-left">
               ${imgHtml}
@@ -1039,6 +1048,15 @@ function renderCart() {
     // NOTA: Ya no vinculamos eventos aquí dentro porque usamos delegación en setupCartEventsDelegation()
     
   recalcTotals();
+
+  // Animación de entrada del ítem nuevo: se hace por CSS (compositor), NO con
+// anime.js, porque la tarjeta ya tiene `transition: transform .1s` y animar
+// el mismo transform por JS por frame provocaba thrashing del hilo principal
+// (freeze). La clase `cart-new` dispara un keyframe de un solo disparo.
+if (cartNewId != null) {
+  // Permitir que el keyframe CSS actúe sin intervención JS.
+  cartNewId = null;
+}
 }
 
 // Función para solicitar cantidad/peso de productos a granel
@@ -1431,32 +1449,37 @@ function setupHistoryModal() {
                  return;
             }
   
-            body.innerHTML = data.data.map(sale => {
-                const total = parseFloat(sale.total).toFixed(2);
-                const date = window.FormatUtils ? window.FormatUtils.date(sale.sale_date) : new Date(sale.sale_date).toLocaleString();
-                const payMethod = sale.payment_method === 'cash' ? 'Efectivo' : 
-                                 sale.payment_method === 'card' ? 'Tarjeta' : 
-                                 sale.payment_method === 'transfer' ? 'Transferencia' : 'Mixto';
+            window.__historySales = data.data;
+            window.__historyFiltered = data.data;
+            body.innerHTML = `<div class="history-split">
+                <aside>
+                    <div class="history-toolbar">
+                        <div class="history-search"><i class="fas fa-search"></i><input type="text" id="historySearchInput" placeholder="Buscar por #ticket, cliente..."></div>
+                        <div class="history-date-filter"><input type="date" id="historyDateInput"><button type="button" id="historyDateClear"><i class="fas fa-times"></i></button></div>
+                    </div>
+                    <div id="historySalesList"></div>
+                </aside>
+                <section id="historyDetailPane"><div class="history-empty"><i class="fas fa-receipt"></i><p>Seleccione un ticket para ver sus detalles.</p></div></section>
+            </div>`;
+            renderHistoryList(data.data);
+            const searchInput = document.getElementById('historySearchInput');
+            const dateInput = document.getElementById('historyDateInput');
+            const dateClear = document.getElementById('historyDateClear');
+            const filter = () => {
+                const term = searchInput.value.toLowerCase();
+                const date = dateInput.value;
+                const filtered = data.data.filter(s => {
+                    const matchTerm = !term || s.sale_id.toString().includes(term) || (s.customer_name || '').toLowerCase().includes(term);
+                    const matchDate = !date || s.sale_date.startsWith(date);
+                    return matchTerm && matchDate;
+                });
+                renderHistoryList(filtered);
+            };
+            searchInput.addEventListener('input', filter);
+            dateInput.addEventListener('change', filter);
+            dateClear.addEventListener('click', () => { dateInput.value = ''; filter(); });
+            if (data.data.length) viewSaleDetails(data.data[0].sale_id);
 
-                return `
-                <div class="history-card" style="border-left: 4px solid var(--primary-color); padding: 12px; margin-bottom: 10px; background: var(--bg-card); border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                    <div class="history-card-header" style="display: flex; justify-content: space-between; margin-bottom: 6px; border-bottom: 1px dashed var(--border-color); padding-bottom: 6px;">
-                        <span class="h-id" style="font-weight: bold;">#${sale.sale_id}</span>
-                        <span class="h-date" style="font-size: 0.85rem; color: var(--text-muted);">${date}</span>
-                    </div>
-                    <div class="history-card-body" style="font-size: 0.9rem; color: var(--text-medium);">
-                        <div style="display: flex; justify-content: space-between;">
-                            <span>Items: <strong>${sale.total_items || '?'}</strong></span>
-                            <span>Pago: <strong>${payMethod}</strong></span>
-                        </div>
-                    </div>
-                    <div class="history-card-footer" style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;">
-                        <div class="h-total-price" style="font-size: 1.1rem; font-weight: bold; color: var(--text-color);">${window.FormatUtils ? window.FormatUtils.currency(sale.total) : `$${total}`}</div>
-                        <button class="btn-reprint" onclick="viewSaleDetails(${sale.sale_id})" style="background: var(--bg-light); border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;"><i class="fas fa-eye"></i> Ver</button>
-                    </div>
-                </div>
-            `}).join('');
-  
         } catch (e) {
             console.error("Error loading history", e);
             body.innerHTML = `<div class="empty-state" style="text-align:center; padding: 20px; color: firebrick;">
@@ -1464,12 +1487,52 @@ function setupHistoryModal() {
             </div>`;
         }
     }
+
+    function renderHistoryList(sales) {
+        const list = document.getElementById('historySalesList');
+        if (!list) return;
+        if (!sales.length) { list.innerHTML = '<div class="hs-empty"><i class="fas fa-search"></i>No se encontraron ventas.</div>'; return; }
+        list.innerHTML = sales.map(sale => {
+            const payMethod = {cash:'Efectivo',card:'Tarjeta',transfer:'Transferencia',mixed:'Mixto',credit:'Fiado'}[sale.payment_method] || sale.payment_method;
+            return `<button type="button" onclick="viewSaleDetails(${sale.sale_id})" data-sale-id="${sale.sale_id}"><span class="hs-id">#${sale.sale_id}</span><span class="hs-date">${window.FormatUtils ? window.FormatUtils.date(sale.sale_date) : sale.sale_date}</span><span class="hs-total">${window.FormatUtils ? window.FormatUtils.currency(sale.total) : '$'+sale.total}</span><span class="hs-method">${payMethod}</span></button>`;
+        }).join('');
+    }
+
 }
 
-// Función global para ver detalles (placeholder por ahora)
-window.viewSaleDetails = function(id) {
-    alert("Pronto: Detalles de venta #" + id);
-    // Aquí se podríá implementar otro modal o redirección
+// Función global para ver detalles completos de una venta.
+window.viewSaleDetails = async function(id) {
+    const body = document.getElementById('historyDetailPane') || document.getElementById('historyModalBody');
+    if (!body) return;
+    document.querySelectorAll('#historySalesList button').forEach(b => b.classList.toggle('active', b.dataset.saleId == id));
+    body.innerHTML = '<div class="history-empty"><i class="fas fa-spinner fa-spin"></i> Cargando ticket...</div>';
+    try {
+        const res = await fetch('../api/sales/sale_details.php?sale_id=' + encodeURIComponent(id));
+        const json = await res.json();
+        if (!json.success) throw new Error(json.message || 'No se pudo cargar la venta');
+        const sale = json.data.sale || json.data;
+        const items = json.data.items || [];
+        const payMethod = {
+            cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia',
+            mixed: 'Mixto', credit: 'Fiado'
+        }[sale.payment_method] || (sale.payment_method || '—');
+        const statusLabel = {
+            completed: 'Completada', cancelled: 'Cancelada', refunded: 'Devuelta'
+        }[sale.status] || (sale.status || '—');
+        const money = v => window.FormatUtils ? window.FormatUtils.currency(v || 0) : '$' + Number(v || 0).toFixed(2);
+        const qty = v => { const n = parseFloat(v); return Number.isInteger(n) ? n : n.toFixed(3); };
+        const itemsHtml = (items || []).map(i => {
+            const imagePath = getRelativeImagePath ? getRelativeImagePath(i.image_path) : '';
+            const img = imagePath ? `<img src="${imagePath}" alt="" onerror="this.style.display='none'">` : '';
+            return `<div class="hp-item">${img}<div class="hp-item-info"><strong>${i.product_name || 'Producto'}</strong><small>${i.category_name || ''}</small></div><div class="hp-item-qty">${qty(i.quantity)} × ${money(i.unit_price)}</div><div class="hp-item-total">${money(i.total)}</div></div>`;
+        }).join('') || '<div class="history-empty">Sin productos registrados.</div>';
+        body.innerHTML = `<div class="hp-ticket">
+            <div class="hp-header"><h3>Ticket #${sale.sale_id}</h3><span class="hp-status ${sale.status}">${statusLabel}</span></div>
+            <div class="hp-meta"><div><small>Cliente</small><strong>${sale.customer_name ? sale.customer_name : 'Venta al público'}</strong></div><div><small>Fecha</small><strong>${window.FormatUtils ? window.FormatUtils.date(sale.sale_date) : sale.sale_date}</strong></div><div><small>Atendido por</small><strong>${sale.cashier_name || '—'}</strong></div><div><small>Método de pago</small><strong>${payMethod}</strong></div></div>
+            <div class="hp-items-section"><h4>Productos</h4>${itemsHtml}</div>
+            <div class="hp-summary"><p>Subtotal <strong>${money(sale.subtotal)}</strong></p><p>Descuento <strong>-${money(sale.discount)}</strong></p><p>Impuestos <strong>${money(sale.tax)}</strong></p><hr><p class="hp-total">Total <strong>${money(sale.total)}</strong></p><p>Pagado <strong>${money(sale.amount_paid)}</strong></p><p>Cambio <strong>${money((sale.amount_paid || 0) - (sale.total || 0))}</strong></p></div>
+        </div>`;
+    } catch (e) { body.innerHTML = '<div class="history-empty">No se pudieron cargar los detalles de la venta.</div>'; }
 };
 
 
@@ -1677,6 +1740,20 @@ function recalcItemPrice(item) {
   item.subtotal = item.quantity * item.unit_price;
 }
 
+// Pulso del total vía Web Animations API: corre en el compositor y NO fuerza
+// reflow síncrono (a diferencia de re-arrancar una clase con offsetWidth, que
+// en el camino de cada agregado provocaba lag/trabazón). Reiniciable y ligero.
+function bumpTotalValue(el) {
+  if (!el) return;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  try {
+    el.animate(
+      [{ transform: 'scale(1)' }, { transform: 'scale(1.16)' }, { transform: 'scale(1)' }],
+      { duration: 380, easing: 'ease-out' }
+    );
+  } catch (e) { /* fallback: no animar */ }
+}
+
 function recalcTotals() {
   // Aplicar Promociones Automáticas antes de calcular totales
   applyPromotions();
@@ -1686,15 +1763,13 @@ function recalcTotals() {
   const promoDiscount = (typeof CURRENT_BILL_DISCOUNT !== 'undefined') ? CURRENT_BILL_DISCOUNT : 0;
   const tax = (taxInput && taxInput.value) ? parseFloat(taxInput.value) : 0;
   const total = Math.max(0, subtotal - discount - promoDiscount + tax);
-  // Salto (bump) del total cuando aumenta — animación de ligero rebote
+  // Salto (bump) del total cuando aumenta — animación CSS ligera (compositor),
+  // sin anime.js, para no poner interpolación JS en el camino del agregado.
   const prevTotal = window.__lastCartTotal ?? 0;
-  if (total > prevTotal && typeof anime !== 'undefined') {
-    [totalBadge, panelTotalEl].forEach(el => {
-      if (el) {
-        anime({ targets: el, scale: [1, 1.16, 1], duration: 380, easing: 'easeOutQuad' });
-      }
-    });
-  } else if (total < prevTotal && typeof anime !== 'undefined') {
+  if (total > prevTotal) {
+    bumpTotalValue(totalBadge);
+    bumpTotalValue(panelTotalEl);
+  } else if (total < prevTotal) {
     [totalBadge, panelTotalEl].forEach(el => {
       if (el) { el.style.transition = 'opacity .2s'; el.style.opacity = '0.5';
         setTimeout(() => { if(el) el.style.opacity = ''; }, 120); }
@@ -2540,8 +2615,21 @@ window.probarEfectosVisuales = probarEfectosVisuales;
 window.fetchByCode = fetchByCode;
 
 function playSound(filename) {
-  const audio = new Audio('assets/sound/' + filename);
-  audio.play().catch(e => console.warn('Error playing sound:', e));
+  // Pool de Audio reutilizable por archivo (round-robin). Reutilizar UN solo
+  // elemento y re-disparar play() a mitad de reproducción corta el sonido a
+  // la mitad / a una fracción / no lo reproduce. Con un pool evitamos eso y
+  // mantenemos la descarga única (preload).
+  const pools = playSound._pools || (playSound._pools = Object.create(null));
+  let arr = pools[filename];
+  if (!arr) {
+    arr = [0, 1, 2].map(() => { const a = new Audio('assets/sound/' + filename); a.preload = 'auto'; return a; });
+    pools[filename] = arr;
+  }
+  const idx = playSound._idx || (playSound._idx = {});
+  const n = idx[filename] = ((idx[filename] || 0) + 1);
+  const audio = arr[n % arr.length];
+  try { audio.currentTime = 0; } catch (e) {}
+  audio.play().catch(() => {});
 }
 
 function printTicket(data) {
@@ -3450,6 +3538,8 @@ if (document.readyState === 'loading') {
 let customerDisplayWindow = null;
 let customerDisplayChannel = null;
 let displaySessionUUID = null;
+let customerDisplaySocket = null;
+let customerDisplayWsReconnectTimer = null;
 
 // Restaurar UUID de sesión guardado
 try {
@@ -3482,9 +3572,25 @@ function initCustomerDisplay() {
       // Cerrar ventana existente
       customerDisplayWindow.close();
       customerDisplayWindow = null;
+      // Limpiar el canal BroadcastChannel
+      if (customerDisplayChannel) {
+        try { customerDisplayChannel.close(); } catch (_) {}
+        customerDisplayChannel = null;
+      }
       toggleBtn.classList.remove('active');
     } else {
       // Abrir nueva ventana
+      // Recrear el canal si fue cerrado previamente
+      if (!customerDisplayChannel) {
+        try {
+          customerDisplayChannel = new BroadcastChannel('tomodachi_pos_sync');
+          customerDisplayChannel.onmessage = (event) => {
+            if (event.data.type === 'request_data') {
+              sendCartToCustomerDisplay();
+            }
+          };
+        } catch (_) {}
+      }
       openCustomerDisplay();
     }
   });
@@ -3494,6 +3600,11 @@ function initCustomerDisplay() {
     if (customerDisplayWindow && customerDisplayWindow.closed) {
       customerDisplayWindow = null;
       toggleBtn.classList.remove('active');
+      // Limpiar el canal cuando se cierra la ventana
+      if (customerDisplayChannel) {
+        try { customerDisplayChannel.close(); } catch (_) {}
+        customerDisplayChannel = null;
+      }
     }
   }, 1000);
 }
@@ -3595,6 +3706,28 @@ function getThemeInfoForCustomerDisplay() {
   };
 }
 
+// Canal WebSocket de baja latencia para la pantalla de cliente.
+function customerDisplayWsUrl() {
+  const scheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${scheme}//${window.location.host}/ws/?session=${encodeURIComponent(displaySessionUUID)}`;
+}
+
+function connectCustomerDisplayWebSocket() {
+  if (!displaySessionUUID || (customerDisplaySocket && (customerDisplaySocket.readyState === WebSocket.OPEN || customerDisplaySocket.readyState === WebSocket.CONNECTING))) return;
+  if (customerDisplayWsReconnectTimer) clearTimeout(customerDisplayWsReconnectTimer);
+  try {
+    customerDisplaySocket = new WebSocket(customerDisplayWsUrl());
+    customerDisplaySocket.onopen = () => sendCartToCustomerDisplay();
+    customerDisplaySocket.onclose = () => {
+      customerDisplaySocket = null;
+      customerDisplayWsReconnectTimer = setTimeout(connectCustomerDisplayWebSocket, 3000);
+    };
+    customerDisplaySocket.onerror = () => customerDisplaySocket?.close();
+  } catch (_) {
+    customerDisplayWsReconnectTimer = setTimeout(connectCustomerDisplayWebSocket, 3000);
+  }
+}
+
 // Enviar datos del carrito a la pantalla de cliente
 function sendCartToCustomerDisplay() {
   const allItems = getCombinedCartForDisplay();
@@ -3613,9 +3746,13 @@ function sendCartToCustomerDisplay() {
   // Enviar por BroadcastChannel
   if (customerDisplayChannel) {
     try {
+      // Verificar que el canal no esté cerrado antes de enviar
       customerDisplayChannel.postMessage(data);
     } catch (error) {
-      console.error('Error enviando por BroadcastChannel:', error);
+      console.warn('BroadcastChannel no disponible, limpiando referencia:', error.message);
+      // El canal fue cerrado (ventana de cliente cerrada); limpiar
+      try { customerDisplayChannel.close(); } catch (_) {}
+      customerDisplayChannel = null;
     }
   }
 
@@ -3624,6 +3761,11 @@ function sendCartToCustomerDisplay() {
     localStorage.setItem('tomodachi_customer_display', JSON.stringify(data));
   } catch (error) {
     console.error('Error guardando en localStorage:', error);
+  }
+
+  // WebSocket: actualización inmediata entre dispositivos.
+  if (customerDisplaySocket?.readyState === WebSocket.OPEN) {
+    try { customerDisplaySocket.send(JSON.stringify(data)); } catch (_) {}
   }
 
   // Servidor con UUID de sesión
@@ -3670,15 +3812,12 @@ function calculateTotals() {
   };
 }
 
-// Sincronización periódica: cada 2s si hay sesión activa
+// El WebSocket es el canal en tiempo real; cart_sync.php conserva el último
+// estado para que una pantalla recién conectada pueda recuperarlo.
 let syncInterval = null;
 function startSyncInterval() {
-  if (syncInterval) clearInterval(syncInterval);
-  syncInterval = setInterval(() => {
-    if (displaySessionUUID) {
-      sendCartToCustomerDisplay();
-    }
-  }, 2000);
+  if (syncInterval) { clearInterval(syncInterval); syncInterval = null; }
+  connectCustomerDisplayWebSocket();
 }
 
 // Llamar también al cambiar el carrito (además del intervalo)

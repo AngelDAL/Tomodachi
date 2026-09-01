@@ -1,194 +1,156 @@
 /* ==========================================================================
-   MEJORAS ESCÁNER (Versión Consolidada)
+   ESCÁNER DE CÓDIGOS (Tomodachi)
+   Overlay inferior flotante y Ocultable.
+   No reemplaza la galería: puedes seguir buscando/agregando productos.
+   Si lo colapsas, el streaming continúa y lee códigos en segundo plano.
    ========================================================================== */
 
-/* Contenedor relativo para posicionar guías y elementos internos */
+/* Contenedor base: overlay flotante, oculto salvo con .hidden removido */
 #scannerContainer {
-    position: relative;
-    background: #000;
-    overflow: hidden;
-    /* Por defecto oculto o manejado por JS, aquí definimos estructura base */
+    position: fixed;
+    z-index: 99999;
     display: flex;
     flex-direction: column;
-    z-index: 100; /* Asegurar que esté por encima de elementos normales */
+    background: #000;
+    overflow: hidden;
+    border-radius: var(--ds-radius-lg, 16px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+    -webkit-user-select: none;
 }
 
-/* Botón de cierre interno (Integrado en el video) */
+/* Cuando está activo se ancla abajo (pequeño, sin tapar la galería) */
+body.scanner-active #scannerContainer {
+    top: auto;
+}
+
+@media (min-width: 901px) {
+    body.scanner-active #scannerContainer {
+        bottom: 20px;
+        right: 20px;
+        width: 320px;
+        height: 260px;
+    }
+}
+
+@media (max-width: 900px) {
+    body.scanner-active #scannerContainer {
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 42vh;
+        border-radius: 18px 18px 0 0;
+    }
+}
+
+/* Botón de cierre (superior derecha) */
 .scanner-close-btn {
     position: absolute;
-    top: 15px;
-    right: 15px; /* Alineado a la derecha como solicitado */
-    z-index: 200; /* Por encima del video */
-    width: 44px;
-    height: 44px;
+    top: 10px;
+    right: 10px;
+    z-index: 200;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
-    background: rgba(0, 0, 0, 0.5); /* Fondo oscuro semitransparente */
+    background: rgba(0, 0, 0, 0.55);
     border: 2px solid rgba(255, 255, 255, 0.8);
-    color: white;
-    font-size: 1.2rem;
+    color: #fff;
+    font-size: 1.1rem;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.2s ease;
-    backdrop-filter: blur(4px);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
-
 .scanner-close-btn:hover {
-    background: rgba(255, 59, 48, 0.8); /* Rojo brillante al pasar mouse */
+    background: rgba(255, 59, 48, 0.85);
     border-color: #ff3b30;
-    transform: scale(1.1);
+    transform: scale(1.08);
 }
 
-.scanner-close-btn:active {
-    transform: scale(0.95);
+/* Botón para ocultar en segundo plano (superior izquierda) */
+.scanner-collapse-btn {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 200;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.55);
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    color: #fff;
+    font-size: 1.1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+.scanner-collapse-btn:hover {
+    background: rgba(57, 197, 187, 0.85);
+    border-color: var(--primary-color, #39c5bb);
+    transform: scale(1.08);
 }
 
-/* 
-   Ajuste visual del video 
-   (Importante: html5-qrcode a veces inserta estilos inline que debemos vencer)
-*/
+/* El video llena el contenedor y queda centrado vertical/horizontalmente */
+#qr-reader {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
 #qr-reader video {
+    position: absolute;
+    inset: 0;
     width: 100% !important;
     height: 100% !important;
     object-fit: cover !important;
     border-radius: 0;
 }
 
-
-/* --- LÓGICA RESPONSIVA DEL MODO ESCÁNER --- */
-
-/* 1. MÓVIL (Pantallas < 900px) */
+/* ---- Modo colapsado: pill pequeño, sigue escaneando ---- */
+body.scanner-active #scannerContainer.collapsed {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    border: 2px solid rgba(57, 197, 187, 0.8);
+    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.5);
+}
+@media (min-width: 901px) {
+    body.scanner-active #scannerContainer.collapsed {
+        bottom: 20px;
+        right: 20px;
+        width: 64px;
+        height: 64px;
+    }
+}
 @media (max-width: 900px) {
-    /* MODO ACTIVO: Inmersivo total */
-    body.scanner-active {
-        overflow: hidden; /* Evitar scroll en body */
-    }
-
-    /* El contenedor del escáner se vuelve fijo en la parte superior */
-    body.scanner-active #scannerContainer {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 60vh; /* 60% de la pantalla */
-        border-radius: 0;
-        margin: 0;
-        z-index: 99999; /* Máxima prioridad, tapa header y todo */
-        box-shadow: 0 5px 20px rgba(0,0,0,0.5);
-    }
-
-    /* Ocultar elementos que podrían estorbar visualmente */
-    body.scanner-active .mobile-view-controls,
-    body.scanner-active .pos-header,
-    body.scanner-active .sidebar-overlay {
-        display: none !important;
-    }
-
-    /* Forzar que el botón de cerrar flotante externo NO se vea (usamos el interno) */
-    #closeScannerOverlayBtn {
-        display: none !important;
-    }
-
-    /* Asegurar que el botón interno sea grande y tocable */
-    body.scanner-active .scanner-close-btn {
-        display: flex;
-        width: 50px;
-        height: 50px;
-        font-size: 1.5rem;
-    }
-
-    /* MANEJO DEL CARRITO DEBAJO DEL ESCÁNER */
-    body.scanner-active .pos-content-grid {
-        display: block !important; /* Romper el grid/flex normal */
-        height: 100%;
-        padding-top: 60vh; /* Empujar contenido hacia abajo */
-        background: var(--bg-card);
-    }
-
-    /* Forzar visibilidad y posición de la columna del carrito */
-    body.scanner-active .cart-column {
-        display: flex !important;
-        transform: none !important; /* Anular slide animation */
-        opacity: 1 !important;
-        width: 100% !important;
-        height: 100% !important; /* Llenar el resto (40vh efectivos aprox) */
-        z-index: 50;
-        position: relative;
-    }
-
-    /* FIX: Product column must remain visible for fixed scanner to render */
-    body.scanner-active .products-column {
-        display: flex !important;
-        transform: none !important; /* Remove transforms so fixed works */
-        width: 0 !important;
-        height: 0 !important;
-        overflow: visible !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        position: static !important;
-    }
-
-    /* Ocultar hermanos del scanner explícitamente */
-    body.scanner-active .product-search-container,
-    body.scanner-active .product-filters,
-    body.scanner-active .gallery-main,
-    body.scanner-active #searchResults {
-        display: none !important;
+    body.scanner-active #scannerContainer.collapsed {
+        bottom: 16px;
+        right: 16px;
+        left: auto;
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
     }
 }
-
-
-/* 2. ESCRITORIO (Pantallas > 901px) */
-@media (min-width: 901px) {
-    /* El scanner vive dentro de .products-column, reemplazando la galería */
-    
-    /* Cuando activo, el contenedor ocupa todo el espacio disponible */
-    body.scanner-active #scannerContainer {
-        width: 100%;
-        flex: 1; /* Crecer para llenar columna */
-        height: 100%;
-        min-height: 500px; /* Altura mínima decente */
-        border-radius: 12px;
-        margin-bottom: 20px;
-    }
-
-    /* Ocultar galería y búsqueda cuando escáner activo */
-    body.scanner-active .gallery-main,
-    body.scanner-active .product-search-container,
-    body.scanner-active .product-filters {
-        display: none !important;
-    }
-
-    /* El botón flotante externo siempre oculto en desktop */
-    #closeScannerOverlayBtn {
-        display: none !important;
-    }
-    
-    /* Ajuste para que el video no se recorte mal en landscape */
-    body.scanner-active #qr-reader video {
-        object-fit: contain !important;
-        background: #111;
-    }
+/* Al colapsar solo queda visible el botón de reabrir (actúa como pill) */
+body.scanner-active #scannerContainer.collapsed #qr-reader,
+body.scanner-active #scannerContainer.collapsed .scanner-close-btn {
+    display: none !important;
 }
-
-/* ============================================================
-   ALINEACIÓN AL DESIGN SYSTEM UNIFICADO (módulo VENTAS — escáner)
-   Solo visual. No renombra clases ni altera la lógica JS.
-   ============================================================ */
-
-#scannerContainer {
-  border-radius: var(--ds-radius-lg);
-  box-shadow: var(--ds-shadow-lg);
-}
-.scanner-close-btn {
-  backdrop-filter: blur(3px);
-  box-shadow: 0 4px 14px -4px rgba(0,0,0,.5);
-}
-/* Escritorio: esquinas redondeadas de la identidad visual */
-@media (min-width: 901px) {
-  body.scanner-active #scannerContainer {
-    border-radius: var(--ds-radius-lg);
-  }
+body.scanner-active #scannerContainer.collapsed .scanner-collapse-btn {
+    position: static;
+    width: 64px;
+    height: 64px;
+    border: none;
+    background: rgba(0, 0, 0, 0.55);
+    font-size: 1.4rem;
 }

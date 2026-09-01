@@ -9,6 +9,19 @@ let selectedFile = null;
 let storeId = 1;
 let currentEditingProduct = null;
 let currentViewMode = 'grid'; // 'grid' or 'list'
+
+// Estado del editor de composiciones (BOM)
+let recipeEditingIngredients = [];
+let recipeEditingProductId = null;
+let addCompositionDraft = [];      // componentes pendientes al crear un producto 'recipe'
+let addCompositionProductId = null;
+
+// Helpers numéricos para el costo en vivo
+const NUM = (v) => { const n = (v === undefined || v === null || v === '') ? 0 : (typeof v === 'number' ? v : parseFloat(v)); return isNaN(n) ? 0 : n; };
+function fmtMoney(n) {
+    n = NUM(n);
+    return (window.FormatUtils && window.FormatUtils.currency) ? window.FormatUtils.currency(n) : '$' + n.toFixed(2);
+}
 const ICON_CATALOG = [
     { class: 'fa-tag', es: 'Etiqueta', en: 'Tag' },
     { class: 'fa-tags', es: 'Etiquetas', en: 'Tags' },
@@ -507,6 +520,168 @@ function bindEvents() {
             performSearch(); 
         });
     }
+
+    // Tipo de inventario en modal de alta
+    const addTrackingSelect = document.getElementById('productTrackingType');
+    if (addTrackingSelect) addTrackingSelect.addEventListener('change', updateAddTrackingUI);
+
+    // Tipo de inventario en edición
+    const editTrackingSelect = document.getElementById('editProductTrackingType');
+    if (editTrackingSelect) editTrackingSelect.addEventListener('change', updateEditTrackingUI);
+
+    // Tarjetas de tipo de inventario (4 opciones grandes)
+    document.querySelectorAll('#addTypeCards .inv-type-card').forEach(card => {
+        card.addEventListener('click', () => {
+            const sel = document.getElementById('productTrackingType');
+            if (sel) sel.value = card.dataset.type;
+            updateAddTrackingUI();
+        });
+    });
+    document.querySelectorAll('#editTypeCards .inv-type-card').forEach(card => {
+        card.addEventListener('click', () => {
+            const sel = document.getElementById('editProductTrackingType');
+            if (sel) sel.value = card.dataset.type;
+            updateEditTrackingUI();
+        });
+    });
+
+    // Añadir presentación (alta y edición)
+    const addPresentBtn = document.getElementById('addPresentAddBtn');
+    if (addPresentBtn) addPresentBtn.addEventListener('click', addAddPresentation);
+    const editPresentBtn = document.getElementById('editPresentAddBtn');
+    if (editPresentBtn) editPresentBtn.addEventListener('click', addEditPresentation);
+
+    // Alta exprés de componente (composición y servicio)
+    const wireExpress = (pre) => {
+        const openBtn = document.getElementById(pre + 'ExpressCompBtn');
+        const saveBtn = document.getElementById(pre + 'ExpressCompSave');
+        const cancelBtn = document.getElementById(pre + 'ExpressCompCancel');
+        if (openBtn) openBtn.addEventListener('click', () => toggleExpressComp(pre));
+        if (saveBtn) saveBtn.addEventListener('click', () => expressCreateComponent(pre));
+        if (cancelBtn) cancelBtn.addEventListener('click', () => {
+            const f = document.getElementById(pre + 'ExpressCompForm');
+            if (f) f.style.display = 'none';
+        });
+    };
+    wireExpress('add');
+    wireExpress('edit');
+
+    // Asistente: PASO 1 → PASO 2 (Continuar) y volver a cambiar el tipo.
+    const addContinueBtn = document.getElementById('addContinueBtn');
+    if (addContinueBtn) addContinueBtn.addEventListener('click', beginAddForm);
+    const addTypeChangeBtn = document.getElementById('addTypeChangeBtn');
+    if (addTypeChangeBtn) addTypeChangeBtn.addEventListener('click', () => {
+        const ts = document.getElementById('addTypeScreen');
+        const fa = document.getElementById('addFormArea');
+        if (ts) ts.style.display = '';
+        if (fa) fa.style.display = 'none';
+        const first = document.querySelector('#addTypeScreen .inv-type-card');
+        const act = document.querySelector('#addTypeCards .inv-type-card.active');
+        if (act && typeof act.focus === 'function') act.focus();
+        else if (first && typeof first.focus === 'function') first.focus();
+    });
+
+    // Editor de receta (BOM)
+    const editRecipeBtn = document.getElementById('editRecipeBtn');
+    if (editRecipeBtn) editRecipeBtn.addEventListener('click', toggleRecipeEditor);
+
+    const addRecipeIngredientBtn = document.getElementById('addRecipeIngredientBtn');
+    if (addRecipeIngredientBtn) addRecipeIngredientBtn.addEventListener('click', addRecipeIngredient);
+
+    const saveRecipeBtn = document.getElementById('saveRecipeBtn');
+    if (saveRecipeBtn) saveRecipeBtn.addEventListener('click', saveRecipe);
+
+    const recipeIngredientsList = document.getElementById('recipeIngredientsList');
+    if (recipeIngredientsList) {
+        recipeIngredientsList.addEventListener('click', (e) => {
+            const btn = e.target.closest('.recipe-ing-remove');
+            if (btn) {
+                e.preventDefault();
+                const componentId = btn.getAttribute('data-component-id');
+                if (componentId) removeRecipeIngredient(componentId);
+            }
+        });
+        // 'change' guarda el valor; 'input' recalcula el costo en vivo sin perder foco.
+        recipeIngredientsList.addEventListener('change', (e) => {
+            if (e.target.classList.contains('recipe-ing-qty')) {
+                const componentId = e.target.getAttribute('data-component-id');
+                const ing = recipeEditingIngredients.find(i => String(i.component_id) === String(componentId));
+                if (ing) ing.quantity = e.target.value;
+            }
+        });
+        recipeIngredientsList.addEventListener('input', (e) => {
+            if (e.target.classList.contains('recipe-ing-qty')) {
+                const componentId = e.target.getAttribute('data-component-id');
+                const ing = recipeEditingIngredients.find(i => String(i.component_id) === String(componentId));
+                if (ing) {
+                    ing.quantity = e.target.value;
+                    updateEditCompositionCost();
+                }
+            }
+        });
+    }
+
+    // Editor de composición en el modal de ALTA (buscador + fichas con pasos)
+    const addCompositionList = document.getElementById('addCompositionList');
+    if (addCompositionList) {
+        addCompositionList.addEventListener('click', (e) => {
+            const removeBtn = e.target.closest('.recipe-ing-remove');
+            if (removeBtn) {
+                e.preventDefault();
+                const componentId = removeBtn.getAttribute('data-component-id');
+                if (componentId) removeAddComposition(componentId);
+                return;
+            }
+            const minus = e.target.closest('.comp-qty-minus');
+            const plus = e.target.closest('.comp-qty-plus');
+            if (minus || plus) {
+                e.preventDefault();
+                const cid = (minus || plus).getAttribute('data-component-id');
+                bumpCompQty(cid, plus ? 1 : -1);
+            }
+        });
+        addCompositionList.addEventListener('input', (e) => {
+            if (e.target.classList.contains('comp-qty')) {
+                const componentId = e.target.getAttribute('data-component-id');
+                const ing = addCompositionDraft.find(i => String(i.component_id) === String(componentId));
+                if (ing) {
+                    ing.quantity = e.target.value;
+                    updateAddCompositionCost();
+                }
+            }
+        });
+    }
+
+    // Búsqueda de componentes: escribe el nombre, sale la lista y se elige para añadir.
+    const compSearchInput = document.getElementById('compSearchInput');
+    const compSearchResults = document.getElementById('compSearchResults');
+    if (compSearchInput) {
+        compSearchInput.addEventListener('input', filterCompSearch);
+        compSearchInput.addEventListener('focus', filterCompSearch);
+        compSearchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && compSearchResults) compSearchResults.style.display = 'none';
+            if (e.key === 'Enter') e.preventDefault();
+        });
+    }
+    if (compSearchResults) {
+        compSearchResults.addEventListener('click', (e) => {
+            const item = e.target.closest('.comp-search-item');
+            if (item && item.getAttribute('data-pid')) addComponentFromPicker(item.getAttribute('data-pid'));
+        });
+    }
+    document.addEventListener('click', (e) => {
+        if (compSearchResults && !e.target.closest('.comp-search')) compSearchResults.style.display = 'none';
+    });
+
+    // Selector de modo de consumo (3 botones resaltables).
+    document.querySelectorAll('.consume-opts').forEach(grp => {
+        grp.addEventListener('click', (e) => {
+            const opt = e.target.closest('.consume-opt');
+            if (!opt) return;
+            const group = grp.closest('.form-group');
+            if (group && group.id) consumeModeSet(group.id, opt.dataset.value);
+        });
+    });
 }
 
 function performSearch() {
@@ -539,12 +714,27 @@ function performSearch() {
 
 // Funciones del modal de agregar producto
 function openAddProductModal() {
+    resetAddComposition();
+    consumeModeSet('addConsumeModeGroup', 'fifo');
+    // Asistente: mostrar el PASO 1 (selección de tipo) ocultando el formulario.
+    const sel = document.getElementById('productTrackingType');
+    if (sel) sel.value = 'stock';
+    document.querySelectorAll('#addTypeCards .inv-type-card').forEach(c => c.classList.toggle('active', c.dataset.type === 'stock'));
+    document.querySelectorAll('.add-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.add-tab-panel').forEach(p => p.classList.remove('active'));
+    const p1 = document.getElementById('ptab1'); if (p1) p1.classList.add('active');
+    const p1t = document.querySelector('.add-tab[data-ptab="ptab1"]'); if (p1t) p1t.classList.add('active');
+    syncAddTabs();
+    const typeScreen = document.getElementById('addTypeScreen');
+    const formArea = document.getElementById('addFormArea');
+    if (typeScreen) typeScreen.style.display = '';
+    if (formArea) formArea.style.display = 'none';
     const modal = document.getElementById('addProductModal');
     if (modal) {
         modal.classList.add('show');
-        // Focus en el primer input
         setTimeout(() => {
-            document.getElementById('productNameInput')?.focus();
+            const first = document.querySelector('#addTypeScreen .inv-type-card');
+            if (first) first.focus();
         }, 100);
     }
 }
@@ -564,6 +754,9 @@ function closeAddProductModal() {
         if (zone) zone.classList.remove('has-image');
         if (input) input.value = '';
     }
+    resetAddComposition();
+    addPresentationDraft = [];
+    renderAddPresentations();
 }
 
 async function submitAddProduct() {
@@ -581,7 +774,12 @@ async function submitAddProduct() {
         price: parseFloat(formData.get('price')),
         cost: parseFloat(formData.get('cost')) || 0,
         stock: parseInt(formData.get('stock')),
-        min_stock: parseInt(formData.get('min_stock')) || 0
+        min_stock: parseInt(formData.get('min_stock')) || 0,
+        tracking_type: document.getElementById('productTrackingType')?.value || 'stock',
+        is_ingredient: (document.getElementById('productTrackingType')?.value === 'component') ? 1 : 0,
+        consume_mode: consumeModeGet('addConsumeModeGroup'),
+        pieces_per_box: parseFloat(document.getElementById('productPiecesPerBox')?.value) || null,
+        cost_per_box: parseFloat(document.getElementById('productCostPerBox')?.value) || null
         // store_id eliminado, el backend lo toma de la sesión
     };
 
@@ -620,11 +818,53 @@ async function submitAddProduct() {
         const data = await response.json();
 
         if (data.success) {
+            const newProductId = data.data.product_id;
+
             // Si hay imagen seleccionada, subirla ahora
             const imageInput = document.getElementById('addProductImage');
             if (imageInput && imageInput.files[0]) {
-                const newProductId = data.data.product_id;
                 await uploadImageForNewProduct(newProductId, imageInput.files[0]);
+            }
+
+            // Persistir la composición si el producto es ensamblado y hay componentes definidos
+            const addType = document.getElementById('productTrackingType')?.value;
+            const compDraft = addCompositionDraft
+                .map(i => ({ component_id: i.component_id, quantity: NUM(i.quantity) }))
+                .filter(i => i.component_id && i.quantity > 0);
+            if ((addType === 'recipe' || addType === 'none') && compDraft.length) {
+                try {
+                    const compRes = await fetch('../api/inventory/recipe.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ product_id: newProductId, ingredients: compDraft })
+                    });
+                    const compData = await compRes.json();
+                    if (!compData.success) {
+                        console.warn('No se pudo guardar la composición del producto nuevo:', compData.message);
+                    }
+                } catch (e) {
+                    console.error('Error guardando composición del producto nuevo:', e);
+                }
+            }
+
+            // Persistir presentaciones si el producto es un componente
+            if (addType === 'component' && addPresentationDraft.length) {
+                for (const p of addPresentationDraft) {
+                    try {
+                        await fetch('../api/inventory/lots.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                product_id: newProductId,
+                                label: p.label,
+                                quantity: p.quantity,
+                                total_cost: p.total_cost || 0
+                            })
+                        });
+                    } catch (e2) {
+                        console.error('Error guardando presentación del producto nuevo:', e2);
+                    }
+                }
             }
 
             showNotification('Producto agregado correctamente', 'success');
@@ -853,7 +1093,7 @@ function renderProducts(items) {
             ? `<img src="${imagePath}" alt="${product.product_name}" onerror="this.parentElement.innerHTML='<span class=&quot;no-image&quot;><i class=&quot;fas fa-image&quot;></i></span>'">`
             : '<span class="no-image"><i class="fas fa-image"></i></span>';
 
-        const stockClass = (product.current_stock <= product.min_stock) ? 'stock-low' : 'stock-ok';
+        const stockInfo = buildStockMarkup(product);
         const formattedPrice = window.FormatUtils ? window.FormatUtils.currency(product.price) : new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(product.price);
 
         if (currentViewMode === 'list') {
@@ -866,8 +1106,8 @@ function renderProducts(items) {
                     <div class="product-list-name">${escapeHtml(product.product_name)}</div>
                      <div class="product-list-details">
                         <div class="product-list-price">${formattedPrice}</div>
-                        <div class="product-list-stock ${stockClass}">
-                            <i class="fas fa-cubes"></i> ${window.FormatUtils ? window.FormatUtils.qty(product.current_stock) : (product.current_stock !== null ? product.current_stock : 0)}
+                        <div class="product-list-stock ${stockInfo.cls}">
+                            ${stockInfo.html}
                         </div>
                     </div>
                 </div>
@@ -885,8 +1125,8 @@ function renderProducts(items) {
                     <div class="product-name">${escapeHtml(product.product_name)}</div>
                     <div class="product-meta">
                         <div class="meta-price">${formattedPrice}</div>
-                        <div class="meta-stock ${stockClass}">
-                            <i class="fas fa-cubes"></i> ${window.FormatUtils ? window.FormatUtils.qty(product.current_stock) : (product.current_stock !== null ? product.current_stock : 0)}
+                        <div class="meta-stock ${stockInfo.cls}">
+                            ${stockInfo.html}
                         </div>
                     </div>
                 </div>
@@ -894,6 +1134,673 @@ function renderProducts(items) {
             `;
         }
     }).join('');
+}
+
+// Construye el marcado de stock/disponibilidad para una tarjeta de producto.
+// Solo muestra la cantidad y su color (sin palabras que desborden el espacio).
+function buildStockMarkup(product) {
+    const fmt = v => window.FormatUtils ? window.FormatUtils.qty(v) : v;
+    const lowCls = (qty, min) => (qty <= (min || 0)) ? 'stock-low' : 'stock-ok';
+
+    // Ensamblado (receta): disponibilidad derivada en un número.
+    if (product.tracking_type === 'recipe') {
+        if (product.available == null) {
+            return { cls: 'stock-muted', html: '<i class="fas fa-cubes"></i> —' };
+        }
+        return { cls: lowCls(product.available, product.min_stock), html: '<i class="fas fa-cubes"></i> ' + fmt(product.available) };
+    }
+
+    // Componente: la cantidad es la suma de sus presentaciones.
+    if (product.tracking_type === 'component') {
+        const qty = (product.available != null) ? product.available
+            : (Array.isArray(product.presentations)
+                ? product.presentations.reduce((s, l) => s + (parseFloat(l.quantity) || 0), 0)
+                : (product.current_stock != null ? product.current_stock : 0));
+        return { cls: lowCls(qty, product.min_stock), html: '<i class="fas fa-cubes"></i> ' + fmt(qty) };
+    }
+
+    // Productos por lotes/cajas: si hay cajas completas "N caja(s) + M"; si no, solo el total.
+    if (product.lots && (parseInt(product.lots.full_boxes) > 0 || parseInt(product.lots.opened) > 0)) {
+        const fb = parseInt(product.lots.full_boxes) || 0;
+        const op = parseInt(product.lots.opened) || 0;
+        const total = (product.lots.total != null) ? parseInt(product.lots.total) : (fb * (parseInt(product.lots.pieces_per_box) || 0) + op);
+        const cls = lowCls(total, product.min_stock);
+        if (fb > 0) {
+            const label = fb + ' caja' + (fb === 1 ? '' : 's') + (op > 0 ? ' + ' + op : '');
+            return { cls: cls, html: '<i class="fas fa-boxes-stacked"></i> ' + label };
+        }
+        return { cls: cls, html: '<i class="fas fa-cubes"></i> ' + fmt(op) };
+    }
+
+    // Stock clásico.
+    const qty = (product.current_stock != null) ? parseFloat(product.current_stock) : 0;
+    return { cls: lowCls(qty, product.min_stock), html: '<i class="fas fa-cubes"></i> ' + fmt(qty) };
+}
+
+// Controla visibilidad de campos en el modal de edición según el tipo de inventario.
+function updateEditTrackingUI() {
+    const tracking = document.getElementById('editProductTrackingType')?.value || 'stock';
+    const lotGroup = document.getElementById('editProductLotGroup');
+    const stockGroup = document.getElementById('editStockGroup');
+    const minStockGroup = document.getElementById('editMinStockGroup');
+    const barcodeGroup = document.getElementById('editBarcodeGroup');
+    const vis = (el, show) => { if (el) el.style.display = show ? '' : 'none'; };
+    vis(lotGroup, tracking === 'stock');
+    vis(stockGroup, tracking !== 'recipe' && tracking !== 'component' && tracking !== 'none');
+    vis(minStockGroup, tracking !== 'none');
+    vis(barcodeGroup, tracking !== 'none');
+    document.querySelectorAll('#editTypeCards .inv-type-card').forEach(c => {
+        c.classList.toggle('active', c.dataset.type === tracking);
+    });
+    syncEditTabs();
+    if (tracking === 'recipe' || tracking === 'none') openRecipePanel();
+    else closeRecipePanel();
+    if (tracking === 'component') loadEditPresentations();
+}
+
+// Muestra/oculta las pestañas del editor según el tipo: Ensamblado/Servicio → "Componentes",
+// Componente → "Presentaciones". Si la pestaña activa quedó oculta, vuelve a "Precio & Stock".
+function syncEditTabs() {
+    const tracking = document.getElementById('editProductTrackingType')?.value || 'stock';
+    const compTab = document.querySelector('.drawer-tab[data-tab="tabComp"]');
+    const presentTab = document.querySelector('.drawer-tab[data-tab="tabPresent"]');
+    const showComp = (tracking === 'recipe' || tracking === 'none');
+    const showPresent = (tracking === 'component');
+    if (compTab) compTab.style.display = showComp ? '' : 'none';
+    if (presentTab) presentTab.style.display = showPresent ? '' : 'none';
+    const activePanel = document.querySelector('.tab-panel.active');
+    const activeId = activePanel ? activePanel.id : 'tab1';
+    if ((activeId === 'tabComp' && !showComp) || (activeId === 'tabPresent' && !showPresent)) {
+        switchDrawerTab('tab1');
+    }
+}
+
+function switchDrawerTab(panelId) {
+    document.querySelectorAll('.drawer-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    const b = document.querySelector('.drawer-tab[data-tab="' + panelId + '"]'); if (b) b.classList.add('active');
+    const p = document.getElementById(panelId); if (p) p.classList.add('active');
+}
+
+// Controla visibilidad de campos en el modal de alta.
+function updateAddTrackingUI() {
+    const tracking = document.getElementById('productTrackingType')?.value || 'stock';
+    const lotGroup = document.getElementById('addProductLotGroup');
+    const stockGroup = document.getElementById('addStockGroup');
+    const minStockGroup = document.getElementById('addMinStockGroup');
+    const barcodeGroup = document.getElementById('addBarcodeGroup');
+    const vis = (el, show) => { if (el) el.style.display = show ? '' : 'none'; };
+    // Producto final → piezas por caja (lotes derivados).
+    vis(lotGroup, tracking === 'stock');
+    // Servicio (none) no es físico: sin cantidad inicial, sin mínimo, sin código de barras.
+    vis(stockGroup, tracking === 'stock');
+    vis(minStockGroup, tracking !== 'none');
+    vis(barcodeGroup, tracking !== 'none');
+    document.querySelectorAll('#addTypeCards .inv-type-card').forEach(c => {
+        c.classList.toggle('active', c.dataset.type === tracking);
+    });
+    // El stock inicial escalar solo aplica al Producto final.
+    const si = document.getElementById('productStockInput');
+    if (si) {
+        if (tracking === 'stock') { si.setAttribute('required', ''); }
+        else { si.removeAttribute('required'); si.value = 0; }
+    }
+    syncAddTabs();
+}
+
+// Muestra/oculta las pestañas dinámicas según el tipo: Ensamblado/Servicio → "Componentes",
+// Componente → "Presentaciones". Si la pestaña activa quedó oculta, vuelve a "Principal".
+function syncAddTabs() {
+    const tracking = document.getElementById('productTrackingType')?.value || 'stock';
+    const compTab = document.querySelector('.add-tab[data-ptab="ptabComp"]');
+    const presentTab = document.querySelector('.add-tab[data-ptab="ptabPresent"]');
+    const showComp = (tracking === 'recipe' || tracking === 'none');
+    const showPresent = (tracking === 'component');
+    if (compTab) compTab.style.display = showComp ? '' : 'none';
+    if (presentTab) presentTab.style.display = showPresent ? '' : 'none';
+    const activePanel = document.querySelector('.add-tab-panel.active');
+    const activeId = activePanel ? activePanel.id : 'ptab1';
+    if ((activeId === 'ptabComp' && !showComp) || (activeId === 'ptabPresent' && !showPresent)) {
+        switchAddTab('ptab1');
+    }
+}
+
+function switchAddTab(panelId) {
+    document.querySelectorAll('.add-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.add-tab-panel').forEach(p => p.classList.remove('active'));
+    const b = document.querySelector('.add-tab[data-ptab="' + panelId + '"]'); if (b) b.classList.add('active');
+    const p = document.getElementById(panelId); if (p) p.classList.add('active');
+}
+
+// PASO 1 → PASO 2: se seleccionó el tipo, se muestra el formulario con sus pestañas.
+function beginAddForm() {
+    const sel = document.getElementById('productTrackingType');
+    if (sel) {
+        const active = document.querySelector('#addTypeCards .inv-type-card.active');
+        if (active) sel.value = active.dataset.type;
+    }
+    const typeScreen = document.getElementById('addTypeScreen');
+    const formArea = document.getElementById('addFormArea');
+    if (typeScreen) typeScreen.style.display = 'none';
+    if (formArea) formArea.style.display = '';
+    syncAddTabs();
+    updateAddTrackingUI();
+    switchAddTab('ptab1');
+    // El buscador de componentes (compSearchInput) ya está listo; sin select previo.
+    const nameEl = document.getElementById('productNameInput');
+    setTimeout(() => { if (nameEl) nameEl.focus(); }, 100);
+}
+
+/* ===== Selector de modo de consumo (3 botones resaltables, sin select) ===== */
+function consumeModeGet(groupId) {
+    const g = document.getElementById(groupId);
+    return g ? (g.dataset.value || 'fifo') : 'fifo';
+}
+function consumeModeSet(groupId, value) {
+    const g = document.getElementById(groupId);
+    if (!g) return;
+    g.dataset.value = value;
+    g.querySelectorAll('.consume-opt').forEach(b => b.classList.toggle('active', b.dataset.value === value));
+    const hint = g.querySelector('.consume-hint');
+    if (hint) {
+        const d = {
+            'fifo': 'Primero se consume la presentación más antigua.',
+            'lifo': 'Primero se consume la presentación más reciente.',
+            'manual': 'En cada venta eliges qué presentación usar.'
+        }[value];
+        if (d) hint.textContent = d;
+    }
+}
+
+/* ===== Presentaciones (componente) en el ALTA ===== */
+let addPresentationDraft = [];
+function addAddPresentation() {
+    const label = document.getElementById('addPresentLabel')?.value.trim();
+    const qty = parseFloat(document.getElementById('addPresentQty')?.value);
+    const totalCost = parseFloat(document.getElementById('addPresentCost')?.value);
+    if (!label) { showNotification('Indica la presentación (ej. Bolsa 1 kg)', 'error'); return; }
+    if (isNaN(qty) || qty <= 0) { showNotification('Cantidad válida requerida', 'error'); return; }
+    addPresentationDraft.push({
+        label: label,
+        quantity: qty,
+        total_cost: isNaN(totalCost) ? 0 : totalCost
+    });
+    renderAddPresentations();
+    const l = document.getElementById('addPresentLabel'); if (l) l.value = '';
+    const q = document.getElementById('addPresentQty'); if (q) q.value = '1';
+    const c = document.getElementById('addPresentCost'); if (c) c.value = '';
+}
+function renderAddPresentations() {
+    const list = document.getElementById('addPresentationsList');
+    if (!list) return;
+    const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    let total = 0, weighted = 0;
+    list.innerHTML = addPresentationDraft.map((p, i) => {
+        const uc = p.quantity > 0 ? p.total_cost / p.quantity : 0;
+        total += p.quantity; weighted += p.quantity * uc;
+        return '<div class="comp-row present-row">' +
+            '<span class="present-label">' + esc(p.label) + '</span>' +
+            '<span class="present-qty">' + NUM(p.quantity) + '</span>' +
+            '<span class="present-cost">$' + uc.toFixed(2) + '/u</span>' +
+            '<button type="button" class="comp-remove" data-idx="' + i + '" title="Quitar"><i class="fas fa-trash"></i></button>' +
+            '</div>';
+    }).join('') || '<div class="form-hint">Aún no has añadido presentaciones.</div>';
+    list.querySelectorAll('.comp-remove').forEach(b => b.addEventListener('click', () => {
+        addPresentationDraft.splice(parseInt(b.dataset.idx, 10), 1);
+        renderAddPresentations();
+    }));
+    const t = document.getElementById('addPresentTotal'); if (t) t.textContent = NUM(total);
+    const cp = document.getElementById('addPresentCostPond');
+    if (cp) cp.textContent = window.FormatUtils ? window.FormatUtils.currency(weighted / (total || 1)) : '$' + (total > 0 ? (weighted / total).toFixed(2) : '0.00');
+}
+
+/* ===== Presentaciones (componente) en la EDICIÓN ===== */
+async function loadEditPresentations() {
+    const pid = currentEditingProduct;
+    const list = document.getElementById('editPresentationsList');
+    if (!pid || !list) return;
+    try {
+        const res = await fetch('../api/inventory/lots.php?product_id=' + pid);
+        const data = await res.json();
+        const lots = (data.success && data.data && data.data.lots) ? data.data.lots : [];
+        const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+        list.innerHTML = lots.map((l, i) => {
+            return '<div class="comp-row present-row">' +
+                '<span class="present-label">' + esc(l.label || ('Presentación ' + (i + 1))) + '</span>' +
+                '<span class="present-qty">' + NUM(l.quantity) + '</span>' +
+                '<span class="present-cost">$' + (parseFloat(l.unit_cost) || 0).toFixed(2) + '/u</span>' +
+                '<button type="button" class="comp-remove" data-lot="' + l.lot_id + '" title="Eliminar"><i class="fas fa-trash"></i></button>' +
+                '</div>';
+        }).join('') || '<div class="form-hint">Sin presentaciones registradas.</div>';
+        list.querySelectorAll('.comp-remove').forEach(b => b.addEventListener('click', async () => {
+            if (!confirm('¿Eliminar esta presentación?')) return;
+            await fetch('../api/inventory/lots.php', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lot_id: parseInt(b.dataset.lot, 10) })
+            });
+            loadEditPresentations();
+        }));
+        const t = document.getElementById('editPresentTotal'); if (t) t.textContent = NUM(data.data ? data.data.total : 0);
+        const cp = document.getElementById('editPresentCostPond');
+        if (cp) cp.textContent = window.FormatUtils ? window.FormatUtils.currency(data.data.unit_cost || 0) : '$' + (data.data.unit_cost || 0).toFixed(2);
+    } catch (err) {
+        console.error('Error cargando presentaciones:', err);
+    }
+}
+async function addEditPresentation() {
+    const pid = currentEditingProduct;
+    const label = document.getElementById('editPresentLabel')?.value.trim();
+    const qty = parseFloat(document.getElementById('editPresentQty')?.value);
+    const totalCost = parseFloat(document.getElementById('editPresentCost')?.value);
+    if (!pid) return;
+    if (!label) { showNotification('Indica la presentación', 'error'); return; }
+    if (isNaN(qty) || qty <= 0) { showNotification('Cantidad válida requerida', 'error'); return; }
+    await fetch('../api/inventory/lots.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product_id: pid, label: label, quantity: qty, total_cost: isNaN(totalCost) ? 0 : totalCost })
+    });
+    const l = document.getElementById('editPresentLabel'); if (l) l.value = '';
+    const q = document.getElementById('editPresentQty'); if (q) q.value = '1';
+    const c = document.getElementById('editPresentCost'); if (c) c.value = '';
+    loadEditPresentations();
+}
+
+/* ===== Alta exprés de componente en el editor de composición ===== */
+function toggleExpressComp(target) {
+    const form = document.getElementById(target + 'ExpressCompForm');
+    if (form) form.style.display = (form.style.display === 'none' || !form.style.display) ? 'grid' : 'none';
+}
+async function expressCreateComponent(target) {
+    const p = (target === 'add') ? 'add' : 'edit';
+    const name = (document.getElementById(p + 'ExpressName')?.value || '').trim();
+    const cost = parseFloat(document.getElementById(p + 'ExpressCost')?.value) || 0;
+    const stock = parseFloat(document.getElementById(p + 'ExpressStock')?.value) || 0;
+    if (!name) { showNotification('Indica el nombre del componente', 'error'); return; }
+    try {
+        const res = await fetch('../api/inventory/products.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                product_name: name, price: 0, cost: cost, stock: 0, min_stock: 0,
+                tracking_type: 'component', consume_mode: 'fifo', is_ingredient: 1, status: 'active'
+            })
+        });
+        const data = await res.json();
+        if (!data.success) { showNotification('Error: ' + (data.message || 'no se pudo crear el componente'), 'error'); return; }
+        const newId = data.data.product_id;
+        // Presentación inicial con el stock indicado (opcional).
+        if (stock > 0) {
+            await fetch('../api/inventory/lots.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ product_id: newId, label: 'Stock inicial', quantity: stock, total_cost: cost * stock || 0 })
+            });
+        }
+        // Registrar en la lista local para que aparezca en el selector al momento.
+        if (!products.some(p => String(p.product_id) === String(newId))) {
+            products.push({ product_id: newId, product_name: name, cost: cost, price: 0, current_stock: 0, tracking_type: 'component', consume_mode: 'fifo', is_ingredient: 1 });
+        }
+        if (target === 'add') {
+            // Añadir el componente recién creado directo a la receta.
+            if (!addCompositionDraft.some(i => String(i.component_id) === String(newId))) {
+                addCompositionDraft.push({ component_id: String(newId), name: name, quantity: 1, unit_cost: cost || 0 });
+                renderAddComposition();
+            }
+        } else {
+            populateRecipeAddSelect();
+            const sel = document.getElementById('recipeIngredientSelect');
+            if (sel) sel.value = String(newId);
+        }
+        const form = document.getElementById(p + 'ExpressCompForm');
+        if (form) { form.style.display = 'none'; form.querySelectorAll('input').forEach(i => i.value = ''); }
+        showNotification('Componente "' + name + '" creado', 'success');
+    } catch (e) {
+        console.error('Error creando componente exprés:', e);
+        showNotification('Error al crear el componente', 'error');
+    }
+}
+
+function openRecipePanel(load) {
+    const panel = document.getElementById('recipePanel');
+    if (!panel) return;
+    panel.classList.remove('hidden');
+    const btn = document.getElementById('editRecipeBtn');
+    if (btn) btn.classList.add('active');
+    if (load !== false) loadRecipeEditor();
+}
+
+function closeRecipePanel() {
+    const panel = document.getElementById('recipePanel');
+    if (panel) panel.classList.add('hidden');
+    const btn = document.getElementById('editRecipeBtn');
+    if (btn) btn.classList.remove('active');
+}
+
+function toggleRecipeEditor() {
+    const panel = document.getElementById('recipePanel');
+    if (panel && !panel.classList.contains('hidden')) {
+        closeRecipePanel();
+    } else {
+        openRecipePanel();
+    }
+}
+
+async function loadRecipeEditor() {
+    const pid = currentEditingProduct;
+    if (!pid) return;
+    recipeEditingProductId = pid;
+    const status = document.getElementById('recipeStatus');
+    if (status) {
+        status.textContent = 'Cargando composición...';
+        status.className = 'status-badge status-analyzing';
+    }
+    try {
+        const res = await fetch(`../api/inventory/recipe.php?product_id=${pid}`);
+        const data = await res.json();
+        if (data.success && data.data) {
+            recipeEditingIngredients = (data.data.ingredients || []).map(i => ({
+                component_id: i.component_id,
+                name: i.name || ('Componente ' + i.component_id),
+                quantity: NUM(i.quantity),
+                unit_cost: NUM(i.unit_cost)
+            }));
+            const productData = data.data.product || {};
+            updateRecipeSummary((productData.available != null) ? productData.available : (data.data.available != null ? data.data.available : null));
+            if (status) {
+                status.textContent = 'Composición cargada';
+                status.className = 'status-badge status-success';
+            }
+        } else {
+            recipeEditingIngredients = [];
+            updateRecipeSummary(null);
+            if (status) {
+                status.textContent = data.message || 'Sin composición definida';
+                status.className = 'status-badge status-waiting';
+            }
+        }
+    } catch (e) {
+        console.error('Error cargando composición:', e);
+        if (status) {
+            status.textContent = 'Error al cargar composición';
+            status.className = 'status-badge status-error';
+        }
+    }
+    renderRecipeIngredients();
+}
+
+function updateRecipeSummary(available) {
+    const availEl = document.getElementById('recipeAvailableDisplay');
+    if (availEl) availEl.textContent = (available != null) ? (window.FormatUtils ? window.FormatUtils.qty(available) : available) : '—';
+    updateEditCompositionCost();
+}
+
+// Recalcula el costo de producción (Σ cantidad × costo unit) del editor de edición.
+function updateEditCompositionCost() {
+    const list = document.getElementById('recipeIngredientsList');
+    const totalEl = document.getElementById('recipeCostDisplay');
+    let total = 0;
+    recipeEditingIngredients.forEach(ing => {
+        const qty = NUM(ing.quantity);
+        const sub = qty * NUM(ing.unit_cost);
+        total += sub;
+        if (list) {
+            const subEl = list.querySelector(`.comp-subtotal[data-component-id="${ing.component_id}"]`);
+            if (subEl) subEl.textContent = fmtMoney(sub);
+        }
+    });
+    if (totalEl) totalEl.textContent = fmtMoney(total);
+    return total;
+}
+
+function renderRecipeIngredients() {
+    const list = document.getElementById('recipeIngredientsList');
+    if (!list) return;
+    if (!recipeEditingIngredients.length) {
+        list.innerHTML = '<div class="recipe-empty">Sin componentes. Añade uno debajo.</div>';
+    } else {
+        const rows = recipeEditingIngredients.map(ing => `
+            <div class="comp-row" data-component-id="${ing.component_id}">
+                <span class="comp-name">${escapeHtml(ing.name)}</span>
+                <input type="number" class="comp-qty recipe-ing-qty" data-component-id="${ing.component_id}" value="${NUM(ing.quantity)}" min="0" step="0.001" inputmode="decimal" title="Cantidad">
+                <span class="comp-unit-cost" data-component-id="${ing.component_id}">${fmtMoney(ing.unit_cost)}</span>
+                <span class="comp-subtotal" data-component-id="${ing.component_id}">${fmtMoney(NUM(ing.quantity) * NUM(ing.unit_cost))}</span>
+                <button type="button" class="recipe-ing-remove" data-component-id="${ing.component_id}" title="Quitar componente">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>`).join('');
+        // Cabecera de columnas + filas
+        list.innerHTML = `
+            <div class="comp-head">
+                <span>Componente</span><span>Cantidad</span><span>Costo unit</span><span>Subtotal</span><span></span>
+            </div>
+            ${rows}`;
+    }
+    updateEditCompositionCost();
+    populateRecipeAddSelect();
+}
+
+function populateRecipeAddSelect() {
+    const addSelect = document.getElementById('recipeIngredientSelect');
+    if (!addSelect) return;
+    const pid = String(recipeEditingProductId != null ? recipeEditingProductId : currentEditingProduct);
+    const existing = new Set(recipeEditingIngredients.map(i => String(i.component_id)));
+    const opts = products
+        .filter(p => String(p.product_id) !== pid && !existing.has(String(p.product_id)))
+        .map(p => `<option value="${p.product_id}">${escapeHtml(p.product_name)}</option>`)
+        .join('');
+    addSelect.innerHTML = '<option value="">Seleccionar componente...</option>' + opts;
+}
+
+function addRecipeIngredient() {
+    const sel = document.getElementById('recipeIngredientSelect');
+    const qtyInput = document.getElementById('recipeIngredientQty');
+    if (!sel || !qtyInput) return;
+    const id = sel.value;
+    if (!id) {
+        showNotification('Selecciona un componente', 'error');
+        return;
+    }
+    if (recipeEditingIngredients.some(i => String(i.component_id) === String(id))) {
+        showNotification('Ese componente ya está en la composición', 'error');
+        return;
+    }
+    let qty = parseFloat(qtyInput.value);
+    if (isNaN(qty) || qty <= 0) qty = 1;
+    const prod = products.find(p => String(p.product_id) === String(id));
+    recipeEditingIngredients.push({
+        component_id: id,
+        name: prod ? prod.product_name : ('Componente ' + id),
+        quantity: qty,
+        unit_cost: NUM(prod ? prod.cost : 0)
+    });
+    qtyInput.value = '';
+    sel.value = '';
+    renderRecipeIngredients();
+}
+
+function removeRecipeIngredient(componentId) {
+    recipeEditingIngredients = recipeEditingIngredients.filter(i => String(i.component_id) !== String(componentId));
+    renderRecipeIngredients();
+}
+
+async function saveRecipe() {
+    const pid = currentEditingProduct;
+    if (!pid) {
+        showNotification('Selecciona un producto', 'error');
+        return;
+    }
+    const ingredients = recipeEditingIngredients
+        .map(i => ({ component_id: i.component_id, quantity: NUM(i.quantity) }))
+        .filter(i => i.component_id && i.quantity > 0);
+
+    const btn = document.getElementById('saveRecipeBtn');
+    const status = document.getElementById('recipeStatus');
+    if (btn) btn.disabled = true;
+    if (status) {
+        status.textContent = 'Guardando composición...';
+        status.className = 'status-badge status-analyzing';
+    }
+    try {
+        const res = await fetch('../api/inventory/recipe.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ product_id: pid, ingredients })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showNotification('Composición guardada', 'success');
+            await loadRecipeEditor();
+            loadProducts();
+        } else {
+            showNotification('Error: ' + (data.message || 'No se pudo guardar la composición'), 'error');
+            if (status) {
+                status.textContent = data.message || 'Error al guardar composición';
+                status.className = 'status-badge status-error';
+            }
+        }
+    } catch (e) {
+        console.error('Error guardando composición:', e);
+        showNotification('Error de conexión al guardar la composición', 'error');
+        if (status) {
+            status.textContent = 'Error de conexión';
+            status.className = 'status-badge status-error';
+        }
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+}
+
+/* ===== Editor de composición en el modal de ALTA ===== */
+function productImgSrc(p) {
+    const rel = (p && p.image_path) ? getRelativeImagePath(p.image_path) : '';
+    return rel || '';
+}
+
+function renderAddComposition() {
+    const list = document.getElementById('addCompositionList');
+    if (!list) return;
+    if (!addCompositionDraft.length) {
+        list.innerHTML = '<div class="recipe-empty">Aún no hay componentes. Búscalos en el campo de arriba y selecciónalos.</div>';
+    } else {
+        list.innerHTML = addCompositionDraft.map(ing => {
+            const prod = products.find(p => String(p.product_id) === String(ing.component_id)) || {};
+            const img = productImgSrc(prod);
+            const qty = NUM(ing.quantity);
+            const sub = qty * NUM(ing.unit_cost);
+            return '<div class="comp-pick-row" data-component-id="' + ing.component_id + '">' +
+                '<span class="comp-pick-thumb">' + (img ? '<img src="' + img + '" alt="">' : '<i class="fas fa-box"></i>') + '</span>' +
+                '<div class="comp-pick-info">' +
+                    '<span class="comp-pick-name">' + escapeHtml(ing.name) + '</span>' +
+                    '<span class="comp-pick-meta">' + fmtMoney(ing.unit_cost) + ' / unidad</span>' +
+                '</div>' +
+                '<div class="comp-qty-stepper">' +
+                    '<button type="button" class="comp-qty-btn comp-qty-minus" data-component-id="' + ing.component_id + '" title="Menos"><i class="fas fa-minus"></i></button>' +
+                    '<input type="number" class="comp-qty" data-component-id="' + ing.component_id + '" value="' + qty + '" min="0" step="0.001" inputmode="decimal">' +
+                    '<button type="button" class="comp-qty-btn comp-qty-plus" data-component-id="' + ing.component_id + '" title="Más"><i class="fas fa-plus"></i></button>' +
+                '</div>' +
+                '<span class="comp-pick-subtotal" data-component-id="' + ing.component_id + '">' + fmtMoney(sub) + '</span>' +
+                '<button type="button" class="recipe-ing-remove" data-component-id="' + ing.component_id + '" title="Quitar"><i class="fas fa-trash"></i></button>' +
+            '</div>';
+        }).join('');
+    }
+    updateAddCompositionCost();
+}
+
+// Lista de resultados de la búsqueda de componentes (imagen, nombre, precio).
+function filterCompSearch() {
+    const input = document.getElementById('compSearchInput');
+    const box = document.getElementById('compSearchResults');
+    if (!input || !box) return;
+    const q = (input.value || '').trim().toLowerCase();
+    if (!q) { box.style.display = 'none'; box.innerHTML = ''; return; }
+    const existing = new Set(addCompositionDraft.map(i => String(i.component_id)));
+    const matches = products
+        .filter(p => !existing.has(String(p.product_id)) && String(p.product_name || '').toLowerCase().includes(q))
+        .slice(0, 12);
+    if (!matches.length) {
+        box.style.display = 'block';
+        box.innerHTML = '<div class="comp-search-empty">Sin coincidencias. Puedes crearlo con "Crear componente".</div>';
+        return;
+    }
+    box.innerHTML = matches.map(p => {
+        const img = productImgSrc(p);
+        return '<button type="button" class="comp-search-item" data-pid="' + p.product_id + '">' +
+            '<span class="comp-search-thumb">' + (img ? '<img src="' + img + '" alt="">' : '<i class="fas fa-box"></i>') + '</span>' +
+            '<span class="comp-search-name">' + escapeHtml(p.product_name) + '</span>' +
+            '<span class="comp-search-price">' + fmtMoney(p.price) + '</span>' +
+            '</button>';
+    }).join('');
+    box.style.display = 'block';
+}
+
+// Al seleccionar un resultado se añade el componente a la receta al momento (qty = 1).
+function addComponentFromPicker(pid) {
+    const prod = products.find(p => String(p.product_id) === String(pid));
+    if (!prod) return;
+    if (addCompositionDraft.some(i => String(i.component_id) === String(pid))) {
+        showNotification('Ese componente ya está en la receta', 'info');
+    } else {
+        addCompositionDraft.push({
+            component_id: String(pid),
+            name: prod.product_name || ('Componente ' + pid),
+            quantity: 1,
+            unit_cost: NUM(prod.cost)
+        });
+        renderAddComposition();
+    }
+    const input = document.getElementById('compSearchInput');
+    const box = document.getElementById('compSearchResults');
+    if (input) input.value = '';
+    if (box) { box.style.display = 'none'; box.innerHTML = ''; }
+}
+
+// Ajusta la cantidad de un componente con los pasos + / -.
+function bumpCompQty(componentId, delta) {
+    const ing = addCompositionDraft.find(i => String(i.component_id) === String(componentId));
+    if (!ing) return;
+    let v = NUM(ing.quantity) + delta;
+    if (v < 0) v = 0;
+    ing.quantity = v;
+    renderAddComposition();
+}
+
+function removeAddComposition(componentId) {
+    addCompositionDraft = addCompositionDraft.filter(i => String(i.component_id) !== String(componentId));
+    renderAddComposition();
+}
+
+// Recalcula el costo de producción en vivo del editor de alta.
+function updateAddCompositionCost() {
+    const list = document.getElementById('addCompositionList');
+    const totalEl = document.getElementById('addCompositionCostTotal');
+    let total = 0;
+    addCompositionDraft.forEach(ing => {
+        const qty = NUM(ing.quantity);
+        const sub = qty * NUM(ing.unit_cost);
+        total += sub;
+        if (list) {
+            const subEl = list.querySelector(`.comp-pick-subtotal[data-component-id="${ing.component_id}"]`);
+            if (subEl) subEl.textContent = fmtMoney(sub);
+        }
+    });
+    if (totalEl) totalEl.textContent = fmtMoney(total);
+    return total;
+}
+
+function resetAddComposition() {
+    addCompositionDraft = [];
+    addCompositionProductId = null;
+    const totalEl = document.getElementById('addCompositionCostTotal');
+    if (totalEl) totalEl.textContent = '—';
+    const list = document.getElementById('addCompositionList');
+    if (list) list.innerHTML = '<div class="recipe-empty">Aún no hay componentes. Búscalos en el campo de arriba y selecciónalos.</div>';
+    const searchInput = document.getElementById('compSearchInput');
+    if (searchInput) searchInput.value = '';
+    const results = document.getElementById('compSearchResults');
+    if (results) { results.innerHTML = ''; results.style.display = 'none'; }
+    // La visibilidad del panel de composición la controla su pestaña, no aquí.
 }
 
 function openProductDetails(productId) {
@@ -931,6 +1838,18 @@ function openProductDetails(productId) {
         bulkUnitSelect.value = product.bulk_unit || 'kg';
     }
 
+    // Campos de tipo de inventario (receta / lotes / ingrediente)
+    const trackingSelect = document.getElementById('editProductTrackingType');
+    const isIngredientCheckbox = document.getElementById('editProductIsIngredient');
+    const piecesPerBoxInput = document.getElementById('editProductPiecesPerBox');
+    const costPerBoxInput = document.getElementById('editProductCostPerBox');
+    if (trackingSelect) trackingSelect.value = product.tracking_type || 'stock';
+    consumeModeSet('editConsumeModeGroup', product.consume_mode || 'fifo');
+    if (isIngredientCheckbox) isIngredientCheckbox.checked = product.is_ingredient == 1;
+    if (piecesPerBoxInput) piecesPerBoxInput.value = product.pieces_per_box != null ? product.pieces_per_box : '';
+    if (costPerBoxInput) costPerBoxInput.value = product.cost_per_box != null ? product.cost_per_box : '';
+    updateEditTrackingUI();
+
     // Imagen
     const img = document.getElementById('detailImage');
     const imagePath = getRelativeImagePath(product.image_path);
@@ -954,6 +1873,13 @@ function closeProductDetails() {
     const modal = document.getElementById('productDetailsModal');
     if (modal) modal.classList.remove('show');
     currentEditingProduct = null;
+    recipeEditingIngredients = [];
+    recipeEditingProductId = null;
+    // Cerrar panel de receta
+    const recipePanelReset = document.getElementById('recipePanel');
+    if (recipePanelReset) recipePanelReset.classList.add('hidden');
+    const recipeBtnReset = document.getElementById('editRecipeBtn');
+    if (recipeBtnReset) recipeBtnReset.classList.remove('active');
     // Limpiar formulario
     document.getElementById('editProductForm')?.reset();
     // Reset a primera pestaña
@@ -1003,7 +1929,12 @@ async function submitEditProduct() {
         cost: parseFloat(formData.get('cost')),
         min_stock: parseInt(formData.get('min_stock')),
         is_bulk: document.getElementById('editProductIsBulk')?.checked ? 1 : 0,
-        bulk_unit: formData.get('bulk_unit') || 'kg'
+        bulk_unit: formData.get('bulk_unit') || 'kg',
+        tracking_type: document.getElementById('editProductTrackingType')?.value,
+        is_ingredient: (document.getElementById('editProductTrackingType')?.value === 'component') ? 1 : 0,
+        consume_mode: consumeModeGet('editConsumeModeGroup'),
+        pieces_per_box: parseFloat(document.getElementById('editProductPiecesPerBox')?.value) || null,
+        cost_per_box: parseFloat(document.getElementById('editProductCostPerBox')?.value) || null
     };
 
     try {

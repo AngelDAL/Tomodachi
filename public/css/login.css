@@ -1,16 +1,23 @@
 :root {
-    --primary-color: #C62828;
-    --primary-dark: #9E1B1B;
-    --primary-darker: #6E1212;
-    --primary-light: #FBE9E9;
-    --primary-lighter: #FDF4F4;
-    --primary-shadow: rgba(198, 40, 40, 0.22);
-    --secondary-color: #6c757d;
+    --primary-color: #39C5BB;
+    --primary-dark: #2CB1A7;
+    --primary-darker: #1F8A82;
+    --primary-light: #E4F8F6;
+    --primary-lighter: #F0FBFA;
+    --primary-shadow: rgba(57, 197, 187, 0.22);
+    --secondary-color: #0E86A6;
+    --secondary-dark: #0A6A86;
     --success-color: #48bb78;
     --error-color: #f56565;
     --text-color: #2d3748;
-    --text-light: #718096;
-    --bg-light: #f7fafc;
+    --text-light: #5a6572;
+    --bg-light: #f4f6f8;
+    --bg-card: #ffffff;
+    --border-color: #d5dbe3;
+    --bg-input: #ffffff;
+    --primary-focus-ring: 0 0 0 3px rgba(57, 197, 187, 0.22);
+    --dur: 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    --dur-spring: 0.38s cubic-bezier(0.34, 1.56, 0.64, 1);
     --white: #ffffff;
     --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
@@ -60,7 +67,15 @@ body {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.17' stroke-width='1.25'%3E%3Cpath d='M0 48Q24 0 48 48T96 48'/%3E%3Cpath d='M0 72Q24 24 48 72T96 72'/%3E%3Cpath d='M0 24Q24-24 48 24T96 24'/%3E%3Cpath d='M24 0Q48 24 72 0M24 96Q48 72 72 96'/%3E%3C/g%3E%3C/svg%3E");
     background-size: 96px 96px;
     background-position: center;
+    /* Máscara estática: el patrón vectorial nace transparente abajo (0 %)
+       y alcanza visibilidad total arriba (100 %). Sin animación ni repaints. */
+    -webkit-mask-image: linear-gradient(to top, transparent 0%, #000 100%);
+    mask-image: linear-gradient(to top, transparent 0%, #000 100%);
+    -webkit-mask-size: 100% 100%;
+    mask-size: 100% 100%;
 }
+
+/* Fondo animado retirado: el login mantiene solo el patrón vectorial enmascarado. */
 
 .bg-image {
     position: absolute;
@@ -391,89 +406,43 @@ dialog.privacy-modal.close .modal-wrapper {
 
 .form-header h3 {
     font-size: 2rem;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--text-color);
     margin-bottom: 0.5rem;
+    font-family: var(--font-heading, 'Sora', sans-serif);
+    letter-spacing: -0.01em;
 }
 
 .form-header p {
     color: var(--text-light);
     font-size: 0.95rem;
+    font-family: var(--font-body, 'Inter', sans-serif);
 }
 
-/* Form Styles */
-.modern-form .input-group {
-    position: relative;
-    margin-bottom: 1.5rem;
-    display: flex;
-    align-items: flex-start;
-}
+/* Form Styles — alineado con el catálogo de estilos (design-system) */
+.modern-form { font-family: var(--font-body, 'Inter', sans-serif); }
 
-.icon-wrapper {
-    width: 40px;
-    height: 50px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-light);
-    font-size: 1.1rem;
-}
+.form-field { margin-bottom: 1.35rem; }
+.form-field .flabel { font-family: var(--font-heading, 'Sora', sans-serif); }
 
-.input-wrapper {
-    flex: 1;
-    position: relative;
-}
-
-.input-wrapper input {
-    width: 100%;
-    padding: 1rem 0.5rem;
-    font-size: 1rem;
-    color: var(--text-color);
-    border: none;
-    border-bottom: 2px solid var(--border-color);
-    outline: none;
-    background: transparent;
-    transition: border-color 0.3s;
-    font-family: inherit;
-}
-
-.input-wrapper input:focus {
-    border-bottom-color: var(--primary-color);
-}
-
-.input-wrapper label {
-    position: absolute;
-    top: 1rem;
-    left: 0.5rem;
-    color: var(--text-light);
-    pointer-events: none;
-    transition: 0.3s ease all;
-    font-size: 1rem;
-}
-
-.input-wrapper input:focus ~ label,
-.input-wrapper input:not(:placeholder-shown) ~ label {
-    top: -0.5rem;
-    font-size: 0.8rem;
-    color: var(--primary-color);
-    font-weight: 500;
-}
-
+/* Botón del ojo dentro del input de contraseña */
 .toggle-password {
     position: absolute;
-    right: 0;
-    top: 1rem;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
     background: none;
     border: none;
-    color: var(--text-light);
+    color: var(--text-muted, #9aa3ad);
     cursor: pointer;
     padding: 0.25rem;
-    transition: color 0.3s;
+    font-size: 0.95rem;
+    transition: color 0.25s;
 }
+.toggle-password:hover { color: var(--primary-color); }
 
-.toggle-password:hover {
-    color: var(--primary-color);
-}
+/* Espacio a la derecha del campo contraseña para que no choque con el ojo */
+.form-field .input-wrap input[type="password"].ds-input { padding-right: 46px; }
 
 .form-actions {
     display: flex;
@@ -481,6 +450,7 @@ dialog.privacy-modal.close .modal-wrapper {
     align-items: center;
     margin-bottom: 2rem;
     font-size: 0.9rem;
+    font-family: var(--font-body, 'Inter', sans-serif);
 }
 
 .remember-me {
@@ -490,51 +460,24 @@ dialog.privacy-modal.close .modal-wrapper {
     cursor: pointer;
     color: var(--text-light);
 }
+.remember-me input { accent-color: var(--primary-color); }
 
 .forgot-password {
     color: var(--primary-color);
     text-decoration: none;
-    font-weight: 500;
-    transition: color 0.3s;
+    font-weight: 600;
+    font-family: var(--font-heading, 'Sora', sans-serif);
+    font-size: 0.85rem;
+    transition: color 0.25s;
 }
-
 .forgot-password:hover {
     color: var(--primary-dark);
     text-decoration: underline;
 }
 
-.btn-login {
-    width: 100%;
-    padding: 1rem;
-    background: linear-gradient(to right, var(--primary-color), var(--primary-dark));
-    color: var(--white);
-    border: none;
-    border-radius: 8px;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    box-shadow: var(--shadow-md);
-}
-
-.btn-login:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
-}
-
-.btn-login:active {
-    transform: translateY(0);
-}
-
-.btn-login:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-    transform: none;
-}
+/* El botón de acceso reusa .btn .btn-solid del catálogo (cápsula cian);
+   aquí solo se hace de ancho completo con aire por encima. */
+.btn-login { width: 100%; margin-top: 0.5rem; }
 
 .login-footer {
     margin-top: 2rem;

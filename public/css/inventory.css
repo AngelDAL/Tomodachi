@@ -2907,3 +2907,385 @@
     border-radius: var(--ds-radius-lg) 0 0 var(--ds-radius-lg);
 }
 
+
+/* ===== Receta (BOM) + inventario por lotes ===== */
+.recipe-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.recipe-card-header h3 { font-size: 0.9rem; }
+.recipe-card-header .btn-secondary {
+    font-size: 0.8rem;
+    padding: 5px 10px;
+}
+#editProductLotGroup { transition: opacity 0.2s; }
+
+.recipe-panel { gap: 14px; }
+
+.recipe-ingredients-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 220px;
+    overflow-y: auto;
+    padding: 4px;
+}
+.recipe-empty {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    padding: 10px;
+    text-align: center;
+    border: 1px dashed var(--border-color);
+    border-radius: 8px;
+}
+.recipe-ing-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--bg-light);
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    padding: 6px 10px;
+}
+.recipe-ing-name {
+    flex: 1;
+    font-weight: 500;
+    font-size: 0.9rem;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.recipe-ing-qty {
+    width: 90px;
+    padding: 6px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    background: var(--bg-card);
+    color: var(--text-color);
+}
+.recipe-ing-remove {
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    color: var(--danger-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+.recipe-ing-remove:hover { background: var(--danger-color); color: #fff; }
+
+.recipe-add-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.recipe-add-row select {
+    flex: 1;
+    min-width: 160px;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-card);
+    color: var(--text-color);
+    font-size: 0.9rem;
+}
+.recipe-add-row input {
+    width: 90px;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-card);
+    color: var(--text-color);
+    font-size: 0.9rem;
+}
+
+.recipe-summary {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    font-size: 0.9rem;
+    color: var(--text-medium);
+    background: var(--bg-light);
+    border: 1px dashed var(--border-color);
+    border-radius: 8px;
+    padding: 10px 12px;
+}
+.recipe-summary strong { color: var(--primary-color); }
+
+.recipe-save-row {
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* Disponibilidad de productos ensamblados (receta) */
+.recipe-avail { font-weight: 600; }
+.recipe-limit { font-size: 0.78em; color: var(--warning-color); }
+.recipe-error { font-size: 0.78em; color: var(--danger-color); margin-top: 2px; }
+.stock-muted { color: var(--text-muted); }
+
+/* ===== Editor de composición (componentes) — grid de columnas + costo en vivo ===== */
+.comp-block {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 6px 0;
+}
+.comp-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.comp-head, .comp-row {
+    display: grid;
+    grid-template-columns: 1fr 84px 92px 92px 30px;
+    gap: 8px;
+    align-items: center;
+}
+.comp-head {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    padding: 2px 10px;
+    border-bottom: 1px solid var(--border-light);
+}
+.comp-head span:last-child { visibility: hidden; }
+.comp-row {
+    background: var(--bg-light);
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    padding: 6px 10px;
+}
+.comp-name {
+    font-weight: 500;
+    font-size: 0.88rem;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.comp-qty {
+    width: 100%;
+    min-width: 0;
+    padding: 5px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    text-align: right;
+}
+.comp-unit-cost, .comp-subtotal {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    text-align: right;
+}
+.comp-subtotal { color: var(--primary-color); font-weight: 600; }
+.add-composition-panel { margin-top: 6px; }
+.add-composition-panel .comp-block {
+    border: 1px solid var(--border-light);
+    border-radius: 10px;
+    padding: 12px;
+    background: var(--bg-card);
+}
+
+/* Ensanchamos el drawer de detalles en escritorio para que el editor quepa cómodo */
+@media (min-width: 1100px) {
+    .drawer-content { width: 780px; }
+}
+@media (max-width: 1099px) and (min-width: 600px) {
+    .comp-head, .comp-row { grid-template-columns: 1fr 74px 84px 84px 28px; }
+}
+@media (max-width: 600px) {
+    .comp-head, .comp-row { grid-template-columns: 1fr 64px 30px; }
+    .comp-unit-cost, .comp-subtotal { display: none; }
+}
+
+/* ===== Selector de tipo de inventario (4 tarjetas grandes) ===== */
+.inv-type-section { margin-bottom: 18px; }
+.inv-type-label {
+    display: flex; align-items: baseline; gap: 8px;
+    font-size: 13px; font-weight: 600; margin-bottom: 10px;
+    color: var(--text-color, #333);
+}
+.inv-type-hint { font-weight: 400; font-size: 12px; color: var(--text-muted, #888); }
+.inv-type-cards {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+}
+.inv-type-card {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 4px; text-align: center;
+    padding: 14px 8px; min-height: 96px;
+    border: 1.5px solid var(--border-color, #ddd);
+    border-radius: 12px; background: var(--card-bg, #fff);
+    color: var(--text-color, #333); cursor: pointer;
+    transition: border-color .15s, box-shadow .15s, transform .1s, background .15s;
+}
+.inv-type-card:hover { transform: translateY(-1px); border-color: var(--primary-color, #4FDDD2); }
+.inv-type-card > i { font-size: 22px; color: var(--primary-color, #4FDDD2); margin-bottom: 2px; }
+.inv-type-card .it-title { font-size: 12.5px; font-weight: 700; line-height: 1.15; }
+.inv-type-card .it-sub { font-size: 10.5px; line-height: 1.2; color: var(--text-muted, #888); }
+.inv-type-card.active {
+    border-color: var(--primary-color, #4FDDD2);
+    background: color-mix(in srgb, var(--primary-color, #4FDDD2) 10%, var(--card-bg, #fff));
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color, #4FDDD2) 25%, transparent);
+}
+.inv-type-cards-edit { margin-bottom: 4px; }
+@media (max-width: 640px) {
+    .inv-type-cards { grid-template-columns: repeat(2, 1fr); }
+}
+/* Bloque de presentaciones (componente) */
+.add-present-panel { }
+.add-present-panel .recipe-add-row { flex-wrap: wrap; }
+.add-present-panel .recipe-add-row input[type=text] { flex: 1 1 140px; }
+
+/* ===== Alta exprés de componente (en el editor de composición) ===== */
+.express-comp-wrap { margin-top: 10px; }
+.express-comp-form {
+    margin-top: 8px; padding: 12px;
+    border: 1px solid var(--border-color, #ddd);
+    border-radius: 10px; background: var(--bg-color, #fafafa);
+    display: grid; grid-template-columns: 1fr 100px 110px; gap: 8px;
+}
+.express-comp-form input {
+    padding: 7px 9px; border: 1px solid var(--border-color, #ddd); border-radius: 8px;
+    width: 100%; box-sizing: border-box;
+}
+.express-comp-actions { grid-column: 1 / -1; display: flex; gap: 8px; justify-content: flex-end; }
+.express-comp-form .form-hint { grid-column: 1 / -1; margin-top: 2px; }
+@media (max-width: 520px) {
+    .express-comp-form { grid-template-columns: 1fr; }
+}
+
+/* ===== Asistente de alta de producto (PASO 1: tipo) ===== */
+.add-type-screen { padding: 8px 0 4px; }
+.add-type-caption {
+    font-size: 14px; font-weight: 700; margin-bottom: 2px; color: var(--text-color, #333);
+    display: flex; align-items: center; gap: 8px;
+}
+.add-type-caption small { font-weight: 400; font-size: 12px; color: var(--text-muted, #888); }
+.add-type-prompt { font-size: 12px; color: var(--text-muted, #888); margin: 6px 0 14px; }
+.inv-type-cards-big .inv-type-card { min-height: 132px; padding: 20px 12px; }
+.inv-type-cards-big .inv-type-card > i { font-size: 30px; margin-bottom: 8px; }
+.inv-type-cards-big .it-title { font-size: 14px; }
+.inv-type-cards-big .it-sub { font-size: 11.5px; }
+.add-type-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+.add-form-area .add-type-change {
+    margin-bottom: 10px; font-size: 12px; color: var(--primary-color, #4FDDD2);
+    background: none; border: none; cursor: pointer; font-weight: 600; padding: 0;
+}
+.add-form-area .add-type-change:hover { text-decoration: underline; }
+
+/* ===== Buscador y fichas de componentes (pestaña Componentes) ===== */
+.comp-pick-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.comp-pick-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px; border: 1px solid var(--border-light, #e5e7eb);
+    border-radius: 10px; background: var(--bg-card, #fff);
+}
+.comp-pick-thumb, .comp-search-thumb {
+    width: 40px; height: 40px; border-radius: 8px; flex: 0 0 40px;
+    display: flex; align-items: center; justify-content: center;
+    background: #f1f3f5; overflow: hidden; color: #9aa3af;
+}
+.comp-pick-thumb img, .comp-search-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.comp-pick-info { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
+.comp-pick-name { font-weight: 600; font-size: 13.5px; color: var(--text-color, #333);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.comp-pick-meta { font-size: 11.5px; color: var(--text-muted, #888); }
+.comp-qty-stepper { display: flex; align-items: center; gap: 2px; }
+.comp-qty-btn {
+    width: 26px; height: 26px; border-radius: 7px; border: 1px solid var(--border-color, #ddd);
+    background: var(--bg-color, #f8f9fa); color: var(--text-color, #333); cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; font-size: 11px;
+}
+.comp-qty-btn:hover { border-color: var(--primary-color, #4FDDD2); color: var(--primary-color, #4FDDD2); }
+.comp-qty {
+    width: 54px; height: 26px; text-align: center; border: 1px solid var(--border-color, #ddd);
+    border-radius: 7px; font-size: 13px; background: var(--bg-color, #f8f9fa); margin: 0 2px;
+}
+.comp-qty:focus { outline: none; border-color: var(--primary-color, #4FDDD2); }
+.comp-pick-subtotal { font-weight: 700; font-size: 13.5px; color: var(--primary-color, #4FDDD2); min-width: 60px; text-align: right; }
+.recipe-ing-remove {
+    width: 26px; height: 26px; border-radius: 7px; border: none; background: transparent;
+    color: #d33; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 26px;
+}
+.recipe-ing-remove:hover { background: #fdecea; }
+
+/* Buscador de componentes */
+.comp-search { position: relative; margin-bottom: 12px; }
+.comp-search-input-wrap {
+    position: relative; display: flex; align-items: center;
+    border: 1px solid var(--border-color, #ddd); border-radius: 10px; background: var(--bg-color, #f8f9fa);
+}
+.comp-search-input-wrap > i { position: absolute; left: 12px; color: #9aa3af; font-size: 13px; pointer-events: none; }
+.comp-search-input-wrap input {
+    flex: 1; border: none; background: transparent; padding: 11px 12px 11px 34px;
+    font-size: 13.5px; color: var(--text-color, #333); outline: none; width: 100%;
+}
+.comp-search-input-wrap input::placeholder { color: #9aa3af; }
+.comp-search-results {
+    position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 30;
+    background: var(--bg-card, #fff); border: 1px solid var(--border-color, #ddd); border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.12); max-height: 260px; overflow-y: auto; display: flex; flex-direction: column; padding: 4px;
+}
+.comp-search-item {
+    display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 8px;
+    border: none; background: transparent; cursor: pointer; text-align: left; width: 100%;
+}
+.comp-search-item:hover { background: #f1f5f4; }
+.comp-search-thumb { width: 34px; height: 34px; flex-basis: 34px; border-radius: 7px; }
+.comp-search-name { flex: 1; font-size: 13px; font-weight: 500; color: var(--text-color, #333); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.comp-search-price { font-size: 12.5px; font-weight: 600; color: var(--primary-color, #4FDDD2); white-space: nowrap; }
+.comp-search-empty { padding: 12px; font-size: 12.5px; color: var(--text-muted, #888); text-align: center; }
+.recipe-empty { font-size: 12.5px; color: var(--text-muted, #888); padding: 8px 2px; text-align: center; }
+.recipe-summary-clear { margin-top: 4px; }
+
+/* ===== Modo de consumo: 3 opciones resaltables (sin select) ===== */
+.consume-opts { display: flex; gap: 8px; margin: 6px 0 2px; }
+.consume-opt {
+    flex: 1; padding: 9px 6px; border-radius: 9px;
+    border: 1.5px solid var(--border-color, #ddd);
+    background: var(--bg-color, #f8f9fa); color: var(--text-color, #333);
+    font-weight: 600; font-size: 13px; cursor: pointer; transition: all .12s;
+}
+.consume-opt:hover { border-color: var(--primary-color, #4FDDD2); }
+.consume-opt.active {
+    border-color: var(--primary-color, #4FDDD2);
+    background: color-mix(in srgb, var(--primary-color, #4FDDD2) 12%, var(--bg-color, #fff));
+    color: var(--primary-color, #4FDDD2);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color, #4FDDD2) 20%, transparent);
+}
+.consume-hint { display: block; margin-top: 6px; }
+
+/* ===== Modal de alta más ancho (pestañas Componentes / Presentaciones) ===== */
+.modal-content.add-product-content { max-width: 880px !important; width: 96% !important; }
+@media (max-width: 700px) {
+    .modal-content.add-product-content { width: 100% !important; max-width: 100% !important; }
+}
+
+/* ===== Editor (detalles): tipo a todo el ancho + drawer ancho para pestañas dinámicas ===== */
+.edit-type-wrap { width: 100%; }
+.edit-type-wrap .inv-type-cards { grid-template-columns: repeat(4, 1fr); }
+@media (max-width: 640px) {
+    .edit-type-wrap .inv-type-cards { grid-template-columns: repeat(2, 1fr); }
+}
+/* Drawer más ancho para que la composición/presentaciones se vean cómodas */
+.drawer-content { width: 880px !important; max-width: 100% !important; }
+@media (max-width: 700px) {
+    .drawer-content { width: 100% !important; }
+}

@@ -12,8 +12,8 @@
     <style>
         :root {
             /* Fallback semántico: theme-init / themeConfig lo reemplaza por tienda. */
-            --primary-color: #C62828;
-            --secondary-color: #4a4a4a;
+            --primary-color: #39C5BB;
+            --secondary-color: #0E86A6;
             --bg-body: #f4f7f6;
             --bg-card: #ffffff;
             --bg-light: #eef2f7;
@@ -43,16 +43,87 @@
             flex-direction: column;
         }
 
-        /* Header */
+        /* Header — grid de 3 columnas: logo a la izquierda, reloj CENTRADO,
+           controles a la derecha. */
         .header {
             background: var(--dark-color);
             padding: 15px 40px;
-            display: flex;
-            justify-content: space-between;
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
             align-items: center;
+            gap: 16px;
             box-shadow: 0 2px 10px color-mix(in srgb, var(--dark-color) 18%, transparent);
             color: var(--text-on-primary);
         }
+        .header-left { justify-self: start; }
+        .header-center { justify-self: center; }
+        .header-right { justify-self: end; }
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            position: relative;
+        }
+
+        /* Reloj centrado */
+        .header-center {
+            font-size: 2.1rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 0.04em;
+            line-height: 1;
+            color: var(--text-on-primary);
+            text-shadow: 0 0 18px color-mix(in srgb, var(--primary-color) 40%, transparent);
+        }
+
+        /* Menú compacto de acciones del kiosco. */
+        .display-actions-toggle {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            color: var(--text-on-primary);
+            border-radius: 8px;
+            width: 40px;
+            height: 36px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+        .display-actions-toggle:hover,
+        .display-actions-toggle[aria-expanded="true"] {
+            background: color-mix(in srgb, var(--primary-color) 30%, transparent);
+            border-color: var(--primary-color);
+        }
+        .display-actions-menu {
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            min-width: 190px;
+            padding: 6px;
+            border: 1px solid color-mix(in srgb, var(--text-on-primary) 18%, transparent);
+            border-radius: 10px;
+            background: color-mix(in srgb, var(--dark-color) 94%, var(--bg-card));
+            box-shadow: 0 12px 28px color-mix(in srgb, var(--dark-color) 35%, transparent);
+            z-index: 20;
+        }
+        .display-actions-menu.hidden { display: none; }
+        .display-action {
+            width: 100%;
+            padding: 10px 12px;
+            border: 0;
+            border-radius: 7px;
+            background: transparent;
+            color: var(--text-on-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-align: left;
+            cursor: pointer;
+            font: inherit;
+            font-size: 0.9rem;
+        }
+        .display-action:hover { background: color-mix(in srgb, var(--text-on-primary) 12%, transparent); }
 
         .logo {
             display: flex;
@@ -67,7 +138,10 @@
             object-fit: contain;
             background: var(--bg-card);
             padding: 2px;
+            opacity: 0;
+            transition: opacity 0.18s ease;
         }
+        .logo-img.loaded { opacity: 1; }
 
         .store-name {
             font-size: 1.8rem;
@@ -146,17 +220,10 @@
             grid-template-columns: auto auto 1fr auto;
             gap: 20px;
             align-items: center;
-            transition: all 0.3s;
-            animation: slideIn 0.3s ease-out;
+            transition: background-color 0.3s, border-color 0.3s;
         }
-
         .product-item:last-child {
             border-bottom: none;
-        }
-
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateX(-20px); }
-            to { opacity: 1; transform: translateX(0); }
         }
 
         .product-image {
@@ -432,25 +499,6 @@
             color: var(--danger-color);
         }
 
-        /* QR toggle */
-        .qr-toggle-btn {
-            background: color-mix(in srgb, var(--text-on-primary) 15%, transparent);
-            border: none;
-            color: var(--text-on-primary);
-            width: 38px;
-            height: 38px;
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 1.2rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 0.2s;
-        }
-        .qr-toggle-btn:hover {
-            background: color-mix(in srgb, var(--text-on-primary) 30%, transparent);
-        }
-
         /* QR Panel */
         .qr-panel {
             position: fixed;
@@ -498,6 +546,16 @@
             font-size: 0.9rem;
             color: var(--text-light);
             margin-bottom: 16px;
+        }
+        .qr-image-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 16px;
+        }
+        .qr-image-container canvas,
+        .qr-image-container img {
+            border-radius: 8px;
+            border: 2px solid var(--border-color);
         }
         .qr-url-box {
             background: var(--bg-light);
@@ -676,12 +734,6 @@
                 padding: 3px 8px;
             }
 
-            .qr-toggle-btn {
-                width: 32px;
-                height: 32px;
-                font-size: 1rem;
-            }
-
             .main-content {
                 flex-direction: column;
                 padding: 8px;
@@ -838,28 +890,38 @@
         }
     </style>
     <link rel="stylesheet" href="css/design-system.css?v=6">
-    <script src="lib/animejs/anime.min.js" defer></script>
+    <script src="lib/qrcodejs/qrcode.min.js"></script>
     <script src="js/design-system.js?v=6" defer></script>
 </head>
 <body>
     <!-- Header -->
     <div class="header">
-        <div class="logo">
-            <img src="assets/images/default-logo.png" alt="Logo" class="logo-img" id="storeLogo" onerror="this.src='assets/images/default-logo.png'">
+        <div class="logo header-left">
+            <img alt="Logo de la tienda" class="logo-img" id="storeLogo">
             <div class="store-name" id="storeName">Tomodachi</div>
         </div>
-        <div style="display:flex; align-items:center; gap:12px;">
-            <span class="conn-status" id="connStatus">Conectando...</span>
-            <button class="qr-toggle-btn" id="qrToggleBtn" title="Mostrar código QR para conectar desde otro dispositivo">
-                <i class="fas fa-qrcode"></i>
+        <!-- Reloj centrado en la parte superior central -->
+        <div class="header-center" id="clock"></div>
+        <div class="header-controls header-right">
+            <button class="display-actions-toggle" id="displayActionsBtn" type="button" title="Opciones de pantalla" aria-label="Opciones de pantalla" aria-expanded="false">
+                <i class="fas fa-ellipsis-vertical"></i>
             </button>
+            <div class="display-actions-menu hidden" id="displayActionsMenu">
+                <button class="display-action" id="fullscreenBtn" type="button">
+                    <i class="fas fa-expand"></i> Pantalla completa
+                </button>
+                <button class="display-action" id="qrToggleBtn" type="button">
+                    <i class="fas fa-qrcode"></i> Mostrar QR
+                </button>
+            </div>
         </div>
     </div>
     <div class="qr-panel hidden" id="qrPanel">
         <div class="qr-panel-content">
             <i class="fas fa-times qr-close" id="qrClose"></i>
             <div class="qr-title">Conectar pantalla de cliente</div>
-            <p class="qr-desc">Abre este enlace en tu tablet o teléfono:</p>
+            <p class="qr-desc">Escanea el código QR o abre este enlace:</p>
+            <div class="qr-image-container" id="qrImageContainer"></div>
             <div class="qr-url-box" id="qrUrlBox"></div>
             <button class="qr-copy-btn" id="qrCopyBtn"><i class="fas fa-copy"></i> Copiar enlace</button>
             <div class="qr-note">La pantalla se actualizará automáticamente cuando agregues productos.</div>
@@ -939,8 +1001,9 @@
         const discount = document.getElementById('discount');
         const discountRow = document.getElementById('discountRow');
         const total = document.getElementById('total');
-        const connStatus = document.getElementById('connStatus');
         const qrToggleBtn = document.getElementById('qrToggleBtn');
+        const displayActionsBtn = document.getElementById('displayActionsBtn');
+        const displayActionsMenu = document.getElementById('displayActionsMenu');
         const qrPanel = document.getElementById('qrPanel');
         const qrClose = document.getElementById('qrClose');
         const qrUrlBox = document.getElementById('qrUrlBox');
@@ -950,7 +1013,58 @@
         // Polling: consulta al servidor cada 2s (tablets, otros dispositivos)
         // ============================================================
         let pollTimer = null;
+        let realtimeSocket = null;
+        let realtimeReconnectTimer = null;
+        let lastRealtimeSignature = '';
         let lastJson = '';
+        let displayRenderToken = 0;
+
+        function receiveDisplayUpdate(data) {
+            const signature = JSON.stringify([data.cart || [], data.totals || {}, data.activeTab || null]);
+            if (signature === lastRealtimeSignature) return;
+            lastRealtimeSignature = signature;
+            updateDisplay(data.cart || [], data.totals || null, data.storeInfo || null, data.activeTab || null);
+            setConnStatus('connected');
+        }
+
+        // WebSocket es el transporte principal. HTTP solo recupera el estado
+        // inicial y funciona como respaldo lento si no hay socket.
+        function realtimeUrl() {
+            const scheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            return `${scheme}//${window.location.host}/ws/?session=${encodeURIComponent(SESSION_UUID)}`;
+        }
+
+        function startFallbackPolling() {
+            if (pollTimer || !SESSION_UUID) return;
+            pollTimer = setInterval(pollOnce, 15000);
+        }
+
+        function connectRealtime() {
+            if (!SESSION_UUID || (realtimeSocket && (realtimeSocket.readyState === WebSocket.OPEN || realtimeSocket.readyState === WebSocket.CONNECTING))) return;
+            if (realtimeReconnectTimer) clearTimeout(realtimeReconnectTimer);
+            try {
+                realtimeSocket = new WebSocket(realtimeUrl());
+                realtimeSocket.onopen = () => {
+                    stopPolling();
+                    setConnStatus('connected');
+                };
+                realtimeSocket.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        if (data.type === 'cart_update') receiveDisplayUpdate(data);
+                    } catch (_) {}
+                };
+                realtimeSocket.onclose = () => {
+                    realtimeSocket = null;
+                    startFallbackPolling();
+                    realtimeReconnectTimer = setTimeout(connectRealtime, 3000);
+                };
+                realtimeSocket.onerror = () => realtimeSocket?.close();
+            } catch (_) {
+                startFallbackPolling();
+                realtimeReconnectTimer = setTimeout(connectRealtime, 3000);
+            }
+        }
 
         function startPolling() {
             if (!SESSION_UUID) {
@@ -959,7 +1073,7 @@
             }
             setConnStatus('connecting');
             pollOnce();
-            pollTimer = setInterval(pollOnce, 2000);
+            connectRealtime();
         }
 
         function stopPolling() {
@@ -980,7 +1094,7 @@
                     }
                     if (contentHash !== lastJson) {
                         lastJson = contentHash;
-                        updateDisplay(json.data.cart || [], json.data.totals || null, json.data.storeInfo || null, json.data.activeTab || null);
+                        receiveDisplayUpdate(json.data);
                     }
                     setConnStatus('connected');
                 } else {
@@ -999,8 +1113,7 @@
                 broadcastChannel = new BroadcastChannel(CHANNEL_NAME);
                 broadcastChannel.onmessage = (event) => {
                     if (event.data.type === 'cart_update') {
-                        updateDisplay(event.data.cart, event.data.totals, event.data.storeInfo, event.data.activeTab);
-                        setConnStatus('connected');
+                        receiveDisplayUpdate(event.data);
                     }
                 };
                 setTimeout(() => {
@@ -1016,8 +1129,7 @@
                 if (e.key === 'tomodachi_customer_display') {
                     try {
                         const data = JSON.parse(e.newValue || '{}');
-                        updateDisplay(data.cart, data.totals, data.storeInfo, data.activeTab);
-                        setConnStatus('connected');
+                        receiveDisplayUpdate(data);
                     } catch (_) {}
                 }
             });
@@ -1025,8 +1137,7 @@
                 const stored = localStorage.getItem('tomodachi_customer_display');
                 if (stored) {
                     const data = JSON.parse(stored);
-                    updateDisplay(data.cart, data.totals, data.storeInfo, data.activeTab);
-                        setConnStatus('connected');
+                    receiveDisplayUpdate(data);
                 }
             } catch (_) {}
         }
@@ -1035,20 +1146,7 @@
         // Estado de conexión
         // ============================================================
         function setConnStatus(status) {
-            if (!connStatus) return;
-            if (status === 'connected') {
-                connStatus.textContent = 'En vivo';
-                connStatus.className = 'conn-status connected';
-            } else if (status === 'connecting') {
-                connStatus.textContent = 'Conectando...';
-                connStatus.className = 'conn-status';
-            } else if (status === 'ready') {
-                connStatus.textContent = 'Listo para conectar';
-                connStatus.className = 'conn-status';
-            } else {
-                connStatus.textContent = 'Desconectado';
-                connStatus.className = 'conn-status disconnected';
-            }
+            // El kiosco no muestra texto de conexión para conservar un encabezado limpio.
         }
 
         // ============================================================
@@ -1060,12 +1158,45 @@
             return SESSION_UUID ? base + '?cart=' + SESSION_UUID : base;
         }
 
-        function showQrPanel() {
-            if (!qrPanel || !qrUrlBox) return;
-            qrUrlBox.textContent = getDisplayUrl();
-            qrPanel.classList.remove('hidden');
+        function closeDisplayActions() {
+            if (displayActionsMenu) displayActionsMenu.classList.add('hidden');
+            if (displayActionsBtn) displayActionsBtn.setAttribute('aria-expanded', 'false');
         }
 
+        function showQrPanel() {
+            if (!qrPanel || !qrUrlBox) return;
+            const url = getDisplayUrl();
+            qrUrlBox.textContent = url;
+            // Generar código QR visual
+            const qrContainer = document.getElementById('qrImageContainer');
+            if (qrContainer && typeof QRCode === 'function') {
+                qrContainer.innerHTML = '';
+                new QRCode(qrContainer, {
+                    text: url,
+                    width: 180,
+                    height: 180,
+                    colorDark: '#333333',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+            }
+            qrPanel.classList.remove('hidden');
+            closeDisplayActions();
+        }
+
+        if (displayActionsBtn) {
+            displayActionsBtn.addEventListener('click', () => {
+                const willOpen = displayActionsMenu?.classList.contains('hidden');
+                displayActionsMenu?.classList.toggle('hidden', !willOpen);
+                displayActionsBtn.setAttribute('aria-expanded', String(willOpen));
+            });
+        }
+        document.addEventListener('click', (event) => {
+            if (displayActionsMenu && displayActionsBtn && !displayActionsMenu.contains(event.target) && !displayActionsBtn.contains(event.target)) {
+                closeDisplayActions();
+            }
+        });
+        document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeDisplayActions(); });
         if (qrToggleBtn) qrToggleBtn.addEventListener('click', showQrPanel);
         if (qrClose) qrClose.addEventListener('click', () => qrPanel.classList.add('hidden'));
         if (qrPanel) qrPanel.addEventListener('click', (e) => { if (e.target === qrPanel) qrPanel.classList.add('hidden'); });
@@ -1100,27 +1231,50 @@
         // Renderizado del carrito
         // ============================================================
         function updateDisplay(cart, totals, storeInfo, activeTab) {
+            const renderToken = ++displayRenderToken;
             // Guardar activeTab para usar en renderizado de items
             window._activeTab = activeTab;
             // Actualizar info de tienda si viene en los datos
             if (storeInfo) {
                 applyDisplayTheme(storeInfo);
                 if (storeInfo.name) document.getElementById('storeName').textContent = storeInfo.name;
-                if (storeInfo.logo) document.getElementById('storeLogo').src = storeInfo.logo;
+                // La API entrega la clave 'logo_url' (a veces 'logo'); aceptamos ambas.
+                const brandLogo = storeInfo.logo_url || storeInfo.logo;
+                if (brandLogo) {
+                    const logoPath = getRelativeImagePath(brandLogo);
+                    if (logoPath) setStoreLogo(logoPath);
+                }
             }
 
             if (!cart || cart.length === 0) {
-                productsList.innerHTML = `
-                    <div class="empty-cart">
-                        <i class="fas fa-shopping-basket"></i>
-                        <div class="empty-cart-text">Tu carrito está vacío</div>
-                    </div>
-                `;
-                itemCount.textContent = '0';
-                subtotal.textContent = '$0.00';
-                discount.textContent = '$0.00';
-                discountRow.style.display = 'none';
-                total.textContent = '$0.00';
+                const finishEmpty = () => {
+                    if (renderToken !== displayRenderToken) return;
+                    productsList.innerHTML = `
+                        <div class="empty-cart">
+                            <i class="fas fa-shopping-basket"></i>
+                            <div class="empty-cart-text">Tu carrito está vacío</div>
+                        </div>
+                    `;
+                    itemCount.textContent = '0';
+                    subtotal.textContent = '$0.00';
+                    discount.textContent = '$0.00';
+                    discountRow.style.display = 'none';
+                    total.textContent = '$0.00';
+                };
+                const currentNodes = Array.from(productsList.querySelectorAll('.product-item'));
+                if (currentNodes.length && typeof anime !== 'undefined' && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                    anime.remove(currentNodes);
+                    anime({
+                        targets: currentNodes,
+                        opacity: [1, 0],
+                        translateX: [0, 24],
+                        duration: 240,
+                        easing: 'easeInCubic',
+                        complete: finishEmpty
+                    });
+                } else {
+                    finishEmpty();
+                }
                 return;
             }
 
@@ -1182,7 +1336,8 @@
             });
 
             // Renderizar items procesados
-            const html = displayItems.map(item => {
+            const html = displayItems.map((item, displayIndex) => {
+                const displayId = String(item.product_id || (item.type === 'bundle' ? 'bundle:' + item.name : item.name) || displayIndex);
                 if (item.type === 'bundle') {
                     // Renderizado de Bundle
                     // Usar imagen del primer producto o ícono de paquete
@@ -1210,7 +1365,7 @@
                     ).join('');
 
                     return `
-                    <div class="product-item" style="background: var(--bg-card); border-left: 4px solid var(--secondary-color);">
+                    <div class="product-item" data-product-id="${escapeHtml(displayId)}" style="background: var(--bg-card); border-left: 4px solid var(--secondary-color);">
                         ${imgHtml}
                         <div class="product-quantity" style="background: var(--secondary-color);">${item.count}</div>
                         <div class="product-info">
@@ -1229,15 +1384,16 @@
                     const imagePath = getRelativeImagePath(item.image_path);
                     const discountPct = hasPromo ? calculateDiscountPercentage(item.original_price, item.unit_price) : 0;
                     
-                    // Mostrar pestaña del carrito si hay multiples
-                    const tabLabel = item.cart_tab ? `<span class="cart-tab-badge ${item.is_active ? 'active' : ''}">#${item.cart_tab}</span>` : '';
+                    // La pestaña del carrito es un detalle interno del cajero;
+                    // no se muestra en la pantalla de cliente.
+                    const tabLabel = '';
 
                     const imgHtml = imagePath 
                         ? `<img src="${imagePath}" alt="" class="product-image" onerror="this.outerHTML='<div class=\\'product-image-icon\\'><i class=\\'fas fa-shopping-basket\\'></i></div>'">`
                         : `<div class="product-image-icon"><i class="fas fa-shopping-basket"></i></div>`;
                     
                     return `
-                    <div class="product-item ${item.is_active ? 'tab-active' : ''}">
+                    <div class="product-item ${item.is_active ? 'tab-active' : ''}" data-product-id="${escapeHtml(displayId)}">
                         ${imgHtml}
                         <div class="product-quantity">${formatQuantity(item.quantity)}</div>
                         <div class="product-info">
@@ -1263,7 +1419,77 @@
                 }
             }).join('');
 
-            productsList.innerHTML = html;
+            // Actualización incremental: se preservan nodos/imágenes existentes.
+            // Solo el artículo nuevo nace en el DOM listo para Anime.js.
+            const staging = document.createElement('div');
+            staging.innerHTML = html;
+            const nextNodes = Array.from(staging.querySelectorAll('.product-item'));
+            const nextIds = new Set(nextNodes.map(el => el.dataset.productId));
+            const currentNodes = Array.from(productsList.querySelectorAll('.product-item'));
+            const currentById = new Map(currentNodes.map(el => [el.dataset.productId, el]));
+            const addedNodes = [];
+
+            currentNodes.filter(el => !nextIds.has(el.dataset.productId)).forEach(el => {
+                if (typeof anime !== 'undefined' && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                    anime.remove(el);
+                    anime({ targets: el, opacity: [1, 0], translateX: [0, 24], duration: 220, easing: 'easeInCubic', complete: () => el.remove() });
+                } else {
+                    el.remove();
+                }
+            });
+
+            nextNodes.forEach(next => {
+                const current = currentById.get(next.dataset.productId);
+                if (!current) {
+                    // Al llegar el primer producto se elimina el estado vacío;
+                    // de otro modo queda arriba como un banner residual.
+                    productsList.querySelector('.empty-cart')?.remove();
+                    next.classList.add('product-enter');
+                    next.style.opacity = '0';
+                    next.style.transform = 'translateX(-28px)';
+                    productsList.appendChild(next);
+                    addedNodes.push(next);
+                } else if (current.innerHTML !== next.innerHTML) {
+                    // Solo la línea que cambió (cantidad/precio) se actualiza.
+                    current.innerHTML = next.innerHTML;
+                    current.className = next.className;
+                }
+            });
+
+            if (addedNodes.length) {
+                const focusItem = addedNodes[addedNodes.length - 1];
+                // Siempre enfocar y desplazar el panel interno, con o sin Anime.js.
+                focusItem.tabIndex = -1;
+                const panelRect = productsList.getBoundingClientRect();
+                const itemRect = focusItem.getBoundingClientRect();
+                const targetTop = Math.max(0, productsList.scrollTop + itemRect.top - panelRect.top - 8);
+                productsList.scrollTo({ top: targetTop, behavior: 'smooth' });
+                focusItem.focus({ preventScroll: true });
+
+                if (typeof anime !== 'undefined' && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                    requestAnimationFrame(() => requestAnimationFrame(() => {
+                        const targets = addedNodes.filter(el => el.isConnected);
+                        anime.remove(targets);
+                        anime({
+                            targets,
+                            opacity: [0, 1],
+                            translateX: [-28, 0],
+                            duration: 360,
+                            delay: anime.stagger(55),
+                            easing: 'easeOutCubic',
+                            complete: () => targets.forEach(el => el.classList.remove('product-enter'))
+                        });
+                    }));
+                } else {
+                    // La carga inicial puede llegar antes que el script defer de
+                    // Anime.js; jamás dejamos productos ocultos en ese caso.
+                    addedNodes.forEach(el => {
+                        el.classList.remove('product-enter');
+                        el.style.opacity = '1';
+                        el.style.transform = 'translateX(0)';
+                    });
+                }
+            }
 
             // Actualizar totales
             if (totals) {
@@ -1340,11 +1566,27 @@
             return cleanPath;
         }
 
+        function setStoreLogo(path) {
+            const logo = document.getElementById('storeLogo');
+            if (!logo || !path) return;
+            logo.onload = () => logo.classList.add('loaded');
+            logo.onerror = () => {
+                logo.removeAttribute('src');
+                logo.classList.remove('loaded');
+            };
+            logo.classList.remove('loaded');
+            logo.src = path;
+            // Las imágenes reutilizadas desde caché pueden estar completas sin
+            // disparar un nuevo load; en ese caso se hacen visibles de inmediato.
+            if (logo.complete && logo.naturalWidth > 0) logo.classList.add('loaded');
+        }
+
         // Cargar logo de la tienda
         function loadStoreLogo() {
             const stored = localStorage.getItem('tomodachi_store_logo');
             if (stored) {
-                document.getElementById('storeLogo').src = stored;
+                const logoPath = getRelativeImagePath(stored);
+                if (logoPath) setStoreLogo(logoPath);
             }
 
             const storeName = localStorage.getItem('tomodachi_store_name');
@@ -1353,9 +1595,47 @@
             }
         }
 
+        // Reloj en la sección superior central
+        function initClock() {
+            const el = document.getElementById('clock');
+            if (!el) return;
+            const tick = () => {
+                const now = new Date();
+                el.textContent = now.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+            };
+            tick();
+            setInterval(tick, 1000);
+        }
+
+        // Pantalla completa (toggle)
+        function initFullscreen() {
+            const btn = document.getElementById('fullscreenBtn');
+            if (!btn) return;
+            const updateIcon = () => {
+                const fs = document.fullscreenElement || document.webkitFullscreenElement;
+                const icon = btn.querySelector('i');
+                if (icon) icon.className = fs ? 'fas fa-compress' : 'fas fa-expand';
+                btn.title = fs ? 'Salir de pantalla completa' : 'Pantalla completa';
+            };
+            btn.addEventListener('click', () => {
+                closeDisplayActions();
+                if (document.fullscreenElement || document.webkitFullscreenElement) {
+                    (document.exitFullscreen && document.exitFullscreen()) ||
+                        (document.webkitExitFullscreen && document.webkitExitFullscreen());
+                } else {
+                    const el = document.documentElement;
+                    if (el.requestFullscreen) el.requestFullscreen();
+                    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+                }
+            });
+            ['fullscreenchange', 'webkitfullscreenchange'].forEach(ev => document.addEventListener(ev, updateIcon));
+        }
+
         // Inicializar
         document.addEventListener('DOMContentLoaded', () => {
             loadStoreLogo();
+            initClock();
+            initFullscreen();
 
             // Polling al servidor (tablets, otros dispositivos)
             startPolling();
@@ -1402,6 +1682,8 @@
         // Limpiar al cerrar
         window.addEventListener('beforeunload', () => {
             if (broadcastChannel) broadcastChannel.close();
+            if (realtimeReconnectTimer) clearTimeout(realtimeReconnectTimer);
+            if (realtimeSocket) realtimeSocket.close();
             stopPolling();
         });
     </script>

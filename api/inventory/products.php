@@ -12,6 +12,7 @@ require_once '../../includes/Response.class.php';
 require_once '../../includes/Validator.class.php';
 require_once '../../includes/Auth.class.php';
 require_once '../../includes/ApiAuth.class.php';
+require_once '../../includes/BomHelper.class.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
@@ -45,7 +46,7 @@ try {
             $search = isset($_GET['search']) ? trim($_GET['search']) : '';
             $params=[];
             // Removed JOIN with inventory, selecting current_stock directly from products
-            $sql = 'SELECT p.product_id, p.product_name, p.description, p.image_path, p.barcode, p.qr_code, p.price, p.cost, p.min_stock, p.status, p.category_id, c.category_name, p.current_stock, p.is_bulk, p.bulk_unit';
+            $sql = 'SELECT p.product_id, p.product_name, p.description, p.image_path, p.barcode, p.qr_code, p.price, p.cost, p.min_stock, p.status, p.category_id, c.category_name, p.current_stock, p.is_bulk, p.bulk_unit, p.tracking_type, p.consume_mode, p.pieces_per_box, p.is_ingredient';
             $sql .= ' FROM products p LEFT JOIN categories c ON p.category_id = c.category_id';
             
             $conditions=[];
@@ -66,6 +67,61 @@ try {
             if ($conditions) { $sql .= ' WHERE '.implode(' AND ',$conditions); }
             $sql .= ' ORDER BY p.product_name ASC LIMIT 200';
             $products = $db->select($sql,$params);
+
+            // Enriquecer con disponibilidad derivada (ensamblados) y vista de cajas (lotes).
+            // Sólo los 'recipe' reciben stock_quantity (la galería no controla los 'stock'
+            // por defecto — mantener comportamiento previo).
+            if ($products) {
+                $bom = new BomHelper($db);
+                foreach ($products as &$pr) {
+                    $type = $bom->normalizeType($pr['tracking_type'] ?? 'stock');
+                    $pr['tracking_type'] = $type;
+                    $pr['consume_mode'] = $bom->normalizeConsume($pr['consume_mode'] ?? null);
+                    $ppb = (int)($pr['pieces_per_box'] ?? 0);
+                    $pr['pieces_per_box'] = $ppb > 0 ? $ppb : null;
+                    if ($type === TRACKING_RECIPE) {
+                        try {
+                            $av = $bom->availability($store_id, (int)$pr['product_id']);
+                            $pr['available'] = $av['available'] === PHP_INT_MAX ? null : $av['available'];
+                            $pr['limiting_ingredient'] = $av['limiting'];
+                            $pr['derived_cost'] = round($av['unit_cost'], 2);
+                            $pr['recipe_ingredients'] = $av['ingredients'];
+                            $pr['is_stock_controlled'] = ($av['available'] !== PHP_INT_MAX);
+                            // La galería solo muestra tope/badge para ensamblados controlados.
+                            unset($pr['stock_quantity']);
+                            if ($av['available'] !== PHP_INT_MAX) {
+                                $pr['stock_quantity'] = $av['available'];
+                            }
+                        } catch (Exception $e) {
+                            $pr['available'] = 0;
+                            $pr['limiting_ingredient'] = null;
+                            $pr['recipe_error'] = $e->getMessage();
+                            $pr['recipe_ingredients'] = [];
+                            $pr['is_stock_controlled'] = true;
+                            $pr['stock_quantity'] = 0;
+                        }
+                    } elseif ($type === TRACKING_COMPONENT) {
+                        try {
+                            $cav = $bom->availability($store_id, (int)$pr['product_id']);
+                            $pr['available'] = $cav['available'];
+                            $pr['presentations'] = $cav['lots'];
+                            $pr['derived_cost'] = round($cav['unit_cost'], 2);
+                            $pr['is_stock_controlled'] = true;
+                            $pr['stock_quantity'] = $cav['available'];
+                        } catch (Exception $e) {
+                            $pr['available'] = 0;
+                            $pr['presentations'] = [];
+                            $pr['is_stock_controlled'] = true;
+                            $pr['stock_quantity'] = 0;
+                        }
+                    } else {
+                        $pr['is_stock_controlled'] = false;
+                        $pr['lots'] = $bom->deriveLots($pr['current_stock'], $ppb);
+                    }
+                }
+                unset($pr);
+            }
+
             Response::success($products,'Listado productos');
             break;
         case 'POST':
@@ -95,6 +151,19 @@ try {
             $description=isset($data['description'])?Validator::sanitizeString($data['description']):'';
             $is_bulk=isset($data['is_bulk'])?(int)$data['is_bulk']:0;
             $bulk_unit=isset($data['bulk_unit'])?Validator::sanitizeString($data['bulk_unit']):'kg';
+            // --- Inventario compuesto (BOM) ---
+            $tracking_type = isset($data['tracking_type']) ? Validator::sanitizeString($data['tracking_type']) : 'stock';
+            if (!in_array($tracking_type, [TRACKING_STOCK, TRACKING_RECIPE, TRACKING_COMPONENT, TRACKING_NONE], true)) { $tracking_type = TRACKING_STOCK; }
+            $pieces_per_box = (isset($data['pieces_per_box']) && is_numeric($data['pieces_per_box']) && (int)$data['pieces_per_box'] > 0)
+                ? (int)$data['pieces_per_box'] : null;
+            $is_ingredient = isset($data['is_ingredient']) ? (int)$data['is_ingredient'] : 0;
+            $consume_mode = isset($data['consume_mode']) ? Validator::sanitizeString($data['consume_mode']) : CONSUME_FIFO;
+            if (!in_array($consume_mode, [CONSUME_FIFO, CONSUME_LIFO, CONSUME_MANUAL], true)) { $consume_mode = CONSUME_FIFO; }
+            $cost_per_box = (isset($data['cost_per_box']) && is_numeric($data['cost_per_box'])) ? (float)$data['cost_per_box'] : null;
+            // Un ensamblado no lleva stock propio; su existencia deriva de la receta.
+            if ($tracking_type === TRACKING_RECIPE) { $initial_stock = 0; }
+            // Costo por pieza de un ingrediente con cajas: valor de caja ÷ piezas por caja.
+            if ($pieces_per_box > 0 && $cost_per_box !== null) { $cost = $cost_per_box / $pieces_per_box; }
             
             if(!Validator::required($product_name)){$errors['product_name']='Requerido';}
             
@@ -119,8 +188,8 @@ try {
             if(!Validator::validatePrice($cost)){$errors['cost']='Costo inválido';}
             if($errors){ Response::validationError($errors); }
             
-            $id=$db->insert('INSERT INTO products (store_id, category_id, product_name, description, barcode, qr_code, price, cost, current_stock, min_stock, status, is_bulk, bulk_unit, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,NOW(),NOW())',[
-                $store_id, $category_id,$product_name,$description,$barcode,$qr_code,$price,$cost,$initial_stock,$min_stock,STATUS_ACTIVE,$is_bulk,$bulk_unit
+            $id=$db->insert('INSERT INTO products (store_id, category_id, product_name, description, barcode, qr_code, price, cost, current_stock, min_stock, status, is_bulk, bulk_unit, tracking_type, consume_mode, pieces_per_box, is_ingredient, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW(),NOW())',[
+                $store_id, $category_id,$product_name,$description,$barcode,$qr_code,$price,$cost,$initial_stock,$min_stock,STATUS_ACTIVE,$is_bulk,$bulk_unit,$tracking_type,$consume_mode,$pieces_per_box,$is_ingredient
             ]);
             
             // Registrar movimiento inicial si el stock > 0
@@ -130,7 +199,7 @@ try {
                     [$store_id, $id, $user_id, $initial_stock, $initial_stock]);
             }
 
-            $product=$db->selectOne('SELECT product_id, product_name, image_path, barcode, qr_code, price, cost, current_stock, min_stock, status, is_bulk, bulk_unit FROM products WHERE product_id = ?',[$id]);
+            $product=$db->selectOne('SELECT product_id, product_name, image_path, barcode, qr_code, price, cost, current_stock, min_stock, status, is_bulk, bulk_unit, tracking_type, consume_mode, pieces_per_box, is_ingredient FROM products WHERE product_id = ?',[$id]);
             Response::success($product,'Producto creado');
             break;
         case 'PUT':
@@ -184,6 +253,36 @@ try {
             if(isset($data['category_id'])){ $cid=(int)$data['category_id']; if($cid && !$db->selectOne('SELECT category_id FROM categories WHERE category_id = ?',[$cid])){ Response::validationError(['category_id'=>'No existe']); } $fields[]='category_id = ?'; $params[]=$cid; }
             if(isset($data['is_bulk'])){ $fields[]='is_bulk = ?'; $params[]=(int)$data['is_bulk']; }
             if(isset($data['bulk_unit'])){ $fields[]='bulk_unit = ?'; $params[]=Validator::sanitizeString($data['bulk_unit']); }
+            // --- Inventario compuesto (BOM) ---
+            if(isset($data['tracking_type'])){
+                $tt = Validator::sanitizeString($data['tracking_type']);
+                if (!in_array($tt, [TRACKING_STOCK, TRACKING_RECIPE, TRACKING_COMPONENT, TRACKING_NONE], true)) { Response::validationError(['tracking_type'=>'Inválido']); }
+                $fields[]='tracking_type = ?'; $params[]=$tt;
+            }
+            if(isset($data['consume_mode'])){
+                $cm = Validator::sanitizeString($data['consume_mode']);
+                if (!in_array($cm, [CONSUME_FIFO, CONSUME_LIFO, CONSUME_MANUAL], true)) { Response::validationError(['consume_mode'=>'Inválido']); }
+                $fields[]='consume_mode = ?'; $params[]=$cm;
+            }
+            if(isset($data['is_ingredient'])){ $fields[]='is_ingredient = ?'; $params[]=(int)$data['is_ingredient']; }
+            if(array_key_exists('pieces_per_box', $data)){
+                $ppb = (isset($data['pieces_per_box']) && is_numeric($data['pieces_per_box']) && (int)$data['pieces_per_box'] > 0) ? (int)$data['pieces_per_box'] : null;
+                $fields[]='pieces_per_box = ?'; $params[]=$ppb;
+            }
+            if(isset($data['cost_per_box']) && is_numeric($data['cost_per_box'])){
+                $cpr = (float)$data['cost_per_box'];
+                // Necesitamos piezas_por_caja (enviada o ya en BD) para derivar el costo por pieza.
+                $ppb = null;
+                if (array_key_exists('pieces_per_box', $data) && isset($data['pieces_per_box']) && (int)$data['pieces_per_box'] > 0) {
+                    $ppb = (int)$data['pieces_per_box'];
+                } else {
+                    $cur = $db->selectOne('SELECT pieces_per_box FROM products WHERE product_id = ? AND store_id = ?', [$product_id, $store_id]);
+                    $ppb = $cur ? (int)($cur['pieces_per_box'] ?? 0) : 0;
+                }
+                if ($ppb > 0) {
+                    $fields[]='cost = ?'; $params[]=$cpr / $ppb;
+                }
+            }
             
             if(!$fields){ Response::error('Nada para actualizar',400); }
             $fields[]='updated_at = NOW()';
@@ -194,7 +293,7 @@ try {
             $params[]=$store_id;
             
             $db->update($sql,$params);
-            $product=$db->selectOne('SELECT product_id, product_name, image_path, barcode, qr_code, price, cost, current_stock, min_stock, status, is_bulk, bulk_unit FROM products WHERE product_id = ?',[$product_id]);
+            $product=$db->selectOne('SELECT product_id, product_name, image_path, barcode, qr_code, price, cost, current_stock, min_stock, status, is_bulk, bulk_unit, tracking_type, consume_mode, pieces_per_box, is_ingredient FROM products WHERE product_id = ?',[$product_id]);
             Response::success($product,'Producto actualizado');
             break;
         default:

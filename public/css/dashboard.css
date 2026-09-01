@@ -817,9 +817,8 @@ body.plan-free a.premium-locked.btn::after {
     letter-spacing: -0.01em;
 }
 
-/* Encabezado con textura sutil (heredado del design system) */
+/* Encabezado del generador de reportes */
 .reports-header {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='44'%3E%3Ccircle cx='22' cy='22' r='8' fill='none' stroke='%23000000' stroke-opacity='0.05'/%3E%3Cpath d='M22 4v36M4 22h36' stroke='%23000000' stroke-opacity='0.03'/%3E%3C/svg%3E");
     background-color: var(--bg-lightest, var(--bg-card));
 }
 .reports-header h2 {

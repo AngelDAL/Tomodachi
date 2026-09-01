@@ -1,0 +1,10 @@
+FROM python:3.12-alpine
+
+WORKDIR /srv/tomodachi-ws
+COPY customer_display_ws.py ./customer_display_ws.py
+
+RUN addgroup -S tomodachi && adduser -S tomodachi -G tomodachi
+USER tomodachi
+
+EXPOSE 8765
+CMD ["python3", "-u", "customer_display_ws.py"]

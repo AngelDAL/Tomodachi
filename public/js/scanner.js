@@ -39,6 +39,53 @@ document.addEventListener('DOMContentLoaded', () => {
       closeScannerContainerBtn.addEventListener('click', stopScanner);
   }
 
+  // Ocultar el overlay pero SEGUIR escaneando en segundo plano: al ocultar
+  // se colapsa a un pill reducido; el streaming no se detiene y las lecturas
+  // siguen agregando productos normalmente.
+  const collapseScannerBtn = document.getElementById('collapseScannerBtn');
+  if (collapseScannerBtn) {
+    collapseScannerBtn.addEventListener('click', () => {
+      const collapsed = scannerContainer.classList.toggle('collapsed');
+      collapseScannerBtn.title = collapsed ? 'Mostrar escáner' : 'Ocultar y seguir escaneando';
+      collapseScannerBtn.innerHTML = collapsed
+        ? '<i class="fas fa-eye"></i>'
+        : '<i class="fas fa-eye-slash"></i>';
+    });
+  }
+
+  // Devuelve el overlay a su estado expandido (se llama al abrir/cerrar)
+  function resetCollapse() {
+    scannerContainer.classList.remove('collapsed');
+    if (collapseScannerBtn) {
+      collapseScannerBtn.title = 'Ocultar y seguir escaneando';
+      collapseScannerBtn.innerHTML = '<i class="fas fa-eye-slash"></i>';
+    }
+  }
+
+  // ---- Overlay ARRASTRABLE: el usuario lo mueve donde no estorbe -----
+  // Todo el contenedor es el "grip"; se excluyen los botones (cerrar/colapsar).
+  let dragState = null;
+  scannerContainer.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('button')) return; // dejar pasar clics en botones
+    const rect = scannerContainer.getBoundingClientRect();
+    dragState = { startX: e.clientX, startY: e.clientY, left: rect.left, top: rect.top };
+    try { scannerContainer.setPointerCapture(e.pointerId); } catch (err) {}
+    e.preventDefault();
+  });
+  scannerContainer.addEventListener('pointermove', (e) => {
+    if (!dragState) return;
+    const dx = e.clientX - dragState.startX;
+    const dy = e.clientY - dragState.startY;
+    // Al moverlo pasamos a coordenadas top/left (anulando el bottom/right base)
+    scannerContainer.style.left = (dragState.left + dx) + 'px';
+    scannerContainer.style.top = (dragState.top + dy) + 'px';
+    scannerContainer.style.right = 'auto';
+    scannerContainer.style.bottom = 'auto';
+  });
+  const endDrag = () => { dragState = null; };
+  scannerContainer.addEventListener('pointerup', endDrag);
+  scannerContainer.addEventListener('pointercancel', endDrag);
+
   // Listener para el botón de cierre flotante (Legacy)
   const legacyOverlayBtn = document.getElementById('closeScannerOverlayBtn');
   if (legacyOverlayBtn) {
@@ -47,6 +94,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function startScanner() {
     document.body.classList.add('scanner-active'); // Activar modo inmersivo CSS
+    // Reabrir siempre en estado expandido (nunca arrancar colapsado)
+    resetCollapse();
     scannerContainer.classList.remove('hidden');
     
     // Cambiar icono del botón principal por si acaso (aunque se oculta en móvil)
@@ -99,7 +148,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     height: boxSize
                 };
             },
-            aspectRatio: 1.0,
+            // Sin aspectRatio forzado: dejamos que la cámara use su proporción
+            // natural y que CSS ajuste el video (portrait o landscape) al contenedor.
             rememberLastUsedCamera: true
         };
         
@@ -123,6 +173,9 @@ document.addEventListener('DOMContentLoaded', () => {
   function stopScanner() {
     document.body.classList.remove('scanner-active'); // Desactivar modo inmersivo
 
+    // Restaurar el overlay a su estado expandido siempre
+    resetCollapse();
+
     if (qrScannerInstance) {
       qrScannerInstance.stop().then(() => {
         qrScannerInstance.clear();
@@ -137,11 +190,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const productsMain = document.querySelector('.products-main');
     if (productsMain) productsMain.classList.remove('hidden');
 
-    // Remover estilos inline forzados por la librería si quedan
+    // Remover estilos inline forzados por la librería y la posición de arrastre
     if (scannerContainer) {
         scannerContainer.style.removeProperty('position');
         scannerContainer.style.removeProperty('top');
         scannerContainer.style.removeProperty('height');
+        scannerContainer.style.removeProperty('left');
+        scannerContainer.style.removeProperty('right');
+        scannerContainer.style.removeProperty('bottom');
     }
   }
 

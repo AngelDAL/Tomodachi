@@ -49,11 +49,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Logout
-    document.getElementById('logoutBtn').addEventListener('click', async (e) => {
-        e.preventDefault();
-        await logout();
-    });
+    // Logout (el botón vive en el sidebar inyectado; proteger por si aún no existe)
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            await logout();
+        });
+    }
 
     // Excel Import
     // const btnImport = document.getElementById('btnImportExcel'); // Removed old button logic
@@ -106,11 +109,6 @@ async function loadProfile() {
         form.phone.value = user.phone || '';
         document.getElementById('userRoleDisplay').value = user.role.toUpperCase();
 
-        // Onboarding setting
-        const onboardingCheck = document.getElementById('showOnboarding');
-        if (onboardingCheck) {
-          onboardingCheck.checked = user.show_onboarding !== undefined ? !!Number(user.show_onboarding) : true;
-        }
       }
       return;
     } catch (error) {
@@ -125,8 +123,6 @@ document.getElementById('profileForm').addEventListener('submit', async (e) => {
     const formData = new FormData(e.target);
     const data = Object.fromEntries(formData.entries());
 
-    // Handle checkbox explicitly
-    data.show_onboarding = document.getElementById('showOnboarding').checked;
 
     try {
         const res = await fetch('../api/users/profile.php', {

@@ -306,3 +306,38 @@ input[type="checkbox"], input[type="radio"], label, select, .form-select,
 
 /* Menús / abrir menú → context-menu */
 [data-context-menu], .context-menu-trigger, .open-menu, .overflow-menu { cursor: context-menu; }
+
+/* ================================================================
+   Componentes del catálogo (design-system.html → estilos reales)
+   Botones variantes (.btn-solid/.btn-outline/.btn-soft/...) e inputs
+   (.field/.flabel/.input-wrap/.ds-input). Se añadieron aquí para que
+   todo lo que muestra el catálogo de estilos sea un componente real.
+   ================================================================ */
+.btn-solid  { background: var(--primary-color); color: #fff; box-shadow: var(--shadow-primary); }
+.btn-solid:hover  { background: var(--primary-hover); box-shadow: var(--shadow-lg); }
+.btn-dark   { background: var(--secondary-color); color: var(--secondary-contrast); }
+.btn-outline { background: transparent; color: var(--primary-color); border-color: var(--primary-color); }
+.btn-outline:hover { background: var(--primary-light); }
+.btn-soft   { background: var(--primary-light); color: var(--primary-dark); }
+.btn-ghost  { background: transparent; color: var(--text-medium); }
+.btn-ghost:hover { background: var(--bg-hover); color: var(--text-color); }
+
+.field { display: flex; flex-direction: column; gap: 7px; width: 100%; }
+.field .flabel { font-family: var(--font-heading); font-size: 0.8rem; font-weight: 600; color: var(--text-medium); }
+.ds-input {
+    width: 100%;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    color: var(--text-color);
+    background: var(--bg-input);
+    border: 1.5px solid var(--border-color);
+    border-radius: 14px;
+    padding: 13px 15px;
+    transition: all var(--dur, 0.28s ease);
+}
+.ds-input::placeholder { color: var(--text-muted); font-weight: 400; }
+.ds-input:hover { border-color: color-mix(in srgb, var(--primary-color) 40%, var(--border-color)); }
+.ds-input:focus { outline: none; border-color: var(--primary-color); box-shadow: var(--primary-focus-ring); }
+.input-wrap { position: relative; width: 100%; display: flex; align-items: center; }
+.input-wrap > i { position: absolute; left: 14px; color: var(--text-muted); font-size: 0.9rem; pointer-events: none; }
+.input-wrap .ds-input.with-icon { padding-left: 42px; }

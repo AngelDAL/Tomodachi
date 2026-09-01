@@ -12,8 +12,8 @@
     <!-- Theme pre-paint: aplica la paleta persistida antes de mostrar el login -->
     <script src="js/theme-init.js"></script>
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="css/login.css?v=9">
-    <link rel="stylesheet" href="css/design-system.css?v=6">
+    <link rel="stylesheet" href="css/login.css?v=10">
+    <link rel="stylesheet" href="css/design-system.css?v=7">
     <script src="lib/animejs/anime.min.js" defer></script>
     <script src="js/design-system.js?v=6" defer></script>
 </head>
@@ -65,31 +65,27 @@
                 </div>
 
                 <div class="form-header">
-                    <h3>Bienvenido</h3>
-                    <p>Ingresa tus credenciales para acceder</p>
+                    <h3 id="loginTitle">Inicia sesión</h3>
+                    <p id="loginSubtitle">Ingresa tus credenciales para acceder</p>
                 </div>
 
                 <form id="loginForm" class="modern-form">
-                    <div class="input-group">
-                        <div class="icon-wrapper">
+                    <div class="field form-field">
+                        <label class="flabel" for="username">Usuario</label>
+                        <div class="input-wrap">
                             <i class="fas fa-user"></i>
-                        </div>
-                        <div class="input-wrapper">
                             <input type="text" id="username" name="username" required autocomplete="username"
-                                placeholder=" ">
-                            <label for="username">Usuario</label>
+                                class="ds-input with-icon" placeholder=" ">
                         </div>
                     </div>
 
-                    <div class="input-group">
-                        <div class="icon-wrapper">
+                    <div class="field form-field">
+                        <label class="flabel" for="password">Contraseña</label>
+                        <div class="input-wrap">
                             <i class="fas fa-lock"></i>
-                        </div>
-                        <div class="input-wrapper">
                             <input type="password" id="password" name="password" required
-                                autocomplete="current-password" placeholder=" ">
-                            <label for="password">Contraseña</label>
-                            <button type="button" class="toggle-password" onclick="togglePasswordVisibility()">
+                                autocomplete="current-password" class="ds-input with-icon" placeholder=" ">
+                            <button type="button" class="toggle-password" onclick="togglePasswordVisibility()" aria-label="Mostrar contraseña">
                                 <i class="fas fa-eye"></i>
                             </button>
                         </div>
@@ -108,7 +104,7 @@
                         <span>Error message here</span>
                     </div>
 
-                    <button type="submit" class="btn-login">
+                    <button type="submit" class="btn btn-solid btn-login">
                         <span>Iniciar Sesión</span>
                         <i class="fas fa-arrow-right"></i>
                     </button>
@@ -124,6 +120,18 @@
     <script>
         const loginForm = document.getElementById('loginForm');
         const errorMessage = document.getElementById('errorMessage');
+
+        // Cuando alguien viene desde una de las empresas de muestra, la pantalla
+        // ya sabe a dónde quiere entrar: solo pide la contraseña correspondiente.
+        const accessParams = new URLSearchParams(window.location.search);
+        const selectedCompany = accessParams.get('company');
+        const selectedUsername = accessParams.get('username');
+        if (selectedCompany && selectedUsername) {
+            document.getElementById('loginTitle').textContent = `Entrar a ${selectedCompany}`;
+            document.getElementById('loginSubtitle').textContent = 'Escribe la contraseña de esta empresa para continuar.';
+            document.getElementById('username').value = selectedUsername;
+            document.getElementById('password').focus();
+        }
         
         function togglePasswordVisibility() {
             const passwordInput = document.getElementById('password');

@@ -5,8 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tomodachi POS</title>
     <script>
-        // La raíz muestra el carrusel de presentación con login/registro
-        window.location.replace('landing.html');
+        // La presentación se ve solo en la primera visita del navegador.
+        // Migramos la marca exacta ('1') de la presentación anterior, sin
+        // confundirla con el valor 'true' del tour administrativo.
+        const legacyLandingSeen = localStorage.getItem('tomodachi_onboarding_done') === '1';
+        const landingSeen = localStorage.getItem('tomodachi_landing_seen') === '1' || legacyLandingSeen;
+        if (legacyLandingSeen) localStorage.setItem('tomodachi_landing_seen', '1');
+        window.location.replace(landingSeen ? 'login.html' : 'landing.html');
     </script>
     <link rel="stylesheet" href="css/design-system.css?v=6">
     <script src="lib/animejs/anime.min.js" defer></script>

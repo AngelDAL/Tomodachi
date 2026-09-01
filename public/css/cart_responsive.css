@@ -2,6 +2,9 @@
 .cart-items-container {
     flex: 1;
     overflow-y: auto;
+    /* El deslizamiento de entrada del ítem nuevo no debe generar una barra de
+       scroll horizontal espuria: recortamos el eje X. */
+    overflow-x: hidden;
     padding: 10px;
     display: flex;
     flex-direction: column;
@@ -28,6 +31,22 @@
 .cart-item-card:hover {
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+}
+
+/* Entrada del ítem recién agregado: CSS por compositor (sin JS por frame).
+   Fade-in + deslizamiento desde la derecha hacia la izquierda. El keyframe
+   sustituye al `transition: transform` de la tarjeta durante su ejecución. */
+@keyframes cart-item-in {
+    from { opacity: 0; transform: translateX(22px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+.cart-item-card.cart-new {
+    animation: cart-item-in 0.26s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+    .cart-item-card.cart-new {
+        animation: none;
+    }
 }
 
 /* Izquierda: Imagen */

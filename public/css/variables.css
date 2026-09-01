@@ -1,5 +1,5 @@
 /* ============================================================
- * Tomodachi POS — Sistema de temas (Tema "Scarlet" por defecto)
+ * Tomodachi POS — Sistema de temas (Tema "Cyan Hatsune" por defecto)
  *
  * Un solo juego de variables controla TODO el tema. Los estilos
  * usan estas variables — nunca colores hardcodeados — para que
@@ -16,22 +16,22 @@
 
 :root,
 [data-theme="light"] {
-    /* Brand Colors — Scarlet (Remilia) */
-    --primary-color: #C62828;
-    --primary-dark: #9E1B1B;
-    --primary-darker: #6E1212;
-    --primary-light: #FBE9E9;
-    --primary-lighter: #FDF4F4;
-    --primary-shadow: rgba(198, 40, 40, 0.22);
+    /* Brand Colors — Cyan Hatsune (Miku) */
+    --primary-color: #39C5BB;
+    --primary-dark: #2CB1A7;
+    --primary-darker: #1F8A82;
+    --primary-light: #E4F8F6;
+    --primary-lighter: #F0FBFA;
+    --primary-shadow: rgba(57, 197, 187, 0.22);
     /* Variantes generadas por filtro (hover/active) */
     --primary-hover: var(--primary-dark);
     --primary-active: var(--primary-darker);
     --primary-focus-ring: 0 0 0 3px var(--primary-shadow);
 
-    --secondary-color: #1A237E;
-    --secondary-dark: #12184F;
-    --secondary-darker: #0B0F33;
-    --secondary-light: #E8EAF6;
+    --secondary-color: #0E86A6;
+    --secondary-dark: #0A6A86;
+    --secondary-darker: #074E64;
+    --secondary-light: #E1F3F9;
     --secondary-contrast: #ffffff;
 
     /* Status Colors */
@@ -56,7 +56,7 @@
     --text-medium: #555555;
     --text-light: #666666;
     --text-muted: #999999;
-    --text-on-primary: #ffffff;
+    --text-on-primary: #08352F;
 
     /* Backgrounds */
     --bg-body: #f4f7f6;
@@ -80,7 +80,7 @@
     --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.10);
     --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.14);
-    --shadow-primary: 0 4px 14px rgba(198, 40, 40, 0.28);
+    --shadow-primary: 0 4px 14px rgba(57, 197, 187, 0.28);
 
     /* Layout */
     --sidebar-width: 250px;
@@ -104,25 +104,25 @@
 
 /* ============================================================
  * TEMA OSCURO — sobrescribe superficies/texto/bordes.
- * Los colores de marca no cambian (el rojo Scarlet funciona en
+ * Los colores de marca no cambian (el cian Hatsune funciona en
  * oscuro); sus hovers se generan con filtros en los estilos.
  * ============================================================ */
 [data-theme="dark"] {
-    --primary-color: #E53935;
-    --primary-dark: #C62828;
-    --primary-darker: #8E1B1B;
-    --primary-light: #4A1F1F;
-    --primary-lighter: #3A1A1A;
-    --primary-shadow: rgba(229, 57, 53, 0.30);
-    --primary-hover: #C62828;
-    --primary-active: #8E1B1B;
-    --primary-focus-ring: 0 0 0 3px rgba(229, 57, 53, 0.35);
+    --primary-color: #4FDDD2;
+    --primary-dark: #35C4B8;
+    --primary-darker: #2AA79B;
+    --primary-light: #143E3B;
+    --primary-lighter: #10322F;
+    --primary-shadow: rgba(79, 221, 210, 0.30);
+    --primary-hover: #35C4B8;
+    --primary-active: #2AA79B;
+    --primary-focus-ring: 0 0 0 3px rgba(79, 221, 210, 0.35);
 
-    --secondary-color: #7986CB;
-    --secondary-dark: #5C6BC0;
-    --secondary-darker: #3949AB;
-    --secondary-light: #1A1F3D;
-    --secondary-contrast: #ffffff;
+    --secondary-color: #61C2E8;
+    --secondary-dark: #46ACD9;
+    --secondary-darker: #2B93C4;
+    --secondary-light: #123A4A;
+    --secondary-contrast: #06332F;
 
     --success-color: #66BB6A;
     --success-dark: #43A047;
@@ -143,7 +143,7 @@
     --text-medium: #C0C0C0;
     --text-light: #A0A0A0;
     --text-muted: #808080;
-    --text-on-primary: #ffffff;
+    --text-on-primary: #06332F;
 
     --bg-body: #121212;
     --bg-card: #1E1E1E;
@@ -165,7 +165,7 @@
     --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
     --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6);
-    --shadow-primary: 0 4px 14px rgba(229, 57, 53, 0.35);
+    --shadow-primary: 0 4px 14px rgba(79, 221, 210, 0.35);
 
     color-scheme: dark;
 }

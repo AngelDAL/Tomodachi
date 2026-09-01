@@ -11,6 +11,7 @@ require_once '../../includes/Response.class.php';
 require_once '../../includes/Validator.class.php';
 require_once '../../includes/Auth.class.php';
 require_once '../../includes/ApiAuth.class.php';
+require_once '../../includes/BomHelper.class.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
@@ -47,18 +48,30 @@ try {
     $items = $db->select('SELECT product_id, quantity FROM sale_details WHERE sale_id = ?',[$sale_id]);
     if (!$items) { Response::error('Venta sin detalles',409); }
 
+    $bom = new BomHelper($db);
+
     $db->beginTransaction();
     try {
         // Devolver stock
         foreach ($items as $it) {
-            $prod = $db->selectOne('SELECT product_id, current_stock FROM products WHERE product_id = ? AND store_id = ?',[$it['product_id'], $sale['store_id']]);
-            if ($prod) {
-                $new_stock = $prod['current_stock'] + $it['quantity'];
-                $db->update('UPDATE products SET current_stock = ?, updated_at = NOW() WHERE product_id = ?',[$new_stock,$it['product_id']]);
-                $db->insert('INSERT INTO inventory_movements (store_id, product_id, user_id, movement_type, quantity, previous_stock, new_stock, notes, created_at) VALUES (?,?,?,?,?,?,?,?,NOW())',[
-                    $sale['store_id'],$it['product_id'],$currentUser['user_id'],MOVEMENT_RETURN,$it['quantity'],$prod['current_stock'],$new_stock,'Cancelación venta #'.$sale_id
-                ]);
+            $prod = $db->selectOne('SELECT product_id, current_stock, tracking_type FROM products WHERE product_id = ? AND store_id = ?',[$it['product_id'], $sale['store_id']]);
+            if (!$prod) { continue; }
+            $type = $bom->normalizeType($prod['tracking_type'] ?? 'stock');
+            // Ensamblado: restituir ingredientes-hoja (no el producto, que no tiene stock propio)
+            if ($type === TRACKING_RECIPE) {
+                $bom->restoreForSale($db, $sale['store_id'], $currentUser['user_id'], $sale_id, $it['product_id'], $it['quantity'], 'Cancelación');
+                continue;
             }
+            if ($type === TRACKING_NONE) {
+                // Servicio: restituye sus componentes si tiene composición (no-op si es puro).
+                $bom->restoreForSale($db, $sale['store_id'], $currentUser['user_id'], $sale_id, $it['product_id'], $it['quantity'], 'Cancelación');
+                continue;
+            }
+            $new_stock = $prod['current_stock'] + $it['quantity'];
+            $db->update('UPDATE products SET current_stock = ?, updated_at = NOW() WHERE product_id = ?',[$new_stock,$it['product_id']]);
+            $db->insert('INSERT INTO inventory_movements (store_id, product_id, user_id, movement_type, quantity, previous_stock, new_stock, notes, created_at) VALUES (?,?,?,?,?,?,?,?,NOW())',[
+                $sale['store_id'],$it['product_id'],$currentUser['user_id'],MOVEMENT_RETURN,$it['quantity'],$prod['current_stock'],$new_stock,'Cancelación venta #'.$sale_id
+            ]);
         }
         // Actualizar estado venta
         $db->update('UPDATE sales SET status = ? WHERE sale_id = ?',[SALE_CANCELLED,$sale_id]);

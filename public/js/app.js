@@ -57,19 +57,29 @@ function waitForElement(selector, timeoutMs = 5000, intervalMs = 100) {
  * Verificar sesión activa
  */
 async function checkSession() {
-    try {
-        const response = await fetch('../api/auth/verify_session.php');
-        const dataResponse = await response.json();
-        if (dataResponse.success && dataResponse.data.logged_in) {
-            console.log('Sesión activa para el usuario:', dataResponse.data.user);
-            return dataResponse.data.user;
+    // Al cargar la página, el primer fetch puede no ver aún la cookie de sesión
+    // (p. ej. justo tras el login o en un hard-reload con cache fría). Si la
+    // primera verificación no da sesión, se reintenta una vez breve antes de
+    // declararla inexistente, para que las páginas no queden en blanco por un
+    // fallo transitorio (productos, logo, etc.). Un usuario sin sesión real
+    // seguirá viendo ambos intentos fallidos y será redirigido al login.
+    for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+            const response = await fetch('../api/auth/verify_session.php', { credentials: 'include' });
+            const dataResponse = await response.json();
+            if (dataResponse.success && dataResponse.data.logged_in) {
+                console.log('Sesión activa para el usuario:', dataResponse.data.user);
+                return dataResponse.data.user;
+            }
+        } catch (error) {
+            console.error('Error al verificar sesión:', error);
+            if (attempt === 1) { await new Promise(r => setTimeout(r, 400)); continue; }
+            return null;
         }
-        console.log('No hay sesión activa.');
-        return null;
-    } catch (error) {
-        console.error('Error al verificar sesión:', error);
-        return null;
+        if (attempt === 1) { await new Promise(r => setTimeout(r, 400)); }
     }
+    console.log('No hay sesión activa.');
+    return null;
 }
 
 /**
@@ -288,6 +298,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+// Tema de tienda listo: las páginas que dibujan componentes con color
+// (p. ej. Chart.js) esperan esta promesa antes de leer variables CSS.
+let resolveStoreThemeReady;
+window.TomodachiThemeReady = new Promise(resolve => { resolveStoreThemeReady = resolve; });
+function markStoreThemeReady() {
+    if (resolveStoreThemeReady) {
+        resolveStoreThemeReady();
+        resolveStoreThemeReady = null;
+    }
+}
+
 // Lógica para el menú tooltip de usuario (Perfil)
 document.addEventListener('DOMContentLoaded', () => {
     const profileMenuBtn = document.getElementById('profileMenuBtn');
@@ -326,62 +347,72 @@ async function loadStoreSettings() {
         if (data.success) {
             const store = data.data;
 
-            // 1. Aplicar Logo
-            // El sidebar lo inyecta sidebar-loader.js de forma ASYNC (primero
-            // espera verify_session.php y luego hace innerHTML), así que
-            // #navStoreLogo puede no existir todavía cuando settings.php
-            // responde. Si lo buscamos una sola vez y no está, el logo nunca
-            // se aplica y el navbar queda con el estado por defecto (o con
-            // una versión vieja del service worker). Esperamos a que exista
-            // (máx. 5s) antes de aplicarlo.
-            const logoImg = await waitForElement('#navStoreLogo', 5000);
-            if (logoImg) {
-                if (store.logo_url) {
-                    logoImg.src = store.logo_url;
-                    // Asegurar que se muestre si estaba oculto por error o fallback previo
-                    logoImg.style.display = 'inline-block';
-                    if (logoImg.nextElementSibling) {
-                        logoImg.nextElementSibling.style.display = 'none';
-                    }
-                } else {
-                    // Fallback si no hay logo
-                    logoImg.style.display = 'none';
-                    if (logoImg.nextElementSibling) {
-                        logoImg.nextElementSibling.style.display = 'inline-block';
-                    }
-                }
-            }
-
-            // 2. Aplicar Tema (Variables CSS) — AHORA guarda TODAS las
-            // variables (marcas + superficies) del tema claro Y el tema
-            // oscuro personalizado si el usuario lo definió.
+            // 1. Aplicar el tema INMEDIATAMENTE. Antes se esperaba hasta 5 s
+            // por #navStoreLogo; durante esa espera dashboard/Chart.js leían
+            // variables base y quedaban mezcladas con el tema final.
             if (store.theme_config) {
+                let localTheme = {};
+                try {
+                    localTheme = JSON.parse(localStorage.getItem('pos_theme_config') || '{}');
+                } catch (e) { localTheme = {}; }
+
+                const hasLocalMode = ['light', 'dark', 'auto'].includes(localTheme.theme_mode)
+                    || localTheme.dark_mode === true || localTheme.dark_mode === false
+                    || localTheme.dark_mode === 'true' || localTheme.dark_mode === 'false';
+                const storeMode = ['light', 'dark', 'auto'].includes(store.theme_config.theme_mode)
+                    ? store.theme_config.theme_mode
+                    : (store.theme_config.dark_mode === true || store.theme_config.dark_mode === 'true' ? 'dark' : 'light');
+                const mode = hasLocalMode
+                    ? (['light', 'dark', 'auto'].includes(localTheme.theme_mode)
+                        ? localTheme.theme_mode
+                        : ((localTheme.dark_mode === true || localTheme.dark_mode === 'true') ? 'dark' : 'light'))
+                    : storeMode;
+                const dark = mode === 'dark' || (mode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+                // Se fija modo + configuración de la tienda como una operación
+                // única, incluso en una primera visita sin caché local.
+                document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
                 applyTheme(store.theme_config, store.theme_config_dark);
-                // Caché para carga rápida: tema claro en pos_theme_config y
-                // tema oscuro (si existe) en pos_theme_config_dark. La
-                // preferencia local de MODO (theme_mode/dark_mode) se respeta;
-                // los colores y superficies vienen de la BD.
-                const localTheme = JSON.parse(localStorage.getItem('pos_theme_config') || '{}');
-                if (!localTheme.theme_mode && localTheme.dark_mode === undefined) {
-                    // Primera vez o sin preferencia local → usar config de la BD
-                    localStorage.setItem('pos_theme_config', JSON.stringify(store.theme_config));
-                } else {
-                    // El usuario tiene preferencia local de modo → fusionar:
-                    // los COLORES/Superficies vienen de la BD, el modo del local.
-                    const merged = { ...localTheme, ...store.theme_config };
-                    if (localTheme.theme_mode) merged.theme_mode = localTheme.theme_mode;
-                    else if (localTheme.dark_mode !== undefined) merged.dark_mode = localTheme.dark_mode;
-                    localStorage.setItem('pos_theme_config', JSON.stringify(merged));
-                }
-                // Tema oscuro personalizado (si existe en BD)
+
+                const cachedTheme = { ...store.theme_config, theme_mode: mode };
+                if (mode === 'light') cachedTheme.dark_mode = false;
+                else if (mode === 'dark') cachedTheme.dark_mode = true;
+                else delete cachedTheme.dark_mode;
+                localStorage.setItem('pos_theme_config', JSON.stringify(cachedTheme));
                 if (store.theme_config_dark) {
                     localStorage.setItem('pos_theme_config_dark', JSON.stringify(store.theme_config_dark));
+                } else {
+                    localStorage.removeItem('pos_theme_config_dark');
                 }
-            }
 
-            // 3. Guardar nombre de la tienda para uso global (ej. tickets)
+                // Si ThemeSystem ya inició, sincroniza su estado interno con
+                // el modo resuelto. Si inicia después, leerá el caché anterior.
+                if (window.ThemeSystem) window.ThemeSystem.setMode(mode);
+            }
+            markStoreThemeReady();
+
+            // 2. El logo es decorativo: se resuelve de forma independiente y
+            // jamás bloquea el tema ni los componentes que dependen de él.
+            waitForElement('#navStoreLogo', 5000).then(logoImg => {
+                if (!logoImg) return;
+                if (store.logo_url) {
+                    logoImg.src = store.logo_url;
+                    logoImg.style.display = 'inline-block';
+                    if (logoImg.nextElementSibling) logoImg.nextElementSibling.style.display = 'none';
+                } else {
+                    logoImg.style.display = 'none';
+                    if (logoImg.nextElementSibling) logoImg.nextElementSibling.style.display = 'inline-block';
+                }
+            });
+
+            // 3. Guardar identidad de la tienda para otras vistas del mismo navegador.
             if (store.store_name) {
                 localStorage.setItem('tomodachi_store_name', store.store_name);
+            }
+            if (store.logo_url) {
+                localStorage.setItem('tomodachi_store_logo', store.logo_url);
+            } else {
+                localStorage.removeItem('tomodachi_store_logo');
             }
 
             // 4. Inicializar formato regional (números, moneda, fechas).
@@ -394,6 +425,9 @@ async function loadStoreSettings() {
         }
     } catch (error) {
         console.error('Error cargando configuración de tienda:', error);
+    } finally {
+        // Nunca dejamos esperando a una pantalla si settings.php falla.
+        markStoreThemeReady();
     }
 }
 
@@ -440,16 +474,8 @@ function showProfileSettings() {
  * Sistema de Soporte
  */
 function initSupport() {
-    // Seleccionar todos los botones de soporte (sidebar y móvil)
-    const btns = document.querySelectorAll('#supportBtn, .js-support-btn');
-    
-    btns.forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.preventDefault();
-            // Community Edition: abrir el centro de soporte local, sin correo externo preconfigurado.
-            window.location.href = 'support.html';
-        });
-    });
+    // Soporte no forma parte de la navegación de esta instancia.
+    document.querySelectorAll('#supportBtn, .js-support-btn').forEach(btn => btn.remove());
 }
 
 /* ============================================================

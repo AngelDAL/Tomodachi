@@ -183,7 +183,7 @@ Los inputs de fecha SIEMPRE usan ISO en la API, independientemente del formato d
 | PUT | `api/users/update.php` | Actualizar usuario | solo sesión admin |
 | POST | `api/users/delete.php` | Desactivar usuario | solo sesión admin |
 | GET/PUT | `api/users/profile.php` | Perfil propio | solo sesión |
-| POST | `api/users/complete_onboarding.php` | Marcar onboarding | solo sesión |
+| POST | `api/users/complete_onboarding.php` | Reclamar la única bienvenida global de la tienda | solo sesión admin |
 
 - Roles: `super_admin`, `admin`, `manager`, `cashier`. Un admin normal que consulte `users/read`
   sin ser super_admin recibe **403** (esperado).

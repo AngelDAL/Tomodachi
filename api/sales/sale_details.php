@@ -38,7 +38,9 @@ try {
         Response::error('No autorizado para ver ventas de otra tienda', 403);
     }
 
-    $items = $db->select('SELECT sd.detail_id, sd.product_id, p.product_name, p.category_id, c.category_name, sd.quantity, sd.unit_price, sd.unit_cost, sd.subtotal, sd.discount, sd.promotion_id, pr.name AS promotion_name, sd.total FROM sale_details sd LEFT JOIN products p ON p.product_id = sd.product_id LEFT JOIN categories c ON c.category_id = p.category_id LEFT JOIN promotions pr ON pr.promotion_id = sd.promotion_id WHERE sd.sale_id = ?',[$sale_id]);
-    $sale['items']=$items;
-    Response::success($sale,'Detalle de venta');
+    $items = $db->select('SELECT sd.detail_id, sd.product_id, p.product_name, p.image_path, p.category_id, c.category_name, sd.quantity, sd.unit_price, sd.unit_cost, sd.subtotal, sd.discount, sd.promotion_id, pr.name AS promotion_name, sd.total FROM sale_details sd LEFT JOIN products p ON p.product_id = sd.product_id LEFT JOIN categories c ON c.category_id = p.category_id LEFT JOIN promotions pr ON pr.promotion_id = sd.promotion_id WHERE sd.sale_id = ?',[$sale_id]);
+    $cashier = $db->selectOne('SELECT username, full_name FROM users WHERE user_id = ?', [(int)$sale['user_id']]);
+    $sale['cashier_name'] = $cashier ? ($cashier['full_name'] ?: $cashier['username']) : null;
+    $sale['items'] = $items;
+    Response::success($sale, 'Detalle de venta');
 } catch (Exception $e) { Response::error('Error servidor: '.$e->getMessage(),500); }

@@ -13,6 +13,7 @@ class Response {
      */
     public static function success($data = null, $message = 'Operación exitosa', $code = 200) {
         http_response_code($code);
+        self::noCacheHeaders();
         header('Content-Type: application/json; charset=utf-8');
         
         echo json_encode([
@@ -33,6 +34,7 @@ class Response {
      */
     public static function error($message = 'Error en la operación', $code = 400, $details = null) {
         http_response_code($code);
+        self::noCacheHeaders();
         header('Content-Type: application/json; charset=utf-8');
         
         echo json_encode([
@@ -43,6 +45,18 @@ class Response {
         ], JSON_UNESCAPED_UNICODE);
         
         exit;
+    }
+    
+    /**
+     * Evitar que las respuestas de la API (dependientes de la sesión) se cacheen
+     * en navegador, service worker o proxies/CDN. Sin esto, un proxy podría servir
+     * una respuesta vieja "401/deslogueado" a peticiones que ya tienen sesión,
+     * provocando errores intermitentes (settings.php, verify_session, etc.).
+     */
+    private static function noCacheHeaders() {
+        header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+        header('Pragma: no-cache');
+        header('Expires: 0');
     }
     
     /**

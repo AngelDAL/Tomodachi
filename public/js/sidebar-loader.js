@@ -23,9 +23,9 @@ async function initSidebar() {
     }
 
     // Cargar navegación por teclado (atajos Alt+1..7 y modo POS) en todas las vistas
-    if (!document.querySelector('script[src="js/keyboard-nav.js"]')) {
+    if (!document.querySelector('script[src^="js/keyboard-nav.js"]')) {
         const kbScript = document.createElement('script');
-        kbScript.src = 'js/keyboard-nav.js';
+        kbScript.src = 'js/keyboard-nav.js?v=2';
         document.head.appendChild(kbScript);
     }
 
@@ -104,9 +104,6 @@ async function initSidebar() {
                 </a>
                 <a href="reports.html" class="tooltip-item">
                     <i class="fas fa-chart-bar"></i> Reportes
-                </a>
-                <a href="#" class="tooltip-item js-support-btn">
-                    <i class="fas fa-headset"></i> Soporte
                 </a>
                 <a href="#" class="tooltip-item" id="logoutTooltipBtn">
                     <i class="fas fa-sign-out-alt"></i> Cerrar Sesión

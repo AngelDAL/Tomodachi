@@ -120,26 +120,72 @@
                 </button>
             </div>
 
-            <!-- Tabs -->
-            <div class="add-tabs">
-                <button type="button" class="add-tab active" data-ptab="ptab1">
-                    <i class="fas fa-shopping-bag"></i>
-                    <span>Principal</span>
-                </button>
-                <button type="button" class="add-tab" data-ptab="ptab2">
-                    <i class="fas fa-info-circle"></i>
-                    <span>Detalles</span>
-                </button>
-                <button type="button" class="add-tab" data-ptab="ptab3">
-                    <i class="fas fa-qrcode"></i>
-                    <span>Códigos</span>
-                </button>
+            <!-- [PASO 1] Selección del tipo de inventario (pantalla exclusiva) -->
+            <div class="add-type-screen" id="addTypeScreen">
+                <div class="add-type-caption">
+                    <i class="fas fa-layer-group"></i> ¿Qué tipo de inventario es?
+                    <small>El tipo define qué campos y pestañas verás. Puedes cambiarlo después.</small>
+                </div>
+                <p class="add-type-prompt">Selecciona una opción para continuar:</p>
+                <div class="inv-type-cards inv-type-cards-big" id="addTypeCards">
+                    <button type="button" class="inv-type-card active" data-type="stock">
+                        <i class="fas fa-shopping-bag"></i>
+                        <span class="it-title">Producto final</span>
+                        <span class="it-sub">Stock clásico y código de barras</span>
+                    </button>
+                    <button type="button" class="inv-type-card" data-type="recipe">
+                        <i class="fas fa-project-diagram"></i>
+                        <span class="it-title">Ensamblado (composición)</span>
+                        <span class="it-sub">Se compone de varios componentes</span>
+                    </button>
+                    <button type="button" class="inv-type-card" data-type="component">
+                        <i class="fas fa-cubes"></i>
+                        <span class="it-title">Componente</span>
+                        <span class="it-sub">Materia prima con presentaciones</span>
+                    </button>
+                    <button type="button" class="inv-type-card" data-type="none">
+                        <i class="fas fa-wrench"></i>
+                        <span class="it-title">Servicio</span>
+                        <span class="it-sub">Sin inventario físico (puede usar insumos)</span>
+                    </button>
+                </div>
+                <div class="add-type-actions">
+                    <button type="button" class="btn-primary" id="addContinueBtn"><i class="fas fa-arrow-right"></i> Continuar</button>
+                </div>
             </div>
+
+            <!-- [PASO 2] Formulario con pestañas -->
+            <div class="add-form-area" id="addFormArea" style="display:none;">
+                <button type="button" class="add-type-change" id="addTypeChangeBtn"><i class="fas fa-chevron-left"></i> Cambiar tipo</button>
+                <!-- Tabs -->
+                <div class="add-tabs">
+                    <button type="button" class="add-tab active" data-ptab="ptab1">
+                        <i class="fas fa-shopping-bag"></i>
+                        <span>Principal</span>
+                    </button>
+                    <button type="button" class="add-tab" data-ptab="ptab2">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Detalles</span>
+                    </button>
+                    <button type="button" class="add-tab" data-ptab="ptab3">
+                        <i class="fas fa-qrcode"></i>
+                        <span>Códigos</span>
+                    </button>
+                    <button type="button" class="add-tab" data-ptab="ptabComp" style="display:none;">
+                        <i class="fas fa-flask"></i>
+                        <span>Componentes</span>
+                    </button>
+                    <button type="button" class="add-tab" data-ptab="ptabPresent" style="display:none;">
+                        <i class="fas fa-cubes"></i>
+                        <span>Presentaciones</span>
+                    </button>
+                </div>
             
             <form id="addProductForm" class="modal-body add-modal-body">
                 <!-- TAB 1: Principal -->
                 <div class="add-tab-panel active" id="ptab1">
                     <div class="add-scroll">
+
                         <div class="add-image-zone" id="addImageZone">
                             <input type="file" id="addProductImage" accept="image/*">
                             <div class="add-image-placeholder" id="addImagePlaceholder">
@@ -181,7 +227,7 @@
                                     <input type="number" id="productPriceInput" name="price" placeholder="0.00" step="0.01" min="0" required>
                                 </div>
                             </div>
-                            <div class="form-group">
+                            <div class="form-group" id="addStockGroup">
                                 <label for="productStockInput">
                                     <i class="fas fa-cubes"></i> Stock inicial <span class="required">*</span>
                                 </label>
@@ -210,13 +256,49 @@
                                     <option value="">Seleccionar categoría...</option>
                                 </select>
                             </div>
-                            <div class="form-group">
+                            <div class="form-group" id="addMinStockGroup">
                                 <label for="productMinStockInput">
                                     <i class="fas fa-exclamation-triangle"></i> Stock mínimo
                                 </label>
                                 <input type="number" id="productMinStockInput" name="min_stock" placeholder="5" min="0" value="5">
                             </div>
                         </div>
+
+                        <div class="add-form-row">
+                            <div class="form-group" style="display:none;">
+                                <label for="productTrackingType">
+                                    <i class="fas fa-layer-group"></i> Tipo de inventario
+                                </label>
+                                <select id="productTrackingType" name="tracking_type">
+                                    <option value="stock">Producto final</option>
+                                    <option value="recipe">Ensamblado (composición)</option>
+                                    <option value="component">Componente</option>
+                                    <option value="none">Servicio (sin inventario)</option>
+                                </select>
+                                <small class="form-hint">La selección se hace en las tarjetas de arriba.</small>
+                            </div>
+                        </div>
+
+                        <div class="add-form-row" id="addProductLotGroup">
+                            <div class="form-group">
+                                <label for="productPiecesPerBox">
+                                    <i class="fas fa-boxes-stacked"></i> Piezas por caja (lote):
+                                </label>
+                                <input type="number" id="productPiecesPerBox" name="pieces_per_box" placeholder="Vacío = sin lotes" min="0" step="1">
+                            </div>
+                            <div class="form-group">
+                                <label for="productCostPerBox">
+                                    <i class="fas fa-money-bill-wave"></i> Costo por caja (opcional):
+                                </label>
+                                <div class="input-prefix">
+                                    <span class="prefix">$</span>
+                                    <input type="number" id="productCostPerBox" name="cost_per_box" placeholder="0.00" step="0.01" min="0">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Modo de consumo y presentaciones viven en la pestaña "Presentaciones" (componente);
+                            la composición en la pestaña "Componentes" (ensamblado/servicio). -->
                     </div>
                 </div>
 
@@ -231,7 +313,7 @@
                         </div>
 
                         <div class="add-form-row">
-                            <div class="form-group">
+                            <div class="form-group" id="addBarcodeGroup">
                                 <label for="productBarcodeInput">
                                     <i class="fas fa-qrcode"></i> Código de Barras
                                 </label>
@@ -271,11 +353,92 @@
                     </div>
                 </div>
                 
+                <!-- TAB Componentes (ensamblado o servicio) -->
+                <div class="add-tab-panel" id="ptabComp">
+                    <div class="add-scroll">
+                        <div class="add-composition-panel" id="addCompositionPanel">
+                            <div class="comp-block">
+                                <h4 class="comp-title"><i class="fas fa-shapes"></i> Composición (componentes)</h4>
+                                <p class="form-hint">Busca y selecciona los componentes de este producto para armar su receta. Seleccionarlo lo añade al momento.</p>
+
+                                <!-- Lista de componentes con imagen + control de cantidad -->
+                                <div id="addCompositionList" class="comp-pick-list recipe-ingredients-list"></div>
+
+                                <!-- Búsqueda: escribe el nombre y elige de la lista (imagen, nombre, precio) -->
+                                <div class="comp-search">
+                                    <div class="comp-search-input-wrap">
+                                        <i class="fas fa-search"></i>
+                                        <input type="text" id="compSearchInput" placeholder="Buscar producto para añadir como componente..." autocomplete="off">
+                                    </div>
+                                    <div class="comp-search-results" id="compSearchResults" style="display:none;"></div>
+                                </div>
+
+                                <div class="express-comp-wrap">
+                                    <button type="button" class="btn-secondary btn-sm" id="addExpressCompBtn">
+                                        <i class="fas fa-plus-circle"></i> Crear componente
+                                    </button>
+                                    <div class="express-comp-form" id="addExpressCompForm" style="display:none;">
+                                        <input type="text" id="addExpressName" placeholder="Nombre del componente *">
+                                        <input type="number" id="addExpressCost" min="0" step="0.01" placeholder="Costo ($)">
+                                        <input type="number" id="addExpressStock" min="0" step="0.01" placeholder="Stock inicial">
+                                        <div class="express-comp-actions">
+                                            <button type="button" class="btn-save btn-sm" id="addExpressCompSave">Guardar componente</button>
+                                            <button type="button" class="btn-cancel btn-sm" id="addExpressCompCancel">Cancelar</button>
+                                        </div>
+                                        <small class="form-hint">Aquí puedes enlistar la receta para este producto. Si el componente ya existe, selecciónalo de la lista; si no existe, créalo aquí al momento.</small>
+                                    </div>
+                                </div>
+
+                                <div class="recipe-summary recipe-summary-clear">
+                                    <span>Costo de producción: <strong id="addCompositionCostTotal">—</strong></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB Presentaciones (componente) -->
+                <div class="add-tab-panel" id="ptabPresent">
+                    <div class="add-scroll">
+                        <div class="form-group" id="addConsumeModeGroup" data-value="fifo">
+                            <label><i class="fas fa-arrows-alt-v"></i> Orden de consumo de presentaciones</label>
+                            <div class="consume-opts">
+                                <button type="button" class="consume-opt active" data-value="fifo" title="La más antigua primero">FIFO</button>
+                                <button type="button" class="consume-opt" data-value="lifo" title="La más reciente primero">LIFO</button>
+                                <button type="button" class="consume-opt" data-value="manual" title="Elegir presentación en cada venta">Manual</button>
+                            </div>
+                            <small class="form-hint consume-hint">Primero se consume la presentación más antigua.</small>
+                        </div>
+                        <div class="add-present-panel" id="addPresentationsPanel">
+                            <div class="comp-block">
+                                <h4 class="comp-title"><i class="fas fa-boxes-stacked"></i> Presentaciones</h4>
+                                <p class="form-hint">Registra cada compra/presentación del componente. La composición solo usa el total.</p>
+                                <div id="addPresentationsList" class="recipe-ingredients-list"></div>
+                                <div class="recipe-add-row">
+                                    <input type="text" id="addPresentLabel" placeholder="Presentación (ej. Bolsa 1 kg)">
+                                    <input type="number" id="addPresentQty" min="0.001" step="0.001" placeholder="Cantidad" value="1">
+                                    <div class="input-prefix" style="max-width:120px;"><span class="prefix">$</span>
+                                        <input type="number" id="addPresentCost" min="0" step="0.01" placeholder="Costo lote">
+                                    </div>
+                                    <button type="button" class="btn-primary btn-sm" id="addPresentAddBtn" title="Añadir presentación">
+                                        <i class="fas fa-plus"></i> Añadir
+                                    </button>
+                                </div>
+                                <div class="recipe-summary">
+                                    <span>Disponible: <strong id="addPresentTotal">0</strong></span>
+                                    <span>Costo ponderado: <strong id="addPresentCostPond">$0.00</strong></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="form-actions">
                     <button type="button" class="btn-cancel" id="cancelProductBtn">Cancelar</button>
                     <button type="submit" class="btn-save">Agregar Producto</button>
                 </div>
             </form>
+            </div><!-- /add-form-area -->
         </div>
     </div>
     
@@ -302,6 +465,18 @@
                 <button type="button" class="drawer-tab" data-tab="tab3">
                     <i class="fas fa-gear"></i>
                     <span>Detalles</span>
+                </button>
+                <button type="button" class="drawer-tab" data-tab="tabType">
+                    <i class="fas fa-layer-group"></i>
+                    <span>Tipo de inventario</span>
+                </button>
+                <button type="button" class="drawer-tab" data-tab="tabComp" style="display:none;">
+                    <i class="fas fa-shapes"></i>
+                    <span>Componentes</span>
+                </button>
+                <button type="button" class="drawer-tab" data-tab="tabPresent" style="display:none;">
+                    <i class="fas fa-cubes"></i>
+                    <span>Presentaciones</span>
                 </button>
             </div>
             
@@ -378,11 +553,11 @@
                                 </div>
                                 
                                 <div class="form-row">
-                                    <div class="form-group">
+                                    <div class="form-group" id="editStockGroup">
                                         <label for="editProductStock">Stock Actual</label>
                                         <input type="number" id="editProductStock" name="current_stock" >
                                     </div>
-                                    <div class="form-group">
+                                    <div class="form-group" id="editMinStockGroup">
                                         <label for="editProductMinStock">Stock Mínimo</label>
                                         <input type="number" id="editProductMinStock" name="min_stock" min="0">
                                     </div>
@@ -403,7 +578,7 @@
                                     <input type="text" id="editProductSku" name="sku" placeholder="Ej: SKU12345">
                                 </div>
                                 <div class="form-row">
-                                    <div class="form-group">
+                                    <div class="form-group" id="editBarcodeGroup">
                                         <label for="editProductBarcode">Código de Barras</label>
                                         <input type="text" id="editProductBarcode" name="barcode">
                                     </div>
@@ -475,7 +650,152 @@
                             </div>
                         </div>
                     </div>
-                    
+                    <!-- TAB 4: Tipo de inventario -->
+                    <div class="tab-panel" id="tabType">
+                        <div class="details-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-layer-group"></i> Tipo de Inventario</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="edit-type-wrap">
+                                    <div style="display:none;">
+                                        <label for="editProductTrackingType">Tipo de inventario</label>
+                                        <select id="editProductTrackingType" name="tracking_type">
+                                            <option value="stock">Producto final</option>
+                                            <option value="recipe">Ensamblado (composición)</option>
+                                            <option value="component">Componente</option>
+                                            <option value="none">Servicio (sin inventario)</option>
+                                        </select>
+                                    </div>
+                                    <label class="inv-type-label"><i class="fas fa-layer-group"></i> Tipo de inventario</label>
+                                    <div class="inv-type-cards inv-type-cards-edit" id="editTypeCards">
+                                        <button type="button" class="inv-type-card" data-type="stock">
+                                            <i class="fas fa-shopping-bag"></i>
+                                            <span class="it-title">Producto final</span>
+                                            <span class="it-sub">Stock clásico y código de barras</span>
+                                        </button>
+                                        <button type="button" class="inv-type-card" data-type="recipe">
+                                            <i class="fas fa-project-diagram"></i>
+                                            <span class="it-title">Ensamblado (composición)</span>
+                                            <span class="it-sub">Se compone de varios componentes</span>
+                                        </button>
+                                        <button type="button" class="inv-type-card" data-type="component">
+                                            <i class="fas fa-cubes"></i>
+                                            <span class="it-title">Componente</span>
+                                            <span class="it-sub">Materia prima con presentaciones</span>
+                                        </button>
+                                        <button type="button" class="inv-type-card" data-type="none">
+                                            <i class="fas fa-wrench"></i>
+                                            <span class="it-title">Servicio</span>
+                                            <span class="it-sub">Sin inventario físico</span>
+                                        </button>
+                                    </div>
+                                    <small class="form-hint">Al cambiar el tipo, los campos y pestañas se adaptan.</small>
+                                </div>
+                                <div class="form-row" id="editProductLotGroup">
+                                    <div class="form-group">
+                                        <label for="editProductPiecesPerBox">Piezas por caja (lote):</label>
+                                        <input type="number" id="editProductPiecesPerBox" name="pieces_per_box" placeholder="Vacío = sin lotes" min="0" step="1">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="editProductCostPerBox">Costo por caja (opcional):</label>
+                                        <input type="number" id="editProductCostPerBox" name="cost_per_box" min="0" step="0.01">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div><!-- /tabType -->
+
+                    <!-- TAB Presentaciones (componente) -->
+                        <div class="tab-panel" id="tabPresent">
+                        <div class="details-card" id="editComponentCard">
+                            <div class="card-header">
+                                <h3><i class="fas fa-boxes-stacked"></i> Presentaciones y consumo</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-group" id="editConsumeModeGroup" data-value="fifo">
+                                    <label><i class="fas fa-arrows-alt-v"></i> Orden de consumo de presentaciones</label>
+                                    <div class="consume-opts">
+                                        <button type="button" class="consume-opt active" data-value="fifo" title="La más antigua primero">FIFO</button>
+                                        <button type="button" class="consume-opt" data-value="lifo" title="La más reciente primero">LIFO</button>
+                                        <button type="button" class="consume-opt" data-value="manual" title="Elegir presentación en cada venta">Manual</button>
+                                    </div>
+                                    <small class="form-hint consume-hint">Primero se consume la presentación más antigua.</small>
+                                </div>
+                                <div class="form-group">
+                                    <label>Presentaciones del componente</label>
+                                    <div id="editPresentationsList" class="recipe-ingredients-list"></div>
+                                </div>
+                                <div class="recipe-add-row">
+                                    <input type="text" id="editPresentLabel" placeholder="Presentación (ej. Bolsa 1 kg)">
+                                    <input type="number" id="editPresentQty" min="0.001" step="0.001" placeholder="Cantidad" value="1">
+                                    <div class="input-prefix" style="max-width:120px;"><span class="prefix">$</span>
+                                        <input type="number" id="editPresentCost" min="0" step="0.01" placeholder="Costo lote">
+                                    </div>
+                                    <button type="button" class="btn-primary btn-sm" id="editPresentAddBtn" title="Añadir presentación">
+                                        <i class="fas fa-plus"></i> Añadir
+                                    </button>
+                                </div>
+                                <div class="recipe-summary">
+                                    <span>Disponible: <strong id="editPresentTotal">0</strong></span>
+                                    <span>Costo ponderado: <strong id="editPresentCostPond">$0.00</strong></span>
+                                </div>
+                            </div>
+                        </div>
+                        </div><!-- /tabPresent -->
+
+                        <!-- TAB Componentes (ensamblado o servicio) -->
+                        <div class="tab-panel" id="tabComp">
+                        <div class="details-card" id="recipeEditorCard">
+                            <div class="card-header recipe-card-header">
+                                <h3><i class="fas fa-shapes"></i> Composición (componentes)</h3>
+                                <button type="button" class="btn-secondary btn-sm" id="editRecipeBtn" title="Abrir editor de composición">
+                                    <i class="fas fa-list-ul"></i> Editar composición
+                                </button>
+                            </div>
+                            <div class="card-body recipe-panel hidden" id="recipePanel">
+                                <div class="status-badge status-waiting" id="recipeStatus">Composición sin cargar</div>
+                                <div class="form-group">
+                                    <label>Componentes de la composición</label>
+                                    <div id="recipeIngredientsList" class="recipe-ingredients-list"></div>
+                                </div>
+                                <div class="recipe-add-row">
+                                    <select id="recipeIngredientSelect">
+                                        <option value="">Seleccionar componente...</option>
+                                    </select>
+                                    <input type="number" id="recipeIngredientQty" min="0" step="0.001" placeholder="Cantidad" value="1">
+                                    <button type="button" class="btn-primary btn-sm" id="addRecipeIngredientBtn" title="Añadir componente">
+                                        <i class="fas fa-plus"></i> Añadir
+                                    </button>
+                                </div>
+                                <div class="express-comp-wrap">
+                                    <button type="button" class="btn-secondary btn-sm" id="editExpressCompBtn">
+                                        <i class="fas fa-plus-circle"></i> Crear componente
+                                    </button>
+                                    <div class="express-comp-form" id="editExpressCompForm" style="display:none;">
+                                        <input type="text" id="editExpressName" placeholder="Nombre del componente *">
+                                        <input type="number" id="editExpressCost" min="0" step="0.01" placeholder="Costo ($)">
+                                        <input type="number" id="editExpressStock" min="0" step="0.01" placeholder="Stock inicial">
+                                        <div class="express-comp-actions">
+                                            <button type="button" class="btn-save btn-sm" id="editExpressCompSave">Guardar componente</button>
+                                            <button type="button" class="btn-cancel btn-sm" id="editExpressCompCancel">Cancelar</button>
+                                        </div>
+                                        <small class="form-hint">Aquí puedes enlistar la receta para este producto. Si el componente ya existe, selecciónalo; si no existe, créalo aquí al momento.</small>
+                                    </div>
+                                </div>
+                                <div class="recipe-summary">
+                                    <span>Disponibles: <strong id="recipeAvailableDisplay">—</strong></span>
+                                    <span>Costo de producción: <strong id="recipeCostDisplay">—</strong></span>
+                                </div>
+                                <div class="recipe-save-row">
+                                    <button type="button" class="btn-save" id="saveRecipeBtn">
+                                        <i class="fas fa-save"></i> Guardar composición
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="form-actions-centered">
                         <button type="button" class="btn-danger" id="deleteProductBtn" style="display: none;">Eliminar</button>
                         <button type="button" class="btn-cancel" id="cancelEditBtn">Cancelar</button>
@@ -694,11 +1014,11 @@
     </div>
     
     <script src="js/sidebar-loader.js?v=5"></script>
-    <script src="js/app.js"></script>
+    <script src="js/app.js?v=10"></script>
     <script src="lib/html5-qrcode/html5-qrcode.min.js"></script>
     <script src="js/scanner.js"></script>
-    <script src="js/tour.js"></script>
-    <script src="js/inventory.js"></script>
+    <script src="js/tour.js?v=4"></script>
+    <script src="js/inventory.js?v=10"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             const session = await checkSession();

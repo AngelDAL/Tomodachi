@@ -193,7 +193,7 @@ async function loadCompanySettings() {
             const localMode = window.ThemeSystem ? window.ThemeSystem.getMode() : null;
             const savedMode = localMode || themeConfig.theme_mode
                 || (themeConfig.dark_mode === true || themeConfig.dark_mode === 'true' ? 'dark'
-                    : themeConfig.dark_mode === false || themeConfig.dark_mode === 'false' ? 'light' : 'auto');
+                    : themeConfig.dark_mode === false || themeConfig.dark_mode === 'false' ? 'light' : 'light');
             if (window.ThemeSystem) {
                 window.ThemeSystem.setMode(savedMode);
             }

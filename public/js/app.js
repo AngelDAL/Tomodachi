@@ -496,8 +496,10 @@ const ThemeSystem = (function () {
             }
             if (saved.dark_mode === true || saved.dark_mode === 'true') return 'dark';
             if (saved.dark_mode === false || saved.dark_mode === 'false') return 'light';
-            return 'auto';
-        } catch (e) { return 'auto'; }
+            // Sin preferencia guardada: primer uso → tema claro por defecto.
+            // El usuario podrá elegir oscuro/automático después (se persiste).
+            return 'light';
+        } catch (e) { return 'light'; }
     }
 
     function saveMode(m) {

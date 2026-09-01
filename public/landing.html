@@ -667,7 +667,6 @@
                         </svg>
                     </div>
                     <div class="hero-title">
-                        <span class="hero-intro">Esto es</span>
                         <svg id="titleTomodachi" class="title-svg" xmlns="http://www.w3.org/2000/svg"></svg>
                     </div>
                     <span class="slide-kicker hero-kicker">Tu punto de venta</span>
@@ -997,25 +996,24 @@
             const heroContent = document.getElementById('heroContent');
             const hint = document.getElementById('swipeHint');
 
-            // El nombre Tomodachi conserva el trazo SVG; "Esto es" es texto
-            // directo, más claro para una instancia ya instalada.
+            // El nombre Tomodachi es el único título (trazo SVG de bienvenida).
             buildTitle(document.getElementById('titleTomodachi'), window.TITLE_PATHS.tomodachi);
 
-            // 1. Logo: EMPIEZA VACÍO (fill="none" + fill-opacity 0). Se dibuja
-            //    el trazo y, al terminar, el fill sube de abajo hacia arriba.
+            // Secuencia en ORDEN: 1) trazo del logo → 2) relleno del logo →
+            // 3) letras "Tomodachi" → 4) relleno de letras → 5) contenido.
             const strokePath = document.querySelector('#heroLogo .logo-stroke');
             const heroLogo = document.getElementById('heroLogo');
             if (strokePath) {
-                drawPath(strokePath, 400, 1500);
-                fillLogoUp(heroLogo, 2050, 800);
+                drawPath(strokePath, 400, 1500);   // trazo del logo (400–1900)
+                fillLogoUp(heroLogo, 2050, 800);   // relleno del logo (2050–2850)
             }
 
-            // 2. "Tomodachi" letra por letra (más grande)
+            // 2. "Tomodachi" letra por letra, SOLO tras terminar el logo.
             const tomo = document.querySelectorAll('#titleTomodachi .letter');
-            tomo.forEach((p, i) => drawPath(p, 1500 + i * 100, 650));
+            tomo.forEach((p, i) => drawPath(p, 3000 + i * 100, 650));
 
             // 3. Relleno de letras + resto del contenido + pista + botón Omitir
-            fillGroup(document.getElementById('titleTomodachi'), 3000);
+            fillGroup(document.getElementById('titleTomodachi'), 4400);
             setTimeout(() => {
                 heroContent.classList.add('ready');
                 if (hint) hint.classList.add('visible');
@@ -1023,7 +1021,7 @@
                 updateSkipVisibility();
                 // Reinicia el auto-avance con el delay normal (8s) ahora que la intro terminó
                 startAutoTimer();
-            }, 3400);
+            }, 5000);
         }
 
         if (document.getElementById('slideHero')) {

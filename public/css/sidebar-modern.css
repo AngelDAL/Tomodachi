@@ -39,6 +39,15 @@ html.sidebar-loading .main-content {
         margin-right: 18px; /* Space between icon and text */
     }
 
+    /* "Mi Perfil" usa un contenedor de imagen/icono propio: dale el mismo
+       espaciado que los demás íconos para que no quede pegado al texto. */
+    .nav-item .profile-icon-container {
+        margin-right: 18px;
+    }
+    .nav-item .profile-icon-container .nav-profile-img {
+        margin-right: 0; /* el margen lo aplica el contenedor, no doblue */
+    }
+
     .nav-text {
         transition: opacity 0.3s ease;
         white-space: nowrap;

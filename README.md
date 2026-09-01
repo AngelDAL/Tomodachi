@@ -1,190 +1,156 @@
 # Tomodachi POS — Community Edition
 
-Sistema de Punto de Venta (POS) web, open source y self-hosted, diseñado para
-pequeñas y medianas empresas. Gestión de inventarios, ventas, usuarios,
-múltiples tiendas, cajas, promociones y reportes.
+Bienvenido. Tomodachi es un sistema de Punto de Venta (POS) web, open source
+(Apache 2.0) y self-hosted, pensado para pequeños y medianos negocios. La rama
+**Community Edition** está hecha para que **tú** lo implementes: sin
+suscripciones, sin cobros y con todas las funciones desbloqueadas.
 
-Esta edición (branch `community-edition`) está pensada para que **tú** lo
-hospedes: sin suscripciones, sin cobros, todas las funciones desbloqueadas.
+Este documento es tu guía para ponerlo en marcha con Docker, conocer sus
+puntos fuertes e integrarlo con tus herramientas y con agentes de IA. Aquí
+eres bienvenido a llevarlo a producción.
 
-## 🚀 Características
+## Puntos fuertes
 
-- **Ventas**: Interfaz de caja rápida e intuitiva, venta a granel, carrito
-  sincronizado y display para cliente.
-- **Inventario**: Control de stock, categorías, códigos de barras, QR y
-  movimientos.
-- **Multitienda**: Soporte para múltiples sucursales con aislamiento de datos
-  entre tiendas.
-- **Usuarios**: Roles y permisos (Super Admin, Admin, Gerente, Cajero).
-- **Cajas**: Apertura/cierre de caja, movimientos y arqueos.
-- **Promociones**: Descuentos simples, por cantidad, paquetes y por cuenta.
-- **Reportes**: Estadísticas de ventas, movimientos y gráficas.
-- **IA integrada** (opcional): análisis y edición de imágenes con
-  Gemini/Stability — configurable en `api/ai/config.php`.
-- **Extensible**: API REST con tokens para integraciones externas y agentes IA
-  (tabla `api_tokens` ya incluida en el esquema).
+- **Caja rápida e intuitiva**: ventas por código de barras, QR o búsqueda
+  instantánea; venta a granel, carrito sincronizado, múltiples métodos de pago
+  y display para el cliente en tiempo real.
+- **Inventario que se actualiza solo**: cada venta descuenta stock
+  automáticamente; categorías, códigos de barras y QR, alertas de
+  reabastecimiento y movimientos con historial completo.
+- **Inventario por recetas (BOM)**: productos compuestos (recetas) con
+  materias primas por presentaciones/lotes, consumo FIFO/LIFO/manual y
+  disponibilidad y costo derivados de la composición.
+- **Multitienda con aislamiento**: cada empresa opera con sus propios datos,
+  aislada del resto (protección frente a accesos cruzados/IDOR).
+- **Control por roles**: Super Admin, Admin, Gerente y Cajero, con permisos
+  según la labor de cada persona.
+- **Cajas con arqueo**: apertura y cierre de caja, movimientos y diferencia
+  calculada al cierre.
+- **Promociones**: descuento simple, por cantidad, paquete y por cuenta.
+- **Reportes y dashboard en tiempo real**: ventas, ganancias, productos más
+  vendidos, stock bajo y gráficas.
+- **Formato regional por empresa**: números, moneda y fechas configurables
+  (México, Colombia, EE. UU., España, Japón y más) en pantallas, tickets y PDF.
+- **Temas claro y oscuro, diseño adaptable**: una buena experiencia en
+  escritorio y en móvil.
+- **API REST completa**, abierta para integraciones y agentes de IA.
 
-## 🐳 Instalación con Docker (recomendada)
+## Instalación con Docker (la forma de hacerlo)
 
-Requisito: Docker y Docker Compose.
+La aplicación corre en un contenedor Docker. **No existe instalación manual**:
+desde el propio contenedor se monta todo — base de datos, esquema, migraciones
+y servidor web — de forma automática.
+
+Requisitos: Docker y Docker Compose.
 
 ```bash
 git clone https://github.com/AngelDAL/Tomodachi.git
 cd Tomodachi
-git checkout community-edition
-cp .env.example .env   # opcional: ajusta puerto/credenciales
+cp .env.example .env        # opcional: ajusta puerto, credenciales, zona horaria
 docker compose up -d --build
 ```
 
-**Todo es automático**: el entrypoint del contenedor espera a que la base de
-datos esté lista, genera `config/database.php`, crea el esquema, aplica las
-migraciones pendientes y carga los datos demo (si `SEED_DEMO=true`, el
-default). **No es necesario copiar ni ejecutar ningún SQL a mano.**
+La rama por defecto del repositorio es `community-edition`, así que ya clonas
+la versión correcta. En la primera subida, el contenedor:
 
-Accede a **http://localhost:8080**
+1. Espera a que la base de datos esté lista.
+2. Genera `config/database.php` a partir de las variables de entorno.
+3. Crea el esquema completo.
+4. Aplica las migraciones pendientes automáticamente.
+5. Levanta Apache.
 
-> Demo pública en **https://tomodachi.tabtap.dev** (Community Edition, datos
-> demo: admin/admin123 o demo/demo123)
+No hace falta copiar ni ejecutar SQL a mano: al terminar, entras a la app.
+
+Accede a **http://localhost:8091** (o al puerto que definas en `.env`).
 
 Credenciales iniciales:
-- **Usuario**: `admin`
-- **Contraseña**: `admin123`
+- Usuario: `admin`
+- Contraseña: `admin123`
 
-> ⚠️ Cambia la contraseña del administrador inmediatamente después del primer
-> inicio de sesión.
+> Cambia la contraseña del administrador justo después del primer inicio de
+> sesión.
+
+### Instalación limpia, sin datos de ejemplo
+
+Por defecto la instalación es **limpia**: la tienda principal nace sin
+productos ni categorías. Construyes el catálogo tú mismo (o con un agente de
+IA a través de la API). En el primer acceso verás una breve presentación de
+bienvenida, y a partir de ahí el resto de las personas van directo a la
+pantalla de inicio de sesión.
+
+Si quieres datos de ejemplo en tu máquina para explorar, usa `SEED_DEMO=true`
+(ver variables de entorno).
+
+### Configuración por variables de entorno
+
+| Variable | Default | Descripción |
+|---|---|---|
+| `PORT` | `8091` | Puerto del host para la web |
+| `DB_NAME` | `tomodachi_pos` | Nombre de la base de datos |
+| `DB_USER` | `tomodachi` | Usuario de la BD |
+| `DB_PASS` | `tomodachi_secret` | Contraseña de la BD |
+| `APP_MODE` | `OPEN_SOURCE` | `OPEN_SOURCE` = todo desbloqueado; `SAAS` = planes freemium |
+| `SEED_DEMO` | `false` | `true` = datos demo al primer arranque; `false` (default) = limpia |
+| `TZ` | `America/Mexico_City` | Zona horaria |
+
+Tu información (base de datos e imágenes) vive en los volúmenes Docker
+`db_data` y `app_uploads`, por lo que sobrevive a los reconstruidos del
+contenedor.
 
 ### Actualizaciones
-
-Para actualizar a una versión nueva:
 
 ```bash
 git pull
 docker compose up -d --build
 ```
 
-El entrypoint detecta automáticamente las **migraciones pendientes** de
-`database/migrations/` (por ejemplo `001_add_product_image.sql`,
-`013_create_api_tokens.sql`) y las aplica en orden numérico, registrando cada
-una en la tabla `schema_migrations` para no re-ejecutarlas. **No hace falta
-ejecutar SQL manualmente en las actualizaciones.** Si alguna migración no se
-puede aplicar (p. ej. porque su cambio ya existía), se registra igualmente con
-un aviso en los logs para no bloquear el arranque.
+El contenedor detecta y aplica solo las migraciones pendientes, registrándolas
+en la tabla `schema_migrations`. No ejecutes SQL manual en las
+actualizaciones.
 
-### Configuración vía variables de entorno
+## Agentes de IA e integraciones
 
-| Variable | Default | Descripción |
-|---|---|---|
-| `PORT` | `8080` | Puerto del host para la web |
-| `DB_NAME` | `tomodachi_pos` | Nombre de la base de datos |
-| `DB_USER` | `tomodachi` | Usuario de la BD |
-| `DB_PASS` | `tomodachi_secret` | Contraseña de la BD |
-| `APP_MODE` | `OPEN_SOURCE` | `OPEN_SOURCE` = todo desbloqueado; `SAAS` = planes freemium |
-| `SEED_DEMO` | `true` | `true` = datos demo al primer arranque; `false` = instalación limpia |
-| `TZ` | `America/Mexico_City` | Zona horaria |
+Tomodachi expone una **API REST completa** para que la consumas desde otras
+aplicaciones o desde un **agente de IA** (Claude Code, Codex, Cursor, Hermes
+o el tuyo). Un agente puede leer el catálogo, crear productos, consultar
+ventas o preparar reportes usando credenciales estándar, sin tocar la base de
+datos.
 
-Los datos (base de datos e imágenes subidas) persisten en volúmenes Docker:
-`db_data` y `app_uploads`.
+Para empezar:
 
-## 🎭 Datos de demostración
+1. Genera un **API token** desde el panel Integraciones de la app (o mediante
+   `api/api_tokens/create.php`), eligiendo permisos `read`, `write` o `custom`
+   y su vigencia.
+2. Autentica tus llamadas con el token (`Authorization: Bearer <token>`) o con
+   la cookie de sesión.
+3. Consulta la referencia de endpoints en [`docs/API.md`](docs/API.md): 91
+   endpoints funcionales documentados.
 
-Con `SEED_DEMO=true` (default), el primer arranque carga además de los datos
-base una tienda de ejemplo "Cafetería Demo" (store_id 2) con productos,
-usuarios y ventas históricas para que puedas explorar el sistema:
+Ejemplo:
 
-- Tienda base: **admin / admin123** (tienda 1, con productos de ejemplo)
-- Tienda demo: **demo / demo123** (tienda 2, con historial de ventas)
+```bash
+# Crear un producto usando un token de escritura
+curl -X POST ${BASE}/api/inventory/products.php \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"product_name":"Cafe","price":35.00}'
+```
 
-Con `SEED_DEMO=false` obtienes solo los datos base del esquema (tienda 1 +
-admin).
+Las **funciones de IA de imágenes** (Stability AI y Google Gemini, `api/ai/*`)
+están deshabilitadas en la Community Edition (responden 403) y se activan en
+el plan gestionado (SAAS) con la clave del proveedor.
 
-## 🖥️ Uso
+Si vas a trabajar sobre el código del repositorio, lee antes
+[`AGENTS.md`](AGENTS.md) y [`CLAUDE.md`](CLAUDE.md).
 
-1. Acceda a la aplicación desde su navegador (ej. `http://localhost:8080`).
-   Verá un **carrusel de presentación** con las características del sistema;
-   la última diapositiva permite iniciar sesión o **crear una empresa nueva**
-   (al registrarte se crea una empresa independiente con su propio
-   inventario, ventas y equipo).
-2. Credenciales por defecto: **admin / admin123**.
-3. **¡Importante!** Cambie la contraseña del administrador inmediatamente
-   después del primer inicio de sesión.
+## Pruebas de seguridad realizadas
 
-## 🌎 Formato regional (números, moneda y fechas por empresa)
+- **Aislamiento multi-tienda**: validación del `store_id` contra la
+  sesión/token en ventas, cajas, inventario, usuarios y tiendas (protección
+  frente a IDOR).
+- **Endpoints protegidos** por autenticación y por tokens con alcance.
+- **Consultas parametrizadas** (PDO) para evitar inyección SQL.
 
-Cada empresa puede configurar cómo se muestran los números, la moneda y las
-fechas en **todo el sistema** (pantallas, tickets, reportes y PDF). Solo
-afecta la presentación; los datos se guardan igual para todas las regiones.
+## Licencia
 
-**Configuración:** Perfil → Configuración de Empresa → **Formato Regional**.
-
-**Presets rápidos:** México, Colombia, Estados Unidos, España, Argentina,
-Japón y Brasil — un clic rellena todo y permite ajuste manual fino:
-
-| País | Código | Ejemplo moneda | Fecha |
-|---|---|---|---|
-| México | MXN | `$1,234.56` | `13/08/2026 14:30` |
-| Colombia | COP | `$1.235` (0 decimales) | `13/08/2026 14:30` |
-| EE. UU. | USD | `$1,234.50` | `08/13/2026 2:30 PM` |
-| España | EUR | `€1.234,50` | `13/08/2026 14:30` |
-| Japón | JPY | `¥1,235` (0 decimales) | `2026-08-13 14:30` |
-
-Campos configurables: código de moneda, símbolo editable (`¥`, `€`,
-`COP $`...), posición del símbolo, separador de miles, separador de
-decimales, decimales (0-4), formato de fecha y hora — con vista previa en
-vivo.
-
-Las cantidades (stock, vendidos, etc.) se muestran inteligentemente: los
-enteros sin decimales (`3`, nunca `3.000`) y las fracciones sin ceros
-finales (`3.25`). El formato visual **jamás** altera lo que se envía al
-servidor: las consultas SQL y los inputs de fecha siempre usan ISO.
-
-## 🛠️ Instalación manual (Apache/Nginx + PHP + MySQL)
-
-Requisitos: PHP 8.0+, MySQL 8.0 / MariaDB 10.5+, extensiones PDO, pdo_mysql,
-mbstring, curl.
-
-1. Clona el repo y haz `git checkout community-edition`.
-2. Importa el esquema base:
-   ```bash
-   mysql -u root -p < database/schema.sql
-   ```
-3. Aplica las migraciones en orden numérico (solo en instalación manual; en
-   Docker esto es automático):
-   ```bash
-   for f in database/migrations/*.sql; do
-     echo "Aplicando $f..."; mysql -u root -p tomodachi_pos < "$f"
-   done
-   ```
-4. Copia y configura:
-   ```bash
-   cp config/database.php.example config/database.php
-   cp config/mail.php.example config/mail.php
-   ```
-5. Instala dependencias PHP:
-   ```bash
-   composer install
-   ```
-6. Apunta el DocumentRoot de tu servidor web a la raíz del proyecto
-   (el `.htaccess` redirige a `public/` y protege `config/`, `includes/` y
-   `database/`).
-
-## 🔌 API para agentes e integraciones
-
-La API REST está documentada en [`docs/API.md`](docs/API.md). Los agentes de
-IA que trabajen en el código deben leer [`AGENTS.md`](AGENTS.md) y
-[`CLAUDE.md`](CLAUDE.md).
-
-En la Community Edition las funciones de IA (`api/ai/*`), comandos de voz y
-tokens de API están **fuera del alcance** (responden 403 en modo OPEN_SOURCE).
-La filosofía: los agentes integran con la API documentada y credenciales
-estándar.
-
-## 🧪 Pruebas de seguridad realizadas
-
-- Aislamiento multi-tienda: validación de `store_id` contra la sesión en
-  ventas, cajas, inventario, usuarios y tiendas (protección contra IDOR).
-- Endpoints de IA y utilidades protegidos con autenticación.
-- Rate limit en formulario público de contacto.
-
-## 📄 Licencia
-
-Apache License 2.0. Ver el archivo `LICENSE`.
+Apache License 2.0. Consulta el archivo `LICENSE`.

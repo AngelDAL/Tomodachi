@@ -580,6 +580,18 @@ INSERT INTO terminals (store_id, terminal_name) VALUES
 INSERT INTO users (store_id, username, password_hash, full_name, email, role, status) VALUES
 (1, 'admin', '$2y$10$rDGCkOinf6RJ2ywtMU6QYeeTNkqq4/soMpsxdF4wO9lqIRTrjfP2a', 'Administrador', 'admin@tomodachi.com', 'admin', 'active');
 
+-- Configuración global de la instalación (no por navegador)
+CREATE TABLE app_settings (
+    setting_key VARCHAR(64) PRIMARY KEY,
+    setting_value TEXT NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Beneficio inicial de la instalación: lo ve SOLO la primera persona que
+-- accede (antes de crear cuenta); al mostrarse/terminarse se marca '1' en
+-- BD y el resto (cualquier visitante o sesión) va directo a login.
+INSERT INTO app_settings (setting_key, setting_value) VALUES ('welcome_seen', '0');
+
 -- Productos de ejemplo: eliminados para una instalación completamente limpia.
 -- El catálogo nace vacío (0 productos). La empresa se crea vía registro y sus
 -- productos se añaden desde Inventario.

@@ -6,13 +6,10 @@
     <title>Tomodachi POS</title>
     <link rel="icon" type="image/svg+xml" href="assets/images/logos/tomodachi-favicon.svg">
     <script>
-        // La presentación se ve solo en la primera visita del navegador.
-        // Migramos la marca exacta ('1') de la presentación anterior, sin
-        // confundirla con el valor 'true' del tour administrativo.
-        const legacyLandingSeen = localStorage.getItem('tomodachi_onboarding_done') === '1';
-        const landingSeen = localStorage.getItem('tomodachi_landing_seen') === '1' || legacyLandingSeen;
-        if (legacyLandingSeen) localStorage.setItem('tomodachi_landing_seen', '1');
-        window.location.replace(landingSeen ? 'login.html' : 'landing.html');
+        // La bienvenida de la instalación se decide por BD (app_settings.
+        // welcome_seen) en landing.html. Aquí solo delegamos; no se usa
+        // localStorage para que ningún visitante repita la presentación.
+        window.location.replace('landing.html');
     </script>
     <link rel="stylesheet" href="css/design-system.css?v=6">
     <script src="lib/animejs/anime.min.js" defer></script>

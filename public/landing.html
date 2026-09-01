@@ -10,29 +10,18 @@
     <!-- Decisión previa al render: nunca pintamos la presentación para luego redirigir. -->
     <script>
         (() => {
-            // Migración única: la versión anterior de la presentación guardaba
-            // exactamente '1' en la clave que hoy pertenece al tour interno.
-            // No migramos el valor 'true' del tour administrativo.
-            const legacyLandingSeen = localStorage.getItem('tomodachi_onboarding_done') === '1';
-            const landingSeen = localStorage.getItem('tomodachi_landing_seen') === '1' || legacyLandingSeen;
-            if (legacyLandingSeen) localStorage.setItem('tomodachi_landing_seen', '1');
-
-            // Ruta ya conocida: salir ANTES de construir/pintar el carrusel.
-            if (landingSeen) {
-                window.location.replace('login.html');
-                return;
-            }
-
-            // Primera visita: mantener la página invisible hasta saber si hay
-            // una sesión activa. Así tampoco hay un flash para usuarios logueados.
+            // La bienvenida de la instalación la ve SOLO la primera persona
+            // que accede (antes de crear cuenta) y se decide por BASE DE DATOS
+            // (app_settings.welcome_seen), NO por localStorage. El resto de
+            // visitantes y sesiones va directo a login.
             document.documentElement.classList.add('landing-session-check');
-            fetch('../api/auth/verify_session.php')
+            fetch('../api/auth/welcome.php')
                 .then(response => response.json())
                 .then(data => {
-                    if (data.success && data.data.logged_in) {
-                        window.location.replace('dashboard.html');
-                    } else {
+                    if (data && data.success && data.data && data.data.show) {
                         document.documentElement.classList.remove('landing-session-check');
+                    } else {
+                        window.location.replace('login.html');
                     }
                 })
                 .catch(() => document.documentElement.classList.remove('landing-session-check'));
@@ -794,7 +783,7 @@
                     <div class="final-kicker"><i class="fas fa-sparkles"></i> Todo listo para comenzar</div>
                     <h2>Hagamos espacio para tu negocio</h2>
                     <p class="final-copy">Si es tu primera vez, empieza creando tu empresa. Te acompañaremos desde el primer paso, sin necesidad de iniciar sesión antes.</p>
-                    <a class="start-btn" href="register.html" onclick="markLandingSeen()"><i class="fas fa-building-circle-check"></i> Crear mi primera empresa <i class="fas fa-arrow-right"></i></a>
+                    <a class="start-btn" href="register.html" onclick="claimWelcome()"><i class="fas fa-building-circle-check"></i> Crear mi primera empresa <i class="fas fa-arrow-right"></i></a>
                     <p class="reassurance">Solo necesitas elegir el nombre de tu negocio y crear tu acceso.</p>
                 </div>
             </section>
@@ -879,19 +868,21 @@
             document.getElementById('nextBtn').style.visibility = (current >= total - 1) ? 'hidden' : 'visible';
             // Al llegar al login (última slide) la presentación ya se vio:
             // la próxima visita irá directo a login.html
-            if (current >= total - 1) markLandingSeen();
+            if (current >= total - 1) claimWelcome();
             // Toda interacción manual reinicia el auto-avance: nunca queda muerto
             startAutoTimer();
         }
 
-        function markLandingSeen() {
-            try { localStorage.setItem('tomodachi_landing_seen', '1'); } catch (e) { /* privado */ }
+        function claimWelcome() {
+            // Marca el beneficio inicial como mostrado en BD (lo llaman al
+            // terminar / omitir / crear primera empresa). Es idempotente.
+            try { fetch('../api/auth/welcome.php', { method: 'POST' }); } catch (e) { /* noop */ }
         }
 
         // Botón Omitir: salta directo al login (última diapositiva) y marca
         // la presentación como vista (próxima vez -> login directo)
         if (skipBtn) skipBtn.addEventListener('click', () => {
-            markLandingSeen();
+            claimWelcome();
             goTo(total - 1);
         });
 

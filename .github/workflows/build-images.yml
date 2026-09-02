@@ -1,0 +1,70 @@
+name: Build & publish Tomodachi images
+
+on:
+  push:
+    branches: [community-edition]
+  workflow_dispatch:
+
+# El GITHUB_TOKEN de la Action recibe packages: write automaticamente
+# para publicar imagenes en ghcr.io de este repositorio.
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_APP: ghcr.io/${{ github.repository }}
+  IMAGE_WS: ghcr.io/${{ github.repository }}-ws
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Normaliza tags (ultimo commit corto)
+        id: meta
+        run: |
+          SHORT="${GITHUB_SHA::8}"
+          echo "short=$SHORT" >> "$GITHUB_OUTPUT"
+          echo "branch=$(echo "${GITHUB_REF#refs/heads/}" | sed 's#/#-#g')" >> "$GITHUB_OUTPUT"
+
+      - name: Build & push app image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_APP }}:latest
+            ${{ env.IMAGE_APP }}:${{ steps.meta.outputs.short }}
+            ${{ env.IMAGE_APP }}:${{ steps.meta.outputs.branch }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push customer-display WS image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./docker
+          file: ./docker/Dockerfile.customer-display-ws
+          push: true
+          tags: |
+            ${{ env.IMAGE_WS }}:latest
+            ${{ env.IMAGE_WS }}:${{ steps.meta.outputs.short }}
+            ${{ env.IMAGE_WS }}:${{ steps.meta.outputs.branch }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

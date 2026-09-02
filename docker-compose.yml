@@ -20,6 +20,7 @@ services:
       retries: 20
 
   app:
+    image: ghcr.io/angeldal/tomodachi:latest
     build: .
     restart: unless-stopped
     depends_on:
@@ -44,6 +45,7 @@ services:
       - app_sessions:/var/lib/php/sessions
 
   ws:
+    image: ghcr.io/angeldal/tomodachi-ws:latest
     build:
       context: ./docker
       dockerfile: Dockerfile.customer-display-ws

@@ -35,11 +35,36 @@ negocio.
 
 Requisitos: Docker y Docker Compose.
 
+### Instalación en una línea (recomendada)
+
+Descarga la imagen precompilada de Tomodachi y levanta todo en segundos:
+
+**Linux / macOS / WSL:**
+
+```bash
+curl -fsSL t.tabtap.dev/i | bash
+```
+
+**Windows (PowerShell):**
+
+```powershell
+irm t.tabtap.dev/install.ps1 | iex
+```
+
+El instalador auto-provisiona Docker si no existe, clona el repositorio y
+despliega Tomodachi. Usa la imagen precompilada en `ghcr.io/angeldal/tomodachi`
+(solo compila desde el código si la imagen no está disponible).
+
+### Instalación manual
+
 ```bash
 git clone https://github.com/AngelDAL/Tomodachi.git
 cd Tomodachi
 cp .env.example .env        # opcional: puerto, credenciales, zona horaria
-docker compose up -d --build
+# Descarga la imagen precompilada (rápido):
+docker compose up -d
+# O compila desde el código (solo para desarrollo):
+# docker compose up -d --build
 ```
 
 El contenedor prepara la base de datos, el esquema, las migraciones y el
@@ -66,7 +91,9 @@ contenedor.
 
 ```bash
 git pull
-docker compose up -d --build
+docker compose up -d          # imagen precompilada (rápido)
+# o, si modificaste el código local:
+# docker compose up -d --build
 ```
 
 El contenedor detecta y aplica automáticamente las migraciones pendientes,

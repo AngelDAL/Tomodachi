@@ -46,13 +46,13 @@ jobs:
           echo "short=$SHORT" >> "$GITHUB_OUTPUT"
           echo "branch=$(echo "${GITHUB_REF#refs/heads/}" | sed 's#/#-#g')" >> "$GITHUB_OUTPUT"
 
-      - name: Build & push app image (arm64+amd64)
+      - name: Build & push app image (amd64)
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
           push: true
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           tags: |
             ${{ env.IMAGE_APP }}:latest
             ${{ env.IMAGE_APP }}:${{ steps.meta.outputs.short }}
@@ -60,13 +60,13 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build & push customer-display WS image (arm64+amd64)
+      - name: Build & push customer-display WS image (amd64)
         uses: docker/build-push-action@v6
         with:
           context: ./docker
           file: ./docker/Dockerfile.customer-display-ws
           push: true
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           tags: |
             ${{ env.IMAGE_WS }}:latest
             ${{ env.IMAGE_WS }}:${{ steps.meta.outputs.short }}

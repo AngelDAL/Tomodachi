@@ -13,10 +13,13 @@
 # Proteger directorios del sistema (No accesibles vía navegador)
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteRule ^(config|includes|database)/ - [F,L]
+    RewriteRule ^(config|includes|database|codi/includes|codi/database|codi/config|codi/tests)/ - [F,L]
     # Propagar header Authorization para API tokens (Bearer)
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+    # Propagar headers de webhook
+    RewriteCond %{HTTP:X-Webhook-Signature} .
+    RewriteRule ^codi/api/webhook\.php$ - [E=HTTP_X_WEBHOOK_SIGNATURE:%{HTTP:X-Webhook-Signature}]
 </IfModule>
 
 # Configuración de PHP (para PHP 8.x)

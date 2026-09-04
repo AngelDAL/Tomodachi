@@ -33,6 +33,7 @@ define('PAYMENT_CARD', 'card');
 define('PAYMENT_TRANSFER', 'transfer');
 define('PAYMENT_MIXED', 'mixed');
 define('PAYMENT_CREDIT', 'credit');
+define('PAYMENT_CODI', 'codi');
 
 // Tipos de movimiento de inventario
 define('MOVEMENT_ENTRY', 'entry');

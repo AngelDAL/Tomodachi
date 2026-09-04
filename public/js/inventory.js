@@ -16,6 +16,7 @@ let activePromotions = []; // Promociones activas para indicators
 let recipeEditingIngredients = [];
 let recipeEditingProductId = null;
 let addCompositionDraft = [];      // componentes pendientes al crear un producto 'recipe'
+let addStagedComponents = [];      // componentes exprés aún no creados en BD
 let addCompositionProductId = null;
 
 // Helpers numéricos para el costo en vivo
@@ -652,7 +653,7 @@ function bindEvents() {
             if (minus || plus) {
                 e.preventDefault();
                 const cid = (minus || plus).getAttribute('data-component-id');
-                bumpCompQty(cid, plus ? 1 : -1);
+                bumpCompQty(cid, plus ? 0.1 : -0.1);
             }
         });
         addCompositionList.addEventListener('input', (e) => {
@@ -849,23 +850,57 @@ async function submitAddProduct() {
 
             // Persistir la composición si el producto es ensamblado y hay componentes definidos
             const addType = document.getElementById('productTrackingType')?.value;
-            const compDraft = addCompositionDraft
-                .map(i => ({ component_id: i.component_id, quantity: NUM(i.quantity) }))
-                .filter(i => i.component_id && i.quantity > 0);
-            if ((addType === 'recipe' || addType === 'none') && compDraft.length) {
-                try {
-                    const compRes = await fetch('../api/inventory/recipe.php', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ product_id: newProductId, ingredients: compDraft })
-                    });
-                    const compData = await compRes.json();
-                    if (!compData.success) {
-                        console.warn('No se pudo guardar la composición del producto nuevo:', compData.message);
-                    }
-                } catch (e) {
-                    console.error('Error guardando composición del producto nuevo:', e);
+            if ((addType === 'recipe' || addType === 'none') && addCompositionDraft.length) {
+                // 1. Crear componentes exprés staged primero
+                const stagedIdMap = {};
+                for (const staged of addStagedComponents) {
+                    try {
+                        const cRes = await fetch('../api/inventory/products.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                product_name: staged.product_name, price: 0, cost: staged.cost,
+                                stock: 0, min_stock: 0, tracking_type: 'component',
+                                consume_mode: 'fifo', is_ingredient: 1, status: 'active'
+                            })
+                        });
+                        const cData = await cRes.json();
+                        if (cData.success) {
+                            stagedIdMap[staged.staged_id] = cData.data.product_id;
+                            // Crear presentación inicial con stock
+                            if (staged.stock > 0) {
+                                await fetch('../api/inventory/lots.php', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ product_id: cData.data.product_id, label: 'Stock inicial', quantity: staged.stock, total_cost: staged.cost * staged.stock })
+                                });
+                            }
+                        }
+                    } catch (e) { console.error('Error creando componente staged:', e); }
                 }
+                // 2. Mapear IDs staged a IDs reales y guardar receta
+                const compDraft = addCompositionDraft
+                    .map(i => ({
+                        component_id: i.is_staged ? (stagedIdMap[i.component_id] || i.component_id) : i.component_id,
+                        quantity: NUM(i.quantity)
+                    }))
+                    .filter(i => i.component_id && i.quantity > 0 && !String(i.component_id).startsWith('staged_'));
+                if (compDraft.length) {
+                    try {
+                        const compRes = await fetch('../api/inventory/recipe.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ product_id: newProductId, ingredients: compDraft })
+                        });
+                        const compData = await compRes.json();
+                        if (!compData.success) {
+                            console.warn('No se pudo guardar la composición del producto nuevo:', compData.message);
+                        }
+                    } catch (e) {
+                        console.error('Error guardando composición del producto nuevo:', e);
+                    }
+                }
+                addStagedComponents = [];
             }
 
             // Persistir presentaciones si el producto es un componente
@@ -1487,54 +1522,33 @@ function toggleExpressComp(target) {
     const form = document.getElementById(target + 'ExpressCompForm');
     if (form) form.style.display = (form.style.display === 'none' || !form.style.display) ? 'grid' : 'none';
 }
-async function expressCreateComponent(target) {
-    const p = (target === 'add') ? 'add' : 'edit';
-    const name = (document.getElementById(p + 'ExpressName')?.value || '').trim();
-    const cost = parseFloat(document.getElementById(p + 'ExpressCost')?.value) || 0;
-    const stock = parseFloat(document.getElementById(p + 'ExpressStock')?.value) || 0;
+function expressCreateComponent(target) {
+    if (target !== 'add') return; // Solo para alta nueva
+    const name = (document.getElementById('addExpressName')?.value || '').trim();
+    const cost = parseFloat(document.getElementById('addExpressCost')?.value) || 0;
+    const stock = parseFloat(document.getElementById('addExpressStock')?.value) || 0;
     if (!name) { showNotification('Indica el nombre del componente', 'error'); return; }
-    try {
-        const res = await fetch('../api/inventory/products.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                product_name: name, price: 0, cost: cost, stock: 0, min_stock: 0,
-                tracking_type: 'component', consume_mode: 'fifo', is_ingredient: 1, status: 'active'
-            })
-        });
-        const data = await res.json();
-        if (!data.success) { showNotification('Error: ' + (data.message || 'no se pudo crear el componente'), 'error'); return; }
-        const newId = data.data.product_id;
-        // Presentación inicial con el stock indicado (opcional).
-        if (stock > 0) {
-            await fetch('../api/inventory/lots.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ product_id: newId, label: 'Stock inicial', quantity: stock, total_cost: cost * stock || 0 })
-            });
-        }
-        // Registrar en la lista local para que aparezca en el selector al momento.
-        if (!products.some(p => String(p.product_id) === String(newId))) {
-            products.push({ product_id: newId, product_name: name, cost: cost, price: 0, current_stock: 0, tracking_type: 'component', consume_mode: 'fifo', is_ingredient: 1 });
-        }
-        if (target === 'add') {
-            // Añadir el componente recién creado directo a la receta.
-            if (!addCompositionDraft.some(i => String(i.component_id) === String(newId))) {
-                addCompositionDraft.push({ component_id: String(newId), name: name, quantity: 1, unit_cost: cost || 0 });
-                renderAddComposition();
-            }
-        } else {
-            populateRecipeAddSelect();
-            const sel = document.getElementById('recipeIngredientSelect');
-            if (sel) sel.value = String(newId);
-        }
-        const form = document.getElementById(p + 'ExpressCompForm');
-        if (form) { form.style.display = 'none'; form.querySelectorAll('input').forEach(i => i.value = ''); }
-        showNotification('Componente "' + name + '" creado', 'success');
-    } catch (e) {
-        console.error('Error creando componente exprés:', e);
-        showNotification('Error al crear el componente', 'error');
-    }
+
+    // Staged: se crea solo cuando el usuario guarda el producto
+    const stagedId = 'staged_' + Date.now();
+    addStagedComponents.push({
+        staged_id: stagedId,
+        product_name: name,
+        cost: cost,
+        stock: stock
+    });
+    // Añadir a la receta
+    addCompositionDraft.push({
+        component_id: stagedId,
+        name: name,
+        quantity: 1,
+        unit_cost: cost,
+        is_staged: true
+    });
+    renderAddComposition();
+    const form = document.getElementById('addExpressCompForm');
+    if (form) { form.style.display = 'none'; form.querySelectorAll('input').forEach(i => i.value = ''); }
+    showNotification('Componente "' + name + '" añadido a la receta (se creará al guardar)', 'info');
 }
 
 function openRecipePanel(load) {
@@ -1767,7 +1781,7 @@ function renderAddComposition() {
             return '<div class="comp-pick-row" data-component-id="' + ing.component_id + '">' +
                 '<span class="comp-pick-thumb">' + (img ? '<img src="' + img + '" alt="">' : '<i class="fas fa-box"></i>') + '</span>' +
                 '<div class="comp-pick-info">' +
-                    '<span class="comp-pick-name">' + escapeHtml(ing.name) + '</span>' +
+                    '<span class="comp-pick-name">' + escapeHtml(ing.name) + (ing.is_staged ? ' <small style="color:var(--info-color)">(nuevo)</small>' : '') + '</span>' +
                     '<span class="comp-pick-meta">' + fmtMoney(ing.unit_cost) + ' / unidad</span>' +
                 '</div>' +
                 '<div class="comp-qty-stepper">' +
@@ -1787,27 +1801,56 @@ function renderAddComposition() {
 function filterCompSearch() {
     const input = document.getElementById('compSearchInput');
     const box = document.getElementById('compSearchResults');
-    if (!input || !box) return;
+    const availList = document.getElementById('compAvailableList');
+    if (!input) return;
     const q = (input.value || '').trim().toLowerCase();
-    if (!q) { box.style.display = 'none'; box.innerHTML = ''; return; }
     const existing = new Set(addCompositionDraft.map(i => String(i.component_id)));
-    const matches = products
-        .filter(p => !existing.has(String(p.product_id)) && String(p.product_name || '').toLowerCase().includes(q))
-        .slice(0, 12);
-    if (!matches.length) {
-        box.style.display = 'block';
-        box.innerHTML = '<div class="comp-search-empty">Sin coincidencias. Puedes crearlo con "Crear componente".</div>';
-        return;
+
+    // Filtrar componentes del sistema
+    const components = products.filter(p => p.tracking_type === 'component' || p.is_ingredient == 1);
+    const matches = q
+        ? components.filter(p => String(p.product_name || '').toLowerCase().includes(q))
+        : components;
+
+    // Renderizar en el panel izquierdo
+    if (availList) {
+        if (!matches.length) {
+            availList.innerHTML = '<div class="recipe-empty">No se encontraron componentes.</div>';
+        } else {
+            availList.innerHTML = matches.map(p => {
+                const inRecipe = existing.has(String(p.product_id));
+                return '<div class="comp-available-item ' + (inRecipe ? 'in-recipe' : '') + '" data-pid="' + p.product_id + '">' +
+                    '<span class="comp-avail-name">' + escapeHtml(p.product_name) + '</span>' +
+                    '<span class="comp-avail-cost">' + fmtMoney(p.cost) + '/u</span>' +
+                    (inRecipe
+                        ? '<span class="comp-avail-add" title="Ya está en la receta"><i class="fas fa-check"></i></span>'
+                        : '<button type="button" class="comp-avail-add" title="Añadir a la receta" onclick="addComponentFromPicker(' + p.product_id + ')"><i class="fas fa-plus"></i></button>') +
+                    '</div>';
+            }).join('');
+        }
     }
-    box.innerHTML = matches.map(p => {
-        const img = productImgSrc(p);
-        return '<button type="button" class="comp-search-item" data-pid="' + p.product_id + '">' +
-            '<span class="comp-search-thumb">' + (img ? '<img src="' + img + '" alt="">' : '<i class="fas fa-box"></i>') + '</span>' +
-            '<span class="comp-search-name">' + escapeHtml(p.product_name) + '</span>' +
-            '<span class="comp-search-price">' + fmtMoney(p.price) + '</span>' +
-            '</button>';
-    }).join('');
-    box.style.display = 'block';
+
+    // Mantener el dropdown de resultados existente para compatibilidad
+    if (box) {
+        if (!q) { box.style.display = 'none'; box.innerHTML = ''; return; }
+        const searchMatches = components
+            .filter(p => !existing.has(String(p.product_id)) && String(p.product_name || '').toLowerCase().includes(q))
+            .slice(0, 12);
+        if (!searchMatches.length) {
+            box.style.display = 'block';
+            box.innerHTML = '<div class="comp-search-empty">Sin coincidencias. Puedes crearlo con "Crear componente".</div>';
+            return;
+        }
+        box.innerHTML = searchMatches.map(p => {
+            const img = productImgSrc(p);
+            return '<button type="button" class="comp-search-item" data-pid="' + p.product_id + '">' +
+                '<span class="comp-search-thumb">' + (img ? '<img src="' + img + '" alt="">' : '<i class="fas fa-box"></i>') + '</span>' +
+                '<span class="comp-search-name">' + escapeHtml(p.product_name) + '</span>' +
+                '<span class="comp-search-price">' + fmtMoney(p.cost) + '</span>' +
+                '</button>';
+        }).join('');
+        box.style.display = 'block';
+    }
 }
 
 // Al seleccionar un resultado se añade el componente a la receta al momento (qty = 1).
@@ -1824,6 +1867,7 @@ function addComponentFromPicker(pid) {
             unit_cost: NUM(prod.cost)
         });
         renderAddComposition();
+        filterCompSearch(); // Actualizar panel izquierdo
     }
     const input = document.getElementById('compSearchInput');
     const box = document.getElementById('compSearchResults');
@@ -1837,13 +1881,16 @@ function bumpCompQty(componentId, delta) {
     if (!ing) return;
     let v = NUM(ing.quantity) + delta;
     if (v < 0) v = 0;
-    ing.quantity = v;
+    ing.quantity = Math.round(v * 100) / 100; // Redondear a 2 decimales
     renderAddComposition();
+    filterCompSearch(); // Actualizar panel izquierdo
 }
 
 function removeAddComposition(componentId) {
     addCompositionDraft = addCompositionDraft.filter(i => String(i.component_id) !== String(componentId));
+    addStagedComponents = addStagedComponents.filter(i => i.staged_id !== componentId);
     renderAddComposition();
+    filterCompSearch(); // Actualizar panel izquierdo
 }
 
 // Recalcula el costo de producción en vivo del editor de alta.
@@ -1866,6 +1913,7 @@ function updateAddCompositionCost() {
 
 function resetAddComposition() {
     addCompositionDraft = [];
+    addStagedComponents = [];
     addCompositionProductId = null;
     const totalEl = document.getElementById('addCompositionCostTotal');
     if (totalEl) totalEl.textContent = '—';

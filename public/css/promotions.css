@@ -394,7 +394,7 @@ body.modal-open { overflow: hidden; }
 }
 
 .modal-close {
-    background: var(--bg-color, transparent);
+    background: var(--bg-card, transparent);
     border: 1px solid var(--border-color);
     border-radius: 50%;
     width: 32px;

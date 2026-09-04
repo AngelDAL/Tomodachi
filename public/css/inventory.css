@@ -3248,7 +3248,7 @@
     gap: 4px; text-align: center;
     padding: 14px 8px; min-height: 96px;
     border: 1.5px solid var(--border-color, #ddd);
-    border-radius: 12px; background: var(--card-bg, #fff);
+    border-radius: 12px; background: var(--bg-card, #fff);
     color: var(--text-color, #333); cursor: pointer;
     transition: border-color .15s, box-shadow .15s, transform .1s, background .15s;
 }
@@ -3258,7 +3258,7 @@
 .inv-type-card .it-sub { font-size: 10.5px; line-height: 1.2; color: var(--text-muted, #888); }
 .inv-type-card.active {
     border-color: var(--primary-color, #4FDDD2);
-    background: color-mix(in srgb, var(--primary-color, #4FDDD2) 10%, var(--card-bg, #fff));
+    background: color-mix(in srgb, var(--primary-color, #4FDDD2) 10%, var(--bg-card, #fff));
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color, #4FDDD2) 25%, transparent);
 }
 .inv-type-cards-edit { margin-bottom: 4px; }
@@ -3275,7 +3275,7 @@
 .express-comp-form {
     margin-top: 8px; padding: 12px;
     border: 1px solid var(--border-color, #ddd);
-    border-radius: 10px; background: var(--bg-color, #fafafa);
+    border-radius: 10px; background: var(--bg-card, #fafafa);
     display: grid; grid-template-columns: 1fr 100px 110px; gap: 8px;
 }
 .express-comp-form input {
@@ -3294,7 +3294,7 @@
     padding: 12px;
     border: 1px dashed var(--primary-color, #4FDDD2);
     border-radius: 10px;
-    background: var(--bg-color, #fafafa);
+    background: var(--bg-card, #fafafa);
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -3446,13 +3446,13 @@
 .comp-qty-stepper { display: flex; align-items: center; gap: 2px; }
 .comp-qty-btn {
     width: 26px; height: 26px; border-radius: 7px; border: 1px solid var(--border-color, #ddd);
-    background: var(--bg-color, #f8f9fa); color: var(--text-color, #333); cursor: pointer;
+    background: var(--bg-input, #f8f9fa); color: var(--text-color, #333); cursor: pointer;
     display: inline-flex; align-items: center; justify-content: center; font-size: 11px;
 }
 .comp-qty-btn:hover { border-color: var(--primary-color, #4FDDD2); color: var(--primary-color, #4FDDD2); }
 .comp-qty {
     width: 54px; height: 26px; text-align: center; border: 1px solid var(--border-color, #ddd);
-    border-radius: 7px; font-size: 13px; background: var(--bg-color, #f8f9fa); margin: 0 2px;
+    border-radius: 7px; font-size: 13px; background: var(--bg-input, #f8f9fa); margin: 0 2px;
 }
 .comp-qty:focus { outline: none; border-color: var(--primary-color, #4FDDD2); }
 .comp-pick-subtotal { font-weight: 700; font-size: 13.5px; color: var(--primary-color, #4FDDD2); min-width: 60px; text-align: right; }
@@ -3466,7 +3466,7 @@
 .comp-search { position: relative; margin-bottom: 12px; }
 .comp-search-input-wrap {
     position: relative; display: flex; align-items: center;
-    border: 1px solid var(--border-color, #ddd); border-radius: 10px; background: var(--bg-color, #f8f9fa);
+    border: 1px solid var(--border-color, #ddd); border-radius: 10px; background: var(--bg-input, #f8f9fa);
 }
 .comp-search-input-wrap > i { position: absolute; left: 12px; color: #9aa3af; font-size: 13px; pointer-events: none; }
 .comp-search-input-wrap input {
@@ -3496,13 +3496,13 @@
 .consume-opt {
     flex: 1; padding: 9px 6px; border-radius: 9px;
     border: 1.5px solid var(--border-color, #ddd);
-    background: var(--bg-color, #f8f9fa); color: var(--text-color, #333);
+    background: var(--bg-input, #f8f9fa); color: var(--text-color, #333);
     font-weight: 600; font-size: 13px; cursor: pointer; transition: all .12s;
 }
 .consume-opt:hover { border-color: var(--primary-color, #4FDDD2); }
 .consume-opt.active {
     border-color: var(--primary-color, #4FDDD2);
-    background: color-mix(in srgb, var(--primary-color, #4FDDD2) 12%, var(--bg-color, #fff));
+    background: color-mix(in srgb, var(--primary-color, #4FDDD2) 12%, var(--bg-card, #fff));
     color: var(--primary-color, #4FDDD2);
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color, #4FDDD2) 20%, transparent);
 }

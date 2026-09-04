@@ -68,7 +68,7 @@ async function checkSession() {
             const response = await fetch('../api/auth/verify_session.php', { credentials: 'include' });
             const dataResponse = await response.json();
             if (dataResponse.success && dataResponse.data.logged_in) {
-                console.log('Sesión activa para el usuario:', dataResponse.data.user);
+                console.debug('Sesión verificada:', dataResponse.data.user.username);
                 return dataResponse.data.user;
             }
         } catch (error) {

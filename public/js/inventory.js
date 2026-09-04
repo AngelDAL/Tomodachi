@@ -10,6 +10,7 @@ let storeId = 1;
 let currentEditingProduct = null;
 let currentViewMode = 'grid'; // 'grid' or 'list'
 let showRetiredProducts = false; // Ocultar productos retirados por defecto
+let activePromotions = []; // Promociones activas para indicators
 
 // Estado del editor de composiciones (BOM)
 let recipeEditingIngredients = [];
@@ -84,6 +85,7 @@ function initInventory() {
     bindEvents();
     loadCategories();
     loadProducts();
+    loadActivePromotions();
 
     // Actualizar símbolo de moneda de los inputs según formato regional
     const sym = window.FormatUtils ? (window.FormatUtils.getConfig().currency_symbol || '$') : '$';
@@ -1033,7 +1035,7 @@ async function loadProducts() {
     for (let attempt = 1; attempt <= 3; attempt++) {
         try {
             // Eliminado store_id de los parámetros, el backend usa la sesión
-            const response = await fetch(`../api/inventory/products.php`);
+            const response = await fetch(`../api/inventory/products.php`, { credentials: 'include' });
             if (!response.ok) {
                 if (attempt < 3) { await new Promise(r => setTimeout(r, 600 * attempt)); continue; }
                 return;
@@ -1054,11 +1056,45 @@ async function loadProducts() {
     }
 }
 
+async function loadActivePromotions() {
+    try {
+        const res = await fetch('../api/promotions/read.php', { credentials: 'include' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.success && data.data) {
+            const now = new Date();
+            activePromotions = (data.data || []).filter(p => {
+                if (!p.is_active) return false;
+                const start = p.start_date ? new Date(p.start_date) : null;
+                const end = p.end_date ? new Date(p.end_date) : null;
+                if (start && start > now) return false;
+                if (end && end < now) return false;
+                return true;
+            });
+        }
+    } catch (e) { /* silent */ }
+}
+
+function getProductPromoInfo(productId, categoryId) {
+    for (const promo of activePromotions) {
+        if (!promo.targets || !promo.targets.length) continue;
+        for (const t of promo.targets) {
+            if (t.product_id && parseInt(t.product_id) === parseInt(productId)) {
+                return { name: promo.name, type: promo.type };
+            }
+            if (t.category_id && parseInt(t.category_id) === parseInt(categoryId)) {
+                return { name: promo.name, type: promo.type };
+            }
+        }
+    }
+    return null;
+}
+
 async function loadCategories() {
     // Reintento: el SW o la red pueden fallar la primera vez al navegar.
     for (let attempt = 1; attempt <= 3; attempt++) {
         try {
-            const response = await fetch('../api/inventory/categories.php');
+            const response = await fetch('../api/inventory/categories.php', { credentials: 'include' });
             if (!response.ok) {
                 if (attempt < 3) { await new Promise(r => setTimeout(r, 600 * attempt)); continue; }
                 return;
@@ -1122,6 +1158,14 @@ function renderProducts(items) {
             visibilityBadge = '<span class="visibility-badge hidden"><i class="fas fa-eye-slash"></i> Oculto en caja</span>';
         }
 
+        // Indicador de promoción activa
+        const promoInfo = getProductPromoInfo(product.product_id, product.category_id);
+        let promoBadge = '';
+        if (promoInfo && !isRetired) {
+            const promoIcon = promoInfo.type === 'bundle' ? 'fa-box' : promoInfo.type === 'bulk_discount' ? 'fa-layer-group' : 'fa-percent';
+            promoBadge = `<span class="promo-indicator" title="${promoInfo.name}"><i class="fas ${promoIcon}"></i></span>`;
+        }
+
         const stockInfo = buildStockMarkup(product);
         const formattedPrice = window.FormatUtils ? window.FormatUtils.currency(product.price) : new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(product.price);
 
@@ -1150,6 +1194,7 @@ function renderProducts(items) {
                 <div class="product-image">
                     ${imgHtml}
                     ${visibilityBadge}
+                    ${promoBadge}
                 </div>
                 <div class="product-info">
                     <div class="product-name">${escapeHtml(product.product_name)}</div>

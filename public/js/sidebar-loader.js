@@ -164,7 +164,7 @@ async function initSidebar() {
     }
 
     // 2. Fetch Store Settings for Dynamic Name
-    fetch('../api/stores/settings.php')
+    fetch('../api/stores/settings.php', { credentials: 'include' })
         .then(response => response.json())
         .then(data => {
             if (data.success && data.data) {

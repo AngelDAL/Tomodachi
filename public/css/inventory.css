@@ -3133,14 +3133,28 @@
     white-space: nowrap;
 }
 .comp-qty {
-    width: 80px;
-    min-width: 60px;
-    padding: 6px 10px;
-    border: 1px solid var(--border-color);
+    width: 110px;
+    min-width: 90px;
+    padding: 8px 12px;
+    border: 1.5px solid var(--border-color);
     border-radius: 6px;
-    font-size: 0.9rem;
-    text-align: right;
+    font-size: 0.95rem;
+    text-align: center;
     font-weight: 600;
+    font-family: 'SF Mono', 'Consolas', monospace;
+    background: var(--bg-input);
+    color: var(--text-color);
+    transition: border-color 0.15s;
+}
+.comp-qty:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 15%, transparent);
+}
+.comp-qty::placeholder {
+    color: var(--text-muted);
+    font-weight: 400;
+    font-size: 0.75rem;
 }
 .comp-unit-cost, .comp-subtotal {
     font-size: 0.85rem;
@@ -3452,10 +3466,12 @@
 }
 .comp-qty-btn:hover { border-color: var(--primary-color, #4FDDD2); color: var(--primary-color, #4FDDD2); }
 .comp-qty {
-    width: 54px; height: 26px; text-align: center; border: 1px solid var(--border-color, #ddd);
-    border-radius: 7px; font-size: 13px; background: var(--bg-input, #f8f9fa); margin: 0 2px;
+    width: 110px; min-width: 90px; padding: 8px 12px; text-align: center; border: 1.5px solid var(--border-color, #ddd);
+    border-radius: 7px; font-size: 14px; font-weight: 600; font-family: 'SF Mono', 'Consolas', monospace;
+    background: var(--bg-input, #f8f9fa); color: var(--text-color, #333); margin: 0 2px;
+    transition: border-color 0.15s;
 }
-.comp-qty:focus { outline: none; border-color: var(--primary-color, #4FDDD2); }
+.comp-qty:focus { outline: none; border-color: var(--primary-color, #4FDDD2); box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color, #4FDDD2) 15%, transparent); }
 .comp-pick-subtotal { font-weight: 700; font-size: 13.5px; color: var(--primary-color, #4FDDD2); min-width: 60px; text-align: right; }
 .recipe-ing-remove {
     width: 26px; height: 26px; border-radius: 7px; border: none; background: transparent;

@@ -1926,7 +1926,7 @@ function renderAddComposition() {
                 '</div>' +
                 '<div class="comp-qty-stepper">' +
                     '<button type="button" class="comp-qty-btn comp-qty-minus" data-component-id="' + ing.component_id + '" title="Menos"><i class="fas fa-minus"></i></button>' +
-                    '<input type="number" class="comp-qty" data-component-id="' + ing.component_id + '" value="' + qty + '" min="0" step="0.001" inputmode="decimal">' +
+                    '<input type="text" class="comp-qty" data-component-id="' + ing.component_id + '" value="' + qty + '" inputmode="decimal" placeholder="0" title="Cantidad — escribe fórmulas: 1/8, 100/12, 2*3">' +
                     '<button type="button" class="comp-qty-btn comp-qty-plus" data-component-id="' + ing.component_id + '" title="Más"><i class="fas fa-plus"></i></button>' +
                 '</div>' +
                 '<span class="comp-pick-subtotal" data-component-id="' + ing.component_id + '">' + fmtMoney(sub) + '</span>' +
@@ -2033,21 +2033,21 @@ function evalMathExpression(input) {
     // Si es solo número, dejarlo
     if (/^-?\d+(\.\d+)?$/.test(raw)) return;
     // Evaluar expresión: soporta +, -, *, / y paréntesis
-    if (/^[\d\s+\-*/().]+$/.test(raw)) {
+    // Reemplazar comas por puntos para soporte internacional
+    const expr = raw.replace(/,/g, '.');
+    if (/^[\d\s+\-*/().]+$/.test(expr)) {
         try {
-            const result = Function('"use strict"; return (' + raw + ')')();
+            const result = Function('"use strict"; return (' + expr + ')')();
             if (typeof result === 'number' && isFinite(result) && result >= 0) {
                 const rounded = Math.round(result * 1000) / 1000;
                 input.value = rounded;
-                input.dispatchEvent(new Event('input', { bubbles: true }));
             } else {
-                input.value = 0;
-                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.value = '0';
             }
         } catch (e) {
-            input.value = 0;
-            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.value = '0';
         }
+        input.dispatchEvent(new Event('input', { bubbles: true }));
     }
 }
 

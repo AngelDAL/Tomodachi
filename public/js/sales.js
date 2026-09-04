@@ -356,7 +356,14 @@ function initPOS() {
   }
 
   loadCategoriesAndProducts();
-  loadActivePromotions();
+  loadActivePromotions().then(() => {
+    // Re-aplicar promociones al carrito existente (restaurado de localStorage)
+    if (CART.length) {
+      applyPromotions();
+      CART.forEach(item => { item.subtotal = item.quantity * item.unit_price; });
+      renderCart();
+    }
+  });
 
   // Preferencias de impresión térmica (ancho y copias)
   const ticketWidthSel = document.getElementById('ticketWidthSelect');

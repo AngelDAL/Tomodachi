@@ -72,7 +72,9 @@ if ($type === 'bundle') {
 $discount_value = floatval($discount_value);
 $min_purchase_amount = isset($data['min_purchase_amount']) ? $data['min_purchase_amount'] : 0;
 $min_quantity = isset($data['min_quantity']) ? $data['min_quantity'] : 1;
+$bulk_pay_quantity = isset($data['bulk_pay_quantity']) ? (int)$data['bulk_pay_quantity'] : 0;
 $targets = isset($data['targets']) ? $data['targets'] : [];
+if ($type === 'bulk_discount' && ((int)$min_quantity < 2 || $bulk_pay_quantity < 1 || $bulk_pay_quantity >= (int)$min_quantity)) Response::error('En volumen, “Paga” debe ser menor que “Lleva”', 422);
 $is_active = isset($data['is_active']) ? (int)$data['is_active'] : 1;
 
 try {
@@ -98,6 +100,7 @@ try {
             discount_value = :discount_value,
             min_purchase_amount = :min_purchase_amount,
             min_quantity = :min_quantity,
+            bulk_pay_quantity = :bulk_pay_quantity,
             is_active = :is_active
         WHERE promotion_id = :promotion_id AND store_id = :store_id
     ");
@@ -112,6 +115,7 @@ try {
         ':discount_value' => $discount_value,
         ':min_purchase_amount' => $min_purchase_amount,
         ':min_quantity' => $min_quantity,
+        ':bulk_pay_quantity' => $bulk_pay_quantity,
         ':is_active' => $is_active,
         ':promotion_id' => $promotion_id,
         ':store_id' => $store_id
@@ -125,8 +129,8 @@ try {
     // Insertar nuevos targets
     if (!empty($targets)) {
         $stmtTarget = $conn->prepare("
-            INSERT INTO promotion_targets (promotion_id, product_id, category_id)
-            VALUES (:promotion_id, :product_id, :category_id)
+            INSERT INTO promotion_targets (promotion_id, product_id, category_id, tag_id, required_quantity)
+            VALUES (:promotion_id, :product_id, :category_id, :tag_id, :required_quantity)
         ");
 
         foreach ($targets as $target) {
@@ -138,13 +142,17 @@ try {
 
             $product_id = ($tType === 'product') ? $tId : null;
             $category_id = ($tType === 'category') ? $tId : null;
+            $tag_id = ($tType === 'tag') ? $tId : null;
+            $required_quantity = max(1, (int)($target['required_quantity'] ?? 1));
             
-            if ($product_id === null && $category_id === null) continue;
+            if ($product_id === null && $category_id === null && $tag_id === null) continue;
 
             $stmtTarget->execute([
                 ':promotion_id' => $promotion_id,
                 ':product_id' => $product_id,
-                ':category_id' => $category_id
+                ':category_id' => $category_id,
+                ':tag_id' => $tag_id,
+                ':required_quantity' => $required_quantity
             ]);
         }
     }

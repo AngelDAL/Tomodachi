@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guía de API - Tomodachi</title>
+    <link rel="icon" type="image/svg+xml" href="assets/images/logos/tomodachi-favicon.svg">
+    <link rel="stylesheet" href="css/fonts.css?v=4">
+    <link rel="stylesheet" href="css/main.css?v=4">
+    <link rel="stylesheet" href="css/design-system.css?v=5">
+    <style>
+        :root { --guide-max: 920px; }
+        body { background: var(--bg-body); color: var(--text-color); }
+        .guide { max-width: var(--guide-max); margin: 0 auto; padding: 42px 20px 72px; }
+        .guide-header { border-bottom: 1px solid var(--border-light); padding-bottom: 26px; margin-bottom: 28px; }
+        h1 { margin: 0 0 10px; font-size: clamp(1.8rem, 4vw, 2.5rem); }
+        h2 { margin: 32px 0 12px; font-size: 1.35rem; }
+        h3 { margin: 22px 0 8px; font-size: 1.05rem; }
+        p, li { line-height: 1.65; }
+        .lead { color: var(--text-muted); max-width: 720px; }
+        .card { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 16px; padding: 20px; margin: 16px 0; box-shadow: var(--ds-shadow-sm, 0 2px 8px rgba(0,0,0,.06)); }
+        .notice { border-left: 4px solid var(--primary-color); background: var(--bg-light); padding: 14px 16px; border-radius: 0 10px 10px 0; }
+        code { background: var(--bg-light); border: 1px solid var(--border-light); border-radius: 4px; padding: 2px 5px; }
+        pre { overflow-x: auto; background: var(--dark-color); color: #e9fffb; padding: 16px; border-radius: 10px; line-height: 1.5; }
+        pre code { background: transparent; border: 0; padding: 0; color: inherit; }
+        .scope { display: grid; grid-template-columns: 180px 1fr; gap: 8px 18px; align-items: start; }
+        .scope strong { color: var(--primary-dark, var(--primary-color)); }
+        .endpoint { display: grid; grid-template-columns: 72px 1fr; gap: 10px; margin: 10px 0; align-items: baseline; }
+        .method { font-weight: 700; color: var(--primary-dark, var(--primary-color)); }
+        .back { display: inline-block; margin-bottom: 24px; color: var(--primary-dark, var(--primary-color)); }
+        @media (max-width: 600px) { .scope { grid-template-columns: 1fr; gap: 2px; } .endpoint { grid-template-columns: 60px 1fr; } }
+    </style>
+</head>
+<body>
+<main class="guide">
+    <a class="back" href="integrations.html">← Volver a Integraciones</a>
+    <header class="guide-header">
+        <h1>Guía de API de Tomodachi</h1>
+        <p class="lead">Conecta un agente de IA o una herramienta externa para consultar y, si lo autorizas, administrar la información de tu tienda mediante la API REST.</p>
+    </header>
+
+    <div class="notice"><strong>Importante:</strong> trata la clave como una contraseña. Se muestra una sola vez, no la publiques y revócala si alguien que no debe la conoce.</div>
+
+    <h2>1. Permisos</h2>
+    <div class="card scope">
+        <strong>Solo lectura</strong><span>Permite consultar productos, categorías, clientes, ventas, reportes y configuraciones permitidas.</span>
+        <strong>Lectura y escritura</strong><span>Permite consultar y también crear o modificar datos. La escritura incluye lectura automáticamente.</span>
+        <strong>Personalizar apariencia</strong><span>Permite modificar únicamente el tema visual cuando el endpoint lo admite. No sustituye a lectura ni escritura.</span>
+    </div>
+    <p>Para un agente que debe revisar y administrar la tienda, selecciona <strong>Lectura y escritura</strong>. No necesitas marcar “Solo lectura” adicionalmente.</p>
+
+    <h2>2. Cómo enviar la clave</h2>
+    <p>Incluye el token completo en cada petición dentro del encabezado <code>Authorization</code>:</p>
+    <pre><code>Authorization: Bearer TU_CLAVE_COMPLETA</code></pre>
+    <p>La dirección base es la misma dirección donde está instalada Tomodachi. Por ejemplo:</p>
+    <pre><code>BASE_URL="https://tu-dominio.example"
+curl "$BASE_URL/api/inventory/products.php" \\
+  -H "Authorization: Bearer TU_CLAVE_COMPLETA" \\
+  -H "Accept: application/json"</code></pre>
+
+    <h2>3. Primer ejemplo: consultar productos</h2>
+    <pre><code>curl -sS "$BASE_URL/api/inventory/products.php" \\
+  -H "Authorization: Bearer TU_CLAVE_COMPLETA"</code></pre>
+    <p>La respuesta contiene <code>product_id</code>, <code>product_name</code>, <code>price</code>, <code>cost</code>, <code>category_name</code>, <code>current_stock</code> y otros datos del producto.</p>
+
+    <h2>4. Endpoints principales</h2>
+    <div class="card">
+        <div class="endpoint"><span class="method">GET</span><code>/api/inventory/products.php</code></div>
+        <div class="endpoint"><span class="method">GET</span><code>/api/inventory/categories.php</code></div>
+        <div class="endpoint"><span class="method">POST</span><code>/api/inventory/stock.php</code> <span>Ajustar existencias</span></div>
+        <div class="endpoint"><span class="method">GET</span><code>/api/customers/customers.php</code></div>
+        <div class="endpoint"><span class="method">GET</span><code>/api/sales/get_sales.php</code></div>
+        <div class="endpoint"><span class="method">GET</span><code>/api/sales/sale_details.php?sale_id=ID</code></div>
+        <div class="endpoint"><span class="method">GET</span><code>/api/reports/dashboard_stats.php</code></div>
+        <div class="endpoint"><span class="method">GET</span><code>/api/reports/close_z.php</code></div>
+        <div class="endpoint"><span class="method">POST</span><code>/api/sales/create_sale.php</code> <span>Crear venta</span></div>
+        <div class="endpoint"><span class="method">PUT</span><code>/api/inventory/products.php</code> <span>Actualizar producto</span></div>
+    </div>
+    <p>La referencia completa de endpoints está en el repositorio, en <code>docs/API.md</code>.</p>
+
+    <h2>5. Qué significan los errores</h2>
+    <div class="card">
+        <p><code>200</code> o <code>201</code>: operación correcta.</p>
+        <p><code>401</code>: clave inválida, incompleta, expirada o revocada.</p>
+        <p><code>403</code>: la clave es válida, pero no tiene el permiso requerido.</p>
+        <p><code>404</code>: endpoint o recurso inexistente.</p>
+        <p><code>422</code>: faltan datos o hay un campo inválido.</p>
+    </div>
+
+    <h2>6. Prompt para Claude, ChatGPT u otro agente</h2>
+    <p>Copia este texto y sustituye los valores entre corchetes:</p>
+    <pre><code>Actúa como asistente de administración de Tomodachi POS.
+Base URL: [URL_DE_TOMODACHI]
+Clave Bearer: [CLAVE_COMPLETA]
+
+Usa la API REST enviando la clave en el encabezado:
+Authorization: Bearer [CLAVE_COMPLETA]
+
+Reglas:
+- Consulta primero el estado actual antes de proponer o ejecutar cambios.
+- Respeta exclusivamente la tienda asociada a esta clave.
+- Para consultar productos usa GET /api/inventory/products.php.
+- Usa solamente endpoints documentados.
+- Antes de crear, modificar, cancelar o eliminar información, explica la acción y pide confirmación.
+- Nunca muestres la clave en una respuesta pública ni la guardes en texto plano innecesariamente.
+- Si recibes 401, indica que la clave es inválida, expirada o revocada.
+- Si recibes 403, indica que falta el permiso necesario.
+- Si recibes 422, revisa los campos enviados antes de volver a intentar.
+- Guía de referencia: [URL_DE_TOMODACHI]/api-guide.html</code></pre>
+
+    <h2>7. Conexión con agentes</h2>
+    <p>Tomodachi Community no necesita una integración propietaria con Claude u OpenAI: cualquier agente capaz de realizar peticiones HTTP puede usar esta API. La pantalla de Integraciones permite copiar la clave, copiar un prompt preparado y abrir esta guía.</p>
+    <p>Los botones “Claude” y “OpenAI” pueden añadirse posteriormente como asistentes de configuración, pero no deben enviar la clave automáticamente a un proveedor externo. La clave debe permanecer bajo control del dueño de la tienda.</p>
+</main>
+</body>
+</html>

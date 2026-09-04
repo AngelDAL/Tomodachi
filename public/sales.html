@@ -425,6 +425,11 @@
                 <i class="fas fa-tag"></i>
                 <span class="ctx-label">Ver en categoría</span>
             </button>
+            <div class="context-menu-divider"></div>
+            <button class="context-menu-item ctx-danger" data-action="hide">
+                <i class="fas fa-eye-slash"></i>
+                <span class="ctx-label">Ocultar del Punto de Venta</span>
+            </button>
         </div>
     </div>
 
@@ -439,7 +444,8 @@
     <script src="js/scanner.js?v=4"></script>
     <script src="js/tour.js?v=4"></script>
     <script src="lib/animejs/anime.min.js"></script>
-    <script src="js/sales.js?v=11"></script>
+    <script src="js/promotion-client-rules.js?v=1"></script>
+    <script src="js/sales.js?v=12"></script>
     <script>
         // En la app nativa: mantener la pantalla encendida mientras se vende
         document.addEventListener('tomodachi-native-ready', () => {

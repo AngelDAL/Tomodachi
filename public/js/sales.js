@@ -737,7 +737,7 @@ function switchCartTab(tabName) {
 async function searchProducts(term) {
   try {
     // Eliminado store_id de los parámetros, el backend usa la sesión
-    const res = await fetch('../api/inventory/products.php?search=' + term, { method: 'GET', headers: { 'Content-Type': 'application/json' }, credentials: 'include' });
+    const res = await fetch('../api/inventory/products.php?context=pos&search=' + term, { method: 'GET', headers: { 'Content-Type': 'application/json' }, credentials: 'include' });
     if (!await checkSessionStatus(res)) return; // Verificar sesión
     const resData = await res.json();
     if (!resData.success) { return; }
@@ -1966,7 +1966,7 @@ async function loadCategoriesAndProducts() {
     try {
       const [catRes, prodRes] = await Promise.all([
         fetch('../api/inventory/categories.php'),
-        fetch('../api/inventory/products.php')
+        fetch('../api/inventory/products.php?context=pos')
       ]);
 
       if (!catRes.ok || !prodRes.ok) {
@@ -2387,6 +2387,26 @@ function handleContextAction(action, productId, categoryId) {
         }
       } else {
         showNotification('Este producto no tiene categoría', 'warning');
+      }
+      break;
+    }
+    case 'hide': {
+      const prod = allProducts.find(p => p.product_id === productId);
+      const name = prod ? prod.product_name : 'Producto';
+      if (confirm(`¿Ocultar "${name}" del Punto de Venta? No se eliminará del inventario.`)) {
+        fetch('../api/inventory/products.php', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ product_id: productId, hidden_in_pos: 1 })
+        }).then(r => r.json()).then(data => {
+          if (data.success) {
+            showNotification('Producto oculto del Punto de Venta', 'success');
+            loadCategoriesAndProducts();
+          } else {
+            showNotification(data.message || 'Error al ocultar', 'error');
+          }
+        }).catch(() => showNotification('Error de red', 'error'));
       }
       break;
     }
@@ -3946,27 +3966,17 @@ function applySimpleDiscount(promo) {
 }
 
 function applyBulkDiscount(promo) {
-    let eligibleItems = CART.filter(item => isTarget(item, promo));
-    let totalQty = eligibleItems.reduce((sum, item) => sum + item.quantity, 0);
-    
-    if (totalQty >= parseInt(promo.min_quantity)) {
-        eligibleItems.forEach(item => {
-             let discount = 0;
-            if (promo.discount_type === 'percentage') {
-                discount = item.original_price * (parseFloat(promo.discount_value) / 100);
-            } else {
-                discount = parseFloat(promo.discount_value);
-            }
-            
-            let newPrice = item.original_price - discount;
-            if (newPrice < 0) newPrice = 0;
-            
-            if (!item.manual_edit && newPrice < item.unit_price) {
-                item.unit_price = newPrice;
-                item.promo_applied = promo.name;
-            }
-        });
-    }
+    const take = parseInt(promo.min_quantity, 10) || 0;
+    const pay = parseInt(promo.bulk_pay_quantity, 10) || 0;
+    if (take < 2 || pay < 1 || pay >= take) return;
+    CART.filter(item => isTarget(item, promo)).forEach(item => {
+        if (item.manual_edit) return;
+        const originalQty = Number(item.quantity) || 0;
+        const paidUnits = paidUnitsForBulk(originalQty, take, pay);
+        if (paidUnits >= originalQty) return;
+        item.unit_price = bulkUnitPrice(item.original_price, originalQty, take, pay);
+        item.promo_applied = `${promo.name} (${take}x${pay})`;
+    });
 }
 
 function applyBundleDiscount(promo) {
@@ -4002,7 +4012,7 @@ function applyBundleDiscount(promo) {
             break;
         }
         
-        potentialBundles = Math.min(potentialBundles, totalQtyForTarget);
+        potentialBundles = Math.min(potentialBundles, Math.floor(totalQtyForTarget / (parseInt(t.required_quantity, 10) || 1)));
         usageMap[i] = matches; 
     }
 
@@ -4021,7 +4031,7 @@ function applyBundleDiscount(promo) {
 
     for (let i = 0; i < requiredTargets.length; i++) {
         let matches = usageMap[i]; // Items del carrito que sirven para este target
-        let countNeeded = numBundles; // Necesitamos 'numBundles' unidades de este target
+        let countNeeded = numBundles * (parseInt(requiredTargets[i].required_quantity, 10) || 1); // cantidad por target
 
         // Ordenamos por precio para maximizar el descuento (o estandarizar).
         // En este caso, tomamos simplemente las disponibles.
@@ -4094,7 +4104,8 @@ function isTarget(item, promo) {
     if (!promo.targets || promo.targets.length === 0) return false;
     return promo.targets.some(t => 
         (t.product_id && t.product_id == item.product_id) || 
-        (t.category_id && t.category_id == item.category_id)
+        (t.category_id && t.category_id == item.category_id) ||
+        (t.tag_id && Array.isArray(item.tag_ids) && item.tag_ids.includes(Number(t.tag_id)) )
     );
 }
 

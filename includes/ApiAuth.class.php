@@ -174,7 +174,12 @@ class ApiAuth {
         if ($actor['via'] === 'session') {
             return true;
         }
-        // Token: debe incluir el scope
+        // Token: write incluye lectura. La interfaz lo presenta como
+        // "Lectura y escritura" y un agente que puede modificar datos también
+        // necesita poder consultar el estado antes de hacerlo.
+        if ($scope === 'read' && in_array('write', $actor['scopes'], true)) {
+            return true;
+        }
         return in_array($scope, $actor['scopes'], true);
     }
 

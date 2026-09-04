@@ -9,6 +9,7 @@ let selectedFile = null;
 let storeId = 1;
 let currentEditingProduct = null;
 let currentViewMode = 'grid'; // 'grid' or 'list'
+let showRetiredProducts = false; // Ocultar productos retirados por defecto
 
 // Estado del editor de composiciones (BOM)
 let recipeEditingIngredients = [];
@@ -506,18 +507,30 @@ function bindEvents() {
     if (toggleViewModeBtn) {
         toggleViewModeBtn.addEventListener('click', () => {
             currentViewMode = currentViewMode === 'grid' ? 'list' : 'grid';
-            
+
             // Actualizar texto del botón y cerrar dropdown
             if (currentViewMode === 'grid') {
                  toggleViewModeBtn.innerHTML = '<i class="fas fa-list"></i> Vista de Lista';
             } else {
                  toggleViewModeBtn.innerHTML = '<i class="fas fa-th"></i> Vista Cuadrícula';
             }
-            
+
             if (viewSettingsDropdown) viewSettingsDropdown.classList.add('hidden');
-            
+
             // Re-render products
-            performSearch(); 
+            performSearch();
+        });
+    }
+
+    const toggleRetiredBtn = document.getElementById('toggleRetiredBtn');
+    if (toggleRetiredBtn) {
+        toggleRetiredBtn.addEventListener('click', () => {
+            showRetiredProducts = !showRetiredProducts;
+            toggleRetiredBtn.innerHTML = showRetiredProducts
+                ? '<i class="fas fa-eye-slash"></i> Ocultar Retirados'
+                : '<i class="fas fa-eye"></i> Mostrar Retirados';
+            if (viewSettingsDropdown) viewSettingsDropdown.classList.add('hidden');
+            performSearch();
         });
     }
 
@@ -690,6 +703,12 @@ function performSearch() {
     const resultCountEl = document.getElementById('searchResultCount');
 
     let filtered = products;
+
+    // Filtrar productos retirados por defecto (a menos que se active "Mostrar Retirados")
+    if (!showRetiredProducts) {
+        filtered = filtered.filter(p => !p.discontinued_at);
+    }
+
     if (currentFilter) {
         const term = currentFilter.toLowerCase();
         filtered = products.filter(p =>
@@ -1093,6 +1112,16 @@ function renderProducts(items) {
             ? `<img src="${imagePath}" alt="${product.product_name}" onerror="this.parentElement.innerHTML='<span class=&quot;no-image&quot;><i class=&quot;fas fa-image&quot;></i></span>'">`
             : '<span class="no-image"><i class="fas fa-image"></i></span>';
 
+        // Indicadores de visibilidad
+        const isRetired = !!product.discontinued_at;
+        const isHidden = product.hidden_in_pos == 1 && !isRetired;
+        let visibilityBadge = '';
+        if (isRetired) {
+            visibilityBadge = '<span class="visibility-badge retired"><i class="fas fa-archive"></i> Retirado</span>';
+        } else if (isHidden) {
+            visibilityBadge = '<span class="visibility-badge hidden"><i class="fas fa-eye-slash"></i> Oculto en caja</span>';
+        }
+
         const stockInfo = buildStockMarkup(product);
         const formattedPrice = window.FormatUtils ? window.FormatUtils.currency(product.price) : new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(product.price);
 
@@ -1117,9 +1146,10 @@ function renderProducts(items) {
             </div>`;
         } else {
             return `
-            <div class="product-card" onclick="openProductDetails(${product.product_id})" title="Ver detalles de ${escapeHtml(product.product_name)}">
+            <div class="product-card ${isRetired ? 'retired-card' : ''}" onclick="openProductDetails(${product.product_id})" title="Ver detalles de ${escapeHtml(product.product_name)}">
                 <div class="product-image">
                     ${imgHtml}
+                    ${visibilityBadge}
                 </div>
                 <div class="product-info">
                     <div class="product-name">${escapeHtml(product.product_name)}</div>
@@ -1864,6 +1894,22 @@ function openProductDetails(productId) {
     // Calcular ganancia inicial
     updateProfitDisplay(parseFloat(product.price) || 0, parseFloat(product.cost) || 0);
 
+    // Visibilidad y estado de retirado
+    const hiddenInPosCheckbox = document.getElementById('editHiddenInPos');
+    const archiveBtn = document.getElementById('archiveProductBtn');
+    const restoreBtn = document.getElementById('restoreProductBtn');
+    const isRetired = !!product.discontinued_at;
+
+    if (hiddenInPosCheckbox) {
+        hiddenInPosCheckbox.checked = product.hidden_in_pos == 1 || isRetired;
+    }
+    if (archiveBtn) {
+        archiveBtn.style.display = isRetired ? 'none' : 'inline-flex';
+    }
+    if (restoreBtn) {
+        restoreBtn.style.display = isRetired ? 'inline-flex' : 'none';
+    }
+
     // Mostrar modal
     const modal = document.getElementById('productDetailsModal');
     if (modal) modal.classList.add('show');
@@ -1889,6 +1935,54 @@ function closeProductDetails() {
     const firstPanel = document.getElementById(firstTab?.dataset?.tab);
     if (firstTab) firstTab.classList.add('active');
     if (firstPanel) firstPanel.classList.add('active');
+}
+
+async function archiveProduct() {
+    if (!currentEditingProduct) return;
+    const ok = confirm('¿Retirar este producto? Se marcará como descontinuado y no aparecerá en el Punto de Venta. El historial e inventario se mantienen intactos.');
+    if (!ok) return;
+    try {
+        const res = await fetch('../api/inventory/products.php', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ product_id: currentEditingProduct, archive: true })
+        });
+        const data = await res.json();
+        if (data.success) {
+            closeProductDetails();
+            loadProducts();
+        } else {
+            alert('Error: ' + (data.message || 'No se pudo retirar'));
+        }
+    } catch (e) {
+        console.error('Error archivando producto:', e);
+        alert('Error de red al intentar retirar producto');
+    }
+}
+
+async function restoreProduct() {
+    if (!currentEditingProduct) return;
+    const ok = confirm('¿Restaurar este producto? Volverá a estar disponible en el Punto de Venta.');
+    if (!ok) return;
+    try {
+        const res = await fetch('../api/inventory/products.php', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ product_id: currentEditingProduct, restore: true, hidden_in_pos: 0 })
+        });
+        const data = await res.json();
+        if (data.success) {
+            closeProductDetails();
+            loadProducts();
+        } else {
+            alert('Error: ' + (data.message || 'No se pudo restaurar'));
+        }
+    } catch (e) {
+        console.error('Error restaurando producto:', e);
+        alert('Error de red al intentar restaurar producto');
+    }
 }
 
 function updateProfitDisplay(price, cost) {
@@ -1934,7 +2028,8 @@ async function submitEditProduct() {
         is_ingredient: (document.getElementById('editProductTrackingType')?.value === 'component') ? 1 : 0,
         consume_mode: consumeModeGet('editConsumeModeGroup'),
         pieces_per_box: parseFloat(document.getElementById('editProductPiecesPerBox')?.value) || null,
-        cost_per_box: parseFloat(document.getElementById('editProductCostPerBox')?.value) || null
+        cost_per_box: parseFloat(document.getElementById('editProductCostPerBox')?.value) || null,
+        hidden_in_pos: document.getElementById('editHiddenInPos')?.checked ? 1 : 0
     };
 
     try {

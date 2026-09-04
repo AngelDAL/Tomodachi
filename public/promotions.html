@@ -11,7 +11,8 @@
     <link rel="stylesheet" href="css/sidebar-modern.css?v=4">
     <link rel="stylesheet" href="css/mobile-nav.css?v=4">
     <link rel="stylesheet" href="css/dashboard.css?v=4">
-    <link rel="stylesheet" href="css/promotions.css?v=4">
+    <link rel="stylesheet" href="css/promotions.css?v=5">
+    <link rel="stylesheet" href="css/promotions-v2.css?v=1">
     <script src="js/theme-init.js"></script>
     <link rel="icon" type="image/svg+xml" href="assets/images/logos/tomodachi-favicon.svg">
     <script src="js/format-utils.js"></script>
@@ -151,6 +152,10 @@
                 <div class="modal-grid-side">
                     <div class="grid-header">
                         <label>Catálogo de Productos</label>
+                        <div class="target-tools">
+                            <select id="promoTagSelect" class="form-control" aria-label="Agregar etiqueta"><option value="">Agregar etiqueta…</option></select>
+                            <button type="button" id="newPromoTagBtn" class="btn btn-secondary">Nueva etiqueta</button>
+                        </div>
                         <div class="input-icon-wrapper" style="width: 60%;">
                              <i class="fas fa-search"></i>
                             <input type="text" id="productGridSearch" placeholder="Buscar producto..." class="form-control">
@@ -369,7 +374,8 @@
 
     <script src="js/sidebar-loader.js?v=5"></script>
     <script src="js/app.js?v=10"></script>
-    <script src="js/promotions.js"></script>
+    <script src="js/promotions.js?v=5"></script>
+    <script src="js/promotions-v2.js?v=1"></script>
     <script src="js/promotions-app.js"></script>
     <script>
     // Mostrar mensaje solo si es bundle

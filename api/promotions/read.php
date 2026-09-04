@@ -38,10 +38,11 @@ try {
     // Obtener targets y estadísticas inferidas para cada promoción
     foreach ($promotions as &$promo) {
         $stmtTargets = $conn->prepare("
-            SELECT pt.*, p.product_name, p.image_path, c.category_name 
+            SELECT pt.*, p.product_name, p.image_path, c.category_name, ptg.name AS tag_name
             FROM promotion_targets pt
             LEFT JOIN products p ON pt.product_id = p.product_id
             LEFT JOIN categories c ON pt.category_id = c.category_id
+            LEFT JOIN product_tags ptg ON pt.tag_id = ptg.tag_id
             WHERE pt.promotion_id = :promotion_id
         ");
         $stmtTargets->execute([':promotion_id' => $promo['promotion_id']]);

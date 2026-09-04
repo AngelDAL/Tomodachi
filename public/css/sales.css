@@ -3061,6 +3061,11 @@
     margin: 4px 12px;
 }
 
+.ctx-danger { color: var(--danger-color, #dc3545) !important; }
+.ctx-danger i { color: var(--danger-color, #dc3545) !important; }
+.ctx-danger:hover { background: rgba(220,53,69,0.08) !important; }
+.ctx-danger:hover i { color: var(--danger-color, #dc3545) !important; }
+
 /* Overlay para cerrar menú al tocar fuera */
 .context-menu-overlay {
     position: fixed;

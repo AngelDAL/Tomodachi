@@ -45,6 +45,7 @@ curl -b /tmp/cj http://localhost:8080/api/reports/dashboard_stats.php
 
 - Los agentes se autentican con `Authorization: Bearer td_...`
   (clase `includes/ApiAuth.class.php`, middleware `getActor()`).
+- **Scopes por método**: `GET`→`read` · `POST/PUT/DELETE`→`write` · `custom` (solo tema). El scope `write` **incluye `read` automáticamente**, porque un agente que modifica datos debe poder consultar el estado primero.
 - Scopes: `read` (leer), `write` (modificar), `custom` (personalizar tema).
 - CRUD: `api/api_tokens/{create,read,revoke}.php` (solo admin, por sesión).
 - Personalizar tema: `POST /api/stores/theme.php` con scope `custom`

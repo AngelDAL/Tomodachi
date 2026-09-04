@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/PromotionRules.class.php';
 /**
  * Pricing - Motor de precios del servidor (fuente de verdad)
  *
@@ -86,6 +87,17 @@ class Pricing {
         foreach ($rows as $r) {
             $productMap[(int)$r['product_id']] = $r;
         }
+        // Labels are resolved once for the cart, so tag-target promotions remain tenant-scoped.
+        $tagMap = [];
+        if ($productMap) {
+            $tagRows = $this->db->select(
+                "SELECT pta.product_id, pta.tag_id FROM product_tag_assignments pta
+                 INNER JOIN product_tags pt ON pt.tag_id = pta.tag_id AND pt.store_id = ?
+                 WHERE pta.product_id IN (" . implode(',', array_fill(0, count($productMap), '?')) . ")",
+                array_merge([$store_id], array_keys($productMap))
+            );
+            foreach ($tagRows as $tagRow) $tagMap[(int)$tagRow['product_id']][(int)$tagRow['tag_id']] = true;
+        }
 
         // 2. Cargar promociones activas con targets
         $promotions = $this->loadActivePromotions($store_id);
@@ -104,6 +116,7 @@ class Pricing {
             $line['discount'] = 0.0;
             $line['promotion_id'] = null;
             $line['promotion_name'] = null;
+            $line['tag_ids'] = array_keys($tagMap[$pid] ?? []);
 
             // Tipo de inventario del producto.
             $type = $this->bom->normalizeType($p['tracking_type'] ?? 'stock');
@@ -187,12 +200,19 @@ class Pricing {
         foreach ($promotions as $promo) {
             if ($promo['type'] !== 'bill_discount') continue;
             if ($subtotal < (float)$promo['min_purchase_amount']) continue;
+            $eligibleSubtotal = $subtotal;
+            if (!empty($promo['targets'])) {
+                $eligibleSubtotal = 0.0;
+                foreach ($finalLines as $line) if ($this->isTarget($line, $promo)) $eligibleSubtotal += $line['total'];
+            }
+            if ($eligibleSubtotal <= 0) continue;
             $disc = 0.0;
             if ($promo['discount_type'] === 'percentage') {
-                $disc = $subtotal * ((float)$promo['discount_value'] / 100);
+                $disc = $eligibleSubtotal * ((float)$promo['discount_value'] / 100);
             } else {
                 $disc = (float)$promo['discount_value'];
             }
+            $disc = min($disc, $eligibleSubtotal);
             if ($disc > $billDiscount) {
                 $billDiscount = $disc;
                 $billPromo = $promo;
@@ -222,13 +242,15 @@ class Pricing {
         );
         foreach ($rows as &$promo) {
             $targets = $this->db->select(
-                "SELECT product_id, category_id FROM promotion_targets WHERE promotion_id = ?",
+                "SELECT product_id, category_id, tag_id, required_quantity FROM promotion_targets WHERE promotion_id = ?",
                 [(int)$promo['promotion_id']]
             );
             $promo['targets'] = array_map(function ($t) {
                 return [
                     'product_id' => $t['product_id'] !== null ? (int)$t['product_id'] : null,
                     'category_id' => $t['category_id'] !== null ? (int)$t['category_id'] : null,
+                    'tag_id' => $t['tag_id'] !== null ? (int)$t['tag_id'] : null,
+                    'required_quantity' => max(1, (int)($t['required_quantity'] ?? 1)),
                 ];
             }, $targets);
             $promo['discount_type'] = $promo['discount_type'] ?? 'fixed_amount';
@@ -243,6 +265,7 @@ class Pricing {
         foreach ($promo['targets'] as $t) {
             if ($t['product_id'] !== null && (int)$line['product_id'] === $t['product_id']) return true;
             if ($t['category_id'] !== null && $line['category_id'] !== null && (int)$line['category_id'] === $t['category_id']) return true;
+            if ($t['tag_id'] !== null && in_array((int)$t['tag_id'], $line['tag_ids'] ?? [], true)) return true;
         }
         return false;
     }
@@ -277,17 +300,32 @@ class Pricing {
     }
 
     private function applyBulkDiscount(&$lines, $promo) {
-        $eligible = array_filter($lines, function ($l) use ($promo) {
-            return $this->isTarget($l, $promo);
-        });
-        $totalQty = array_sum(array_column($eligible, 'quantity'));
-        if ($totalQty >= $promo['min_quantity']) {
+        $take = max(1, (int)$promo['min_quantity']);
+        // Legacy volume promotions with no explicit paid quantity preserve prior semantics.
+        $pay = (int)($promo['bulk_pay_quantity'] ?? 0);
+        if ($pay <= 0 || $pay >= $take) {
             foreach ($lines as &$line) {
-                if (!$this->isTarget($line, $promo)) continue;
-                $this->applyToLine($line, $promo, $this->discountFor($promo, $line['original_price']));
+                if ($this->isTarget($line, $promo) && $line['quantity'] >= $take) {
+                    $this->applyToLine($line, $promo, $this->discountFor($promo, $line['original_price']));
+                }
             }
             unset($line);
+            return;
         }
+        foreach ($lines as &$line) {
+            if (!$this->isTarget($line, $promo)) continue;
+            $quantity = (int)floor($line['quantity']);
+            $paidUnits = PromotionRules::paidUnitsForBulk($quantity, $take, $pay);
+            if ($paidUnits >= $quantity || $quantity <= 0) continue;
+            $newPrice = round(($line['original_price'] * $paidUnits) / $quantity, 2);
+            if ($newPrice < $line['unit_price']) {
+                $line['discount'] = round($line['original_price'] - $newPrice, 2);
+                $line['unit_price'] = $newPrice;
+                $line['promotion_id'] = (int)$promo['promotion_id'];
+                $line['promotion_name'] = $promo['name'];
+            }
+        }
+        unset($line);
     }
 
     /**
@@ -299,21 +337,20 @@ class Pricing {
         $targets = $promo['targets'];
         if (!$targets) return;
 
-        // Encontrar líneas que cumplen cada target
+        // Each target carries its own required quantity (e.g. 2 sodas + 3 chips).
         $coverage = [];
         $potential = PHP_INT_MAX;
         foreach ($targets as $i => $t) {
             $matches = array_filter($lines, function ($l) use ($t) {
                 if ($t['product_id'] !== null && (int)$l['product_id'] === $t['product_id']) return true;
                 if ($t['category_id'] !== null && $l['category_id'] !== null && (int)$l['category_id'] === $t['category_id']) return true;
+                if ($t['tag_id'] !== null && in_array((int)$t['tag_id'], $l['tag_ids'] ?? [], true)) return true;
                 return false;
             });
             $qtyForTarget = array_sum(array_column($matches, 'quantity'));
-            if ($qtyForTarget <= 0) {
-                $potential = 0;
-                break;
-            }
-            $potential = min($potential, (int)floor($qtyForTarget));
+            $required = max(1, (int)($t['required_quantity'] ?? 1));
+            if ($qtyForTarget < $required) { $potential = 0; break; }
+            $potential = min($potential, (int)floor($qtyForTarget / $required));
             $coverage[$i] = $matches;
         }
 
@@ -336,12 +373,15 @@ class Pricing {
         }
         if ($originalSum <= 0) return;
 
-        // Repartir el ahorro proporcionalmente
+        // Repartir el ahorro proporcionalmente. Cada línea se toca una vez aunque
+        // coincida con más de un objetivo (producto/categoría/etiqueta).
         $savings = max(0.0, $originalSum - $totalBundleCost);
+        $appliedKeys = [];
         foreach ($coverage as $i => $matches) {
             foreach ($matches as $line) {
                 $key = $line['product_id'];
-                if (!isset($lines[$key])) continue;
+                if (isset($appliedKeys[$key]) || !isset($lines[$key])) continue;
+                $appliedKeys[$key] = true;
                 $share = $line['original_price'] * $line['quantity'] / $originalSum;
                 $lineDiscount = $savings * $share / $line['quantity'];
                 $newPrice = $line['original_price'] - $lineDiscount;
@@ -353,6 +393,15 @@ class Pricing {
                     $lines[$key]['promotion_name'] = $promo['name'];
                 }
             }
+        }
+        // Keep the advertised fixed price exact after per-unit cent rounding.
+        $appliedTotal = 0.0;
+        foreach (array_keys($appliedKeys) as $key) $appliedTotal += $lines[$key]['quantity'] * $lines[$key]['unit_price'];
+        $roundingDelta = round($totalBundleCost - $appliedTotal, 2);
+        if ($roundingDelta != 0.0 && $appliedKeys) {
+            $lastKey = array_key_last($appliedKeys);
+            $lines[$lastKey]['unit_price'] = round(max(0, $lines[$lastKey]['unit_price'] + $roundingDelta / $lines[$lastKey]['quantity']), 2);
+            $lines[$lastKey]['discount'] = round($lines[$lastKey]['original_price'] - $lines[$lastKey]['unit_price'], 2);
         }
     }
 }

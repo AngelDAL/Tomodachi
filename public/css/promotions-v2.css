@@ -1,0 +1,14 @@
+
+/* Promociones v2: dialog ample and a vertically scrollable workflow. */
+#promoModal .modal-content { width:min(1240px, calc(100vw - 32px)); max-width:1240px; height:min(88vh, 900px); }
+#promoModal .modal-split-body { grid-template-columns:minmax(390px, .78fr) minmax(0, 1.22fr); min-height:0; }
+#promoModal .modal-form-side, #promoModal .modal-grid-side { min-height:0; }
+.promo-help { margin:0 0 14px; padding:10px 12px; border-left:3px solid var(--info-color); border-radius:var(--ds-radius-md); background:var(--bg-light); color:var(--text-medium); font-size:.84rem; line-height:1.45; }
+.target-tools { display:flex; gap:6px; align-items:center; flex:1; min-width:0; }
+.target-tools select { min-width:130px; }
+.target-tools .btn { white-space:nowrap; }
+.selected-chip { gap:8px; }
+.selected-chip .bundle-qty { display:flex; align-items:center; gap:5px; margin-left:auto; color:var(--text-muted); font-size:.75rem; }
+.selected-chip .bundle-qty input { width:54px; min-height:28px; padding:3px 5px; border:1px solid var(--border-color); border-radius:var(--ds-radius-sm); background:var(--bg-input); color:var(--text-color); }
+.selected-chip .remove-chip { border:0; background:transparent; font-size:1.15rem; line-height:1; cursor:pointer; }
+@media (max-width: 1000px) { #promoModal .modal-split-body { grid-template-columns:360px minmax(0,1fr); } }

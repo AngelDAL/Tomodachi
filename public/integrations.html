@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="view-transition" content="same-origin">
     <title>Integraciones - Tomodachi</title>
     <link rel="icon" type="image/svg+xml" href="assets/images/logos/tomodachi-favicon.svg">
     <link rel="stylesheet" href="css/fonts.css?v=4">
@@ -11,6 +12,8 @@
     <link rel="stylesheet" href="css/design-system.css?v=5">
     <link rel="stylesheet" href="css/sidebar-modern.css?v=4">
     <link rel="stylesheet" href="css/mobile-nav.css?v=4">
+    <script src="js/theme-init.js"></script>
+    <script src="js/format-utils.js"></script>
     <style>
         .integrations-container {
             max-width: 1000px;
@@ -219,6 +222,29 @@
             word-break: break-all;
             margin: 12px 0;
         }
+        .token-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        .btn-secondary {
+            background: var(--bg-light);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+        }
+        .btn-secondary:hover { border-color: var(--primary-color); }
+        #copyPromptBtn {
+            background: var(--primary-color);
+            color: #fff;
+            border-color: var(--primary-color);
+        }
+        #copyPromptBtn:hover { background: var(--primary-dark); }
+        .scope-help {
+            margin: 8px 0 0;
+            color: var(--text-muted);
+            font-size: .82rem;
+        }
         .empty-state {
             text-align: center;
             padding: 2.5rem;
@@ -250,6 +276,7 @@
     </style>
 </head>
 <body>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
     <div class="app-container">
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
@@ -299,7 +326,7 @@
                                 </label>
                                 <label class="scope-check">
                                     <input type="checkbox" name="scopes" value="write">
-                                    <span><i class="fas fa-pen"></i> Leer y editar</span>
+                                    <span><i class="fas fa-pen"></i> Lectura y escritura</span>
                                 </label>
                                 <label class="scope-check">
                                     <input type="checkbox" name="scopes" value="custom">
@@ -307,8 +334,12 @@
                                 </label>
                             </div>
                             <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">
-                                Solo lectura: consultar datos · Leer y editar: crear y modificar ventas,
-                                inventario, etc. · Personalizar apariencia: tema y colores de la tienda.
+                                Solo lectura: consultar datos. · Lectura y escritura: consultar y crear o
+                                modificar datos (incluye lectura). · Personalizar apariencia: tema y colores.
+                            </p>
+                            <p class="scope-help"><i class="fas fa-circle-info"></i>
+                                Para un agente que administra la tienda seleccione <strong>Lectura y escritura</strong>.
+                                No es necesario marcar también “Solo lectura”.
                             </p>
                         </div>
                         <button type="submit" class="btn btn-primary" id="createBtn">
@@ -316,6 +347,17 @@
                         </button>
                         <div class="msg" id="createMsg"></div>
                         <div class="token-reveal" id="tokenReveal" style="display: none;"></div>
+                        <div class="token-actions" id="tokenActions" style="display: none;">
+                            <button type="button" class="btn btn-secondary btn-sm" id="copyTokenBtn">
+                                <i class="fas fa-copy"></i> Copiar clave
+                            </button>
+                            <button type="button" class="btn btn-secondary btn-sm" id="copyPromptBtn">
+                                <i class="fas fa-robot"></i> Conectar mi Agente de IA a mi sitio
+                            </button>
+                            <a class="btn btn-secondary btn-sm" href="api-guide.html" target="_blank" rel="noopener">
+                                <i class="fas fa-book"></i> Ver guía de API
+                            </a>
+                        </div>
                     </form>
                 </div>
 
@@ -331,11 +373,6 @@
                     </div>
                 </div>
 
-                <div class="api-doc-hint">
-                    <i class="fas fa-book"></i> <strong>¿Para conectar un asistente o herramienta?</strong> La
-                    documentación técnica completa está en el repositorio del proyecto (<code>docs/API.md</code>).
-                    La clave se envía en el encabezado de cada petición que haga tu herramienta.
-                </div>
             </div>
         </main>
     </div>
@@ -356,8 +393,10 @@
             e.preventDefault();
             const msg = document.getElementById('createMsg');
             const reveal = document.getElementById('tokenReveal');
+            const tokenActions = document.getElementById('tokenActions');
             msg.className = 'msg';
             reveal.style.display = 'none';
+            tokenActions.style.display = 'none';
 
             const scopes = Array.from(document.querySelectorAll('input[name="scopes"]:checked')).map(c => c.value);
             if (scopes.length === 0) {
@@ -384,9 +423,11 @@
                 const data = await res.json();
                 if (data.success) {
                     msg.className = 'msg success';
-                    msg.textContent = 'Clave generada. ¡Cópiala ahora, no se mostrará de nuevo!';
+                    msg.textContent = 'Clave generada. Cópiala ahora; no volverá a mostrarse.';
                     reveal.style.display = 'block';
                     reveal.textContent = data.data.token;
+                    tokenActions.style.display = 'flex';
+                    window.lastGeneratedToken = data.data.token;
                     e.target.reset();
                     loadTokens();
                 } else {
@@ -468,6 +509,58 @@
         function escapeHtml(s) {
             return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
+
+        function integrationPrompt() {
+            const base = window.location.origin;
+            return `Actúa como mi agente de administración de Tomodachi POS.
+
+CONEXIÓN
+- URL base: ${base}
+- API key: ${window.lastGeneratedToken || '[PEGA_AQUI_TU_CLAVE]'}
+- En cada petición usa el encabezado: Authorization: Bearer ${window.lastGeneratedToken || '[PEGA_AQUI_TU_CLAVE]'}
+- Guía completa: ${base}/api-guide.html
+
+ALCANCE Y SEGURIDAD
+- Esta clave pertenece a una sola tienda. Nunca intentes consultar o modificar otra tienda.
+- Consulta primero la información actual antes de proponer o ejecutar cambios.
+- Antes de crear, modificar, cancelar, devolver o eliminar información, explica la acción y pide confirmación explícita.
+- No inventes IDs, precios, existencias, clientes ni ventas. Si faltan datos, consúltalos mediante la API.
+- No muestres esta API key en respuestas públicas ni la envíes a otra persona o servicio.
+- Respeta los errores: 401 significa clave inválida/expirada/revocada; 403 significa permiso insuficiente; 422 significa datos inválidos; 409 significa conflicto.
+
+CONSULTAS HABITUALES
+- Productos: GET ${base}/api/inventory/products.php
+- Categorías: GET ${base}/api/inventory/categories.php
+- Clientes: GET ${base}/api/customers/customers.php
+- Ventas: GET ${base}/api/sales/get_sales.php
+- Detalle de venta: GET ${base}/api/sales/sale_details.php?sale_id=ID
+- Estadísticas: GET ${base}/api/reports/dashboard_stats.php
+- Cierre Z: GET ${base}/api/reports/close_z.php
+
+ACCIONES DE ESCRITURA
+- Crear venta: POST ${base}/api/sales/create_sale.php
+- Actualizar producto: PUT ${base}/api/inventory/products.php
+- Ajustar existencias: POST ${base}/api/inventory/stock.php
+- Crear o modificar clientes, promociones y otras entidades solo mediante los endpoints documentados.
+- Nunca ejecutes una acción destructiva sin confirmación.
+
+FORMATO
+- Las respuestas normalmente tienen {success, message, data, error}.
+- Devuelve resultados claros en español, incluyendo ID, nombre, precio, existencia y cualquier advertencia relevante.
+- Si una operación no está permitida por el scope o por el rol, dilo claramente y no intentes evadir el control.`;
+        }
+
+        document.getElementById('copyTokenBtn').addEventListener('click', async () => {
+            if (!window.lastGeneratedToken) return;
+            await navigator.clipboard.writeText(window.lastGeneratedToken);
+            document.getElementById('createMsg').className = 'msg success';
+            document.getElementById('createMsg').textContent = 'Clave copiada al portapapeles.';
+        });
+        document.getElementById('copyPromptBtn').addEventListener('click', async () => {
+            await navigator.clipboard.writeText(integrationPrompt());
+            document.getElementById('createMsg').className = 'msg success';
+            document.getElementById('createMsg').textContent = 'Prompt copiado. Pégalo en tu agente junto con la clave.';
+        });
     </script>
     <script src="lib/animejs/anime.min.js"></script>
     <script src="js/design-system.js?v=5"></script>

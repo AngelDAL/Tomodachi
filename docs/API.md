@@ -35,7 +35,7 @@ edición (responden 403) y se documentan aparte.
 - **Sesión de navegador**: `POST /api/auth/login.php` → cookie `tomodachi_session` (httponly).
 - **API token (para agentes/IA)**: header `Authorization: Bearer <token>` (clase `ApiAuth`).
   Cada token pertenece a UNA tienda y tiene scopes. Se muestra UNA sola vez al crearlo.
-- **Scopes por método**: `GET`→`read` · `POST/PUT/DELETE`→`write` · `custom` (solo tema).
+- **Scopes por método**: `GET`→`read` · `POST/PUT/DELETE`→`write` · `custom` (solo tema). El scope `write` **incluye `read` automáticamente**, porque un agente que modifica datos debe poder consultar el estado primero.
 - Endpoints **solo sesión** (no admiten token): `auth/*`, `users/create|update|delete|profile`,
   `stores/create|import_data|upload_logo|save_background`, `terminals/*`, `super_admin/*`,
   `ai/*`, `sales/cart_sync.php`, `inventory/upload_image.php`.

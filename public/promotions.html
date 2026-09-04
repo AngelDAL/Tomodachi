@@ -112,7 +112,7 @@
                                 <label>Valor del Descuento</label>
                                 <div class="input-icon-wrapper">
                                     <span class="currency-icon">$</span>
-                                    <input type="number" name="discount_value" step="0.01" required class="form-control" placeholder="10" oninput="calculateProfit()">
+                                    <input type="number" name="discount_value" step="0.01" class="form-control" placeholder="10" oninput="calculateProfit()">
                                 </div>
                             </div>
                         </div>
@@ -123,6 +123,7 @@
                                 <i class="fas fa-tag"></i>
                                 <input type="number" name="bundle_price" step="0.01" class="form-control" placeholder="99.90" oninput="calculateProfit()">
                             </div>
+                            <small id="bundleOriginalTotal" style="color:var(--text-muted); margin-top:4px; display:block; font-size:0.8rem;"></small>
                         </div>
 
                         <div id="conditionFields" class="form-row">

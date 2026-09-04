@@ -28,12 +28,33 @@
     section.style.display = selectedTargets.length ? 'block' : 'none';
     const bundle = document.getElementById('promoType')?.value === 'bundle';
     list.innerHTML = selectedTargets.map((t, i) => `<div class="selected-chip"><span>${esc(t.name)}</span>${bundle ? `<label class="bundle-qty">Cantidad <input data-target-qty="${i}" type="number" min="1" value="${Math.max(1, +t.required_quantity || 1)}"></label>` : ''}<button type="button" class="remove-chip" data-remove-target="${i}" aria-label="Quitar">×</button></div>`).join('');
-    list.querySelectorAll('[data-target-qty]').forEach(el => el.addEventListener('input', () => { selectedTargets[+el.dataset.targetQty].required_quantity = Math.max(1, +el.value || 1); }));
-    list.querySelectorAll('[data-remove-target]').forEach(el => el.addEventListener('click', () => { selectedTargets.splice(+el.dataset.removeTarget,1); renderProductsGrid(allProducts); }));
+    list.querySelectorAll('[data-target-qty]').forEach(el => el.addEventListener('input', () => { selectedTargets[+el.dataset.targetQty].required_quantity = Math.max(1, +el.value || 1); updateBundleOriginalTotal(); }));
+    list.querySelectorAll('[data-remove-target]').forEach(el => el.addEventListener('click', () => { selectedTargets.splice(+el.dataset.removeTarget,1); renderProductsGrid(allProducts); updateBundleOriginalTotal(); }));
+    updateBundleOriginalTotal();
   };
+
+  function updateBundleOriginalTotal() {
+    const el = document.getElementById('bundleOriginalTotal');
+    const type = document.getElementById('promoType')?.value;
+    if (!el || type !== 'bundle') { if (el) el.textContent = ''; return; }
+    let total = 0;
+    selectedTargets.forEach(t => {
+      const prod = (typeof allProducts !== 'undefined') ? allProducts.find(p => p.product_id == t.id) : null;
+      const price = prod ? parseFloat(prod.price) : 0;
+      total += price * Math.max(1, parseInt(t.required_quantity) || 1);
+    });
+    const fmt = (window.FormatUtils && FormatUtils.currency) ? FormatUtils.currency.bind(FormatUtils) : v => '$' + v.toFixed(2);
+    if (total > 0) {
+      el.innerHTML = 'Precio sin promo: <b>' + fmt(total) + '</b> — ingresa el precio final del paquete';
+    } else {
+      el.textContent = 'Selecciona productos para ver el precio sin promo';
+    }
+  }
   window.savePromotion = async function (e) {
     e.preventDefault(); const form = e.target, type = form.querySelector('[name=type]').value;
     if (!selectedTargets.length && type !== 'bill_discount') return showNotification('Selecciona al menos un objetivo.', 'warning');
+    if (type === 'bundle' && !form.bundle_price.value) return showNotification('Ingresa el precio final del paquete.', 'warning');
+    if (type === 'simple_discount' && !form.discount_value.value) return showNotification('Ingresa el valor del descuento.', 'warning');
     const payload = { name: form.name.value, description:'', start_date:form.start_date.value, end_date:form.end_date.value, type, targets:selectedTargets.map(t => ({type:t.type,id:t.id,required_quantity:Math.max(1,+t.required_quantity||1)})), min_quantity:+(form.querySelector('[name=min_quantity]')?.value||1), bulk_pay_quantity:+(form.querySelector('[name=bulk_pay_quantity]')?.value||0), min_purchase_amount:+(form.querySelector('[name=min_purchase_amount]')?.value||0) };
     if (type === 'bundle') { payload.bundle_price = form.bundle_price.value; payload.discount_type='fixed_price'; payload.discount_value=0; }
     else if (type === 'bulk_discount') { payload.discount_type='fixed_amount'; payload.discount_value=0; }

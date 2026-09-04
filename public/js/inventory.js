@@ -695,6 +695,18 @@ function bindEvents() {
                 }
             }
         });
+        // Evaluar expresiones matemáticas (ej: "1/8") al presionar Enter o perder foco
+        addCompositionList.addEventListener('keydown', (e) => {
+            if (e.target.classList.contains('comp-qty') && e.key === 'Enter') {
+                e.preventDefault();
+                evalMathExpression(e.target);
+            }
+        });
+        addCompositionList.addEventListener('focusout', (e) => {
+            if (e.target.classList.contains('comp-qty')) {
+                evalMathExpression(e.target);
+            }
+        });
     }
 
     // Búsqueda de componentes: escribe el nombre, sale la lista y se elige para añadir.
@@ -2012,6 +2024,31 @@ function addComponentFromPicker(pid) {
     const box = document.getElementById('compSearchResults');
     if (input) input.value = '';
     if (box) { box.style.display = 'none'; box.innerHTML = ''; }
+}
+
+// Evalúa expresiones matemáticas simples en inputs de cantidad (ej: "1/8", "2*3", "100/12")
+function evalMathExpression(input) {
+    const raw = (input.value || '').trim();
+    if (!raw) return;
+    // Si es solo número, dejarlo
+    if (/^-?\d+(\.\d+)?$/.test(raw)) return;
+    // Evaluar expresión: soporta +, -, *, / y paréntesis
+    if (/^[\d\s+\-*/().]+$/.test(raw)) {
+        try {
+            const result = Function('"use strict"; return (' + raw + ')')();
+            if (typeof result === 'number' && isFinite(result) && result >= 0) {
+                const rounded = Math.round(result * 1000) / 1000;
+                input.value = rounded;
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+            } else {
+                input.value = 0;
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        } catch (e) {
+            input.value = 0;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+    }
 }
 
 // Ajusta la cantidad de un componente con los pasos + / -.

@@ -3288,6 +3288,125 @@
     .express-comp-form { grid-template-columns: 1fr; }
 }
 
+/* ===== Inline component creation (inside comp-available-panel) ===== */
+.comp-create-inline {
+    margin-top: 10px;
+    padding: 12px;
+    border: 1px dashed var(--primary-color, #4FDDD2);
+    border-radius: 10px;
+    background: var(--bg-color, #fafafa);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.comp-create-inline-header {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--primary-color, #4FDDD2);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border-light, #e5e7eb);
+}
+.comp-create-inline-header i { font-size: 0.85rem; }
+.comp-create-inline .inline-comp-input {
+    padding: 7px 9px;
+    border: 1px solid var(--border-color, #ddd);
+    border-radius: 8px;
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 0.8rem;
+}
+.comp-create-inline .inline-comp-input:focus {
+    border-color: var(--primary-color, #4FDDD2);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(79, 221, 210, 0.15);
+}
+.comp-create-inline .btn-save { align-self: flex-end; }
+
+/* ===== Presentations sub-section in inline form ===== */
+.comp-present-section {
+    margin-top: 4px;
+}
+.comp-present-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 4px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--border-light, #e5e7eb);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-color, #333);
+}
+.comp-present-header span {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.comp-present-header span i { font-size: 0.7rem; color: var(--text-muted, #888); }
+.btn-add-present-inline {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 1.5px solid var(--primary-color, #4FDDD2);
+    background: transparent;
+    color: var(--primary-color, #4FDDD2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.65rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    flex-shrink: 0;
+}
+.btn-add-present-inline:hover {
+    background: var(--primary-color, #4FDDD2);
+    color: #fff;
+}
+.comp-present-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.comp-present-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.comp-present-input {
+    padding: 5px 7px;
+    border: 1px solid var(--border-color, #ddd);
+    border-radius: 6px;
+    font-size: 0.75rem;
+    width: 100%;
+    box-sizing: border-box;
+}
+.comp-present-input:focus {
+    border-color: var(--primary-color, #4FDDD2);
+    outline: none;
+}
+.comp-present-row .present-label { flex: 2; }
+.comp-present-row .present-qty { flex: 1; max-width: 80px; }
+.comp-present-row .present-cost { flex: 1; max-width: 100px; }
+.comp-present-remove {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--text-muted, #888);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.6rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    flex-shrink: 0;
+}
+.comp-present-remove:hover { color: var(--danger-color, #e74c3c); background: rgba(231,76,60,0.1); }
+@media (max-width: 520px) {
+    .comp-present-row { flex-wrap: wrap; }
+    .comp-present-row .present-label { flex: 1 1 100%; }
+    .comp-present-row .present-qty,
+    .comp-present-row .present-cost { max-width: none; }
+}
+
 /* ===== Asistente de alta de producto (PASO 1: tipo) ===== */
 .add-type-screen { padding: 8px 0 4px; }
 .add-type-caption {

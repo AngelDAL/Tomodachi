@@ -380,6 +380,22 @@
                                         <div id="compAvailableList" class="comp-available-list">
                                             <div class="recipe-empty">Los componentes aparecerán aquí una vez que busques.</div>
                                         </div>
+                                        <!-- Formulario inline de creación (visible cuando no hay resultados) -->
+                                        <div class="comp-create-inline" id="compCreateInline" style="display:none;">
+                                            <div class="comp-create-inline-header">
+                                                <i class="fas fa-plus-circle"></i> Crear componente nuevo
+                                            </div>
+                                            <input type="text" id="inlineCompName" placeholder="Nombre del componente *" class="inline-comp-input">
+                                            <input type="number" id="inlineCompCost" min="0" step="0.01" placeholder="Costo por unidad ($)" class="inline-comp-input">
+                                            <div class="comp-present-section">
+                                                <div class="comp-present-header">
+                                                    <span><i class="fas fa-boxes-stacked"></i> Presentaciones</span>
+                                                    <button type="button" class="btn-add-present-inline" id="addInlinePresentBtn" title="Agregar presentación"><i class="fas fa-plus"></i></button>
+                                                </div>
+                                                <div id="inlineCompPresentations" class="comp-present-rows"></div>
+                                            </div>
+                                            <button type="button" class="btn-save btn-sm" id="inlineCompSaveBtn"><i class="fas fa-plus-circle"></i> Crear componente</button>
+                                        </div>
                                     </div>
 
                                     <!-- Panel derecho: Receta actual -->

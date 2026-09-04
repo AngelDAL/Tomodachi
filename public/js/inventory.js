@@ -582,6 +582,35 @@ function bindEvents() {
     wireExpress('add');
     wireExpress('edit');
 
+    // Inline component creation from search no-results
+    const addInlinePresentBtn = document.getElementById('addInlinePresentBtn');
+    if (addInlinePresentBtn) addInlinePresentBtn.addEventListener('click', addInlinePresentation);
+    const inlineCompSaveBtn = document.getElementById('inlineCompSaveBtn');
+    if (inlineCompSaveBtn) inlineCompSaveBtn.addEventListener('click', inlineCreateComponent);
+
+    // Delegation for remove buttons on inline presentations
+    const inlineCompPresentations = document.getElementById('inlineCompPresentations');
+    if (inlineCompPresentations) {
+        inlineCompPresentations.addEventListener('click', (e) => {
+            const removeBtn = e.target.closest('.comp-present-remove');
+            if (removeBtn) {
+                e.preventDefault();
+                const idx = parseInt(removeBtn.getAttribute('data-idx'), 10);
+                if (!isNaN(idx)) removeInlinePresentation(idx);
+            }
+        });
+        // Sync draft state on input changes
+        inlineCompPresentations.addEventListener('input', (e) => {
+            const row = e.target.closest('.comp-present-row');
+            if (!row) return;
+            const idx = parseInt(row.getAttribute('data-idx'), 10);
+            if (isNaN(idx) || !inlinePresentationsDraft[idx]) return;
+            if (e.target.classList.contains('present-label')) inlinePresentationsDraft[idx].label = e.target.value;
+            if (e.target.classList.contains('present-qty')) inlinePresentationsDraft[idx].quantity = e.target.value;
+            if (e.target.classList.contains('present-cost')) inlinePresentationsDraft[idx].total_cost = e.target.value;
+        });
+    }
+
     // Asistente: PASO 1 → PASO 2 (Continuar) y volver a cambiar el tipo.
     const addContinueBtn = document.getElementById('addContinueBtn');
     if (addContinueBtn) addContinueBtn.addEventListener('click', beginAddForm);
@@ -1079,7 +1108,7 @@ async function loadProducts() {
 
             if (data.success) {
                 products = data.data || [];
-                renderProducts(products);
+                performSearch(); // Aplica filtro de retirados y búsqueda
             } else {
                 console.error('Error:', data.error);
             }
@@ -1529,13 +1558,26 @@ function expressCreateComponent(target) {
     const stock = parseFloat(document.getElementById('addExpressStock')?.value) || 0;
     if (!name) { showNotification('Indica el nombre del componente', 'error'); return; }
 
+    // Recopilar presentaciones del formulario exprés (legacy)
+    const presentations = [];
+    const presRows = document.querySelectorAll('#addExpressCompForm .comp-present-row');
+    presRows.forEach(row => {
+        const label = (row.querySelector('.present-label')?.value || '').trim();
+        const qty = parseFloat(row.querySelector('.present-qty')?.value) || 0;
+        const total = parseFloat(row.querySelector('.present-cost')?.value) || 0;
+        if (label || qty || total) {
+            presentations.push({ label, quantity: qty, total_cost: total });
+        }
+    });
+
     // Staged: se crea solo cuando el usuario guarda el producto
     const stagedId = 'staged_' + Date.now();
     addStagedComponents.push({
         staged_id: stagedId,
         product_name: name,
         cost: cost,
-        stock: stock
+        stock: stock,
+        presentations: presentations
     });
     // Añadir a la receta
     addCompositionDraft.push({
@@ -1548,6 +1590,92 @@ function expressCreateComponent(target) {
     renderAddComposition();
     const form = document.getElementById('addExpressCompForm');
     if (form) { form.style.display = 'none'; form.querySelectorAll('input').forEach(i => i.value = ''); }
+    showNotification('Componente "' + name + '" añadido a la receta (se creará al guardar)', 'info');
+}
+
+/* ===== Inline component creation (from search no-results) ===== */
+let inlinePresentationsDraft = []; // Presentaciones temporales del formulario inline
+
+function renderStagedPresentations() {
+    const container = document.getElementById('inlineCompPresentations');
+    if (!container) return;
+    if (!inlinePresentationsDraft.length) {
+        container.innerHTML = '';
+        return;
+    }
+    container.innerHTML = inlinePresentationsDraft.map((pres, idx) =>
+        '<div class="comp-present-row" data-idx="' + idx + '">' +
+            '<input type="text" class="comp-present-input present-label" placeholder="Etiqueta (ej. Bolsa 1kg)" value="' + escapeHtml(pres.label || '') + '">' +
+            '<input type="number" class="comp-present-input present-qty" placeholder="Cantidad" min="0.001" step="0.001" value="' + (pres.quantity || '') + '">' +
+            '<input type="number" class="comp-present-input present-cost" placeholder="Costo total ($)" min="0" step="0.01" value="' + (pres.total_cost || '') + '">' +
+            '<button type="button" class="comp-present-remove" data-idx="' + idx + '" title="Quitar presentación"><i class="fas fa-times"></i></button>' +
+        '</div>'
+    ).join('');
+}
+
+function addInlinePresentation() {
+    inlinePresentationsDraft.push({ label: '', quantity: '', total_cost: '' });
+    renderStagedPresentations();
+    // Focus the last label input
+    const container = document.getElementById('inlineCompPresentations');
+    if (container) {
+        const lastRow = container.querySelector('.comp-present-row:last-child .present-label');
+        if (lastRow) lastRow.focus();
+    }
+}
+
+function removeInlinePresentation(idx) {
+    inlinePresentationsDraft.splice(idx, 1);
+    renderStagedPresentations();
+}
+
+function inlineCreateComponent() {
+    const name = (document.getElementById('inlineCompName')?.value || '').trim();
+    const cost = parseFloat(document.getElementById('inlineCompCost')?.value) || 0;
+    if (!name) { showNotification('Indica el nombre del componente', 'error'); return; }
+
+    // Recopilar presentaciones del formulario inline
+    const presentations = [];
+    const container = document.getElementById('inlineCompPresentations');
+    if (container) {
+        container.querySelectorAll('.comp-present-row').forEach(row => {
+            const label = (row.querySelector('.present-label')?.value || '').trim();
+            const qty = parseFloat(row.querySelector('.present-qty')?.value) || 0;
+            const total = parseFloat(row.querySelector('.present-cost')?.value) || 0;
+            if (label || qty || total) {
+                presentations.push({ label, quantity: qty, total_cost: total });
+            }
+        });
+    }
+
+    // Staged: se crea solo cuando el usuario guarda el producto
+    const stagedId = 'staged_' + Date.now();
+    addStagedComponents.push({
+        staged_id: stagedId,
+        product_name: name,
+        cost: cost,
+        stock: 0,
+        presentations: presentations
+    });
+    // Añadir a la receta
+    addCompositionDraft.push({
+        component_id: stagedId,
+        name: name,
+        quantity: 1,
+        unit_cost: cost,
+        is_staged: true
+    });
+
+    // Limpiar formulario inline
+    inlinePresentationsDraft = [];
+    renderStagedPresentations();
+    const nameInput = document.getElementById('inlineCompName');
+    const costInput = document.getElementById('inlineCompCost');
+    if (nameInput) nameInput.value = '';
+    if (costInput) costInput.value = '';
+
+    renderAddComposition();
+    filterCompSearch();
     showNotification('Componente "' + name + '" añadido a la receta (se creará al guardar)', 'info');
 }
 
@@ -1802,6 +1930,7 @@ function filterCompSearch() {
     const input = document.getElementById('compSearchInput');
     const box = document.getElementById('compSearchResults');
     const availList = document.getElementById('compAvailableList');
+    const inlineForm = document.getElementById('compCreateInline');
     if (!input) return;
     const q = (input.value || '').trim().toLowerCase();
     const existing = new Set(addCompositionDraft.map(i => String(i.component_id)));
@@ -1812,10 +1941,21 @@ function filterCompSearch() {
         ? components.filter(p => String(p.product_name || '').toLowerCase().includes(q))
         : components;
 
+    // Mostrar formulario inline solo cuando se busca y no hay resultados
+    const noResults = q && !matches.length;
+    if (inlineForm) {
+        inlineForm.style.display = noResults ? 'block' : 'none';
+        if (noResults) {
+            // Pre-llenar el nombre del componente con la búsqueda
+            const nameInput = document.getElementById('inlineCompName');
+            if (nameInput && !nameInput.value) nameInput.value = input.value.trim();
+        }
+    }
+
     // Renderizar en el panel izquierdo
     if (availList) {
         if (!matches.length) {
-            availList.innerHTML = '<div class="recipe-empty">No se encontraron componentes.</div>';
+            availList.innerHTML = noResults ? '' : '<div class="recipe-empty">No se encontraron componentes.</div>';
         } else {
             availList.innerHTML = matches.map(p => {
                 const inRecipe = existing.has(String(p.product_id));
@@ -1837,8 +1977,7 @@ function filterCompSearch() {
             .filter(p => !existing.has(String(p.product_id)) && String(p.product_name || '').toLowerCase().includes(q))
             .slice(0, 12);
         if (!searchMatches.length) {
-            box.style.display = 'block';
-            box.innerHTML = '<div class="comp-search-empty">Sin coincidencias. Puedes crearlo con "Crear componente".</div>';
+            box.style.display = 'none'; // El formulario inline reemplaza este mensaje
             return;
         }
         box.innerHTML = searchMatches.map(p => {
@@ -1889,6 +2028,8 @@ function bumpCompQty(componentId, delta) {
 function removeAddComposition(componentId) {
     addCompositionDraft = addCompositionDraft.filter(i => String(i.component_id) !== String(componentId));
     addStagedComponents = addStagedComponents.filter(i => i.staged_id !== componentId);
+    // Also clean up inline presentations draft if this was an inline-created component
+    const removedStaged = addStagedComponents.length; // Check if a staged was removed
     renderAddComposition();
     filterCompSearch(); // Actualizar panel izquierdo
 }

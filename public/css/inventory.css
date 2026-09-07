@@ -3902,6 +3902,13 @@
 .icon-button:hover { color:var(--primary-color,#39c5bb); }
 .icon-button.danger:hover { color:var(--danger-color,#ef4444); }
 .composer-hint,.execution-intro { margin:12px 0 0; font-size:.76rem; color:var(--text-muted,#667); }
+.detail-list-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:16px 0 10px; }
+.detail-list-heading h3 { margin:0; font-size:1rem; }
+.purchase-modal-footer { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+.selected-purchase-row .total-cost-field { min-width:145px; }
+.selected-purchase-row .total-cost-field input { min-width:135px; }
+.detail-total-field { min-width:130px; }
+.detail-total-field input { min-width:120px; }
 .express-product-panel { margin-bottom:12px; padding:12px; border:1px solid var(--primary-color,#39c5bb); border-radius:10px; background:var(--bg-card,#fff); }
 .express-header { display:flex; justify-content:space-between; align-items:center; }
 .express-header h3 { margin:0; }

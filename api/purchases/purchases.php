@@ -54,6 +54,7 @@ try {
             );
             foreach ($items as &$it) {
                 $it['planned_quantity'] = (float)$it['planned_quantity'];
+                $it['planned_total_cost'] = (float)$it['planned_total_cost'];
                 $it['actual_quantity'] = $it['actual_quantity'] !== null ? (float)$it['actual_quantity'] : null;
                 $it['unit_cost'] = (float)$it['unit_cost'];
                 $it['total_cost'] = (float)$it['total_cost'];
@@ -126,8 +127,10 @@ try {
             foreach ($items as $item) {
                 $product_id = isset($item['product_id']) ? (int)$item['product_id'] : 0;
                 $planned_quantity = isset($item['planned_quantity']) ? (float)$item['planned_quantity'] : 0;
-                $unit_cost = isset($item['unit_cost']) ? (float)$item['unit_cost'] : 0;
-                if ($product_id <= 0 || $planned_quantity <= 0 || $unit_cost < 0) {
+                $planned_total_cost = isset($item['total_cost']) ? (float)$item['total_cost'] : 0;
+                if ($planned_total_cost < 0) $planned_total_cost = 0;
+                $unit_cost = $planned_quantity > 0 ? ($planned_total_cost / $planned_quantity) : 0;
+                if ($product_id <= 0 || $planned_quantity <= 0) {
                     throw new Exception('Cada producto debe tener una cantidad válida y un costo no negativo');
                 }
                 $product = $db->selectOne(
@@ -138,8 +141,8 @@ try {
                     throw new Exception('Solo se pueden comprar productos activos de inventario o componentes');
                 }
                 $db->insert(
-                    'INSERT INTO purchase_items (purchase_id, product_id, planned_quantity, unit_cost) VALUES (?,?,?,?)',
-                    [$id, $product_id, $planned_quantity, $unit_cost]
+                    'INSERT INTO purchase_items (purchase_id, product_id, planned_quantity, planned_total_cost, unit_cost) VALUES (?,?,?,?,?)',
+                    [$id, $product_id, $planned_quantity, $planned_total_cost, $unit_cost]
                 );
             }
             if ($items) {
@@ -183,6 +186,8 @@ try {
             }
             $product_id = isset($data['product_id']) ? (int)$data['product_id'] : 0;
             $planned_quantity = isset($data['planned_quantity']) ? (float)$data['planned_quantity'] : 0;
+            $planned_total_cost = isset($data['total_cost']) ? (float)$data['total_cost'] : 0;
+            if ($planned_total_cost < 0) { Response::validationError(['total_cost' => 'No puede ser negativo']); }
             if ($product_id <= 0) { Response::validationError(['product_id' => 'Requerido']); }
             if ($planned_quantity <= 0) { Response::validationError(['planned_quantity' => 'Debe ser mayor a 0']); }
 
@@ -204,8 +209,8 @@ try {
             if ($exists) { Response::error('Este producto ya está en la orden', 409); }
 
             $item_id = $db->insert(
-                'INSERT INTO purchase_items (purchase_id, product_id, planned_quantity) VALUES (?,?,?)',
-                [$purchase_id, $product_id, $planned_quantity]
+                'INSERT INTO purchase_items (purchase_id, product_id, planned_quantity, planned_total_cost, unit_cost) VALUES (?,?,?,?,?)',
+                [$purchase_id, $product_id, $planned_quantity, $planned_total_cost, $planned_quantity > 0 ? $planned_total_cost / $planned_quantity : 0]
             );
 
             // Auto-cambiar a pending si estaba draft
@@ -225,7 +230,9 @@ try {
             $item_id = isset($data['item_id']) ? (int)$data['item_id'] : 0;
             $planned_quantity = isset($data['planned_quantity']) ? (float)$data['planned_quantity'] : null;
             $unit_cost = isset($data['unit_cost']) ? (float)$data['unit_cost'] : null;
+            $planned_total_cost = isset($data['total_cost']) ? (float)$data['total_cost'] : null;
             if ($item_id <= 0) { Response::validationError(['item_id' => 'Requerido']); }
+            if ($planned_total_cost !== null && $planned_total_cost < 0) { Response::validationError(['total_cost' => 'No puede ser negativo']); }
             if ($unit_cost !== null && $unit_cost < 0) { Response::validationError(['unit_cost' => 'No puede ser negativo']); }
 
             $item = $db->selectOne('SELECT item_id FROM purchase_items WHERE item_id = ? AND purchase_id = ?', [$item_id, $purchase_id]);
@@ -236,6 +243,17 @@ try {
             }
             if ($unit_cost !== null) {
                 $db->update('UPDATE purchase_items SET unit_cost = ? WHERE item_id = ?', [$unit_cost, $item_id]);
+            }
+            if ($planned_total_cost !== null) {
+                $db->update('UPDATE purchase_items SET planned_total_cost = ? WHERE item_id = ?', [$planned_total_cost, $item_id]);
+                $qtyForCost = $planned_quantity;
+                if ($qtyForCost === null) {
+                    $existingQty = $db->selectOne('SELECT planned_quantity FROM purchase_items WHERE item_id = ?', [$item_id]);
+                    $qtyForCost = $existingQty ? (float)$existingQty['planned_quantity'] : 0;
+                }
+                if ($qtyForCost > 0) {
+                    $db->update('UPDATE purchase_items SET unit_cost = ? WHERE item_id = ?', [$planned_total_cost / $qtyForCost, $item_id]);
+                }
             }
             Response::success([], 'Ítem actualizado');
         }

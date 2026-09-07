@@ -588,6 +588,7 @@ CREATE TABLE IF NOT EXISTS purchase_items (
     purchase_id INT NOT NULL,
     product_id INT NOT NULL COMMENT 'Producto o componente a comprar',
     planned_quantity DECIMAL(12,3) NOT NULL DEFAULT 0 COMMENT 'Cantidad planeada (lista de compras)',
+    planned_total_cost DECIMAL(12,2) NOT NULL DEFAULT 0.00 COMMENT 'Costo total planeado de la línea',
     actual_quantity DECIMAL(12,3) NULL COMMENT 'Cantidad real recibida (al ejecutar)',
     unit_cost DECIMAL(10,2) NOT NULL DEFAULT 0 COMMENT 'Costo unitario pagado',
     total_cost DECIMAL(12,2) NOT NULL DEFAULT 0 COMMENT 'actual_quantity * unit_cost',

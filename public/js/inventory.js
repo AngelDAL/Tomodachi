@@ -1070,7 +1070,7 @@ async function uploadImage() {
     const productId = document.getElementById('productId')?.value;
 
     if (!productId || !selectedFile) {
-        alert('Selecciona producto e imagen');
+        showNotification('Selecciona producto e imagen');
         return;
     }
 
@@ -1089,18 +1089,18 @@ async function uploadImage() {
             const data = await response.json();
 
             if (data.success) {
-                alert('Imagen subida correctamente');
+                showNotification('Imagen subida correctamente');
                 document.getElementById('uploadPreview').innerHTML = '';
                 document.getElementById('productId').value = '';
                 document.getElementById('productImage').value = '';
                 selectedFile = null;
                 loadProducts();
             } else {
-                alert('Error: ' + (data.error || 'No se pudo subir la imagen'));
+                showNotification('Error: ' + (data.error || 'No se pudo subir la imagen'));
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('Error al subir la imagen');
+            showNotification('Error al subir la imagen');
         }
     };
     reader.readAsDataURL(selectedFile);
@@ -1523,14 +1523,14 @@ async function loadEditPresentations() {
                 '<button type="button" class="comp-remove" data-lot="' + l.lot_id + '" title="Eliminar"><i class="fas fa-trash"></i></button>' +
                 '</div>';
         }).join('') || '<div class="form-hint">Sin presentaciones registradas.</div>';
-        list.querySelectorAll('.comp-remove').forEach(b => b.addEventListener('click', async () => {
-            if (!confirm('¿Eliminar esta presentación?')) return;
-            await fetch('../api/inventory/lots.php', {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ lot_id: parseInt(b.dataset.lot, 10) })
-            });
-            loadEditPresentations();
+        list.querySelectorAll('.comp-remove').forEach(b => b.addEventListener('click', () => {
+            if (typeof decisionModal !== 'function') { showNotification('El diálogo está cargando', 'warning'); return; }
+            decisionModal('Eliminar presentación', 'Esta acción eliminará la presentación y su cantidad disponible.', 'Eliminar', async () => {
+                try {
+                    await fetch('../api/inventory/lots.php', { method: 'DELETE', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lot_id: parseInt(b.dataset.lot, 10) }) });
+                    loadEditPresentations();
+                } catch (e) { showNotification('Error al eliminar la presentación', 'error'); }
+            }, true);
         }));
         const t = document.getElementById('editPresentTotal'); if (t) t.textContent = NUM(data.data ? data.data.total : 0);
         const cp = document.getElementById('editPresentCostPond');
@@ -2214,52 +2214,48 @@ function closeProductDetails() {
     if (firstPanel) firstPanel.classList.add('active');
 }
 
-async function archiveProduct() {
+function archiveProduct() {
     if (!currentEditingProduct) return;
-    const ok = confirm('¿Retirar este producto? Se marcará como descontinuado y no aparecerá en el Punto de Venta. El historial e inventario se mantienen intactos.');
-    if (!ok) return;
-    try {
-        const res = await fetch('../api/inventory/products.php', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ product_id: currentEditingProduct, archive: true })
-        });
-        const data = await res.json();
-        if (data.success) {
-            closeProductDetails();
-            loadProducts();
-        } else {
-            alert('Error: ' + (data.message || 'No se pudo retirar'));
-        }
-    } catch (e) {
-        console.error('Error archivando producto:', e);
-        alert('Error de red al intentar retirar producto');
+    if (typeof decisionModal === 'function') {
+        decisionModal('Retirar producto', 'Se marcará como descontinuado y no aparecerá en el Punto de Venta. El historial e inventario se mantienen intactos.', 'Retirar producto', archiveProductRequest, true);
+    } else {
+        showNotification('El diálogo de confirmación todavía está cargando', 'warning');
     }
 }
 
-async function restoreProduct() {
+async function archiveProductRequest() {
     if (!currentEditingProduct) return;
-    const ok = confirm('¿Restaurar este producto? Volverá a estar disponible en el Punto de Venta.');
-    if (!ok) return;
     try {
         const res = await fetch('../api/inventory/products.php', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
+            method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+            body: JSON.stringify({ product_id: currentEditingProduct, archive: true })
+        });
+        const data = await res.json();
+        if (data.success) { closeProductDetails(); loadProducts(); }
+        else showNotification('Error: ' + (data.message || 'No se pudo retirar'), 'error');
+    } catch (e) { console.error('Error archivando producto:', e); showNotification('Error de red al intentar retirar producto', 'error'); }
+}
+
+function restoreProduct() {
+    if (!currentEditingProduct) return;
+    if (typeof decisionModal === 'function') {
+        decisionModal('Restaurar producto', 'Volverá a estar disponible en el Punto de Venta.', 'Restaurar producto', restoreProductRequest, false);
+    } else {
+        showNotification('El diálogo de confirmación todavía está cargando', 'warning');
+    }
+}
+
+async function restoreProductRequest() {
+    if (!currentEditingProduct) return;
+    try {
+        const res = await fetch('../api/inventory/products.php', {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
             body: JSON.stringify({ product_id: currentEditingProduct, restore: true, hidden_in_pos: 0 })
         });
         const data = await res.json();
-        if (data.success) {
-            closeProductDetails();
-            loadProducts();
-        } else {
-            alert('Error: ' + (data.message || 'No se pudo restaurar'));
-        }
-    } catch (e) {
-        console.error('Error restaurando producto:', e);
-        alert('Error de red al intentar restaurar producto');
-    }
+        if (data.success) { closeProductDetails(); loadProducts(); }
+        else showNotification('Error: ' + (data.message || 'No se pudo restaurar'), 'error');
+    } catch (e) { console.error('Error restaurando producto:', e); showNotification('Error de red al intentar restaurar producto', 'error'); }
 }
 
 function updateProfitDisplay(price, cost) {
@@ -2404,7 +2400,7 @@ async function savePrice(input) {
     const price = parseFloat(input.value);
 
     if (isNaN(price) || price < 0) {
-        alert('Precio inválido');
+        showNotification('Precio inválido');
         const product = products.find(p => p.product_id == productId);
         if (product) input.value = parseFloat(product.price).toFixed(2);
         return;
@@ -2427,13 +2423,13 @@ async function savePrice(input) {
             const product = products.find(p => p.product_id == productId);
             if (product) product.price = price;
         } else {
-            alert('Error: ' + (data.message || 'No se pudo actualizar precio'));
+            showNotification('Error: ' + (data.message || 'No se pudo actualizar precio'));
             const product = products.find(p => p.product_id == productId);
             if (product) input.value = parseFloat(product.price).toFixed(2);
         }
     } catch (error) {
         console.error('Error:', error);
-        alert('Error al actualizar precio');
+        showNotification('Error al actualizar precio');
         const product = products.find(p => p.product_id == productId);
         if (product) input.value = parseFloat(product.price).toFixed(2);
     }
@@ -2444,7 +2440,7 @@ async function saveStock(input) {
     const newStock = parseInt(input.value);
 
     if (isNaN(newStock) || newStock < 0) {
-        alert('Stock inválido');
+        showNotification('Stock inválido');
         const product = products.find(p => p.product_id == productId);
         if (product) input.value = product.current_stock || 0;
         return;
@@ -2913,8 +2909,8 @@ async function generateAIImage() {
     const prompt = document.getElementById('aiPrompt').value;
     const strength = document.getElementById('aiStrength').value; // Ya es decimal (0.75, 0.55, 0.25)
     
-    if (!fileInput.files[0]) return alert('Sube una imagen primero');
-    if (!prompt) return alert('Escribe un prompt');
+    if (!fileInput.files[0]) return showNotification('Sube una imagen primero');
+    if (!prompt) return showNotification('Escribe un prompt');
 
     // UI Loading
     document.getElementById('aiEmptyResult').style.display = 'none';
@@ -2976,12 +2972,12 @@ async function generateAIImage() {
             
             document.getElementById('aiActions').style.display = 'block';
         } else {
-            alert('Error: ' + (data.message || 'Error generando imagen'));
+            showNotification('Error: ' + (data.message || 'Error generando imagen'));
             document.getElementById('aiEmptyResult').style.display = 'block';
         }
     } catch (error) {
         console.error(error);
-        alert('Error de conexi�n con el servidor de IA');
+        showNotification('Error de conexi�n con el servidor de IA');
         document.getElementById('aiEmptyResult').style.display = 'block';
     } finally {
         document.getElementById('aiLoading').style.display = 'none';
@@ -3036,12 +3032,12 @@ async function applyAIImage() {
         if (typeof showToast === 'function') {
             showToast('Imagen IA aplicada correctamente', 'success');
         } else {
-            alert('Imagen IA aplicada correctamente');
+            showNotification('Imagen IA aplicada correctamente');
         }
 
     } catch (e) {
         console.error('Error aplicando imagen', e);
-        alert('Error aplicando la imagen al formulario');
+        showNotification('Error aplicando la imagen al formulario');
     }
 }
 
@@ -3051,7 +3047,7 @@ function copyAIDescription() {
         if (typeof showToast === 'function') {
             showToast('Descripción copiada al portapapeles');
         } else {
-            alert('Descripción copiada');
+            showNotification('Descripción copiada');
         }
     });
 }
@@ -3086,7 +3082,7 @@ function toggleStudioOptions() {
 
 async function generateBackgroundPreview() {
     const prompt = document.getElementById('studioPrompt').value;
-    if (!prompt) return alert('Escribe una descripción para el fondo');
+    if (!prompt) return showNotification('Escribe una descripción para el fondo');
 
     const btn = document.querySelector('#studioGenerateOptions .btn-secondary');
     const originalText = btn.innerHTML;
@@ -3109,11 +3105,11 @@ async function generateBackgroundPreview() {
             img.dataset.fullPath = data.image_url; // Store for later use
             document.getElementById('bgPreviewArea').style.display = 'block';
         } else {
-            alert('Error: ' + (data.message || 'No se pudo generar el fondo'));
+            showNotification('Error: ' + (data.message || 'No se pudo generar el fondo'));
         }
     } catch (e) {
         console.error(e);
-        alert('Error de conexión');
+        showNotification('Error de conexión');
     } finally {
         btn.disabled = false;
         btn.innerHTML = originalText;
@@ -3145,16 +3141,16 @@ async function saveBackgroundToLibrary() {
         const data = await response.json();
         
         if (data.status === 'success') {
-            alert('Fondo guardado en la biblioteca de la tienda');
+            showNotification('Fondo guardado en la biblioteca de la tienda');
             // Update the preview source to the new permanent location
             img.src = data.new_url;
             img.dataset.fullPath = data.new_url;
         } else {
-            alert('Error: ' + data.message);
+            showNotification('Error: ' + data.message);
         }
     } catch (e) {
         console.error(e);
-        alert('Error al guardar');
+        showNotification('Error al guardar');
     } finally {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-save"></i> Guardar';
@@ -3163,7 +3159,7 @@ async function saveBackgroundToLibrary() {
 
 async function generateStudioImage() {
     const fileInput = document.getElementById('aiImageInput');
-    if (!fileInput.files[0]) return alert('Sube una imagen del producto primero');
+    if (!fileInput.files[0]) return showNotification('Sube una imagen del producto primero');
 
     const type = document.getElementById('studioBgType').value;
     const btn = document.getElementById('btnGenerateStudio');
@@ -3244,12 +3240,12 @@ async function generateStudioImage() {
             
             document.getElementById('aiActions').style.display = 'block';
         } else {
-            alert('Error: ' + (data.message || 'Error procesando imagen'));
+            showNotification('Error: ' + (data.message || 'Error procesando imagen'));
             document.getElementById('aiEmptyResult').style.display = 'block';
         }
     } catch (error) {
         console.error(error);
-        alert('Error de conexión con el servidor de IA');
+        showNotification('Error de conexión con el servidor de IA');
         document.getElementById('aiEmptyResult').style.display = 'block';
     } finally {
         document.getElementById('aiLoading').style.display = 'none';

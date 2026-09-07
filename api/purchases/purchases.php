@@ -115,13 +115,43 @@ try {
 
         $supplier_name = isset($data['supplier_name']) ? Validator::sanitizeString($data['supplier_name']) : null;
         $notes = isset($data['notes']) ? Validator::sanitizeString($data['notes']) : null;
+        $items = isset($data['items']) && is_array($data['items']) ? $data['items'] : [];
 
-        $id = $db->insert(
-            'INSERT INTO purchases (store_id, user_id, supplier_name, status, notes) VALUES (?,?,?,?,?)',
-            [$store_id, $currentUser['user_id'], $supplier_name, PURCHASE_DRAFT, $notes]
-        );
+        $db->beginTransaction();
+        try {
+            $id = $db->insert(
+                'INSERT INTO purchases (store_id, user_id, supplier_name, status, notes) VALUES (?,?,?,?,?)',
+                [$store_id, $currentUser['user_id'], $supplier_name, PURCHASE_DRAFT, $notes]
+            );
+            foreach ($items as $item) {
+                $product_id = isset($item['product_id']) ? (int)$item['product_id'] : 0;
+                $planned_quantity = isset($item['planned_quantity']) ? (float)$item['planned_quantity'] : 0;
+                $unit_cost = isset($item['unit_cost']) ? (float)$item['unit_cost'] : 0;
+                if ($product_id <= 0 || $planned_quantity <= 0 || $unit_cost < 0) {
+                    throw new Exception('Cada producto debe tener una cantidad válida y un costo no negativo');
+                }
+                $product = $db->selectOne(
+                    'SELECT product_id, tracking_type FROM products WHERE product_id=? AND store_id=? AND status=?',
+                    [$product_id, $store_id, STATUS_ACTIVE]
+                );
+                if (!$product || !in_array($product['tracking_type'], ['stock', 'component'], true)) {
+                    throw new Exception('Solo se pueden comprar productos activos de inventario o componentes');
+                }
+                $db->insert(
+                    'INSERT INTO purchase_items (purchase_id, product_id, planned_quantity, unit_cost) VALUES (?,?,?,?)',
+                    [$id, $product_id, $planned_quantity, $unit_cost]
+                );
+            }
+            if ($items) {
+                $db->update('UPDATE purchases SET status=? WHERE purchase_id=?', [PURCHASE_PENDING, $id]);
+            }
+            $db->commit();
+        } catch (Exception $e) {
+            $db->rollback();
+            throw $e;
+        }
 
-        Response::success(['purchase_id' => $id, 'status' => PURCHASE_DRAFT], 'Orden creada');
+        Response::success(['purchase_id' => $id, 'status' => $items ? PURCHASE_PENDING : PURCHASE_DRAFT], 'Orden creada');
     }
 
     // ── UPDATE ────────────────────────────────────────────
@@ -194,13 +224,18 @@ try {
             }
             $item_id = isset($data['item_id']) ? (int)$data['item_id'] : 0;
             $planned_quantity = isset($data['planned_quantity']) ? (float)$data['planned_quantity'] : null;
+            $unit_cost = isset($data['unit_cost']) ? (float)$data['unit_cost'] : null;
             if ($item_id <= 0) { Response::validationError(['item_id' => 'Requerido']); }
+            if ($unit_cost !== null && $unit_cost < 0) { Response::validationError(['unit_cost' => 'No puede ser negativo']); }
 
             $item = $db->selectOne('SELECT item_id FROM purchase_items WHERE item_id = ? AND purchase_id = ?', [$item_id, $purchase_id]);
             if (!$item) { Response::notFound('Ítem no encontrado'); }
 
             if ($planned_quantity !== null && $planned_quantity > 0) {
                 $db->update('UPDATE purchase_items SET planned_quantity = ? WHERE item_id = ?', [$planned_quantity, $item_id]);
+            }
+            if ($unit_cost !== null) {
+                $db->update('UPDATE purchase_items SET unit_cost = ? WHERE item_id = ?', [$unit_cost, $item_id]);
             }
             Response::success([], 'Ítem actualizado');
         }

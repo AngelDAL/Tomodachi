@@ -89,16 +89,44 @@ function renderComposerCatalog() {
 function renderSelectedPurchaseItems() {
     const modal=document.getElementById('purchaseComposerModal'); if(!modal)return;
     const target=modal.querySelector('#selectedPurchaseItems');
-    target.innerHTML=selectedPurchaseProducts.size?[...selectedPurchaseProducts.values()].map(p=>`<div class="selected-purchase-row" data-selected-id="${p.product_id}"><div class="selected-purchase-name"><i class="fas ${p.tracking_type==='component'?'fa-cubes':'fa-box'}"></i><strong>${esc(p.product_name)}</strong><small>${p.tracking_type==='component'?'Componente':'Producto final'} · Anterior: ${money(p.derived_cost??p.cost??p.unit_cost??0)} / unidad</small></div><label>Cantidad<input type="number" min="0.001" step="0.001" data-plan-qty="${p.product_id}" value="${p.planned_quantity||1}"></label><label class="total-cost-field">Costo total<input type="number" min="0" step="0.01" data-plan-total="${p.product_id}" value="${p.planned_total_cost ?? ((Number(p.unit_cost)||0)*(Number(p.planned_quantity)||1))}"></label></div>`).join(''):'<div class="selected-empty">Selecciona uno o varios productos del catálogo</div>';
-    target.querySelectorAll('[data-plan-qty]').forEach(i=>i.addEventListener('input',()=>{const p=selectedPurchaseProducts.get(Number(i.dataset.planQty));if(p)p.planned_quantity=i.value;}));
-    target.querySelectorAll('[data-plan-total]').forEach(i=>i.addEventListener('input',()=>{const p=selectedPurchaseProducts.get(Number(i.dataset.planTotal));if(p)p.planned_total_cost=i.value;}));
+    target.innerHTML=selectedPurchaseProducts.size?[...selectedPurchaseProducts.values()].map(p=>{const qty=Math.max(1,Math.round(Number(p.planned_quantity)||1));const total=Number(p.planned_total_cost)||((Number(p.unit_cost)||0)*qty);const unit=qty>0?total/qty:0;return `<div class="selected-purchase-row" data-selected-id="${p.product_id}"><button type="button" class="selected-item-remove" data-remove-selected="${p.product_id}" aria-label="Quitar ${esc(p.product_name)}" title="Quitar producto"><i class="fas fa-times"></i></button><div class="selected-purchase-name"><i class="fas ${p.tracking_type==='component'?'fa-cubes':'fa-box'}"></i><strong>${esc(p.product_name)}</strong><small>${p.tracking_type==='component'?'Componente':'Producto final'} · Anterior: ${money(p.derived_cost??p.cost??p.unit_cost??0)} / unidad</small></div><label>Cantidad<input type="number" min="1" step="1" inputmode="numeric" data-plan-qty="${p.product_id}" value="${qty}"></label><label class="total-cost-field">Costo total<input type="number" min="0" step="0.01" inputmode="decimal" data-plan-total="${p.product_id}" value="${total.toFixed(2)}"><small class="unit-cost-estimate" data-unit-cost="${p.product_id}">Precio unitario estimado: ${money(unit)}</small></label></div>`;}).join(''):'<div class="selected-empty">Selecciona uno o varios productos del catálogo</div>';
+    target.querySelectorAll('[data-remove-selected]').forEach(b=>b.addEventListener('click',()=>{selectedPurchaseProducts.delete(Number(b.dataset.removeSelected));renderComposerCatalog();}));
+    target.querySelectorAll('[data-plan-qty]').forEach(i=>i.addEventListener('input',()=>{const p=selectedPurchaseProducts.get(Number(i.dataset.planQty));if(p){p.planned_quantity=Math.max(1,Math.round(Number(i.value)||1));i.value=p.planned_quantity;updateUnitCostEstimate(p.product_id);}}));
+    target.querySelectorAll('[data-plan-total]').forEach(i=>i.addEventListener('input',()=>{const p=selectedPurchaseProducts.get(Number(i.dataset.planTotal));if(p){p.planned_total_cost=Math.max(0,Number(i.value)||0);updateUnitCostEstimate(p.product_id);}}));
+    updateComposerCartTotal();
 }
 function togglePurchaseProduct(id) {
-    const p=purchaseProducts.find(x=>x.product_id===id); if(!p)return;
-    if(selectedPurchaseProducts.has(id))selectedPurchaseProducts.delete(id); else selectedPurchaseProducts.set(id,{...p,planned_quantity:1,planned_total_cost:Number(p.derived_cost??p.cost??0)||0});
+    const p=purchaseProducts.find(x=>Number(x.product_id)===Number(id)); if(!p)return;
+    if(selectedPurchaseProducts.has(Number(id)))selectedPurchaseProducts.delete(Number(id)); else selectedPurchaseProducts.set(Number(id),{...p,planned_quantity:1,planned_total_cost:Number(p.derived_cost??p.cost??0)||0});
     renderComposerCatalog();
 }
-
+function updateUnitCostEstimate(productId) {
+    const p=selectedPurchaseProducts.get(Number(productId));
+    const qty=Math.max(1,Math.round(Number(p?.planned_quantity)||1));
+    const total=Number(p?.planned_total_cost)||0;
+    const label=document.querySelector(`[data-unit-cost="${productId}"]`);
+    if(label)label.textContent=`Precio unitario estimado: ${money(total/qty)}`;
+    updateComposerCartTotal();
+}
+function updateComposerCartTotal() {
+    const total=[...selectedPurchaseProducts.values()].reduce((sum,p)=>sum+(Number(p.planned_total_cost)||0),0);
+    const label=document.querySelector('#composerCartTotal');
+    if(label)label.textContent=money(total);
+}
+function toggleDiscardPurchaseSelection() {
+    const button=document.querySelector('#discardPurchaseSelection');
+    if(!button)return;
+    if(button.dataset.confirming==='1') {
+        selectedPurchaseProducts.clear();
+        button.dataset.confirming='0';
+        document.querySelector('#discardPurchaseHint')?.remove();
+        renderComposerCatalog();
+        return;
+    }
+    button.dataset.confirming='1';
+    const hint=document.createElement('span'); hint.id='discardPurchaseHint'; hint.className='discard-purchase-hint'; hint.textContent='¿Vaciar Carrito?';
+    button.parentElement?.appendChild(hint);
+}
 async function openPurchaseComposer(existingPurchaseId=null) {
     try {
         await loadPurchaseProducts();
@@ -106,13 +134,13 @@ async function openPurchaseComposer(existingPurchaseId=null) {
         let existing=null;
         if(existingPurchaseId){existing=(await api(`../api/purchases/purchases.php?purchase_id=${existingPurchaseId}`)).data;(existing.items||[]).filter(i=>!i.actual_quantity).forEach(i=>selectedPurchaseProducts.set(Number(i.product_id),{...i,product_id:Number(i.product_id),planned_quantity:i.planned_quantity,planned_total_cost:Number(i.planned_total_cost||((Number(i.unit_cost)||0)*Number(i.planned_quantity)||0))}));}
         const categories=[...new Map(purchaseProducts.filter(p=>p.category_id).map(p=>[p.category_id,p.category_name])).entries()];
-        const body=`<div class="composer-layout"><section class="composer-catalog"><div class="composer-intro"><p>${existing?'Agrega productos a esta lista de compra.':'Selecciona todo lo que deseas comprar.'}</p><button type="button" class="btn-secondary btn-express" id="openExpressProduct"><i class="fas fa-wand-magic-sparkles"></i> Alta express</button></div><div class="catalog-filters"><input type="search" id="purchaseCatalogSearch" placeholder="Buscar por nombre o código" aria-label="Buscar productos"><select id="purchaseCatalogType"><option value="">Producto o componente</option><option value="stock">Productos finales</option><option value="component">Componentes</option></select><select id="purchaseCatalogCategory"><option value="">Todas las categorías</option>${categories.map(([id,name])=>`<option value="${id}">${esc(name)}</option>`).join('')}</select></div><div id="purchaseProductCatalog" class="purchase-product-catalog"></div></section><aside class="composer-order"><div class="composer-order-heading"><h3><i class="fas fa-list-check"></i> Lista de compra</h3><button type="button" class="icon-button danger discard-purchase-list" id="discardPurchaseSelection" title="Descartar lista" aria-label="Descartar lista"><i class="fas fa-trash"></i></button></div><div class="composer-fields"><label>Proveedor<input type="text" id="composerSupplier" maxlength="150" value="${esc(existing?.supplier_name||'')}" placeholder="Opcional"></label><label>Notas<textarea id="composerNotes" rows="2" maxlength="1000" placeholder="Notas de la compra">${esc(existing?.notes||'')}</textarea></label></div><div id="selectedPurchaseItems" class="selected-purchase-items"></div><div class="composer-hint"><i class="fas fa-circle-info"></i> El costo total corresponde a todo lo que pagarás por ese producto. El costo anterior solo sirve como referencia.</div></aside></div>`;
-        const actions=`<button type="button" class="btn-secondary" data-close-modal="purchaseComposerModal">Cerrar</button><button type="button" class="btn-primary" id="savePurchaseComposer"><i class="fas fa-save"></i> ${existing?'Guardar lista':'Crear próxima compra'}</button>`;
+        const body=`<div class="composer-layout"><section class="composer-catalog"><div class="composer-intro"><p>${existing?'Agrega productos a esta lista de compra.':'Selecciona todo lo que deseas comprar.'}</p><button type="button" class="btn-secondary btn-express" id="openExpressProduct"><i class="fas fa-wand-magic-sparkles"></i> Alta express</button></div><div class="catalog-filters"><input type="search" id="purchaseCatalogSearch" placeholder="Buscar por nombre o código" aria-label="Buscar productos"><select id="purchaseCatalogType"><option value="">Producto o componente</option><option value="stock">Productos finales</option><option value="component">Componentes</option></select><select id="purchaseCatalogCategory"><option value="">Todas las categorías</option>${categories.map(([id,name])=>`<option value="${id}">${esc(name)}</option>`).join('')}</select></div><div id="purchaseProductCatalog" class="purchase-product-catalog"></div></section><aside class="composer-order"><div class="composer-order-heading"><h3><i class="fas fa-list-check"></i> Lista de compra</h3><div class="composer-order-tools"><button type="button" class="icon-button danger discard-purchase-list" id="discardPurchaseSelection" title="Vaciar carrito" aria-label="Vaciar carrito"><i class="fas fa-trash"></i></button></div></div><div class="composer-fields"><label>Proveedor<input type="text" id="composerSupplier" maxlength="150" value="${esc(existing?.supplier_name||'')}" placeholder="Opcional"></label><label>Notas<textarea id="composerNotes" rows="2" maxlength="1000" placeholder="Notas de la compra">${esc(existing?.notes||'')}</textarea></label></div><div id="selectedPurchaseItems" class="selected-purchase-items"></div><div class="composer-cart-total"><span>Total del carrito</span><strong id="composerCartTotal">$0.00</strong></div></aside></div>`;
+        const actions=`<button type="button" class="btn-secondary" data-close-modal="purchaseComposerModal">Cerrar</button><button type="button" class="btn-primary" id="savePurchaseComposer"><i class="fas fa-check"></i> Confirmar</button>`;
         const modal=modalFrame('purchaseComposerModal',`<i class="fas fa-cart-shopping"></i> ${existing?'Editar compra':'Nueva próxima compra'}`,body,actions);
         modal.querySelector('[data-close-modal]')?.addEventListener('click',()=>modal.remove());
         ['purchaseCatalogSearch','purchaseCatalogType','purchaseCatalogCategory'].forEach(id=>modal.querySelector('#'+id).addEventListener(id==='purchaseCatalogSearch'?'input':'change',renderComposerCatalog));
         modal.querySelector('#openExpressProduct').addEventListener('click',openExpressProductPanel);
-        modal.querySelector('#discardPurchaseSelection').addEventListener('click',()=>decisionModal('Descartar lista','Se quitarán todos los productos seleccionados de esta lista.','Descartar',()=>{selectedPurchaseProducts.clear();renderComposerCatalog();},true));
+        modal.querySelector('#discardPurchaseSelection').addEventListener('click',toggleDiscardPurchaseSelection);
         modal.querySelector('#savePurchaseComposer').addEventListener('click',()=>savePurchaseComposer(existingPurchaseId));
         renderComposerCatalog();
     } catch(e){notify(e.message,'error');}

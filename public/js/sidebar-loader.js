@@ -105,6 +105,9 @@ async function initSidebar() {
                 <a href="reports.html" class="tooltip-item">
                     <i class="fas fa-chart-bar"></i> Reportes
                 </a>
+                <a href="#" class="tooltip-item" id="fullscreenToggleBtn">
+                    <i class="fas fa-expand"></i> Pantalla completa
+                </a>
                 <a href="#" class="tooltip-item" id="logoutTooltipBtn">
                     <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
                 </a>
@@ -117,6 +120,10 @@ async function initSidebar() {
     //  aquí queda el toggle rápido de tema + logout)
     const bottomGroupHTML = `
         <div class="nav-bottom-group">
+            <a href="#" class="nav-item" id="fullscreenBottomBtn" aria-label="Pantalla completa">
+                <span class="nav-icon"><i class="fas fa-expand"></i></span>
+                <span class="nav-text" id="fullscreenBottomLabel">Pantalla completa</span>
+            </a>
             <a href="#" class="nav-item" id="tempThemeToggle" aria-label="Alternar tema">
                 <span class="nav-icon"><i class="fas ${isDarkChecked() ? 'fa-moon' : 'fa-sun'}"></i></span>
                 <span class="nav-text" id="tempThemeLabel">Tema ${isDarkChecked() ? 'oscuro' : 'claro'}</span>
@@ -132,6 +139,30 @@ async function initSidebar() {
     }
 
     sidebarNav.innerHTML = menuHTML + profileHTML + bottomGroupHTML;
+
+    // Pantalla completa: disponible tanto en el menú móvil como encima del tema en escritorio.
+    const updateFullscreenLabels = () => {
+        const active = !!document.fullscreenElement;
+        const text = active ? 'Salir de pantalla completa' : 'Pantalla completa';
+        const icon = active ? 'fa-compress' : 'fa-expand';
+        const mobileBtn = document.getElementById('fullscreenToggleBtn');
+        const desktopBtn = document.getElementById('fullscreenBottomBtn');
+        if (mobileBtn) { mobileBtn.lastChild.textContent = ` ${text}`; const i = mobileBtn.querySelector('i'); if (i) i.className = `fas ${icon}`; }
+        if (desktopBtn) { const label = document.getElementById('fullscreenBottomLabel'); if (label) label.textContent = text; const i = desktopBtn.querySelector('i'); if (i) i.className = `fas ${icon}`; }
+    };
+    const toggleFullscreen = async (event) => {
+        event.preventDefault();
+        try {
+            if (document.fullscreenElement) await document.exitFullscreen();
+            else if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
+            else throw new Error('Fullscreen API no disponible');
+        } catch (error) { console.warn('No se pudo cambiar a pantalla completa:', error); }
+        updateFullscreenLabels();
+    };
+    document.getElementById('fullscreenToggleBtn')?.addEventListener('click', toggleFullscreen);
+    document.getElementById('fullscreenBottomBtn')?.addEventListener('click', toggleFullscreen);
+    document.addEventListener('fullscreenchange', updateFullscreenLabels);
+    updateFullscreenLabels();
 
     // --- Enhanced Sidebar Logic (Floating & Dynamic Store Name) ---
 

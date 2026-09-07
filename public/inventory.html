@@ -38,6 +38,18 @@
         <main class="main-content">
             
             <div class="inventory-container">
+                <!-- Pestañas de navegación -->
+                <div class="inv-tabs">
+                    <button class="inv-tab active" data-tab="inventory">
+                        <i class="fas fa-box"></i> Inventario
+                    </button>
+                    <button class="inv-tab" data-tab="movements">
+                        <i class="fas fa-arrows-spin"></i> Movimientos
+                    </button>
+                </div>
+
+                <!-- TAB: Inventario (contenido existente) -->
+                <div class="inv-tab-content active" data-tab="inventory">
                 <!-- Panel de búsqueda y controles -->
                 <section class="inv-controls">
                     <div class="controls-top">
@@ -110,6 +122,53 @@
                     <div id="uploadPreview"></div>
                     <div id="invResults" class="products-grid"></div>
                 </section>
+                </div><!-- /inv-tab-content inventory -->
+
+                <!-- TAB: Movimientos y Compras -->
+                <div class="inv-tab-content" data-tab="movements" style="display:none;">
+                    <div class="purchases-container">
+                        <div class="purchases-header">
+                            <h3><i class="fas fa-cart-shopping"></i> Próximas Compras</h3>
+                            <button type="button" id="newPurchaseBtn" class="btn-add-product">
+                                <i class="fas fa-plus"></i> Nueva Orden
+                            </button>
+                        </div>
+                        <div class="purchases-filters">
+                            <select id="purchaseStatusFilter" class="filter-select">
+                                <option value="">Todos los estados</option>
+                                <option value="draft">Borrador</option>
+                                <option value="pending">Pendiente</option>
+                                <option value="executed">Ejecutada</option>
+                                <option value="cancelled">Cancelada</option>
+                            </select>
+                        </div>
+                        <div id="purchasesList" class="purchases-list"></div>
+                    </div>
+                    <div class="movements-container" style="margin-top:20px;">
+                        <div class="movements-header">
+                            <h3><i class="fas fa-arrows-spin"></i> Historial de Movimientos</h3>
+                        </div>
+                        <div class="movements-filters">
+                            <select id="movementTypeFilter" class="filter-select">
+                                <option value="">Todos los tipos</option>
+                                <option value="purchase">Compra</option>
+                                <option value="entry">Entrada</option>
+                                <option value="exit">Salida</option>
+                                <option value="sale">Venta</option>
+                                <option value="return">Devolución</option>
+                                <option value="loss">Pérdida</option>
+                                <option value="adjustment">Ajuste</option>
+                            </select>
+                            <input type="date" id="movementDateFrom" class="filter-date" placeholder="Desde">
+                            <input type="date" id="movementDateTo" class="filter-date" placeholder="Hasta">
+                            <button type="button" id="filterMovementsBtn" class="btn-secondary">
+                                <i class="fas fa-filter"></i> Filtrar
+                            </button>
+                        </div>
+                        <div id="movementsList" class="movements-list"></div>
+                    </div>
+                </div>
+
             </div>
         </main>
     </div>
@@ -841,6 +900,9 @@
                         <button type="button" class="btn-warning" id="archiveProductBtn" onclick="archiveProduct()" style="display:none;">
                             <i class="fas fa-archive"></i> Retirar producto
                         </button>
+                        <button type="button" class="btn-danger-outline" id="recordLossBtn" onclick="openLossModal()" style="display:none;">
+                            <i class="fas fa-triangle-exclamation"></i> Registrar pérdida
+                        </button>
                         <button type="button" class="btn-success" id="restoreProductBtn" onclick="restoreProduct()" style="display:none;">
                             <i class="fas fa-undo"></i> Restaurar producto
                         </button>
@@ -853,6 +915,30 @@
         </div>
     </div>
     
+    <!-- Modal de registro de pérdida -->
+    <div id="lossModal" class="modal">
+        <div class="modal-content" style="max-width:460px;width:95%;">
+            <div class="modal-header">
+                <h2><i class="fas fa-triangle-exclamation"></i> Registrar pérdida</h2>
+                <button type="button" class="modal-close" onclick="closeLossModal()" aria-label="Cerrar"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="lossForm">
+                <div class="modal-body">
+                    <p id="lossProductName" style="font-weight:600;margin-bottom:14px;"></p>
+                    <label for="lossQuantity">Cantidad perdida</label>
+                    <input type="text" inputmode="decimal" id="lossQuantity" class="form-control" placeholder="0" required>
+                    <label for="lossReason" style="display:block;margin-top:12px;">Motivo</label>
+                    <input type="text" id="lossReason" class="form-control" value="Caducidad" maxlength="255">
+                    <p id="lossAvailable" class="form-hint" style="margin-top:8px;"></p>
+                </div>
+                <div class="form-actions-centered">
+                    <button type="button" class="btn-cancel" onclick="closeLossModal()">Cancelar</button>
+                    <button type="submit" class="btn-danger"><i class="fas fa-check"></i> Registrar pérdida</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Modal para gestionar categorías -->
     <div id="categoriesModal" class="modal">
         <div class="modal-content" style="max-width: 500px;">
@@ -1066,6 +1152,7 @@
     <script src="js/scanner.js"></script>
     <script src="js/tour.js?v=4"></script>
     <script src="js/inventory.js?v=10"></script>
+    <script src="js/purchases.js?v=1"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             const session = await checkSession();

@@ -41,6 +41,14 @@ define('MOVEMENT_EXIT', 'exit');
 define('MOVEMENT_ADJUSTMENT', 'adjustment');
 define('MOVEMENT_SALE', 'sale');
 define('MOVEMENT_RETURN', 'return');
+define('MOVEMENT_PURCHASE', 'purchase');
+define('MOVEMENT_LOSS', 'loss');
+
+// Estados de compra
+define('PURCHASE_DRAFT', 'draft');
+define('PURCHASE_PENDING', 'pending');
+define('PURCHASE_EXECUTED', 'executed');
+define('PURCHASE_CANCELLED', 'cancelled');
 
 // Estados de caja
 define('REGISTER_OPEN', 'open');

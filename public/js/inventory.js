@@ -2169,7 +2169,13 @@ function openProductDetails(productId) {
     const hiddenInPosCheckbox = document.getElementById('editHiddenInPos');
     const archiveBtn = document.getElementById('archiveProductBtn');
     const restoreBtn = document.getElementById('restoreProductBtn');
+    const recordLossBtn = document.getElementById('recordLossBtn');
     const isRetired = !!product.discontinued_at;
+    const inventoryType = product.tracking_type || 'stock';
+
+    if (recordLossBtn) {
+        recordLossBtn.style.display = (!isRetired && (inventoryType === 'stock' || inventoryType === 'component')) ? 'inline-flex' : 'none';
+    }
 
     if (hiddenInPosCheckbox) {
         hiddenInPosCheckbox.checked = product.hidden_in_pos == 1 || isRetired;

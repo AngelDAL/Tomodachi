@@ -45,7 +45,9 @@ try {
             if (!$purchase) { Response::notFound('Compra no encontrada'); }
 
             $items = $db->select(
-                'SELECT pi.*, pr.product_name, pr.tracking_type, pr.image_path
+                'SELECT pi.*, pr.product_name, pr.tracking_type, pr.image_path,
+                         COALESCE((SELECT SUM(pl.quantity * pl.unit_cost) / NULLIF(SUM(pl.quantity), 0)
+                                   FROM product_lots pl WHERE pl.product_id = pr.product_id AND pl.store_id = pr.store_id), pr.cost, 0) AS last_unit_cost
                  FROM purchase_items pi
                  JOIN products pr ON pi.product_id = pr.product_id
                  WHERE pi.purchase_id = ?

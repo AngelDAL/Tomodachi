@@ -3918,6 +3918,13 @@
 .purchase-modal-footer { display:flex; justify-content:space-between; align-items:center; gap:10px; }
 .selected-purchase-row .total-cost-field { min-width:145px; }
 .selected-purchase-row .total-cost-field input { min-width:135px; }
+.purchase-detail-total { grid-column:1 / -1; display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:6px; padding:12px 14px; border-radius:10px; background:color-mix(in srgb,var(--primary-color,#39c5bb) 10%,var(--bg-card,#fff)); border:1px solid color-mix(in srgb,var(--primary-color,#39c5bb) 30%,transparent); }
+.purchase-detail-total span { font-size:.85rem; font-weight:700; color:var(--text-muted,#667); }
+.purchase-detail-total strong { font-size:1.5rem; color:var(--primary-color,#39c5bb); }
+.purchase-estimate-field { min-width:145px; display:grid; gap:4px; align-self:end; }
+.purchase-estimate-field span { font-size:.76rem; font-weight:600; color:var(--text-muted,#667); }
+.purchase-estimate-field strong { font-size:1.05rem; color:var(--primary-color,#39c5bb); }
+.purchase-estimate-field small { font-size:.68rem; color:var(--text-muted,#667); }
 .detail-total-field { min-width:130px; }
 .detail-total-field input { min-width:120px; }
 .express-product-panel { margin-bottom:12px; padding:12px; border:1px solid var(--primary-color,#39c5bb); border-radius:10px; background:var(--bg-card,#fff); }

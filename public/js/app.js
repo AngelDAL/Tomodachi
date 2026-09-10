@@ -17,7 +17,17 @@
                 try {
                     response.clone().json().then(function (data) {
                         if (data && data.error === 'must_change_password') {
-                            window.location.href = 'profile.html?change_password=1';
+                            // Evitar bucles: si la página ACTUAL es ya
+                            // profile.html?change_password=1 (donde el servidor
+                            // sí permite el cambio), redirigir de nuevo
+                            // provocaría una recarga infinita.
+                            const current = new URL(window.location.href);
+                            const alreadyThere =
+                                current.pathname.split('/').pop() === 'profile.html' &&
+                                current.searchParams.get('change_password') === '1';
+                            if (!alreadyThere) {
+                                window.location.href = 'profile.html?change_password=1';
+                            }
                         }
                     }).catch(function () {});
                 } catch (e) { /* respuesta sin JSON */ }

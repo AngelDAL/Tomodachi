@@ -51,6 +51,9 @@ try {
     $customer_id = isset($data['customer_id']) ? (int)$data['customer_id'] : 0;
     // Para apartado: cuánto pagó el cliente AHORA (el resto queda como saldo).
     $amount_paid = isset($data['amount_paid']) ? (float)$data['amount_paid'] : 0.0;
+    // Cobro con tarjeta vía Stripe (opcional): el POS cobra con Stripe.js y
+    // manda el PaymentIntent; aquí se verifica contra la API de Stripe.
+    $stripe_intent = isset($data['stripe_payment_intent']) ? Validator::sanitizeString($data['stripe_payment_intent']) : '';
 
     $errors=[];
     if ($store_id<=0) $errors['store_id']='Requerido';
@@ -144,6 +147,24 @@ try {
     $total = $subtotal - $manualDiscount + $tax;
     if ($total < 0) { Response::error('Total negativo',400); }
 
+    // Verificación del cobro Stripe: debe existir, estar cobrado (succeeded),
+    // ser de esta tienda, no estar ligado a otra venta y el monto debe
+    // coincidir EXACTO con el total calculado por el servidor.
+    $stripePaymentId = null;
+    $stripeService = null;
+    if ($stripe_intent !== '') {
+        if ($payment_method !== PAYMENT_CARD) {
+            Response::validationError(['payment_method' => 'Un cobro Stripe solo aplica con método de pago tarjeta']);
+        }
+        require_once '../../stripe/includes/StripeService.class.php';
+        $stripeService = new StripeService($db, $store_id);
+        try {
+            $stripePaymentId = $stripeService->verifyIntentForSale($stripe_intent, $total);
+        } catch (Exception $e) {
+            Response::error($e->getMessage(), 402);
+        }
+    }
+
     // Validación de apartado (después de conocer el total)
     if ($payment_method === PAYMENT_CREDIT && ($amount_paid < 0 || $amount_paid > $total)) {
         Response::validationError(['amount_paid' => 'Monto inválido para apartado']);
@@ -194,8 +215,8 @@ try {
     try {
         $user = $actor;
         $createdVia = ($user['via'] === 'token') ? 'token' : 'session';
-        $sale_id = $db->insert('INSERT INTO sales (store_id, user_id, customer_id, register_id, sale_date, subtotal, tax, discount, total, amount_paid, payment_method, status, created_via, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())',[
-            $store_id, $user['user_id'], ($customer_id > 0 ? $customer_id : null), $register_id, date('Y-m-d H:i:s'), $subtotal, $tax, $discount, $total, $amount_paid, $payment_method, SALE_COMPLETED, $createdVia
+        $sale_id = $db->insert('INSERT INTO sales (store_id, user_id, customer_id, register_id, sale_date, subtotal, tax, discount, total, amount_paid, payment_method, stripe_payment_id, status, created_via, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())',[
+            $store_id, $user['user_id'], ($customer_id > 0 ? $customer_id : null), $register_id, date('Y-m-d H:i:s'), $subtotal, $tax, $discount, $total, $amount_paid, $payment_method, $stripePaymentId, SALE_COMPLETED, $createdVia
         ]);
 
         // Si es apartado, incrementar balance del cliente
@@ -247,6 +268,11 @@ try {
         }
 
         $db->commit();
+
+        // Vincular el cobro Stripe con la venta recién registrada
+        if ($stripePaymentId !== null && $stripeService !== null) {
+            try { $stripeService->linkToSale($stripePaymentId, $sale_id); } catch (Exception $e) { /* la venta ya quedó registrada */ }
+        }
     } catch (Exception $e) {
         $db->rollback();
         throw $e;

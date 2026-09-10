@@ -74,7 +74,10 @@ CREATE TABLE products (
     current_stock DECIMAL(12,3) DEFAULT 0.000,
     min_stock DECIMAL(12,3) DEFAULT 0.000,
     status ENUM('active', 'inactive') DEFAULT 'active',
+    hidden_in_pos TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Producto oculto en el punto de venta',
+    discontinued_at DATETIME NULL COMMENT 'Fecha de descontinuación (trazabilidad, no se borra el registro)',
     is_bulk TINYINT(1) DEFAULT 0 COMMENT 'Indica si el producto se vende a granel (por peso/volumen)',
+    unit_type ENUM('unit', 'kg', 'g', 'l', 'ml', 'm') NOT NULL DEFAULT 'unit' COMMENT 'Unidad de venta: unit=pieza, kg/g/l/ml/m=medida',
     bulk_unit VARCHAR(20) DEFAULT 'kg' COMMENT 'Unidad de medida para granel: kg, g, L, mL, etc.',
     tracking_type ENUM('stock','recipe','component','none') NOT NULL DEFAULT 'stock' COMMENT 'stock=producto final, recipe=ensamblado (stock derivado de receta), component=materia prima con presentaciones, none=sin inventario',
     consume_mode ENUM('fifo','lifo','manual') NOT NULL DEFAULT 'fifo' COMMENT 'Orden de consumo de presentaciones: fifo (mas antiguo), lifo (mas reciente), manual (seleccion explicita)',
@@ -87,6 +90,7 @@ CREATE TABLE products (
     UNIQUE KEY unique_store_qr_code (store_id, qr_code),
     INDEX idx_product_name (product_name),
     INDEX idx_status (status),
+    INDEX idx_products_hidden_pos (hidden_in_pos),
     INDEX idx_store (store_id),
     INDEX idx_category (category_id),
     INDEX idx_is_bulk (is_bulk)

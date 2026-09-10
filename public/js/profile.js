@@ -1,3 +1,7 @@
+// Flag: había un cambio de contraseña obligatorio pendiente al cargar la
+// página (se omite loadUsers() mientras tanto; se carga al cumplirse).
+let passwordChangeWasPending = false;
+
 document.addEventListener('DOMContentLoaded', async () => {
     const session = await checkSession();
     if (!session) { requireSession(); return; }
@@ -10,7 +14,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('companyTabBtn').style.display = 'inline-block';
         document.getElementById('usersTabBtn').style.display = 'inline-block';
         loadCompanySettings();
-        loadUsers();
+        if (session.must_change_password) {
+            // Mientras la contraseña pendiente, el backend bloquea
+            // users/read.php (403); el wrapper global (app.js) redirigiría a
+            // esta misma página y recargaría en bucle. Se omite la carga y se
+            // indica el motivo en la pestaña Usuarios.
+            passwordChangeWasPending = true;
+            const tbody = document.getElementById('usersList');
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="6">Cambia primero tu contraseña (formulario superior) para administrar usuarios.</td></tr>';
+            }
+        } else {
+            loadUsers();
+        }
     }
 
     // Color picker sync & Real-time preview (CLARO y OSCURO)
@@ -144,6 +160,12 @@ document.getElementById('profileForm').addEventListener('submit', async (e) => {
             e.target.current_password.value = '';
             // Re-consultar: si había un cambio obligatorio pendiente, ya se cumplió
             loadProfile();
+            // Si venía pendiente el cambio forzado (y no se cargaron usuarios
+            // al inicio), ahora que la contraseña ya es nueva cargamos la lista.
+            if (passwordChangeWasPending) {
+                passwordChangeWasPending = false;
+                loadUsers();
+            }
         } else {
             showNotification(result.message || 'Error al actualizar', 'error');
         }

@@ -231,6 +231,7 @@ CREATE TABLE sales (
     total DECIMAL(10,2) NOT NULL,
     amount_paid DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT 'Monto efectivamente pagado al momento de la venta (resto = fiado)',
     payment_method ENUM('cash', 'card', 'transfer', 'mixed', 'credit') NOT NULL,
+    stripe_payment_id INT NULL COMMENT 'ID del cobro Stripe asociado (módulo Stripe)',
     status ENUM('completed', 'cancelled', 'refunded') DEFAULT 'completed',
     refunded_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT 'Monto total devuelto acumulado (devoluciones parciales)',
     created_via VARCHAR(10) NOT NULL DEFAULT 'session' COMMENT 'session = interfaz (humano), token = API/agente',
@@ -242,7 +243,8 @@ CREATE TABLE sales (
     INDEX idx_store_date (store_id, sale_date),
     INDEX idx_status (status),
     INDEX idx_customer (customer_id),
-    INDEX idx_register (register_id)
+    INDEX idx_register (register_id),
+    INDEX idx_stripe_payment (stripe_payment_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabla: sale_details (Detalle de ventas)
@@ -625,3 +627,87 @@ INSERT INTO app_settings (setting_key, setting_value) VALUES ('welcome_seen', '0
 -- El catálogo nace vacío (0 productos). La empresa se crea vía registro y sus
 -- productos se añaden desde Inventario.
 -- INSERT INTO products (...) VALUES (...);
+
+-- =============================================
+-- Módulo Stripe (cobros con tarjeta)
+-- =============================================
+
+-- Tabla: stripe_settings (credenciales y configuración por tienda)
+CREATE TABLE stripe_settings (
+    setting_id INT AUTO_INCREMENT PRIMARY KEY,
+    store_id INT NOT NULL UNIQUE,
+    enabled TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Módulo Stripe habilitado para esta tienda',
+    currency VARCHAR(3) NOT NULL DEFAULT 'mxn' COMMENT 'Moneda de cobro (ISO 4217, minúsculas)',
+    publishable_key VARCHAR(255) NULL COMMENT 'pk_live_... / pk_test_...',
+    secret_key VARCHAR(255) NULL COMMENT 'sk_live_... / sk_test_... (solo escritura)',
+    webhook_secret VARCHAR(255) NULL COMMENT 'whsec_... para validar firmas de webhook',
+    auto_complete_sale TINYINT(1) NOT NULL DEFAULT 1 COMMENT 'Marcar pago como pagado al confirmar el PaymentIntent',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: stripe_payments (un registro por PaymentIntent creado desde el POS)
+CREATE TABLE stripe_payments (
+    payment_id INT AUTO_INCREMENT PRIMARY KEY,
+    store_id INT NOT NULL,
+    user_id INT NOT NULL,
+    sale_id INT NULL COMMENT 'Venta asociada una vez cobrada',
+    stripe_payment_intent_id VARCHAR(100) NOT NULL COMMENT 'pi_...',
+    stripe_charge_id VARCHAR(100) NULL COMMENT 'ch_... una vez cobrado',
+    amount DECIMAL(10,2) NOT NULL COMMENT 'Monto en unidades de moneda',
+    amount_cents BIGINT NOT NULL COMMENT 'Monto en centavos (lo que se envía a Stripe)',
+    currency VARCHAR(3) NOT NULL DEFAULT 'mxn',
+    concept VARCHAR(150) NOT NULL DEFAULT 'Cobro en tienda',
+    status ENUM('requires_payment_method','requires_confirmation','requires_action','processing','succeeded','canceled','failed') NOT NULL DEFAULT 'requires_payment_method',
+    last_error VARCHAR(255) NULL COMMENT 'Último mensaje de error de Stripe (genérico)',
+    card_brand VARCHAR(20) NULL COMMENT 'visa, mastercard, etc.',
+    card_last4 VARCHAR(4) NULL COMMENT 'Últimos 4 dígitos',
+    paid_at DATETIME NULL COMMENT 'Fecha de cobro confirmado',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_stripe_pi (stripe_payment_intent_id),
+    INDEX idx_store (store_id),
+    INDEX idx_sale (sale_id),
+    INDEX idx_status (status),
+    INDEX idx_created (created_at),
+    FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE RESTRICT,
+    FOREIGN KEY (sale_id) REFERENCES sales(sale_id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: stripe_payment_events (webhook: auditoría e idempotencia)
+CREATE TABLE stripe_payment_events (
+    event_id INT AUTO_INCREMENT PRIMARY KEY,
+    stripe_payment_id INT NULL,
+    stripe_event_id VARCHAR(100) NOT NULL COMMENT 'evt_... (idempotencia)',
+    event_type VARCHAR(80) NOT NULL COMMENT 'payment_intent.succeeded, etc.',
+    payload MEDIUMTEXT NULL COMMENT 'Evento completo (JSON)',
+    processed TINYINT(1) NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_stripe_event (stripe_event_id),
+    INDEX idx_payment (stripe_payment_id),
+    INDEX idx_event_type (event_type),
+    FOREIGN KEY (stripe_payment_id) REFERENCES stripe_payments(payment_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: stripe_audit_log (auditoría de operaciones del módulo)
+CREATE TABLE stripe_audit_log (
+    audit_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    store_id INT NOT NULL,
+    user_id INT NULL,
+    stripe_payment_id INT NULL,
+    action VARCHAR(50) NOT NULL COMMENT 'create_intent, confirm, webhook, cancel, config',
+    request_payload TEXT NULL COMMENT 'Datos enviados (sin datos sensibles)',
+    response_payload TEXT NULL COMMENT 'Respuesta (sin datos sensibles)',
+    http_status INT NULL,
+    error_message TEXT NULL,
+    ip_address VARCHAR(45) NULL,
+    duration_ms INT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_store (store_id),
+    INDEX idx_action (action),
+    INDEX idx_payment (stripe_payment_id),
+    INDEX idx_created (created_at),
+    FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

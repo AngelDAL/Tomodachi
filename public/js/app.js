@@ -4,6 +4,30 @@
  */
 
 /**
+ * Redirigir al perfil si el servidor exige el cambio de contraseña.
+ * El backend responde 403 con error "must_change_password" en todos los
+ * endpoints mientras la credencial siga siendo la de por defecto.
+ */
+(function () {
+    if (typeof window.fetch !== 'function') return;
+    const originalFetch = window.fetch;
+    window.fetch = function () {
+        return originalFetch.apply(this, arguments).then(function (response) {
+            if (response && response.status === 403) {
+                try {
+                    response.clone().json().then(function (data) {
+                        if (data && data.error === 'must_change_password') {
+                            window.location.href = 'profile.html?change_password=1';
+                        }
+                    }).catch(function () {});
+                } catch (e) { /* respuesta sin JSON */ }
+            }
+            return response;
+        });
+    };
+})();
+
+/**
  * Obtener ruta relativa de imagen
  * Convierte rutas absolutas o de sistema de archivos a relativas web
  */

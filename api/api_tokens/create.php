@@ -4,7 +4,7 @@
  * POST /api/api_tokens/create.php
  * Body: { "name": "mi-agente", "scopes": ["read","write"], "expires_in_days": 30 }
  * scopes válidos: read, write, custom (o combinación)
- * expires_in_days: opcional; si se omite, el token no expira.
+ * expires_in_days: opcional; por defecto 90 días (0 = no expira, no recomendado).
  * Requiere: sesión de administrador de la tienda.
  */
 require_once '../../config/database.php';
@@ -34,7 +34,9 @@ try {
 
     $name = isset($data['name']) ? Validator::sanitizeString($data['name']) : '';
     $scopes = isset($data['scopes']) ? $data['scopes'] : ['read'];
-    $expiresInDays = isset($data['expires_in_days']) ? (int)$data['expires_in_days'] : 0;
+    // Por defecto los tokens expiran en 90 días; 0 explícito = no expira
+    // (no recomendado, se advierte en la respuesta).
+    $expiresInDays = isset($data['expires_in_days']) ? (int)$data['expires_in_days'] : 90;
 
     $errors = [];
     if (!Validator::required($name)) { $errors['name'] = 'Nombre requerido'; }
@@ -74,8 +76,11 @@ try {
         'token'       => $result['token'], // SE MUESTRA UNA SOLA VEZ
         'scopes'      => $scopes,
         'expires_at'  => $expiresAt,
-        'warning'     => 'Guarda este token ahora; no podrás verlo de nuevo.'
+        'warning'     => $expiresAt === null
+            ? 'Este token NO expira; considera asignarle una fecha de expiración. Guárdalo ahora; no podrás verlo de nuevo.'
+            : 'Guarda este token ahora; no podrás verlo de nuevo.'
     ], 'Token creado');
 } catch (Exception $e) {
-    Response::error('Error en el servidor: ' . $e->getMessage(), 500);
+    error_log('Error en api_tokens/create: ' . $e->getMessage());
+    Response::error('Error interno del servidor', 500);
 }

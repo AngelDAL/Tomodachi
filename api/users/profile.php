@@ -25,7 +25,7 @@ $user_id = $auth->getCurrentUser()['user_id'];
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     try {
         $user = $db->selectOne(
-            'SELECT user_id, username, full_name, email, phone, role, store_id, status, created_at
+            'SELECT user_id, username, full_name, email, phone, role, store_id, status, created_at, must_change_password
              FROM users WHERE user_id = ?', 
             [$user_id]
         );
@@ -88,9 +88,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             }
             $newHash = Auth::hashPassword($password);
             $db->update(
-                'UPDATE users SET full_name = ?, email = ?, phone = ?, password_hash = ? WHERE user_id = ?',
+                'UPDATE users SET full_name = ?, email = ?, phone = ?, password_hash = ?, must_change_password = 0 WHERE user_id = ?',
                 [$full_name, $email, $phone, $newHash, $user_id]
             );
+            // Cambio obligatorio cumplido: desbloquear la sesión actual
+            unset($_SESSION['must_change_password']);
+            $_SESSION['_revalidated_at'] = time();
         } else {
             $db->update(
                 'UPDATE users SET full_name = ?, email = ?, phone = ? WHERE user_id = ?',

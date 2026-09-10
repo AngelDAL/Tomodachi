@@ -1,7 +1,7 @@
 # Tomodachi POS - Community Edition
 # Levantar: docker compose up -d
 # Acceder: http://localhost:8080
-# Credenciales iniciales: admin / admin123
+# Credenciales iniciales: admin / admin123 (el sistema pedirá cambiarla en el primer acceso)
 services:
   db:
     image: mariadb:10.11
@@ -34,6 +34,14 @@ services:
       APP_MODE: ${APP_MODE:-OPEN_SOURCE}
       SEED_DEMO: ${SEED_DEMO:-false}
       TZ: ${TZ:-America/Mexico_City}
+      # Proxy confiable (p. ej. Cloudflare Tunnel → CF-Connecting-IP): usa la
+      # IP real del cliente en el rate limiting. Vacío = usar REMOTE_ADDR.
+      TRUSTED_PROXY_HEADER: ${TRUSTED_PROXY_HEADER:-}
+      # Orígenes CORS adicionales permitidos, separados por coma. El mismo
+      # host de la petición siempre está permitido.
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
+      # URL pública de la app (enlaces de correo). Ej: https://pos.midominio.com
+      APP_URL: ${APP_URL:-}
     ports:
       - "127.0.0.1:${PORT:-8091}:80"
     volumes:

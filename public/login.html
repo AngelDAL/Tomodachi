@@ -181,7 +181,11 @@
                     btn.innerHTML = '<i class="fas fa-check"></i> ¡Éxito!';
                     btn.style.background = '#48bb78';
                     setTimeout(() => {
-                        if (data.data.user.role === 'super_admin') {
+                        // Contraseña pendiente de cambio (credenciales por defecto):
+                        // el servidor bloquea el resto hasta cambiarla.
+                        if (data.data.session && data.data.session.must_change_password) {
+                            window.location.href = 'profile.html?change_password=1';
+                        } else if (data.data.user.role === 'super_admin') {
                             window.location.href = 'super_admin.html';
                         } else {
                             window.location.href = 'dashboard.html';

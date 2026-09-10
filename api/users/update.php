@@ -54,8 +54,21 @@ try {
         $params[] = $email;
     }
     if (isset($data['password']) && strlen(trim($data['password']))>0) {
+        // Cambio de la propia contraseña: exigir la contraseña actual
+        if ($currentUser['user_id'] == $user_id) {
+            $current_password = isset($data['current_password']) ? (string)$data['current_password'] : '';
+            if ($current_password === '') {
+                Response::validationError(['current_password' => 'Requerida para cambiar tu contraseña']);
+            }
+            $own = $db->selectOne('SELECT password_hash FROM users WHERE user_id = ?', [$user_id]);
+            if (!$own || !password_verify($current_password, $own['password_hash'])) {
+                Response::error('Contraseña actual incorrecta', 401);
+            }
+        }
         $fields[] = 'password_hash = ?';
         $params[] = Auth::hashPassword($data['password']);
+        // La contraseña se asignó explícitamente: no forzar cambio
+        $fields[] = 'must_change_password = 0';
     }
     if (isset($data['status'])) {
         if (!in_array($data['status'],[STATUS_ACTIVE,STATUS_INACTIVE])) { Response::validationError(['status'=>'Estado inválido']); }
@@ -90,5 +103,6 @@ try {
     $updated = $db->selectOne('SELECT user_id, username, full_name, email, role, store_id, status FROM users WHERE user_id = ?',[$user_id]);
     Response::success($updated,'Usuario actualizado');
 } catch (Exception $e) {
-    Response::error('Error servidor: '.$e->getMessage(),500);
+    error_log('Error en users/update: '.$e->getMessage());
+    Response::error('Error interno del servidor',500);
 }

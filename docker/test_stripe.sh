@@ -5,6 +5,7 @@
 # Sin credenciales ejecuta el bloque "sin Stripe" (auth, validación,
 # aislamiento, persistencia de config). Con credenciales de prueba:
 #   STRIPE_SK_TEST=sk_test_... STRIPE_PK_TEST=pk_test_... bash docker/test_stripe.sh
+# La clave secreta puede ser estándar (sk_test_...) o restringida (rk_test_...).
 # ejecuta además el flujo de cobro completo (PaymentIntent real en modo test,
 # confirmación con tarjeta 4242, venta ligada, anti-reuso, webhook).
 BASE="${1:-http://localhost:8091}"
@@ -58,14 +59,31 @@ check "create_payment_intent sin sesión (401)" 401 "$code"
 code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/api/stripe/payments.php")
 check "payments sin sesión (401)" 401 "$code"
 
+# Estado inicial: el API no permite borrar credenciales ya guardadas, así que si
+# una corrida previa las dejó, las comprobaciones de "instalación limpia" se
+# omiten en lugar de fallar. Para rehacerlas:
+#   UPDATE stripe_settings SET enabled=0, publishable_key=NULL, secret_key=NULL,
+#   webhook_secret=NULL WHERE store_id=1;
+respEstado=$(curl -s -b "$CJ" "$BASE/api/stripe/config.php")
+start_enabled=$(echo "$respEstado" | json_get "['data']['enabled']")
+start_has_sk=$(echo "$respEstado" | json_get "['data']['has_secret_key']")
+
 # --- public_config con sesión (módulo aún sin configurar) ---
 resp=$(curl -s -b "$CJ" "$BASE/api/stripe/public_config.php")
 en=$(echo "$resp" | json_get "['data']['enabled']")
-check "public_config deshabilitado por defecto" "False" "$en"
+if [ "$start_enabled" = "False" ]; then
+  check "public_config deshabilitado por defecto" "False" "$en"
+else
+  echo "SKIP | public_config deshabilitado por defecto (ya habilitado por una corrida previa)"; SKIP=$((SKIP+1))
+fi
 
 # --- Cobro sin habilitar (403) ---
-code=$(curl -s -o /dev/null -w "%{http_code}" -b "$CJ" -X POST "$BASE/api/stripe/create_payment_intent.php" -H 'Content-Type: application/json' -d '{"amount":100}')
-check "create_intent con módulo deshabilitado (403)" 403 "$code"
+if [ "$start_enabled" = "False" ]; then
+  code=$(curl -s -o /dev/null -w "%{http_code}" -b "$CJ" -X POST "$BASE/api/stripe/create_payment_intent.php" -H 'Content-Type: application/json' -d '{"amount":100}')
+  check "create_intent con módulo deshabilitado (403)" 403 "$code"
+else
+  echo "SKIP | create_intent con módulo deshabilitado (ya habilitado por una corrida previa)"; SKIP=$((SKIP+1))
+fi
 
 # --- Validación de formato de claves (422) ---
 code=$(curl -s -o /dev/null -w "%{http_code}" -b "$CJ" -X POST "$BASE/api/stripe/config.php" -H 'Content-Type: application/json' -d '{"enabled":true,"secret_key":"no-es-una-clave"}')
@@ -82,7 +100,11 @@ resp=$(curl -s -b "$CJ" "$BASE/api/stripe/config.php")
 cur=$(echo "$resp" | json_get "['data']['currency']")
 check "config persistida (currency=mxn)" "mxn" "$cur"
 has_sk=$(echo "$resp" | json_get "['data']['has_secret_key']")
-check "secret_key no existe aún" "False" "$has_sk"
+if [ "$start_has_sk" = "False" ]; then
+  check "secret_key no existe aún" "False" "$has_sk"
+else
+  echo "SKIP | secret_key no existe aún (credenciales de una corrida previa)"; SKIP=$((SKIP+1))
+fi
 # La clave secreta nunca debe exponerse en claro
 if echo "$resp" | grep -q '"secret_key"[^_m]'; then
   echo "FAIL | GET config expone secret_key"; FAIL=$((FAIL+1))
@@ -111,6 +133,10 @@ check "webhook firma inválida (401)" 401 "$code"
 code=$(curl -s -o /dev/null -w "%{http_code}" -b "$CJ2" -X POST "$BASE/api/stripe/config.php" -H 'Content-Type: application/json' -d '{"enabled":true}')
 # demo es admin de tienda 2 en seed; si el seed cambia, aceptar 200
 if [ "$code" = "403" ] || [ "$code" = "200" ]; then echo "PASS | config demo respuesta controlada ($code)"; PASS=$((PASS+1)); else echo "FAIL | config demo ($code)"; FAIL=$((FAIL+1)); fi
+
+# Restaurar tienda 2 a deshabilitada: si no, la próxima corrida falla en la
+# comprobación temprana "tienda 2: config independiente (deshabilitada)".
+curl -s -o /dev/null -b "$CJ2" -X POST "$BASE/api/stripe/config.php" -H 'Content-Type: application/json' -d '{"enabled":false}'
 
 # ============================================================
 # Flujo COMPLETO con credenciales de prueba (modo test de Stripe)
@@ -146,7 +172,10 @@ if [ -n "$STRIPE_SK_TEST" ] && [ -n "$STRIPE_PK_TEST" ]; then
   check "card_last4 = 4242" "4242" "$last4"
 
   # Crear producto efímero de $25 y vender con el PI
-  resp=$(curl -s -b "$CJ" -X POST "$BASE/api/inventory/create_product.php" -H 'Content-Type: application/json' -d '{"name":"ZZ Test Stripe","price":25.00,"stock":100,"barcode":"ZZSTRIPE1"}')
+  # Código de barras único por corrida: si no, la segunda ejecución falla con
+  # "Duplicado en esta tienda" porque el producto efímero anterior persiste.
+  ZZBARCODE="ZZSTRIPE$(date +%s)"
+  resp=$(curl -s -b "$CJ" -X POST "$BASE/api/inventory/products.php" -H 'Content-Type: application/json' -d "{\"product_name\":\"ZZ Test Stripe\",\"price\":25.00,\"stock\":100,\"barcode\":\"$ZZBARCODE\"}")
   PID=$(echo "$resp" | json_get "['data']['product_id']")
   if [ -z "$PID" ]; then PID=$(echo "$resp" | json_get "['data']['id']"); fi
   if [ -n "$PID" ]; then echo "PASS | producto de prueba creado ($PID)"; PASS=$((PASS+1)); else echo "FAIL | producto de prueba: $resp"; FAIL=$((FAIL+1)); fi
@@ -185,6 +214,11 @@ if [ -n "$STRIPE_SK_TEST" ] && [ -n "$STRIPE_PK_TEST" ]; then
     # Un PI succeeded no se puede cancelar: se espera error controlado (500/400)
     if [ "$code" != "200" ]; then echo "PASS | cancelar cobro ya pagado rechazado ($code)"; PASS=$((PASS+1)); else echo "FAIL | se canceló un cobro pagado"; FAIL=$((FAIL+1)); fi
   fi
+
+  # Dejar la tienda 1 deshabilitada para que la batería temprana de la próxima
+  # corrida encuentre el módulo apagado. Las claves se conservan porque el API
+  # no permite borrarlas (saveConfig usa COALESCE).
+  curl -s -o /dev/null -b "$CJ" -X POST "$BASE/api/stripe/config.php" -H 'Content-Type: application/json' -d '{"enabled":false}'
 else
   echo
   echo "SKIP | Flujo completo: define STRIPE_SK_TEST y STRIPE_PK_TEST para ejecutarlo"

@@ -109,7 +109,10 @@ class StripeService
         $autoComplete = array_key_exists('auto_complete_sale', $data) ? (!empty($data['auto_complete_sale']) ? 1 : 0) : 1;
 
         $publishable = $this->validateKeyFormat($data['publishable_key'] ?? null, 'pk_');
-        $secret = $this->validateKeyFormat($data['secret_key'] ?? null, 'sk_');
+        // Se aceptan claves secretas estándar (sk_) y restringidas (rk_): ambas
+        // operan contra el API de Stripe; rk_ permite conceder únicamente los
+        // permisos necesarios (payment_intents, webhook_endpoints).
+        $secret = $this->validateKeyFormat($data['secret_key'] ?? null, ['sk_', 'rk_']);
         $whSecret = $this->validateKeyFormat($data['webhook_secret'] ?? null, 'whsec_');
 
         $existing = $this->db->selectOne(
@@ -144,14 +147,20 @@ class StripeService
 
     /**
      * Valida formato de clave; devuelve null si viene vacía (no pisar).
+     * @param string|string[] $prefix Prefijo válido, o lista de prefijos válidos
      * @throws Exception si el formato es inválido
      */
-    private function validateKeyFormat($key, string $prefix): ?string
+    private function validateKeyFormat($key, $prefix): ?string
     {
         if ($key === null || $key === '') { return null; }
         $key = trim((string)$key);
-        if (strpos($key, $prefix) !== 0 || strlen($key) > 255) {
-            throw new Exception("La clave debe comenzar con {$prefix}");
+        $prefixes = is_array($prefix) ? $prefix : [$prefix];
+        $valid = false;
+        foreach ($prefixes as $candidate) {
+            if (strpos($key, $candidate) === 0) { $valid = true; break; }
+        }
+        if (!$valid || strlen($key) > 255) {
+            throw new Exception('La clave debe comenzar con ' . implode(' o ', $prefixes));
         }
         return $key;
     }
@@ -215,7 +224,10 @@ class StripeService
                 'amount' => $amountCents,
                 'currency' => $currency,
                 'description' => $concept,
-                'automatic_payment_methods' => ['enabled' => true],
+                // allow_redirects=never: esto es un cobro presencial en el POS. Los
+                // métodos con redirección (OXXO, transferencia bancaria) exigen
+                // return_url y harían fallar la confirmación del PaymentIntent.
+                'automatic_payment_methods' => ['enabled' => true, 'allow_redirects' => 'never'],
                 'metadata' => [
                     'store_id' => (string)$this->storeId,
                     'source' => 'tomodachi_pos',

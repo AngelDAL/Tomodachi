@@ -19,6 +19,11 @@ $apiAuth = new ApiAuth($db);
 $actor = $apiAuth->requireActor($auth);
 if ($actor['via'] === 'token') { $apiAuth->requireScope($actor, 'write'); }
 
+// Las mutaciones de promociones son solo para admin/manager (sesión)
+if ($actor['via'] === 'session' && !$auth->hasRole([ROLE_ADMIN, ROLE_MANAGER])) {
+    Response::error('Permisos insuficientes para gestionar promociones', 403);
+}
+
 // Obtener datos
 $data = json_decode(file_get_contents('php://input'), true);
 
@@ -162,5 +167,6 @@ try {
 
 } catch (Exception $e) {
     if (isset($conn)) $conn->rollBack();
-    Response::error('Error al actualizar: ' . $e->getMessage(), 500);
+    error_log('Error al actualizar promoción: ' . $e->getMessage());
+    Response::error('Error interno del servidor', 500);
 }

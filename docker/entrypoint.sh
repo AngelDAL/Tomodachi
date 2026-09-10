@@ -41,16 +41,24 @@ MIGRATIONS_DIR="/var/www/html/database/migrations"
 # Generar config/database.php a partir de variables de entorno
 if [ ! -f /var/www/html/config/database.php ]; then
   echo "[Tomodachi] Generando config/database.php..."
+
+  # Escapar valores para cadenas PHP entre comillas simples: una contraseña
+  # con comillas simples o backslashes no debe romper (ni inyectar código en)
+  # el archivo de configuración generado.
+  php_single_quote_escape() {
+    printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e "s/'/\\\\'/g"
+  }
+
   cat > /var/www/html/config/database.php <<PHP
 <?php
 // Generado automáticamente por el entrypoint de Docker
-define('DB_HOST', '${DB_HOST}');
-define('DB_NAME', '${DB_NAME}');
-define('DB_USER', '${DB_USER}');
-define('DB_PASS', '${DB_PASS}');
-define('DB_CHARSET', '${DB_CHARSET:-utf8mb4}');
+define('DB_HOST', '$(php_single_quote_escape "${DB_HOST}")');
+define('DB_NAME', '$(php_single_quote_escape "${DB_NAME}")');
+define('DB_USER', '$(php_single_quote_escape "${DB_USER}")');
+define('DB_PASS', '$(php_single_quote_escape "${DB_PASS}")');
+define('DB_CHARSET', '$(php_single_quote_escape "${DB_CHARSET:-utf8mb4}")');
 
-date_default_timezone_set('${TZ:-America/Mexico_City}');
+date_default_timezone_set('$(php_single_quote_escape "${TZ:-America/Mexico_City}")');
 
 define('DEBUG_MODE', false);
 

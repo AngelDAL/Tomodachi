@@ -16,6 +16,15 @@ try {
     $actor = $apiAuth->requireActor($auth);
     $apiAuth->requireScope($actor, 'read');
     
+    // Las ganancias (utilidad = ventas - costo) son información sensible de
+    // negocio: para sesiones solo admin/manager las reciben. El resto de
+    // roles ve únicamente el gráfico de ventas. Los tokens de integración
+    // conservan su scope 'read' (los crea un admin explícitamente).
+    $canSeeProfit = true;
+    if ($actor['via'] === 'session' && !$auth->hasRole([ROLE_ADMIN, ROLE_MANAGER])) {
+        $canSeeProfit = false;
+    }
+    
     $conn = $db->getConnection();
     $currentUser = $actor;
     $store_id = $currentUser['store_id'] ?? 1;
@@ -79,11 +88,12 @@ try {
         'data' => [
             'labels' => $labels,
             'revenue' => $revenue,
-            'profit' => $profit
+            'profit' => $canSeeProfit ? $profit : []
         ]
     ]);
 
 } catch (Exception $e) {
+    error_log('Error en get_chart_data: ' . $e->getMessage());
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    echo json_encode(['success' => false, 'message' => 'Error interno del servidor']);
 }

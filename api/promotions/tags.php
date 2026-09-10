@@ -5,6 +5,7 @@ require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
 require_once '../../includes/Auth.class.php';
 require_once '../../includes/ApiAuth.class.php';
+require_once '../../includes/Validator.class.php';
 $db = new Database(); $auth = new Auth($db); $apiAuth = new ApiAuth($db);
 $actor = $apiAuth->requireActor($auth); $storeId = (int)$actor['store_id'];
 $conn = $db->getConnection();
@@ -14,12 +15,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 }
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') Response::error('Método no permitido', 405);
 if ($actor['via'] === 'token') $apiAuth->requireScope($actor, 'write');
+if ($actor['via'] === 'session' && !$auth->hasRole([ROLE_ADMIN, ROLE_MANAGER])) Response::error('Permisos insuficientes para gestionar etiquetas', 403);
 $data = json_decode(file_get_contents('php://input'), true) ?: [];
 $action = $data['action'] ?? '';
 try {
     if ($action === 'create') {
         $name = trim((string)($data['name'] ?? ''));
         if ($name === '' || mb_strlen($name) > 80) Response::error('La etiqueta debe tener entre 1 y 80 caracteres', 422);
+        // Escapar en el servidor: el nombre se pinta con innerHTML en el POS
+        $name = Validator::sanitizeString($name);
         $stmt = $conn->prepare('INSERT INTO product_tags (store_id, name) VALUES (?, ?) ON DUPLICATE KEY UPDATE tag_id = LAST_INSERT_ID(tag_id)');
         $stmt->execute([$storeId, $name]); Response::success(['tag_id' => (int)$conn->lastInsertId(), 'name' => $name], 'Etiqueta lista', 201);
     }

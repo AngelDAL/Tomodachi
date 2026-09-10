@@ -20,3 +20,12 @@ api/ai/config.php
 temp/
 cache/
 database/backups/
+
+# Scripts de desarrollo/diagnóstico (no van a producción)
+repro_issue.php
+test_cli_mail.php
+test_consume_mode.php
+test_mail_get.php
+docker/test_suite.sh
+docker/audit_api.sh
+docker/test_digital_signage.sh

@@ -12,7 +12,8 @@ require_once '../../includes/Validator.class.php';
 require_once '../../includes/Auth.class.php';
 require_once '../../includes/LoginRateLimiter.class.php';
 
-header('Access-Control-Allow-Origin: *');
+require_once __DIR__ . '/../../includes/Cors.class.php';
+Cors::apply();
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Methods: POST');
 header('Access-Control-Allow-Headers: Content-Type');

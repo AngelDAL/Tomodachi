@@ -35,15 +35,20 @@ class LoginRateLimiter
 {
     private $db;
 
+    // Namespace de las claves: separa los bloqueos de login de los de otros
+    // flujos (p. ej. recuperación de contraseña) para que no interfieran.
+    private $namespace;
+
     // Configuración (sobrescribible con constantes definidas en constants.php)
     private $maxAttempts;   // intentos fallidos antes de bloquear
     private $baseLockSeconds; // duración del 1er bloqueo
     private $maxLockSeconds;  // tope de duración de bloqueo
     private $lockMultiplier;  // factor de escalamiento por bloqueo
 
-    public function __construct($database)
+    public function __construct($database, $namespace = 'login')
     {
         $this->db = $database;
+        $this->namespace = (string)$namespace;
         $this->maxAttempts      = defined('LOGIN_MAX_ATTEMPTS')     ? LOGIN_MAX_ATTEMPTS     : 5;
         $this->baseLockSeconds  = defined('LOGIN_LOCK_BASE_SECONDS')? LOGIN_LOCK_BASE_SECONDS: 60;
         $this->maxLockSeconds   = defined('LOGIN_LOCK_MAX_SECONDS') ? LOGIN_LOCK_MAX_SECONDS : 7200;
@@ -80,11 +85,38 @@ class LoginRateLimiter
     }
 
     /**
-     * Clave de bloqueo por cuenta (no se guarda el usuario en claro).
+     * Clave de bloqueo para la IP. El namespace "login" mantiene el formato
+     * histórico (IP directa) para no invalidar bloqueos existentes; los
+     * demás namespaces usan claves con prefijo.
+     */
+    private function ipKey()
+    {
+        if ($this->namespace === 'login') {
+            return $this->ip();
+        }
+        return $this->scopedKey('ip', $this->ip());
+    }
+
+    /**
+     * Clave de bloqueo por cuenta (no se guarda el usuario en claro) o para
+     * cualquier otro namespace (p. ej. correo en recuperación de contraseña).
      */
     private function userKey($username)
     {
-        return 'u:' . substr(hash('sha256', 'login|' . strtolower(trim((string)$username))), 0, 42);
+        if ($this->namespace === 'login') {
+            return 'u:' . substr(hash('sha256', 'login|' . strtolower(trim((string)$username))), 0, 42);
+        }
+        return $this->scopedKey('user', $username);
+    }
+
+    /**
+     * Clave con prefijo de namespace, comprimida para caber en
+     * login_attempts.ip_address (VARCHAR(45)).
+     */
+    private function scopedKey($type, $value)
+    {
+        $prefix = 'x' . substr($this->namespace, 0, 4) . ':' . $type . ':';
+        return substr($prefix . hash('sha256', $this->namespace . '|' . $type . '|' . strtolower(trim((string)$value))), 0, 45);
     }
 
     /**
@@ -115,7 +147,7 @@ class LoginRateLimiter
     {
         $retryAfter = 0;
 
-        $row = $this->fetch($this->ip());
+        $row = $this->fetch($this->ipKey());
         if ($row) {
             $retryAfter = max($retryAfter, (int)$row['remaining']);
         }
@@ -193,7 +225,7 @@ class LoginRateLimiter
     {
         $username = substr((string)$username, 0, 100);
 
-        $this->bump($this->ip(), $username);
+        $this->bump($this->ipKey(), $username);
 
         if ($username !== '') {
             $this->bump($this->userKey($username), $username);
@@ -206,7 +238,7 @@ class LoginRateLimiter
      */
     public function recordSuccess($username = null)
     {
-        $this->db->delete("DELETE FROM login_attempts WHERE ip_address = ?", [$this->ip()]);
+        $this->db->delete("DELETE FROM login_attempts WHERE ip_address = ?", [$this->ipKey()]);
 
         if (is_string($username) && $username !== '') {
             $this->db->delete(

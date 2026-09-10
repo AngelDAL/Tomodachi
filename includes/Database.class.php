@@ -35,7 +35,10 @@ class Database {
             
             $this->conn = new PDO($dsn, $this->username, $this->password, $options);
         } catch (PDOException $e) {
-            throw new Exception("Error de conexión: " . $e->getMessage());
+            // Detalle solo en el log del servidor; el cliente no debe ver
+            // credenciales, hosts ni la estructura interna de la BD.
+            error_log("Database::connect - " . $e->getMessage());
+            throw new Exception("Error interno del servidor");
         }
     }
     
@@ -58,7 +61,8 @@ class Database {
             $stmt->execute($params);
             return $stmt;
         } catch (PDOException $e) {
-            throw new Exception("Error en consulta: " . $e->getMessage());
+            error_log("Database::query - " . $e->getMessage() . " | SQL: " . $sql);
+            throw new Exception("Error interno del servidor");
         }
     }
     

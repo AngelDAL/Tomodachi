@@ -19,6 +19,11 @@ $apiAuth = new ApiAuth($db);
 $actor = $apiAuth->requireActor($auth);
 if ($actor['via'] === 'token') { $apiAuth->requireScope($actor, 'write'); }
 
+// Las mutaciones de promociones son solo para admin/manager (sesión)
+if ($actor['via'] === 'session' && !$auth->hasRole([ROLE_ADMIN, ROLE_MANAGER])) {
+    Response::error('Permisos insuficientes para gestionar promociones', 403);
+}
+
 // Obtener datos
 $data = json_decode(file_get_contents('php://input'), true);
 
@@ -156,5 +161,5 @@ try {
     $errorMsg = date('Y-m-d H:i:s') . " Error: " . $e->getMessage() . "\n" . $e->getTraceAsString() . "\n";
     @file_put_contents($logPath, $errorMsg, FILE_APPEND);
     
-    Response::error('Error del servidor: ' . $e->getMessage(), 500, ['trace' => $e->getTraceAsString()]);
+    Response::error('Error interno del servidor', 500);
 }

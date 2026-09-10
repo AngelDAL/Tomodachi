@@ -56,9 +56,14 @@ try {
             'via'               => $actor['via'],
         ], 'Tema de la tienda');
     } elseif ($method === 'POST') {
-        // Escribir tema: requiere scope custom (la personalización es exclusiva
-        // del scope 'custom'; un token solo-write no puede tocar el tema)
-        if (!$apiAuth->hasScope($actor, 'custom')) {
+        // Escribir tema: sesión de admin, o token con scope 'custom' (la
+        // personalización es exclusiva del scope 'custom'; un token
+        // solo-write no puede tocar el tema)
+        if ($actor['via'] === 'session') {
+            if (!$auth->hasRole([ROLE_ADMIN, ROLE_SUPER_ADMIN])) {
+                Response::error('Permisos insuficientes para modificar el tema', 403);
+            }
+        } elseif (!$apiAuth->hasScope($actor, 'custom')) {
             Response::error('El token no tiene permiso: custom', 403);
         }
 
@@ -136,5 +141,6 @@ try {
         Response::error('Método no permitido', 405);
     }
 } catch (Exception $e) {
-    Response::error('Error en el servidor: ' . $e->getMessage(), 500);
+    error_log('Error en stores/theme: ' . $e->getMessage());
+    Response::error('Error interno del servidor', 500);
 }

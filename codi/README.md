@@ -42,8 +42,12 @@ Módulo de pagos **CoDi (Cobro Digital)** del Banco de México para Tomodachi PO
 
 ### 1. Migración de base de datos
 
+La migración `database/migrations/038_codi_tables.sql` la aplica sola el
+entrypoint del contenedor al arrancar, igual que el resto de migraciones. Para
+aplicarla a mano en una instalación fuera de Docker:
+
 ```bash
-mysql -u root -p tomodachi_pos < codi/database/migrations/001_codi_tables.sql
+mysql -u root -p tomodachi_pos < database/migrations/038_codi_tables.sql
 ```
 
 ### 2. Crear tablas
@@ -128,10 +132,9 @@ $codiConfig = [
 codi/
 ├── includes/
 │   └── CodiService.class.php    # Servicio principal
-├── database/
-│   └── migrations/
-│       └── 001_codi_tables.sql  # Esquema de BD
 └── README.md                    # Este archivo
+
+database/migrations/038_codi_tables.sql   # Esquema de BD (lo aplica el entrypoint)
 
 api/codi/
 ├── create_qr.php                # POST - Generar QR

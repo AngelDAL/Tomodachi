@@ -41,16 +41,24 @@ MIGRATIONS_DIR="/var/www/html/database/migrations"
 # Generar config/database.php a partir de variables de entorno
 if [ ! -f /var/www/html/config/database.php ]; then
   echo "[Tomodachi] Generando config/database.php..."
+
+  # Escapar valores para cadenas PHP entre comillas simples: una contraseña
+  # con comillas simples o backslashes no debe romper (ni inyectar código en)
+  # el archivo de configuración generado.
+  php_single_quote_escape() {
+    printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e "s/'/\\\\'/g"
+  }
+
   cat > /var/www/html/config/database.php <<PHP
 <?php
 // Generado automáticamente por el entrypoint de Docker
-define('DB_HOST', '${DB_HOST}');
-define('DB_NAME', '${DB_NAME}');
-define('DB_USER', '${DB_USER}');
-define('DB_PASS', '${DB_PASS}');
-define('DB_CHARSET', '${DB_CHARSET:-utf8mb4}');
+define('DB_HOST', '$(php_single_quote_escape "${DB_HOST}")');
+define('DB_NAME', '$(php_single_quote_escape "${DB_NAME}")');
+define('DB_USER', '$(php_single_quote_escape "${DB_USER}")');
+define('DB_PASS', '$(php_single_quote_escape "${DB_PASS}")');
+define('DB_CHARSET', '$(php_single_quote_escape "${DB_CHARSET:-utf8mb4}")');
 
-date_default_timezone_set('${TZ:-America/Mexico_City}');
+date_default_timezone_set('$(php_single_quote_escape "${TZ:-America/Mexico_City}")');
 
 define('DEBUG_MODE', false);
 
@@ -70,7 +78,7 @@ if [ "${TABLE_COUNT}" = "0" ] || [ -z "${TABLE_COUNT}" ]; then
   # ================== PRIMER ARRANQUE (BD vacía) ==================
   echo "[Tomodachi] Base vacía — importando schema.sql (baseline)..."
   $MYSQL "${DB_NAME}" < /var/www/html/database/schema.sql
-  echo "[Tomodachi] Esquema importado. Usuario inicial: admin / admin123"
+  echo "[Tomodachi] Esquema importado. Usuario inicial: admin / admin123 (se pedirá cambiar la contraseña en el primer acceso)"
 
   # schema.sql es el baseline consolidado: ya incluye los cambios de todas las
   # migraciones, así que se registran todas como aplicadas sin re-ejecutarlas.
@@ -139,6 +147,39 @@ if [ -f /opt/tomodachi-assets/products/default-product.svg ] && [ ! -f /var/www/
 fi
 chown -R www-data:www-data /var/www/html/public/assets/images
 chown -R www-data:www-data /var/www/html/uploads
+
+# Endurecer directorios de subida: nada de lo que sube un usuario debe poder
+# ejecutarse como código (se re-escribe en cada arranque para cubrir también
+# volúmenes Docker ya existentes, donde el .htaccess de la imagen no llega).
+write_upload_htaccess() {
+  local dir="$1"
+  [ -d "$dir" ] || return 0
+  cat > "${dir}/.htaccess" <<'HTACCESS'
+# Tomodachi POS - directorio de archivos subidos: solo contenido estático
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php7.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php8.c>
+    php_flag engine off
+</IfModule>
+<FilesMatch "\.(php|phtml|php[0-9]|phar|cgi|pl|py|sh|shtml|htaccess|ini)$">
+    Require all denied
+</FilesMatch>
+<IfModule mod_mime.c>
+    RemoveHandler .php .phtml .phar
+    RemoveType .php .phtml .phar
+</IfModule>
+Options -Indexes -ExecCGI
+HTACCESS
+  chown www-data:www-data "${dir}/.htaccess" 2>/dev/null || true
+}
+
+write_upload_htaccess /var/www/html/public/assets/images
+write_upload_htaccess /var/www/html/uploads
+write_upload_htaccess /var/www/html/uploads/digital_signage
 
 echo "[Tomodachi] Iniciando Apache..."
 exec "$@"

@@ -1,0 +1,27 @@
+# Tomodachi POS - Directorio de imágenes subidas por usuarios.
+# Regla de oro: aquí NADA debe ejecutarse como código, solo servirse como
+# archivo estático. Aplica a logos, productos y fondos.
+
+# Desactivar el intérprete PHP si está presente (mod_php)
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php7.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php8.c>
+    php_flag engine off
+</IfModule>
+
+# Denegar cualquier archivo ejecutable/interpretable
+<FilesMatch "\.(php|phtml|php[0-9]|phar|cgi|pl|py|sh|shtml|htaccess|ini)$">
+    Require all denied
+</FilesMatch>
+
+# Quitar handlers de scripts por si el hosting los asocia a estas extensiones
+<IfModule mod_mime.c>
+    RemoveHandler .php .phtml .phar
+    RemoveType .php .phtml .phar
+</IfModule>
+
+Options -Indexes -ExecCGI

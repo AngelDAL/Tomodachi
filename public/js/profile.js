@@ -1,3 +1,7 @@
+// Flag: había un cambio de contraseña obligatorio pendiente al cargar la
+// página (se omite loadUsers() mientras tanto; se carga al cumplirse).
+let passwordChangeWasPending = false;
+
 document.addEventListener('DOMContentLoaded', async () => {
     const session = await checkSession();
     if (!session) { requireSession(); return; }
@@ -10,7 +14,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('companyTabBtn').style.display = 'inline-block';
         document.getElementById('usersTabBtn').style.display = 'inline-block';
         loadCompanySettings();
-        loadUsers();
+        if (session.must_change_password) {
+            // Mientras la contraseña pendiente, el backend bloquea
+            // users/read.php (403); el wrapper global (app.js) redirigiría a
+            // esta misma página y recargaría en bucle. Se omite la carga y se
+            // indica el motivo en la pestaña Usuarios.
+            passwordChangeWasPending = true;
+            const tbody = document.getElementById('usersList');
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="6">Cambia primero tu contraseña (formulario superior) para administrar usuarios.</td></tr>';
+            }
+        } else {
+            loadUsers();
+        }
     }
 
     // Color picker sync & Real-time preview (CLARO y OSCURO)
@@ -109,6 +125,13 @@ async function loadProfile() {
         form.phone.value = user.phone || '';
         document.getElementById('userRoleDisplay').value = user.role.toUpperCase();
 
+        // Cambio de contraseña obligatorio pendiente (credenciales por defecto)
+        if (user.must_change_password) {
+          showPasswordChangeNotice();
+        } else {
+          removePasswordChangeNotice();
+        }
+
       }
       return;
     } catch (error) {
@@ -135,6 +158,14 @@ document.getElementById('profileForm').addEventListener('submit', async (e) => {
             showNotification('Perfil actualizado correctamente', 'success');
             e.target.password.value = '';
             e.target.current_password.value = '';
+            // Re-consultar: si había un cambio obligatorio pendiente, ya se cumplió
+            loadProfile();
+            // Si venía pendiente el cambio forzado (y no se cargaron usuarios
+            // al inicio), ahora que la contraseña ya es nueva cargamos la lista.
+            if (passwordChangeWasPending) {
+                passwordChangeWasPending = false;
+                loadUsers();
+            }
         } else {
             showNotification(result.message || 'Error al actualizar', 'error');
         }
@@ -1241,4 +1272,37 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (e) { /* noop */ }
         });
     });
+});
+
+
+// ===== Cambio obligatorio de contraseña (credenciales por defecto) =====
+
+function showPasswordChangeNotice() {
+  if (document.getElementById('passwordChangeNotice')) return;
+  const main = document.querySelector('main.main-content') || document.querySelector('main') || document.body;
+  const div = document.createElement('div');
+  div.id = 'passwordChangeNotice';
+  div.style.cssText = 'background:#fff3cd;border:1px solid #ffe08a;color:#7a5b00;padding:12px 16px;border-radius:8px;margin:12px 0;font-size:14px;line-height:1.5;';
+  div.innerHTML = '<strong>Acción requerida:</strong> estás usando la contraseña por defecto. ' +
+    'Escribe una nueva en los campos «Contraseña actual» y «Nueva contraseña» de este formulario y guarda para poder usar el resto del sistema.';
+  main.insertBefore(div, main.firstChild);
+}
+
+function removePasswordChangeNotice() {
+  const el = document.getElementById('passwordChangeNotice');
+  if (el) el.remove();
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  const wantsChange = new URLSearchParams(window.location.search).get('change_password') === '1';
+  if (wantsChange) {
+    showPasswordChangeNotice();
+    setTimeout(function () {
+      const form = document.getElementById('profileForm');
+      if (form && form.current_password) {
+        form.current_password.focus();
+        if (form.current_password.scrollIntoView) form.current_password.scrollIntoView({ block: 'center' });
+      }
+    }, 400);
+  }
 });

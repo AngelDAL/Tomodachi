@@ -25,10 +25,12 @@ try {
     $start_date = isset($_GET['start_date']) ? str_replace('T', ' ', $_GET['start_date']) : date('Y-m-01 00:00:00');
     $end_date = isset($_GET['end_date']) ? str_replace('T', ' ', $_GET['end_date']) : date('Y-m-t 23:59:59');
 
-    // Permisos granulares (B4): los reportes detallados solo admin/manager;
-    // el dashboard básico (ventas del día) lo puede ver cualquier rol.
-    $reportTypes = ['sales', 'products', 'inventory', 'movements', 'cash_register', 'registers', 'top_products'];
-    if (in_array($type, $reportTypes)) {
+    // Permisos granulares: SOLO el dashboard básico puede verlo cualquier
+    // rol; el resto de reportes (incluidos movimientos de inventario, cajas
+    // y movimientos de caja) requieren admin/manager. Antes había tipos que
+    // no estaban en la lista y se saltaban el control.
+    $publicTypes = ['dashboard'];
+    if (!in_array($type, $publicTypes, true)) {
         if ($actor['via'] === 'session' && !$auth->hasRole([ROLE_ADMIN, ROLE_MANAGER])) {
             Response::error('Permisos insuficientes para ver reportes', 403);
         }

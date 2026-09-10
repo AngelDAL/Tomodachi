@@ -1,7 +1,11 @@
 -- =============================================
--- Módulo CoDi para Tomodachi POS
--- Implementación temprana / v1
--- Tablas para pagos CoDi (Cobro Digital)
+-- Migración 038: Módulo CoDi para Tomodachi POS
+-- Tablas para pagos CoDi (Cobro Digital) + sales.codi_payment_id
+-- =============================================
+-- Idempotente (CREATE TABLE IF NOT EXISTS / ADD COLUMN IF NOT EXISTS), así que
+-- se puede aplicar también donde las tablas ya existían de forma manual.
+-- Las mismas tablas están en database/schema.sql para instalaciones nuevas.
+-- El valor 'codi' del ENUM sales.payment_method lo agrega la migración 037.
 -- =============================================
 
 -- Tabla: codi_payments

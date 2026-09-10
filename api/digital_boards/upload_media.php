@@ -100,6 +100,13 @@ try {
         Response::validationError(['file' => 'El archivo no es una imagen válida']);
     }
 
+    // Anti "image bomb": rechazar dimensiones descomunales ANTES de
+    // descomprimir (un archivo pequeño puede declarar gigapíxeles y agotar
+    // la memoria al cargarlo con GD).
+    if (($info[0] * $info[1]) > 40000000) {
+        Response::validationError(['file' => 'La imagen es demasiado grande (máximo 40 megapíxeles)']);
+    }
+
     // Mapa de tipos GD a mimetypes que sí podemos re-encodear
     $gd_type = $info[2];
     $allowed_gd = [

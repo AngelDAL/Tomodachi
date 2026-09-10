@@ -24,6 +24,15 @@ try {
     $actor = $apiAuth->requireActor($auth);
     $apiAuth->requireScope($actor, 'read');
 
-    $stores = $db->select('SELECT store_id, store_name, address, phone, status FROM stores',[]);
+    // Solo super_admin puede listar todas las tiendas; el resto de usuarios
+    // (y tokens) únicamente pueden consultar la suya.
+    if ($actor['via'] === 'session' && $auth->hasRole(ROLE_SUPER_ADMIN)) {
+        $stores = $db->select('SELECT store_id, store_name, address, phone, status FROM stores', []);
+    } else {
+        $stores = $db->select('SELECT store_id, store_name, address, phone, status FROM stores WHERE store_id = ?', [$actor['store_id']]);
+    }
     Response::success($stores,'Listado tiendas');
-} catch (Exception $e) { Response::error('Error servidor: '.$e->getMessage(),500); }
+} catch (Exception $e) {
+    error_log('Error al listar tiendas: '.$e->getMessage());
+    Response::error('Error interno del servidor',500);
+}

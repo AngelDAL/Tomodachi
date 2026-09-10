@@ -2073,7 +2073,36 @@ async function finalizeSale() {
   if (!CART.length) return;
   finalizeSaleBtn.disabled = true;
 
-  const method = paymentMethodSelect ? paymentMethodSelect.value : 'cash';
+  let method = paymentMethodSelect ? paymentMethodSelect.value : 'cash';
+  let stripePaymentIntent = null;
+
+  // Cobro con tarjeta en línea (Stripe): primero se cobra con Stripe.js,
+  // luego se registra la venta con el PaymentIntent verificado por el servidor.
+  if (method === 'stripe') {
+    if (!window.StripePOS || !window.StripePOS.ready) {
+      showNotification('Stripe no está configurado. Actívalo en Integraciones.', 'error');
+      finalizeSaleBtn.disabled = false;
+      return;
+    }
+    const subtotalStripe = CART.reduce((s, i) => s + (i.subtotal != null ? i.subtotal : i.unit_price * i.quantity), 0);
+    const discountStripe = (discountInput && discountInput.value) ? parseFloat(discountInput.value) : 0;
+    const promoStripe = (typeof CURRENT_BILL_DISCOUNT !== 'undefined') ? CURRENT_BILL_DISCOUNT : 0;
+    const taxStripe = (taxInput && taxInput.value) ? parseFloat(taxInput.value) : 0;
+    const totalStripe = Math.max(0, subtotalStripe - discountStripe - promoStripe + taxStripe);
+
+    try {
+      stripePaymentIntent = await window.StripePOS.charge(totalStripe, 'Venta POS');
+    } catch (e) {
+      if (!e.stripeCancelled) {
+        showNotification(e.message || 'No se completó el cobro con tarjeta', 'error');
+      }
+      finalizeSaleBtn.disabled = false;
+      return;
+    }
+    // El cobro quedó confirmado: la venta se registra como tarjeta
+    method = 'card';
+  }
+
   const payload = {
     store_id: CURRENT_STORE_ID,
     items: CART.map(i => ({ product_id: i.product_id, quantity: i.quantity })),
@@ -2081,6 +2110,10 @@ async function finalizeSale() {
     discount: (discountInput && discountInput.value) ? parseFloat(discountInput.value) : 0,
     tax: (taxInput && taxInput.value) ? parseFloat(taxInput.value) : 0
   };
+
+  if (stripePaymentIntent) {
+    payload.stripe_payment_intent = stripePaymentIntent;
+  }
 
   // Añadir cash_amount si es necesario
   if ((method === 'cash' || method === 'mixed') && checkoutReceivedInput) {
@@ -2148,7 +2181,7 @@ async function finalizeSale() {
         date: window.FormatUtils ? window.FormatUtils.date(new Date()) : new Date().toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
         sale_id: resData.sale_id || '---',
         cashier: resData.cashier_name || 'Cajero',
-        payment_method: paymentMethodSelect ? paymentMethodSelect.value : 'cash',
+        payment_method: method,
         qr_payload: `TOMODISALE|${resData.sale_id || ''}|${(resData.total != null ? resData.total : 0).toFixed(2)}`
       };
 

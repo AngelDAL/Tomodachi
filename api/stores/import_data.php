@@ -9,8 +9,10 @@ require_once '../../config/constants.php';
 require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
 require_once '../../includes/Auth.class.php';
+require_once '../../includes/Validator.class.php';
 
-header('Access-Control-Allow-Origin: *');
+require_once __DIR__ . '/../../includes/Cors.class.php';
+Cors::apply();
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Methods: POST');
 
@@ -24,6 +26,11 @@ try {
     
     $currentUser = $auth->getCurrentUser();
     $store_id = $currentUser['store_id'];
+
+    // Importación masiva: solo admin/manager/super_admin (afecta precios y stock)
+    if (!in_array($currentUser['role'], [ROLE_ADMIN, ROLE_MANAGER, ROLE_SUPER_ADMIN], true)) {
+        Response::error('Permisos insuficientes para importar datos', 403);
+    }
     
     // Obtener datos del cuerpo de la solicitud
     $input = json_decode(file_get_contents('php://input'), true);
@@ -65,12 +72,12 @@ try {
         foreach ($products as $p) {
             $stats['processed']++;
             
-            $name = trim($p['name'] ?? '');
-            $barcode = trim($p['barcode'] ?? '');
+            $name = is_string($p['name'] ?? null) ? Validator::sanitizeString($p['name']) : '';
+            $barcode = is_string($p['barcode'] ?? null) ? Validator::sanitizeString($p['barcode']) : '';
             $price = floatval($p['price'] ?? 0);
             $cost = floatval($p['cost'] ?? 0);
             $stock = intval($p['stock'] ?? 0);
-            $description = trim($p['description'] ?? 'Importado');
+            $description = is_string($p['description'] ?? null) ? Validator::sanitizeString($p['description']) : 'Importado';
             
             if (empty($name)) {
                 $stats['errors']++;
@@ -124,9 +131,11 @@ try {
         
     } catch (Exception $e) {
         $conn->rollBack();
-        Response::error('Error durante la importación: ' . $e->getMessage(), 500);
+        error_log('Error durante la importación: ' . $e->getMessage());
+        Response::error('Error durante la importación', 500);
     }
     
 } catch (Exception $e) {
-    Response::error('Error en el servidor: ' . $e->getMessage(), 500);
+    error_log('Error en import_data: ' . $e->getMessage());
+    Response::error('Error interno del servidor', 500);
 }

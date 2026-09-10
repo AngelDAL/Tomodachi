@@ -38,6 +38,7 @@ CREATE TABLE users (
     show_onboarding TINYINT(1) DEFAULT 1,
     reset_token_hash VARCHAR(255) NULL,
     reset_token_expires_at DATETIME NULL,
+    must_change_password TINYINT(1) NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_login TIMESTAMP NULL,
     FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE RESTRICT,
@@ -73,7 +74,10 @@ CREATE TABLE products (
     current_stock DECIMAL(12,3) DEFAULT 0.000,
     min_stock DECIMAL(12,3) DEFAULT 0.000,
     status ENUM('active', 'inactive') DEFAULT 'active',
+    hidden_in_pos TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Producto oculto en el punto de venta',
+    discontinued_at DATETIME NULL COMMENT 'Fecha de descontinuación (trazabilidad, no se borra el registro)',
     is_bulk TINYINT(1) DEFAULT 0 COMMENT 'Indica si el producto se vende a granel (por peso/volumen)',
+    unit_type ENUM('unit', 'kg', 'g', 'l', 'ml', 'm') NOT NULL DEFAULT 'unit' COMMENT 'Unidad de venta: unit=pieza, kg/g/l/ml/m=medida',
     bulk_unit VARCHAR(20) DEFAULT 'kg' COMMENT 'Unidad de medida para granel: kg, g, L, mL, etc.',
     tracking_type ENUM('stock','recipe','component','none') NOT NULL DEFAULT 'stock' COMMENT 'stock=producto final, recipe=ensamblado (stock derivado de receta), component=materia prima con presentaciones, none=sin inventario',
     consume_mode ENUM('fifo','lifo','manual') NOT NULL DEFAULT 'fifo' COMMENT 'Orden de consumo de presentaciones: fifo (mas antiguo), lifo (mas reciente), manual (seleccion explicita)',
@@ -86,6 +90,7 @@ CREATE TABLE products (
     UNIQUE KEY unique_store_qr_code (store_id, qr_code),
     INDEX idx_product_name (product_name),
     INDEX idx_status (status),
+    INDEX idx_products_hidden_pos (hidden_in_pos),
     INDEX idx_store (store_id),
     INDEX idx_category (category_id),
     INDEX idx_is_bulk (is_bulk)
@@ -225,7 +230,9 @@ CREATE TABLE sales (
     discount DECIMAL(10,2) DEFAULT 0.00,
     total DECIMAL(10,2) NOT NULL,
     amount_paid DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT 'Monto efectivamente pagado al momento de la venta (resto = fiado)',
-    payment_method ENUM('cash', 'card', 'transfer', 'mixed', 'credit') NOT NULL,
+    payment_method ENUM('cash', 'card', 'transfer', 'mixed', 'credit', 'codi', 'stripe') NOT NULL,
+    codi_payment_id INT NULL COMMENT 'ID del pago CoDi asociado (módulo CoDi)',
+    stripe_payment_id INT NULL COMMENT 'ID del cobro Stripe asociado (módulo Stripe)',
     status ENUM('completed', 'cancelled', 'refunded') DEFAULT 'completed',
     refunded_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT 'Monto total devuelto acumulado (devoluciones parciales)',
     created_via VARCHAR(10) NOT NULL DEFAULT 'session' COMMENT 'session = interfaz (humano), token = API/agente',
@@ -237,7 +244,9 @@ CREATE TABLE sales (
     INDEX idx_store_date (store_id, sale_date),
     INDEX idx_status (status),
     INDEX idx_customer (customer_id),
-    INDEX idx_register (register_id)
+    INDEX idx_register (register_id),
+    INDEX idx_codi_payment (codi_payment_id),
+    INDEX idx_stripe_payment (stripe_payment_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabla: sale_details (Detalle de ventas)
@@ -648,9 +657,9 @@ INSERT INTO terminals (store_id, terminal_name) VALUES
 -- (1, 'Abarrotes', 'Productos de despensa', 'fa-basket-shopping'),
 -- (1, 'Lácteos', 'Productos lácteos y derivados', 'fa-cheese');
 
--- Insertar usuario administrador (password: admin123)
-INSERT INTO users (store_id, username, password_hash, full_name, email, role, status) VALUES
-(1, 'admin', '$2y$10$rDGCkOinf6RJ2ywtMU6QYeeTNkqq4/soMpsxdF4wO9lqIRTrjfP2a', 'Administrador', 'admin@tomodachi.com', 'admin', 'active');
+-- Insertar usuario administrador (password: admin123, cambio obligatorio al primer acceso)
+INSERT INTO users (store_id, username, password_hash, full_name, email, role, status, must_change_password) VALUES
+(1, 'admin', '$2y$10$rDGCkOinf6RJ2ywtMU6QYeeTNkqq4/soMpsxdF4wO9lqIRTrjfP2a', 'Administrador', 'admin@tomodachi.com', 'admin', 'active', 1);
 
 -- Configuración global de la instalación (no por navegador)
 CREATE TABLE app_settings (
@@ -668,3 +677,172 @@ INSERT INTO app_settings (setting_key, setting_value) VALUES ('welcome_seen', '0
 -- El catálogo nace vacío (0 productos). La empresa se crea vía registro y sus
 -- productos se añaden desde Inventario.
 -- INSERT INTO products (...) VALUES (...);
+
+-- =============================================
+-- Módulo Stripe (cobros con tarjeta)
+-- =============================================
+
+-- Tabla: stripe_settings (credenciales y configuración por tienda)
+CREATE TABLE stripe_settings (
+    setting_id INT AUTO_INCREMENT PRIMARY KEY,
+    store_id INT NOT NULL UNIQUE,
+    enabled TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Módulo Stripe habilitado para esta tienda',
+    currency VARCHAR(3) NOT NULL DEFAULT 'mxn' COMMENT 'Moneda de cobro (ISO 4217, minúsculas)',
+    publishable_key VARCHAR(255) NULL COMMENT 'pk_live_... / pk_test_...',
+    secret_key VARCHAR(255) NULL COMMENT 'sk_live_... / sk_test_... (solo escritura)',
+    webhook_secret VARCHAR(255) NULL COMMENT 'whsec_... para validar firmas de webhook',
+    auto_complete_sale TINYINT(1) NOT NULL DEFAULT 1 COMMENT 'Marcar pago como pagado al confirmar el PaymentIntent',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: stripe_payments (un registro por PaymentIntent creado desde el POS)
+CREATE TABLE stripe_payments (
+    payment_id INT AUTO_INCREMENT PRIMARY KEY,
+    store_id INT NOT NULL,
+    user_id INT NOT NULL,
+    sale_id INT NULL COMMENT 'Venta asociada una vez cobrada',
+    stripe_payment_intent_id VARCHAR(100) NOT NULL COMMENT 'pi_...',
+    stripe_charge_id VARCHAR(100) NULL COMMENT 'ch_... una vez cobrado',
+    amount DECIMAL(10,2) NOT NULL COMMENT 'Monto en unidades de moneda',
+    amount_cents BIGINT NOT NULL COMMENT 'Monto en centavos (lo que se envía a Stripe)',
+    currency VARCHAR(3) NOT NULL DEFAULT 'mxn',
+    concept VARCHAR(150) NOT NULL DEFAULT 'Cobro en tienda',
+    status ENUM('requires_payment_method','requires_confirmation','requires_action','processing','succeeded','canceled','failed') NOT NULL DEFAULT 'requires_payment_method',
+    last_error VARCHAR(255) NULL COMMENT 'Último mensaje de error de Stripe (genérico)',
+    card_brand VARCHAR(20) NULL COMMENT 'visa, mastercard, etc.',
+    card_last4 VARCHAR(4) NULL COMMENT 'Últimos 4 dígitos',
+    paid_at DATETIME NULL COMMENT 'Fecha de cobro confirmado',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_stripe_pi (stripe_payment_intent_id),
+    INDEX idx_store (store_id),
+    INDEX idx_sale (sale_id),
+    INDEX idx_status (status),
+    INDEX idx_created (created_at),
+    FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE RESTRICT,
+    FOREIGN KEY (sale_id) REFERENCES sales(sale_id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: stripe_payment_events (webhook: auditoría e idempotencia)
+CREATE TABLE stripe_payment_events (
+    event_id INT AUTO_INCREMENT PRIMARY KEY,
+    stripe_payment_id INT NULL,
+    stripe_event_id VARCHAR(100) NOT NULL COMMENT 'evt_... (idempotencia)',
+    event_type VARCHAR(80) NOT NULL COMMENT 'payment_intent.succeeded, etc.',
+    payload MEDIUMTEXT NULL COMMENT 'Evento completo (JSON)',
+    processed TINYINT(1) NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_stripe_event (stripe_event_id),
+    INDEX idx_payment (stripe_payment_id),
+    INDEX idx_event_type (event_type),
+    FOREIGN KEY (stripe_payment_id) REFERENCES stripe_payments(payment_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: stripe_audit_log (auditoría de operaciones del módulo)
+CREATE TABLE stripe_audit_log (
+    audit_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    store_id INT NOT NULL,
+    user_id INT NULL,
+    stripe_payment_id INT NULL,
+    action VARCHAR(50) NOT NULL COMMENT 'create_intent, confirm, webhook, cancel, config',
+    request_payload TEXT NULL COMMENT 'Datos enviados (sin datos sensibles)',
+    response_payload TEXT NULL COMMENT 'Respuesta (sin datos sensibles)',
+    http_status INT NULL,
+    error_message TEXT NULL,
+    ip_address VARCHAR(45) NULL,
+    duration_ms INT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_store (store_id),
+    INDEX idx_action (action),
+    INDEX idx_payment (stripe_payment_id),
+    INDEX idx_created (created_at),
+    FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =============================================
+-- Módulo CoDi (cobros con QR / push)
+-- =============================================
+
+-- Tabla: codi_payments (solicitudes de pago CoDi)
+CREATE TABLE codi_payments (
+    payment_id INT AUTO_INCREMENT PRIMARY KEY,
+    store_id INT NOT NULL,
+    user_id INT NOT NULL,
+    sale_id INT NULL COMMENT 'Venta asociada (si se vinculó a una venta existente)',
+    amount DECIMAL(10,2) NOT NULL COMMENT 'Monto del pago',
+    concept VARCHAR(150) NOT NULL COMMENT 'Concepto/descripción del pago',
+    reference VARCHAR(50) NULL COMMENT 'Referencia interna (ej. folio de venta)',
+    customer_phone VARCHAR(20) NULL COMMENT 'Teléfono del cliente para push notification',
+    customer_name VARCHAR(100) NULL COMMENT 'Nombre del cliente',
+    folio_codi VARCHAR(100) NULL COMMENT 'FolioCoDi generado por el proveedor',
+    qr_code TEXT NULL COMMENT 'Código QR en base64',
+    payment_method ENUM('qr', 'push') NOT NULL DEFAULT 'qr' COMMENT 'Método: QR o push notification',
+    status ENUM('pending', 'generated', 'paid', 'expired', 'cancelled', 'failed') NOT NULL DEFAULT 'pending' COMMENT 'Estado del pago CoDi',
+    expires_at DATETIME NULL COMMENT 'Fecha de expiración del QR',
+    paid_at DATETIME NULL COMMENT 'Fecha de pago confirmado',
+    banxico_response TEXT NULL COMMENT 'Última respuesta del proveedor (JSON)',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_store (store_id),
+    INDEX idx_sale (sale_id),
+    INDEX idx_status (status),
+    INDEX idx_folio (folio_codi),
+    INDEX idx_reference (reference),
+    INDEX idx_created (created_at),
+    FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE RESTRICT,
+    FOREIGN KEY (sale_id) REFERENCES sales(sale_id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: codi_payment_events (webhook: auditoría e idempotencia)
+CREATE TABLE codi_payment_events (
+    event_id INT AUTO_INCREMENT PRIMARY KEY,
+    codi_payment_id INT NOT NULL,
+    event_type VARCHAR(50) NOT NULL COMMENT 'Tipo de evento: paid, expired, cancelled, etc.',
+    provider_event_id VARCHAR(100) NULL COMMENT 'ID del evento del proveedor (idempotencia)',
+    payload TEXT NULL COMMENT 'Payload del evento (JSON)',
+    processed TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Si ya fue procesado',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_payment (codi_payment_id),
+    INDEX idx_event_type (event_type),
+    INDEX idx_provider_event (provider_event_id),
+    FOREIGN KEY (codi_payment_id) REFERENCES codi_payments(payment_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: codi_settings (configuración por tienda)
+CREATE TABLE codi_settings (
+    setting_id INT AUTO_INCREMENT PRIMARY KEY,
+    store_id INT NOT NULL UNIQUE,
+    environment ENUM('sandbox', 'production') NOT NULL DEFAULT 'sandbox' COMMENT 'Ambiente del proveedor',
+    enabled TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Módulo CoDi habilitado para esta tienda',
+    notify_on_payment TINYINT(1) NOT NULL DEFAULT 1 COMMENT 'Notificar al confirmar pago',
+    auto_complete_sale TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Completar venta automáticamente al confirmar pago CoDi',
+    webhook_secret VARCHAR(255) NULL COMMENT 'Secreto para validar webhooks',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: codi_audit_log (auditoría de operaciones)
+CREATE TABLE codi_audit_log (
+    audit_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    store_id INT NOT NULL,
+    user_id INT NULL,
+    codi_payment_id INT NULL,
+    action VARCHAR(50) NOT NULL COMMENT 'Acción: create_qr, create_push, check_status, webhook, cancel',
+    request_payload TEXT NULL COMMENT 'Datos enviados (sin datos sensibles)',
+    response_payload TEXT NULL COMMENT 'Respuesta recibida',
+    http_status INT NULL COMMENT 'Código HTTP de la respuesta',
+    error_message TEXT NULL COMMENT 'Mensaje de error si falló',
+    ip_address VARCHAR(45) NULL COMMENT 'IP del request',
+    duration_ms INT NULL COMMENT 'Duración en milisegundos',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_store (store_id),
+    INDEX idx_action (action),
+    INDEX idx_payment (codi_payment_id),
+    INDEX idx_created (created_at),
+    FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

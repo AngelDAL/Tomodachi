@@ -373,12 +373,67 @@
                     </div>
                 </div>
 
+                <!-- Cobros con tarjeta (Stripe) -->
+                <div class="card" id="stripeCard">
+                    <h3><i class="fab fa-stripe"></i> Cobros con tarjeta (Stripe)</h3>
+                    <p class="subtitle">Cobra con tarjeta directo desde el Punto de Venta. Necesitas una cuenta de
+                        <a href="https://dashboard.stripe.com/register" target="_blank" rel="noopener">Stripe</a>;
+                        copia aquí tus claves de API y listo. Los datos de la tarjeta los captura Stripe, nunca este servidor.</p>
+                    <form id="stripeConfigForm">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="stripePublishableKey">Clave pública (pk_...)</label>
+                                <input type="text" id="stripePublishableKey" placeholder="pk_live_... o pk_test_..." autocomplete="off">
+                            </div>
+                            <div class="form-group">
+                                <label for="stripeCurrency">Moneda</label>
+                                <select id="stripeCurrency">
+                                    <option value="mxn" selected>MXN — Peso mexicano</option>
+                                    <option value="usd">USD — Dólar estadounidense</option>
+                                    <option value="eur">EUR — Euro</option>
+                                    <option value="cop">COP — Peso colombiano</option>
+                                    <option value="ars">ARS — Peso argentino</option>
+                                    <option value="clp">CLP — Peso chileno</option>
+                                    <option value="pen">PEN — Sol peruano</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="stripeSecretKey">Clave secreta (sk_... o rk_...)</label>
+                            <input type="password" id="stripeSecretKey" placeholder="sk_test_... o rk_test_..." autocomplete="new-password">
+                            <small id="stripeSecretHint" style="color: var(--text-muted);"></small>
+                        </div>
+                        <div class="form-group">
+                            <label for="stripeWebhookSecret">Firma de webhook (whsec_...)</label>
+                            <input type="password" id="stripeWebhookSecret" placeholder="whsec_..." autocomplete="new-password">
+                            <small id="stripeWebhookHint" style="color: var(--text-muted);"></small>
+                        </div>
+                        <div class="api-doc-hint">
+                            <i class="fas fa-info-circle"></i>
+                            En tu panel de Stripe (Developers → Webhooks) registra esta URL con los eventos
+                            <code>payment_intent.succeeded</code>, <code>payment_intent.payment_failed</code> y
+                            <code>payment_intent.canceled</code>:<br>
+                            <code id="stripeWebhookUrl"></code>
+                        </div>
+                        <div class="form-group" style="margin-top: 0.75rem;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" id="stripeEnabled" style="width: auto;">
+                                Habilitar cobros con Stripe en el Punto de Venta
+                            </label>
+                        </div>
+                        <div id="stripeConfigMsg" class="msg"></div>
+                        <button type="submit" class="btn-primary" id="stripeSaveBtn">
+                            <i class="fas fa-save"></i> Guardar configuración
+                        </button>
+                    </form>
+                </div>
+
             </div>
         </main>
     </div>
 
     <script src="js/sidebar-loader.js?v=6"></script>
-    <script src="js/app.js?v=10"></script>
+    <script src="js/app.js?v=11"></script>
     <script>
         // Verificar sesión (modal de re-login si caducó y pidió sesión permanente)
         (async () => {
@@ -386,7 +441,88 @@
             if (!session) return;
             initSidebar();
             loadTokens();
+            loadStripeConfig();
         })();
+
+        // ---------- Cobros con tarjeta (Stripe) ----------
+        document.getElementById('stripeWebhookUrl').textContent =
+            location.origin + '/api/stripe/webhook.php';
+
+        async function loadStripeConfig() {
+            const msg = document.getElementById('stripeConfigMsg');
+            try {
+                const res = await fetch('../api/stripe/config.php', { credentials: 'include' });
+                const data = await res.json();
+                if (res.status === 403) {
+                    document.getElementById('stripeCard').style.display = 'none';
+                    return;
+                }
+                if (!data.success) return;
+                const cfg = data.data;
+                document.getElementById('stripeEnabled').checked = !!cfg.enabled;
+                document.getElementById('stripePublishableKey').value = cfg.publishable_key || '';
+                document.getElementById('stripeCurrency').value = cfg.currency || 'mxn';
+                if (cfg.has_secret_key) {
+                    document.getElementById('stripeSecretHint').textContent =
+                        'Guardada: ' + cfg.secret_key_masked + ' — deja el campo vacío para conservarla.';
+                }
+                if (cfg.has_webhook_secret) {
+                    document.getElementById('stripeWebhookHint').textContent =
+                        'Guardada: ' + cfg.webhook_secret_masked + ' — deja el campo vacío para conservarla.';
+                }
+            } catch (err) {
+                msg.className = 'msg error';
+                msg.textContent = 'No se pudo cargar la configuración de Stripe.';
+            }
+        }
+
+        document.getElementById('stripeConfigForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const msg = document.getElementById('stripeConfigMsg');
+            const btn = document.getElementById('stripeSaveBtn');
+            msg.className = 'msg';
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+
+            const body = {
+                enabled: document.getElementById('stripeEnabled').checked,
+                currency: document.getElementById('stripeCurrency').value
+            };
+            const pk = document.getElementById('stripePublishableKey').value.trim();
+            const sk = document.getElementById('stripeSecretKey').value.trim();
+            const wh = document.getElementById('stripeWebhookSecret').value.trim();
+            if (pk) body.publishable_key = pk;
+            if (sk) body.secret_key = sk;
+            if (wh) body.webhook_secret = wh;
+
+            try {
+                const res = await fetch('../api/stripe/config.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    msg.className = 'msg success';
+                    msg.textContent = data.data.enabled
+                        ? 'Stripe configurado y habilitado. Ya puedes cobrar con tarjeta en el Punto de Venta.'
+                        : 'Configuración guardada. Stripe está deshabilitado.';
+                    document.getElementById('stripeSecretKey').value = '';
+                    document.getElementById('stripeWebhookSecret').value = '';
+                    loadStripeConfig();
+                } else {
+                    msg.className = 'msg error';
+                    msg.textContent = data.message || 'Error al guardar';
+                }
+            } catch (err) {
+                msg.className = 'msg error';
+                msg.textContent = 'Error de conexión. Intente nuevamente.';
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-save"></i> Guardar configuración';
+            }
+        });
 
         // Crear token
         document.getElementById('createTokenForm').addEventListener('submit', async (e) => {

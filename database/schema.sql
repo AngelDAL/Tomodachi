@@ -38,6 +38,7 @@ CREATE TABLE users (
     show_onboarding TINYINT(1) DEFAULT 1,
     reset_token_hash VARCHAR(255) NULL,
     reset_token_expires_at DATETIME NULL,
+    must_change_password TINYINT(1) NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_login TIMESTAMP NULL,
     FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE RESTRICT,
@@ -600,9 +601,9 @@ INSERT INTO terminals (store_id, terminal_name) VALUES
 -- (1, 'Abarrotes', 'Productos de despensa', 'fa-basket-shopping'),
 -- (1, 'Lácteos', 'Productos lácteos y derivados', 'fa-cheese');
 
--- Insertar usuario administrador (password: admin123)
-INSERT INTO users (store_id, username, password_hash, full_name, email, role, status) VALUES
-(1, 'admin', '$2y$10$rDGCkOinf6RJ2ywtMU6QYeeTNkqq4/soMpsxdF4wO9lqIRTrjfP2a', 'Administrador', 'admin@tomodachi.com', 'admin', 'active');
+-- Insertar usuario administrador (password: admin123, cambio obligatorio al primer acceso)
+INSERT INTO users (store_id, username, password_hash, full_name, email, role, status, must_change_password) VALUES
+(1, 'admin', '$2y$10$rDGCkOinf6RJ2ywtMU6QYeeTNkqq4/soMpsxdF4wO9lqIRTrjfP2a', 'Administrador', 'admin@tomodachi.com', 'admin', 'active', 1);
 
 -- Configuración global de la instalación (no por navegador)
 CREATE TABLE app_settings (

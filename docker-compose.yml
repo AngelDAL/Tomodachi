@@ -1,7 +1,7 @@
 # Tomodachi POS - Community Edition
 # Levantar: docker compose up -d
 # Acceder: http://localhost:8080
-# Credenciales iniciales: admin / admin123
+# Credenciales iniciales: admin / admin123 (el sistema pedirá cambiarla en el primer acceso)
 services:
   db:
     image: mariadb:10.11

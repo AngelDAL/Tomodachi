@@ -47,9 +47,9 @@ try {
     $db = new Database();
     $auth = new Auth($db);
 
-    // === Anti fuerza bruta: comprobar bloqueo de la IP antes de validar ===
+    // === Anti fuerza bruta: comprobar bloqueo de la IP y de la cuenta ===
     $rateLimiter = new LoginRateLimiter($db);
-    $rlCheck = $rateLimiter->check();
+    $rlCheck = $rateLimiter->check($username);
     if (!$rlCheck['allowed']) {
         http_response_code(429);
         header('Content-Type: application/json; charset=utf-8');
@@ -67,21 +67,20 @@ try {
     $user = $auth->login($username, $password);
     
     if ($user) {
-        // Login exitoso: limpiar el contador de la IP
-        $rateLimiter->recordSuccess();
+        // Login exitoso: limpiar los contadores de la IP y de la cuenta
+        $rateLimiter->recordSuccess($username);
 
-        // Handle Remember Me
+        // Handle Remember Me (cookie persistente de 30 días máximo)
         if (isset($data['remember']) && $data['remember'] === true) {
             $params = session_get_cookie_params();
-            setcookie(
-                session_name(),
-                session_id(),
-                time() + (365 * 24 * 60 * 60), // 1 year permanent
-                $params['path'],
-                $params['domain'],
-                $params['secure'],
-                $params['httponly']
-            );
+            setcookie(session_name(), session_id(), [
+                'expires'  => time() + (30 * 24 * 60 * 60),
+                'path'     => $params['path'],
+                'domain'   => $params['domain'],
+                'secure'   => !empty($params['secure']),
+                'httponly' => true,
+                'samesite' => 'Lax',
+            ]);
         }
 
         Response::success([
@@ -95,5 +94,6 @@ try {
     }
     
 } catch (Exception $e) {
-    Response::error('Error en el servidor: ' . $e->getMessage(), 500);
+    error_log('Error en login: ' . $e->getMessage());
+    Response::error('Error interno del servidor', 500);
 }

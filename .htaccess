@@ -10,10 +10,19 @@
     Require all denied
 </FilesMatch>
 
+# Scripts de desarrollo/diagnóstico: no deben ser accesibles por web
+<FilesMatch "^(repro_issue|test_cli_mail|test_consume_mode|test_mail_get)\.php$">
+    Require all denied
+</FilesMatch>
+
+# Sin listado de directorios
+Options -Indexes
+
 # Proteger directorios del sistema (No accesibles vía navegador)
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteRule ^(config|includes|database|codi/includes|codi/database|codi/config|codi/tests)/ - [F,L]
+    RewriteRule ^(config|includes|database|temp|cache|vendor|tests|docs|docker|logs|codi/includes|codi/database|codi/config|codi/tests)/ - [F,L]
+    RewriteRule ^api/ai/config\.php$ - [F,L]
     # Propagar header Authorization para API tokens (Bearer)
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

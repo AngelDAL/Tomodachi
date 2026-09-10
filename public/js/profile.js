@@ -171,6 +171,22 @@ async function loadCompanySettings() {
           // Cargar formato regional
                 loadFormatConfig(store.settings.format || null);
             }
+            // Cargar configuracion CoDi
+            if (store.settings && store.settings.codi) {
+                const codi = store.settings.codi;
+                document.getElementById('codiEnabled').checked = !!codi.enabled;
+                document.getElementById('codiSettingsGroup').style.display = codi.enabled ? 'block' : 'none';
+                if (codi.environment) document.getElementById('codiEnvironment').value = codi.environment;
+                if (codi.api_key) document.getElementById('codiApiKey').value = codi.api_key;
+                if (codi.endpoint) document.getElementById('codiEndpoint').value = codi.endpoint;
+            }
+            // Cargar configuracion Stripe
+            if (store.settings && store.settings.stripe) {
+                const stripe = store.settings.stripe;
+                document.getElementById('stripeEnabled').checked = !!stripe.enabled;
+                document.getElementById('stripeSettingsGroup').style.display = stripe.enabled ? 'block' : 'none';
+                // No cargar llaves completas por seguridad (solo placeholders)
+            }
 
             // Cargar configuración de tema (claro + oscuro personalizado)
             const themeConfig = store.theme_config || {};
@@ -632,7 +648,19 @@ document.getElementById('companyForm').addEventListener('submit', async (e) => {
     const settings = {
         allow_negative_stock: document.getElementById('allowNegativeStock').checked,
         require_open_register: document.getElementById('requireOpenRegister').checked,
-        format: readFormatForm()
+        format: readFormatForm(),
+        codi: {
+            enabled: document.getElementById('codiEnabled').checked,
+            environment: document.getElementById('codiEnvironment').value,
+            api_key: document.getElementById('codiApiKey').value || undefined,
+            endpoint: document.getElementById('codiEndpoint').value || 'https://api.bite-size.mx'
+        },
+        stripe: {
+            enabled: document.getElementById('stripeEnabled').checked,
+            secret_key: document.getElementById('stripeSecretKey').value || undefined,
+            publishable_key: document.getElementById('stripePublishableKey').value || undefined,
+            webhook_secret: document.getElementById('stripeWebhookSecret').value || undefined
+        }
     };
 
     const data = {
@@ -662,6 +690,12 @@ document.getElementById('companyForm').addEventListener('submit', async (e) => {
             localStorage.setItem('pos_theme_config', JSON.stringify(themeConfig));
             if (persistDark) localStorage.setItem('pos_theme_config_dark', JSON.stringify(persistDark));
             else localStorage.removeItem('pos_theme_config_dark');
+            // Asegurar que el formato regional quede en localStorage para
+            // que otras páginas (sales.html) lo lean sin depender del fetch async
+            if (settings.format) {
+                localStorage.setItem('pos_format_config', JSON.stringify(settings.format));
+                if (window.FormatUtils) window.FormatUtils.init(settings.format);
+            }
         } else {
             showNotification(result.message, 'error');
         }
@@ -1115,6 +1149,32 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     updateBtnState();
+});
+
+// ==========================================
+// CoDi: toggle settings visibility
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+    const codiToggle = document.getElementById('codiEnabled');
+    const codiGroup = document.getElementById('codiSettingsGroup');
+    if (codiToggle && codiGroup) {
+        codiToggle.addEventListener('change', () => {
+            codiGroup.style.display = codiToggle.checked ? 'block' : 'none';
+        });
+    }
+});
+
+// ==========================================
+// Stripe: toggle settings visibility
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+    const stripeToggle = document.getElementById('stripeEnabled');
+    const stripeGroup = document.getElementById('stripeSettingsGroup');
+    if (stripeToggle && stripeGroup) {
+        stripeToggle.addEventListener('change', () => {
+            stripeGroup.style.display = stripeToggle.checked ? 'block' : 'none';
+        });
+    }
 });
 
 function urlBase64ToUint8Array(base64String) {

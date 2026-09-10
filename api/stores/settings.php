@@ -86,6 +86,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             [$store_name, $address, $phone, $theme_json, $dark_json, $settings_json, $store_id]
         );
 
+        // Sincronizar configuracion CoDi con la tabla codi_settings
+        if ($settings && isset($settings['codi'])) {
+            $codi = $settings['codi'];
+            $codiEnabled = !empty($codi['enabled']) ? 1 : 0;
+            $codiEnv = isset($codi['environment']) && in_array($codi['environment'], ['sandbox', 'production']) ? $codi['environment'] : 'sandbox';
+            $codiProvider = isset($codi['provider']) ? Validator::sanitizeString($codi['provider']) : 'portfedh';
+            $codiApiKey = isset($codi['api_key']) ? Validator::sanitizeString($codi['api_key']) : null;
+            $codiEndpoint = isset($codi['endpoint']) ? Validator::sanitizeString($codi['endpoint']) : null;
+            $codiWebhookSecret = isset($codi['webhook_secret']) ? Validator::sanitizeString($codi['webhook_secret']) : null;
+
+            $existing = $db->selectOne('SELECT setting_id FROM codi_settings WHERE store_id = ?', [$store_id]);
+            if ($existing) {
+                $db->update(
+                    'UPDATE codi_settings SET enabled = ?, environment = ?, webhook_secret = COALESCE(?, webhook_secret), updated_at = NOW() WHERE store_id = ?',
+                    [$codiEnabled, $codiEnv, $codiWebhookSecret, $store_id]
+                );
+            } else {
+                $db->insert(
+                    'INSERT INTO codi_settings (store_id, enabled, environment, webhook_secret) VALUES (?, ?, ?, ?)',
+                    [$store_id, $codiEnabled, $codiEnv, $codiWebhookSecret]
+                );
+            }
+        }
+
         Response::success(null, 'Configuración actualizada');
 
     } catch (Exception $e) {

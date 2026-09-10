@@ -108,6 +108,9 @@ async function initSidebar() {
                 <a href="#" class="tooltip-item" id="fullscreenToggleBtn">
                     <i class="fas fa-expand"></i> Pantalla completa
                 </a>
+                <a href="#" class="tooltip-item" id="themeToggleTooltipBtn">
+                    <i class="fas ${isDarkChecked() ? 'fa-moon' : 'fa-sun'}"></i> <span id="themeToggleTooltipLabel">Tema ${isDarkChecked() ? 'oscuro' : 'claro'}</span>
+                </a>
                 <a href="#" class="tooltip-item" id="logoutTooltipBtn">
                     <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
                 </a>
@@ -292,6 +295,31 @@ async function initSidebar() {
     }
     document.addEventListener('tomodachi:themechange', syncThemeBtn);
     syncThemeBtn();
+
+    // Toggle tema desde el tooltip del perfil (móvil)
+    const themeToggleTooltip = document.getElementById('themeToggleTooltipBtn');
+    const themeToggleTooltipLabel = document.getElementById('themeToggleTooltipLabel');
+    const syncThemeTooltip = () => {
+        const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+        if (themeToggleTooltip) {
+            const icon = themeToggleTooltip.querySelector('i');
+            if (icon) icon.className = `fas ${dark ? 'fa-moon' : 'fa-sun'}`;
+        }
+        if (themeToggleTooltipLabel) themeToggleTooltipLabel.textContent = `Tema ${dark ? 'oscuro' : 'claro'}`;
+    };
+    if (themeToggleTooltip) {
+        themeToggleTooltip.addEventListener('click', (e) => {
+            e.preventDefault();
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            if (window.ThemeSystem && ThemeSystem.setMode) {
+                ThemeSystem.setMode(isDark ? 'light' : 'dark');
+            } else {
+                document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
+            }
+            setTimeout(syncThemeTooltip, 40);
+        });
+    }
+    document.addEventListener('tomodachi:themechange', syncThemeTooltip);
 
     // Profile Menu Toggle Logic (Consolidated from app.js)
     // If app.js handles this, we might have duplicate listeners if we add it here too.

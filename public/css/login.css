@@ -1,28 +1,5 @@
-:root {
-    --primary-color: #39C5BB;
-    --primary-dark: #2CB1A7;
-    --primary-darker: #1F8A82;
-    --primary-light: #E4F8F6;
-    --primary-lighter: #F0FBFA;
-    --primary-shadow: rgba(57, 197, 187, 0.22);
-    --secondary-color: #0E86A6;
-    --secondary-dark: #0A6A86;
-    --success-color: #48bb78;
-    --error-color: #f56565;
-    --text-color: #2d3748;
-    --text-light: #5a6572;
-    --bg-light: #f4f6f8;
-    --bg-card: #ffffff;
-    --border-color: #d5dbe3;
-    --bg-input: #ffffff;
-    --primary-focus-ring: 0 0 0 3px rgba(57, 197, 187, 0.22);
-    --dur: 0.28s cubic-bezier(0.4, 0, 0.2, 1);
-    --dur-spring: 0.38s cubic-bezier(0.34, 1.56, 0.64, 1);
-    --white: #ffffff;
-    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-}
+/* Variables del tema global se cargan desde variables.css via design-system.css.
+   No declarar :root aquí para no interferir con el sistema de temas. */
 
 * {
     margin: 0;

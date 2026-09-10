@@ -7,8 +7,9 @@
  *   "store_id":1,
  *   "register_id":2, // opcional si se obtiene automáticamente
  *   "items":[{"product_id":1,"quantity":2,"price":15.50}],
- *   "payment_method":"cash", // cash|card|transfer|mixed
+ *   "payment_method":"cash", // cash|card|transfer|mixed|credit|codi
  *   "cash_amount":31.00,       // si mixed indica parte en efectivo
+ *   "codi_payment_id":123,     // requerido si payment_method=codi
  *   "discount":0,
  *   "tax":0
  * }
@@ -55,9 +56,11 @@ try {
     $errors=[];
     if ($store_id<=0) $errors['store_id']='Requerido';
     if (!$items || !is_array($items)) $errors['items']='Lista vacía';
-    if (!in_array($payment_method,[PAYMENT_CASH,PAYMENT_CARD,PAYMENT_TRANSFER,PAYMENT_MIXED,PAYMENT_CREDIT])) $errors['payment_method']='Método inválido';
+    $codi_payment_id = isset($data['codi_payment_id']) ? (int)$data['codi_payment_id'] : null;
+    if (!in_array($payment_method,[PAYMENT_CASH,PAYMENT_CARD,PAYMENT_TRANSFER,PAYMENT_MIXED,PAYMENT_CREDIT,PAYMENT_CODI,PAYMENT_STRIPE])) $errors['payment_method']='Metodo invalido';
     if ($payment_method===PAYMENT_MIXED && ($cash_amount===null || $cash_amount<0)) $errors['cash_amount']='Requerido en pago mixto';
     if ($payment_method===PAYMENT_CREDIT && $customer_id<=0) $errors['customer_id']='Requerido para apartado';
+    if ($payment_method===PAYMENT_CODI && $codi_payment_id<=0) $errors['codi_payment_id']='Requerido para pago CoDi';
     if ($errors) { Response::validationError($errors); }
 
     // Seguridad: el usuario solo puede facturar en su propia tienda
@@ -150,6 +153,8 @@ try {
     }
     // Si no es apartado, amount_paid = total (pago completo)
     if ($payment_method !== PAYMENT_CREDIT) { $amount_paid = $total; }
+    // CoDi: pago completo al confirmar
+    if ($payment_method === PAYMENT_CODI) { $amount_paid = $total; }
 
     // Si hay cliente asociado, validar que exista en la tienda
     $customer = null;
@@ -194,8 +199,8 @@ try {
     try {
         $user = $actor;
         $createdVia = ($user['via'] === 'token') ? 'token' : 'session';
-        $sale_id = $db->insert('INSERT INTO sales (store_id, user_id, customer_id, register_id, sale_date, subtotal, tax, discount, total, amount_paid, payment_method, status, created_via, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())',[
-            $store_id, $user['user_id'], ($customer_id > 0 ? $customer_id : null), $register_id, date('Y-m-d H:i:s'), $subtotal, $tax, $discount, $total, $amount_paid, $payment_method, SALE_COMPLETED, $createdVia
+        $sale_id = $db->insert('INSERT INTO sales (store_id, user_id, customer_id, register_id, sale_date, subtotal, tax, discount, total, amount_paid, payment_method, codi_payment_id, status, created_via, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())',[
+            $store_id, $user['user_id'], ($customer_id > 0 ? $customer_id : null), $register_id, date('Y-m-d H:i:s'), $subtotal, $tax, $discount, $total, $amount_paid, $payment_method, $codi_payment_id, SALE_COMPLETED, $createdVia
         ]);
 
         // Si es apartado, incrementar balance del cliente

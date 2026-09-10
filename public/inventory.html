@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="css/sidebar-modern.css?v=4">
     <link rel="stylesheet" href="css/mobile-nav.css?v=4">
     <link rel="stylesheet" href="css/dashboard.css?v=4">
-    <link rel="stylesheet" href="css/inventory.css?v=10">
+    <link rel="stylesheet" href="css/inventory.css?v=12">
     <script src="js/theme-init.js"></script>
     <link rel="icon" type="image/svg+xml" href="assets/images/logos/tomodachi-favicon.svg">
     <script src="js/format-utils.js"></script>
@@ -134,13 +134,28 @@
                             </button>
                         </div>
                         <div class="purchases-filters">
-                            <select id="purchaseStatusFilter" class="filter-select">
-                                <option value="">Todos los estados</option>
-                                <option value="draft">Borrador</option>
-                                <option value="pending">Pendiente</option>
-                                <option value="executed">Ejecutada</option>
-                                <option value="cancelled">Cancelada</option>
-                            </select>
+                            <div class="filter-chips" id="purchaseFilterChips">
+                                <button type="button" class="filter-chip active" data-filter="pending">
+                                    <i class="fas fa-clock"></i> Pendientes
+                                    <span class="chip-count" id="countPending">0</span>
+                                </button>
+                                <button type="button" class="filter-chip" data-filter="executed">
+                                    <i class="fas fa-check"></i> Completadas
+                                    <span class="chip-count" id="countExecuted">0</span>
+                                </button>
+                                <button type="button" class="filter-chip" data-filter="draft">
+                                    <i class="fas fa-pen"></i> Borradores
+                                    <span class="chip-count" id="countDraft">0</span>
+                                </button>
+                                <button type="button" class="filter-chip" data-filter="cancelled">
+                                    <i class="fas fa-ban"></i> Canceladas
+                                    <span class="chip-count" id="countCancelled">0</span>
+                                </button>
+                                <button type="button" class="filter-chip" data-filter="">
+                                    <i class="fas fa-list"></i> Todas
+                                    <span class="chip-count" id="countAll">0</span>
+                                </button>
+                            </div>
                         </div>
                         <div id="purchasesList" class="purchases-list"></div>
                     </div>
@@ -1152,7 +1167,7 @@
     <script src="js/scanner.js"></script>
     <script src="js/tour.js?v=4"></script>
     <script src="js/inventory.js?v=10"></script>
-    <script src="js/purchases.js?v=7"></script>
+    <script src="js/purchases.js?v=8"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             const session = await checkSession();

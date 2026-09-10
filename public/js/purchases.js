@@ -46,22 +46,79 @@ function setTab(target) {
 document.addEventListener('DOMContentLoaded',()=>{
     document.querySelectorAll('.inv-tab').forEach(t=>t.addEventListener('click',()=>setTab(t.dataset.tab)));
     document.getElementById('newPurchaseBtn')?.addEventListener('click',()=>openPurchaseComposer());
-    document.getElementById('purchaseStatusFilter')?.addEventListener('change',loadPurchases);
+    document.querySelectorAll('#purchaseFilterChips .filter-chip').forEach(c => {
+        c.addEventListener('click', () => setPurchaseFilter(c.dataset.filter));
+    });
     document.getElementById('filterMovementsBtn')?.addEventListener('click',loadMovements);
     document.getElementById('lossForm')?.addEventListener('submit',e=>{e.preventDefault();submitLoss();});
     document.getElementById('lossModal')?.addEventListener('click',e=>{if(e.target.id==='lossModal')closeLossModal();});
 });
 
+let currentPurchaseFilter = 'pending'; // Por defecto: solo pendientes
+let allPurchasesCache = []; // Cache para contadores
+
+function setPurchaseFilter(filter) {
+    currentPurchaseFilter = filter;
+    document.querySelectorAll('#purchaseFilterChips .filter-chip').forEach(c => {
+        c.classList.toggle('active', c.dataset.filter === filter);
+    });
+    loadPurchases();
+}
+
 async function loadPurchases() {
-    const list=document.getElementById('purchasesList'); if(!list)return;
-    list.innerHTML='<div class="empty-state"><i class="fas fa-spinner fa-spin"></i> Cargando compras…</div>';
+    const list = document.getElementById('purchasesList'); if (!list) return;
+    list.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i> Cargando compras…</div>';
     try {
-        const status=document.getElementById('purchaseStatusFilter')?.value||'';
-        const data=await api('../api/purchases/purchases.php'+(status?`?status=${encodeURIComponent(status)}`:''));
-        const purchases=data.data||[];
-        list.innerHTML=purchases.length?purchases.map(p=>`<button type="button" class="purchase-card" data-purchase-id="${p.purchase_id}"><span class="purchase-card-header"><strong>#${p.purchase_id}</strong><span class="purchase-status" style="background:${PURCHASE_STATUS_COLORS[p.status]||'#6b7280'}">${esc(PURCHASE_STATUS_LABELS[p.status]||p.status)}</span></span><span class="purchase-supplier">${esc(p.supplier_name||'Sin proveedor')}</span><span class="purchase-meta"><span><i class="fas fa-box"></i> ${p.item_count} ítem(s)</span><span>${money(p.total_cost)}</span></span><span class="purchase-date">${dateText(p.created_at)}</span></button>`).join(''):'<div class="empty-state"><i class="fas fa-cart-shopping"></i><br>No hay órdenes de compra</div>';
-        list.querySelectorAll('[data-purchase-id]').forEach(card=>card.addEventListener('click',()=>openPurchaseDetail(Number(card.dataset.purchaseId))));
-    } catch(e) { list.innerHTML=`<div class="empty-state">${esc(e.message)}</div>`; }
+        // Siempre cargar todas para contadores, luego filtrar en cliente
+        const data = await api('../api/purchases/purchases.php');
+        allPurchasesCache = data.data || [];
+        updateFilterCounts();
+        const filtered = currentPurchaseFilter
+            ? allPurchasesCache.filter(p => p.status === currentPurchaseFilter)
+            : allPurchasesCache;
+        renderPurchaseList(filtered);
+    } catch (e) {
+        list.innerHTML = `<div class="empty-state">${esc(e.message)}</div>`;
+    }
+}
+
+function updateFilterCounts() {
+    const counts = { pending: 0, executed: 0, draft: 0, cancelled: 0 };
+    allPurchasesCache.forEach(p => { if (counts[p.status] !== undefined) counts[p.status]++; });
+    const elPending = document.getElementById('countPending');
+    const elExecuted = document.getElementById('countExecuted');
+    const elDraft = document.getElementById('countDraft');
+    const elCancelled = document.getElementById('countCancelled');
+    const elAll = document.getElementById('countAll');
+    if (elPending) elPending.textContent = counts.pending;
+    if (elExecuted) elExecuted.textContent = counts.executed;
+    if (elDraft) elDraft.textContent = counts.draft;
+    if (elCancelled) elCancelled.textContent = counts.cancelled;
+    if (elAll) elAll.textContent = allPurchasesCache.length;
+}
+
+function renderPurchaseList(purchases) {
+    const list = document.getElementById('purchasesList'); if (!list) return;
+    if (!purchases.length) {
+        list.innerHTML = '<div class="empty-state"><i class="fas fa-cart-shopping"></i><br>No hay órdenes de compra</div>';
+        return;
+    }
+    list.innerHTML = purchases.map(p => `
+        <button type="button" class="purchase-card" data-purchase-id="${p.purchase_id}">
+            <span class="purchase-card-header">
+                <span class="purchase-id">#${p.purchase_id}</span>
+                <span class="purchase-status" style="background:${PURCHASE_STATUS_COLORS[p.status]||'#6b7280'}">${esc(PURCHASE_STATUS_LABELS[p.status]||p.status)}</span>
+            </span>
+            <span class="purchase-supplier">${esc(p.supplier_name||'Sin proveedor')}</span>
+            <span class="purchase-meta">
+                <span><i class="fas fa-box"></i> ${p.item_count} ítem(s)</span>
+                <span class="purchase-total">${money(p.total_cost)}</span>
+            </span>
+            <span class="purchase-date">${dateText(p.created_at)}</span>
+        </button>`).join('');
+    list.querySelectorAll('[data-purchase-id]').forEach(card => {
+        card.addEventListener('click', () => openPurchaseDetail(Number(card.dataset.purchaseId)));
+    });
 }
 
 async function loadPurchaseProducts() {
@@ -182,12 +239,18 @@ function renderPurchaseDetail(p) {
     const hasItems=p.items.length>0;
     const rows=p.items.map(i=>{
         const plannedTotal=Number(i.planned_total_cost||((Number(i.unit_cost)||0)*Number(i.planned_quantity)||0));
-        return `<div class="detail-item-row" data-item-id="${i.item_id}"><div class="detail-item-name"><strong>${esc(i.product_name)}</strong><small>${i.tracking_type==='component'?'Componente':'Producto final'} · Último costo: ${money(i.last_unit_cost||0)} / unidad</small></div>${editable&&!i.actual_quantity?`<label>Cantidad recibida<input type="number" min="0.001" step="0.001" data-detail-qty="${i.item_id}" value="${i.planned_quantity}"></label><label class="detail-total-field">Costo total real<input type="number" min="0" step="0.01" data-detail-total="${i.item_id}" value="${plannedTotal}"></label><button type="button" class="icon-button danger" data-remove-detail="${i.item_id}" aria-label="Quitar"><i class="fas fa-trash"></i></button>`:`<span>Recibido: ${i.actual_quantity??'—'}</span><strong>${money(i.total_cost)}</strong>`}</div>`;
+        const isEditable=editable&&!i.actual_quantity;
+        const typeName=i.tracking_type==='component'?'Componente':'Producto final';
+        const lastUnitCost=Number(i.last_unit_cost||0);
+        if(isEditable){
+            return `<div class="detail-item-row editable" data-item-id="${i.item_id}"><div class="detail-item-header"><div class="detail-item-name"><i class="fas ${i.tracking_type==='component'?'fa-cubes':'fa-box'}"></i><strong>${esc(i.product_name)}</strong><small>${typeName}</small></div><button type="button" class="icon-button danger" data-remove-detail="${i.item_id}" aria-label="Quitar"><i class="fas fa-trash"></i></button></div><div class="detail-item-cost-ref"><small>Último costo: ${money(lastUnitCost)}/ud</small></div><div class="detail-item-fields"><label class="detail-field"><span class="detail-field-label">Cantidad recibida</span><input type="number" min="0.001" step="0.001" data-detail-qty="${i.item_id}" value="${i.planned_quantity}"></label><label class="detail-field"><span class="detail-field-label">Costo total real</span><input type="number" min="0" step="0.01" data-detail-total="${i.item_id}" value="${plannedTotal}"></label></div></div>`;
+        }
+        return `<div class="detail-item-row read-only" data-item-id="${i.item_id}"><div class="detail-item-header"><div class="detail-item-name"><i class="fas ${i.tracking_type==='component'?'fa-cubes':'fa-box'}"></i><strong>${esc(i.product_name)}</strong><small>${typeName}</small></div></div><div class="detail-item-read-grid"><span class="detail-read-item"><span class="detail-read-label">Recibido</span><strong>${i.actual_quantity??'—'}</strong></span><span class="detail-read-item"><span class="detail-read-label">Costo</span><strong>${money(i.total_cost)}</strong></span></div></div>`;
     }).join('');
     const plannedGrandTotal=p.items.reduce((sum,i)=>sum+Number(i.planned_total_cost||((Number(i.unit_cost)||0)*Number(i.planned_quantity)||0)),0);
     const visibleTotal=p.status==='executed'?Number(p.total_cost||0):plannedGrandTotal;
     const totalLabel=p.status==='executed'?'Total pagado':'Presupuesto aproximado';
-    const body=`<div class="purchase-detail-meta"><div><strong>Proveedor:</strong> ${esc(p.supplier_name||'Sin proveedor')}</div><div><strong>Creada:</strong> ${dateText(p.created_at)}</div><div><strong>Estado:</strong> <span class="purchase-status" style="background:${PURCHASE_STATUS_COLORS[p.status]}">${esc(PURCHASE_STATUS_LABELS[p.status])}</span></div><div class="purchase-detail-total"><span>${totalLabel}</span><strong id="detailGrandTotal">${money(visibleTotal)}</strong></div></div>${p.status==='pending'?'<p class="execution-intro"><i class="fas fa-circle-info"></i> Captura la cantidad recibida y el costo total real pagado por cada producto. La diferencia se ajustará al confirmar.</p>':''}<div class="detail-list-heading"><h3><i class="fas fa-list"></i> Productos</h3>${editable?'<button type="button" class="btn-secondary" id="detailAddProducts"><i class="fas fa-plus"></i> Agregar productos</button>':''}</div><div class="purchase-detail-items">${hasItems?rows:'<div class="empty-state">Esta orden no tiene productos</div>'}</div>`;
+    const body=`<div class="purchase-detail-meta"><div class="detail-meta-row"><i class="fas fa-store"></i><div><strong>Proveedor</strong><span>${esc(p.supplier_name||'Sin proveedor')}</span></div></div><div class="detail-meta-row"><i class="fas fa-calendar"></i><div><strong>Creada</strong><span>${dateText(p.created_at)}</span></div></div><div class="detail-meta-row"><i class="fas fa-circle"></i><div><strong>Estado</strong><span class="purchase-status" style="background:${PURCHASE_STATUS_COLORS[p.status]}">${esc(PURCHASE_STATUS_LABELS[p.status])}</span></div></div><div class="detail-meta-row total"><i class="fas fa-dollar-sign"></i><div><strong>${totalLabel}</strong><strong class="detail-grand-total" id="detailGrandTotal">${money(visibleTotal)}</strong></div></div></div>${p.status==='pending'?'<p class="execution-intro"><i class="fas fa-circle-info"></i> Captura la cantidad recibida y el costo total real pagado por cada producto. La diferencia se ajustará al confirmar.</p>':''}<div class="detail-list-heading"><h3><i class="fas fa-list"></i> Productos</h3>${editable?'<button type="button" class="btn-secondary" id="detailAddProducts"><i class="fas fa-plus"></i> Agregar productos</button>':''}</div><div class="purchase-detail-items">${hasItems?rows:'<div class="empty-state">Esta orden no tiene productos</div>'}</div>`;
     let actions='';
     if(p.status==='pending')actions+='<button type="button" class="btn-primary" id="detailExecute"><i class="fas fa-check"></i> Confirmar</button>';
     if(editable)actions='<button type="button" class="btn-danger-outline" id="detailCancel"><i class="fas fa-ban"></i> Cancelar</button>'+actions;
@@ -214,7 +277,7 @@ async function confirmPurchaseFromDetail(p) {
 async function loadMovements() {
     const list=document.getElementById('movementsList');if(!list)return;list.innerHTML='<div class="empty-state"><i class="fas fa-spinner fa-spin"></i> Cargando movimientos…</div>';
     const q=new URLSearchParams();const type=document.getElementById('movementTypeFilter')?.value,from=document.getElementById('movementDateFrom')?.value,to=document.getElementById('movementDateTo')?.value;if(type)q.set('type',type);if(from)q.set('date_from',from);if(to)q.set('date_to',to);
-    try{const data=await api(`../api/purchases/inventory_log.php?${q}`);const rows=data.data||[];list.innerHTML=rows.length?`<div class="movements-table-wrap"><table class="movements-table"><thead><tr><th>Fecha</th><th>Producto</th><th>Tipo</th><th>Cantidad</th><th>Stock</th><th>Detalle</th><th>Usuario</th></tr></thead><tbody>${rows.map(m=>{const outgoing=['exit','sale','loss'].includes(m.movement_type);return `<tr><td>${dateText(m.created_at)}</td><td class="mov-product">${esc(m.product_name)}</td><td><span class="mov-type-badge" style="background:${MOVEMENT_TYPE_COLORS[m.movement_type]||'#6b7280'}">${esc(MOVEMENT_TYPE_LABELS[m.movement_type]||m.movement_type)}</span></td><td class="movement-qty ${outgoing?'outgoing':'incoming'}">${outgoing?'-':'+'}${m.quantity}</td><td>${m.previous_stock} → ${m.new_stock}</td><td>${esc(m.notes||'—')}</td><td>${esc(m.user_name)}</td></tr>`}).join('')}</tbody></table></div>`:'<div class="empty-state">No hay movimientos registrados</div>';}catch(e){list.innerHTML=`<div class="empty-state">${esc(e.message)}</div>`;}
+    try{const data=await api(`../api/purchases/inventory_log.php?${q}`);const rows=data.data||[];list.innerHTML=rows.length?`<div class="movements-table-wrap"><table class="movements-table"><thead><tr><th>Fecha</th><th>Producto</th><th>Tipo</th><th>Cantidad</th><th>Stock</th><th>Detalle</th><th>Usuario</th></tr></thead><tbody>${rows.map(m=>{const outgoing=['exit','sale','loss'].includes(m.movement_type);return `<tr><td data-label="Fecha">${dateText(m.created_at)}</td><td data-label="Producto" class="mov-product">${esc(m.product_name)}</td><td data-label="Tipo"><span class="mov-type-badge" style="background:${MOVEMENT_TYPE_COLORS[m.movement_type]||'#6b7280'}">${esc(MOVEMENT_TYPE_LABELS[m.movement_type]||m.movement_type)}</span></td><td data-label="Cantidad" class="movement-qty ${outgoing?'outgoing':'incoming'}">${outgoing?'-':'+'}${m.quantity}</td><td data-label="Stock">${m.previous_stock} → ${m.new_stock}</td><td data-label="Detalle" class="mov-notes">${esc(m.notes||'—')}</td><td data-label="Usuario">${esc(m.user_name)}</td></tr>`}).join('')}</tbody></table></div>`:'<div class="empty-state">No hay movimientos registrados</div>';}catch(e){list.innerHTML=`<div class="empty-state">${esc(e.message)}</div>`;}
 }
 
 /* Pérdidas desde el drawer existente */

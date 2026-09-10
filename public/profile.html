@@ -499,7 +499,62 @@
                                 <button type="button" id="pushSubscribeBtn" class="btn" style="padding: 9px 16px; border-radius: 8px; background: var(--primary-color); color: #fff; border: none; cursor: pointer;">
                                     <i class="fas fa-bell"></i> Activar notificaciones en este dispositivo
                                 </button>
-                                <p class="settings-hint" style="margin-left: 0;">Recibe avisos (ventas, stock bajo) aun con la app cerrada. Requiere configuración de llaves VAPID en el servidor (ver docs/PUSH.md).</p>
+                                <p class="settings-hint" style="margin-left: 0;">Recibe avisos (ventas, stock bajo) aun con la app cerrada. Requiere configuracion de llaves VAPID en el servidor (ver docs/PUSH.md).</p>
+                            </div>
+
+                            <div class="settings-block">
+                                <h5 class="settings-subhead"><i class="fas fa-qrcode"></i> CoDi (Cobro Digital)</h5>
+                                <label class="catalog-check">
+                                    <input type="checkbox" name="codi_enabled" id="codiEnabled">
+                                    <span class="catalog-check-box"></span>
+                                    <span class="catalog-check-label">Habilitar cobros con CoDi</span>
+                                </label>
+                                <p class="settings-hint">Genera codigos QR para que el cliente pague desde su app bancaria. Sin comisiones. Requiere cuenta en <a href="https://docs.bite-size.mx/enrollment" target="_blank" style="color: var(--primary-color);">bite-size.mx</a></p>
+
+                                <div id="codiSettingsGroup" style="display:none; margin-top: 12px;">
+                                    <div class="form-group" style="margin-bottom: 10px;">
+                                        <label style="font-size: 0.85rem; margin-bottom: 4px;">Ambiente</label>
+                                        <select id="codiEnvironment" style="width:100%; padding:8px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-input); color: var(--text-color);">
+                                            <option value="sandbox">Sandbox (pruebas)</option>
+                                            <option value="production">Produccion</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" style="margin-bottom: 10px;">
+                                        <label style="font-size: 0.85rem; margin-bottom: 4px;">API Key (128 caracteres hexadecimales)</label>
+                                        <input type="password" id="codiApiKey" placeholder="Tu API key de bite-size.mx" style="width:100%; padding:8px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-input); color: var(--text-color);">
+                                    </div>
+                                    <div class="form-group" style="margin-bottom: 10px;">
+                                        <label style="font-size: 0.85rem; margin-bottom: 4px;">Endpoint del servidor</label>
+                                        <input type="text" id="codiEndpoint" value="https://api.bite-size.mx" style="width:100%; padding:8px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-input); color: var(--text-color);">
+                                    </div>
+                                    <p class="settings-hint" style="margin-left: 0;">Registrate gratis en <a href="https://docs.bite-size.mx/enrollment" target="_blank" style="color: var(--primary-color);">bite-size.mx/enrollment</a> para obtener tu API key.</p>
+                                </div>
+                            </div>
+
+                            <div class="settings-block">
+                                <h5 class="settings-subhead"><i class="fas fa-credit-card"></i> Stripe (Tarjeta de credito/debito)</h5>
+                                <label class="catalog-check">
+                                    <input type="checkbox" name="stripe_enabled" id="stripeEnabled">
+                                    <span class="catalog-check-box"></span>
+                                    <span class="catalog-check-label">Habilitar cobros con tarjeta via Stripe</span>
+                                </label>
+                                <p class="settings-hint">Acepta pagos con tarjeta de credito y debito. Requiere cuenta de Stripe (stripe.com).</p>
+
+                                <div id="stripeSettingsGroup" style="display:none; margin-top: 12px;">
+                                    <div class="form-group" style="margin-bottom: 10px;">
+                                        <label style="font-size: 0.85rem; margin-bottom: 4px;">Secret Key (sk_test_... o sk_live_...)</label>
+                                        <input type="password" id="stripeSecretKey" placeholder="sk_test_..." style="width:100%; padding:8px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-input); color: var(--text-color);">
+                                    </div>
+                                    <div class="form-group" style="margin-bottom: 10px;">
+                                        <label style="font-size: 0.85rem; margin-bottom: 4px;">Publishable Key (pk_test_... o pk_live_...)</label>
+                                        <input type="password" id="stripePublishableKey" placeholder="pk_test_..." style="width:100%; padding:8px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-input); color: var(--text-color);">
+                                    </div>
+                                    <div class="form-group">
+                                        <label style="font-size: 0.85rem; margin-bottom: 4px;">Webhook Secret (whsec_...)</label>
+                                        <input type="password" id="stripeWebhookSecret" placeholder="whsec_..." style="width:100%; padding:8px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-input); color: var(--text-color);">
+                                    </div>
+                                    <p class="settings-hint" style="margin-left: 0;">Obten estas llaves en <a href="https://dashboard.stripe.com/apikeys" target="_blank" style="color: var(--primary-color);">dashboard.stripe.com/apikeys</a>. En modo test usa las llaves de sandbox.</p>
+                                </div>
                             </div>
 
                             <h4 class="sub-section-title" style="margin-top: 2.2rem; margin-bottom: 1rem;"><i class="fas fa-globe"></i> Formato Regional</h4>

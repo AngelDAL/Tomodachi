@@ -261,7 +261,8 @@ function initPOS() {
   // Ahora vinculamos eventos
   bindEvents();
   setupToggles(); // Inicializar toggles (footer y header)
-  initViewToggle(); // Toggle de vista (grid / catálogo)
+  initViewToggle(); // Toggle de vista (grid / catalogo)
+  codiInitModal(); // Inicializar modal CoDi y botones de metodo de pago
 
   // Delegación de eventos para el carrito (Fix doble click y performance)
   setupCartEventsDelegation();
@@ -1850,6 +1851,224 @@ function toggleCartPanel(forceOpen = null) {
   }
 }
 
+// ============================================
+// CoDi (Cobro Digital) — integracion POS
+// ============================================
+let codiPaymentId = null;
+let codiPollTimer = null;
+let codiSalePayload = null;
+
+function codiShowModal() {
+  const modal = document.getElementById('codiModal');
+  if (modal) { modal.classList.remove('hidden'); modal.style.display = 'flex'; }
+}
+function codiHideModal() {
+  const modal = document.getElementById('codiModal');
+  if (modal) { modal.classList.add('hidden'); modal.style.display = 'none'; }
+  codiStopPolling();
+  codiPaymentId = null;
+  codiSalePayload = null;
+}
+function codiShowSpinner() {
+  ['codiQrDisplay','codiPaid','codiError'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.style.display = 'none';
+  });
+  const sp = document.getElementById('codiSpinner'); if (sp) sp.style.display = 'flex';
+}
+function codiShowQr(qrCode, amount, folio) {
+  ['codiSpinner','codiPaid','codiError'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.style.display = 'none';
+  });
+  const d = document.getElementById('codiQrDisplay'); if (d) d.style.display = 'flex';
+  const img = document.getElementById('codiQrImage');
+  if (img) {
+    img.innerHTML = qrCode && qrCode.startsWith('data:')
+      ? '<img src="' + qrCode + '" alt="QR CoDi" style="max-width:260px;border-radius:12px;">'
+      : '<i class="fas fa-qrcode" style="font-size:8rem;color:var(--primary-color);"></i>';
+  }
+  const amt = document.getElementById('codiAmountDisplay'); if (amt) amt.textContent = '$' + parseFloat(amount).toFixed(2);
+  const fol = document.getElementById('codiFolioDisplay'); if (fol) fol.textContent = 'Folio: ' + (folio || '—');
+}
+function codiShowPaid() {
+  ['codiSpinner','codiQrDisplay','codiError'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.style.display = 'none';
+  });
+  const p = document.getElementById('codiPaid'); if (p) p.style.display = 'flex';
+}
+function codiShowError(msg) {
+  ['codiSpinner','codiQrDisplay','codiPaid'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.style.display = 'none';
+  });
+  const e = document.getElementById('codiError'); if (e) e.style.display = 'flex';
+  const em = document.getElementById('codiErrorMsg'); if (em) em.textContent = msg || 'Error';
+  const retry = document.getElementById('codiRetryBtn'); if (retry) retry.style.display = 'inline-flex';
+}
+
+function codiStopPolling() { if (codiPollTimer) { clearInterval(codiPollTimer); codiPollTimer = null; } }
+
+function codiStartPolling(paymentId) {
+  codiStopPolling();
+  codiPollTimer = setInterval(async () => {
+    try {
+      const res = await fetch('../api/codi/check_status.php?payment_id=' + paymentId, { credentials: 'include' });
+      const data = await res.json();
+      if (data.success && data.data) {
+        const st = data.data.status;
+        if (st === 'paid') {
+          codiStopPolling();
+          codiShowPaid();
+          codiPaymentId = paymentId;
+          setTimeout(() => codiCompleteSale(), 1200);
+        } else if (st === 'expired' || st === 'cancelled' || st === 'failed') {
+          codiStopPolling();
+          codiShowError(st === 'expired' ? 'El codigo expiro' : st === 'cancelled' ? 'Pago cancelado' : 'Error en el pago');
+        }
+      }
+    } catch (_) { /* seguir intentando */ }
+  }, 3000);
+}
+
+async function codiGeneratePayment(total, concept) {
+  codiShowSpinner();
+  codiShowModal();
+  try {
+    const res = await fetch('../api/codi/create_qr.php', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount: total, concept: concept || 'Venta Tomodachi' })
+    });
+    if (!await checkSessionStatus(res)) { codiHideModal(); return; }
+    const data = await res.json();
+    if (data.success && data.data) {
+      const d = data.data;
+      codiPaymentId = d.payment_id;
+      codiShowQr(d.qr_code, d.amount, d.folio_codi);
+      codiStartPolling(d.payment_id);
+    } else {
+      codiShowError(data.message || 'No se pudo generar el QR');
+    }
+  } catch (e) {
+    codiShowError('Error de conexion: ' + e.message);
+  }
+}
+
+async function codiCompleteSale() {
+  if (!codiSalePayload || !codiPaymentId) return;
+  codiSalePayload.payment_method = 'codi';
+  codiSalePayload.codi_payment_id = codiPaymentId;
+  try {
+    const res = await fetch('../api/sales/create_sale.php', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(codiSalePayload)
+    });
+    if (!await checkSessionStatus(res)) { codiHideModal(); return; }
+    const resData = await res.json();
+    if (resData.success) {
+      playSound('Sound7.mp3');
+      showNotification('Venta CoDi registrada', 'success');
+      const subtotalCart = CART.reduce((s, i) => s + (i.subtotal != null ? i.subtotal : i.unit_price * i.quantity), 0);
+      const ticketData = {
+        items: CART.map(i => ({
+          product_name: i.product_name, quantity: i.quantity,
+          unit_price: i.unit_price, total: i.subtotal != null ? i.subtotal : i.unit_price * i.quantity
+        })),
+        subtotal: subtotalCart,
+        discount: parseFloat((discountInput && discountInput.value) || 0),
+        tax: parseFloat((taxInput && taxInput.value) || 0),
+        total: resData.total != null ? resData.total : CART.reduce((s, i) => s + i.subtotal, 0),
+        date: window.FormatUtils ? window.FormatUtils.date(new Date()) : new Date().toLocaleString('es-MX', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }),
+        sale_id: resData.sale_id || '---',
+        cashier: resData.cashier_name || 'Cajero',
+        payment_method: 'codi',
+        qr_payload: `TOMODISALE|${resData.sale_id || ''}|${(resData.total != null ? resData.total : 0).toFixed(2)}`
+      };
+      saveSaleToHistory(ticketData);
+      const printEnabled = document.getElementById('printTicketCheckbox') && document.getElementById('printTicketCheckbox').checked;
+      if (printEnabled) printTicket(ticketData);
+      CART = [];
+      MULTI_CARTS[CURRENT_TAB] = [];
+      localStorage.setItem('tomodachi_multi_carts', JSON.stringify(MULTI_CARTS));
+      renderCart();
+      if (discountInput) discountInput.value = '0';
+      if (taxInput) taxInput.value = '0';
+      if (checkoutReceivedInput) checkoutReceivedInput.value = '0';
+      if (typeof resetMoneyCounts === 'function') resetMoneyCounts(true);
+      if (typeof unlinkPosCustomer === 'function') unlinkPosCustomer();
+      setTimeout(() => codiHideModal(), 600);
+    } else {
+      codiShowError(resData.message || 'Error al registrar venta');
+    }
+  } catch (e) {
+    codiShowError('Error al registrar venta: ' + e.message);
+  }
+}
+
+function codiInitModal() {
+  const closeBtn = document.getElementById('closeCodiModalBtn');
+  const cancelBtn = document.getElementById('codiCancelBtn');
+  const retryBtn = document.getElementById('codiRetryBtn');
+  if (closeBtn) closeBtn.addEventListener('click', () => { codiHideModal(); });
+  if (cancelBtn) cancelBtn.addEventListener('click', () => { codiHideModal(); });
+  if (retryBtn) retryBtn.addEventListener('click', () => {
+    retryBtn.style.display = 'none';
+    if (codiSalePayload) {
+      codiGeneratePayment(codiSalePayload.total, 'Venta Tomodachi');
+    }
+  });
+  // Botones de metodo de pago
+  const selector = document.getElementById('paymentMethodSelector');
+  const hiddenInput = document.getElementById('paymentMethod');
+  if (selector && hiddenInput) {
+    selector.querySelectorAll('.pm-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selector.querySelectorAll('.pm-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        hiddenInput.value = btn.dataset.method;
+        recalcTotals();
+      });
+    });
+  }
+}
+
+// ============================================
+// Stripe — integracion POS
+// ============================================
+let stripeSalePayload = null;
+
+function stripeStartCheckout(total, concept) {
+  // Crear session de checkout via API
+  fetch('../api/stripe/create_checkout.php', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      amount: total,
+      concept: concept || 'Venta Tomodachi',
+      store_id: CURRENT_STORE_ID,
+      items: CART.map(i => ({ product_id: i.product_id, quantity: i.quantity, name: i.product_name })),
+      discount: (discountInput && discountInput.value) ? parseFloat(discountInput.value) : 0,
+      tax: (taxInput && taxInput.value) ? parseFloat(taxInput.value) : 0
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success && data.checkout_url) {
+      // Redirigir a Stripe Checkout
+      window.location.href = data.checkout_url;
+    } else {
+      showNotification(data.message || 'Error al crear pago con Stripe', 'error');
+      finalizeSaleBtn.disabled = false;
+    }
+  })
+  .catch(e => {
+    showNotification('Error de conexion: ' + e.message, 'error');
+    finalizeSaleBtn.disabled = false;
+  });
+}
+
 async function finalizeSale() {
   if (!CART.length) return;
   finalizeSaleBtn.disabled = true;
@@ -1873,6 +2092,32 @@ async function finalizeSale() {
     const custSel = document.getElementById('customerSelect');
     payload.customer_id = custSel ? parseInt(custSel.value, 10) || 0 : 0;
     payload.amount_paid = parseFloat((document.getElementById('apartadoPaidInput') || {}).value) || 0;
+  }
+
+  // CoDi: redirigir al flujo QR
+  if (method === 'codi') {
+    const total = payload.items.reduce((sum, item) => {
+      const cartItem = CART.find(c => c.product_id === item.product_id);
+      return sum + (cartItem ? (cartItem.subtotal || cartItem.unit_price * cartItem.quantity) : 0);
+    }, 0) - (payload.discount || 0) + (payload.tax || 0);
+    payload.total = total;
+    codiSalePayload = payload;
+    finalizeSaleBtn.disabled = false;
+    codiGeneratePayment(total, 'Venta Tomodachi');
+    return;
+  }
+
+  // Stripe: redirigir a Checkout de Stripe
+  if (method === 'stripe') {
+    const total = payload.items.reduce((sum, item) => {
+      const cartItem = CART.find(c => c.product_id === item.product_id);
+      return sum + (cartItem ? (cartItem.subtotal || cartItem.unit_price * cartItem.quantity) : 0);
+    }, 0) - (payload.discount || 0) + (payload.tax || 0);
+    payload.total = total;
+    stripeSalePayload = payload;
+    finalizeSaleBtn.disabled = false;
+    stripeStartCheckout(total, 'Venta Tomodachi');
+    return;
   }
 
   try {
@@ -2846,6 +3091,26 @@ function showParkedSalesList() {
 
 let moneyCounts = {};
 
+// Denominaciones por moneda (billetes y monedas físicas reales)
+const CURRENCY_DENOMINATIONS = {
+  MXN: { bills: [20, 50, 100, 200, 500, 1000], coins: [1, 2, 5, 10] },
+  USD: { bills: [1, 2, 5, 10, 20, 50, 100], coins: [0.01, 0.05, 0.10, 0.25] },
+  EUR: { bills: [5, 10, 20, 50, 100, 200, 500], coins: [0.01, 0.02, 0.05, 0.10, 0.20, 0.50, 1, 2] },
+  COP: { bills: [1000, 2000, 5000, 10000, 20000, 50000, 100000], coins: [50, 100, 200, 500, 1000] },
+  ARS: { bills: [10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000], coins: [1] },
+  JPY: { bills: [1000, 5000, 10000], coins: [1, 5, 10, 50, 100, 500] },
+  BRL: { bills: [2, 5, 10, 20, 50, 100, 200], coins: [0.05, 0.10, 0.25, 0.50, 1] }
+};
+
+function getDenominationsByCurrency() {
+  const cfg = (window.FormatUtils && FormatUtils.getConfig) ? FormatUtils.getConfig() : {};
+  const code = (cfg.currency_code || 'MXN').toUpperCase();
+  if (!CURRENCY_DENOMINATIONS[code]) {
+    console.warn('[MoneyPanel] currency_code "' + code + '" not in CURRENCY_DENOMINATIONS, using MXN fallback');
+  }
+  return CURRENCY_DENOMINATIONS[code] || { bills: [20, 50, 100, 200, 500, 1000], coins: [1, 2, 5, 10] };
+}
+
 function renderQuickCashButtons() {
   const input = document.getElementById('checkoutReceived');
   if (!input) return;
@@ -2874,7 +3139,7 @@ function renderQuickCashButtons() {
     btn.innerHTML = '<i class="fas fa-money-bill-wave"></i>';
     btn.title = "Seleccionar billetes/monedas";
     btn.onclick = toggleMoneyPanel;
-    btn.style.cssText = 'padding: 0 15px; background: var(--primary-color, #4CAF50); color: white; border: none; border-top-right-radius: 4px; border-bottom-right-radius: 4px; cursor: pointer; font-size: 1.1rem;';
+    btn.style.cssText = 'padding: 0 15px; background: var(--primary-color); color: var(--white); border: none; border-top-right-radius: 4px; border-bottom-right-radius: 4px; cursor: pointer; font-size: 1.1rem;';
 
     wrapper.appendChild(btn);
 
@@ -2901,14 +3166,14 @@ function injectMoneyPanelStyles() {
   style.textContent = `
         /* Estilos comunes */
         .money-panel-tooltip {
-            background: white;
+            background: var(--bg-card);
             border: 1px solid var(--border-color);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            box-shadow: var(--shadow-lg);
             border-radius: 8px;
             padding: 15px;
             z-index: 10001;
         }
-        
+
         .money-panel-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -2922,7 +3187,7 @@ function injectMoneyPanelStyles() {
             opacity: 1;
             visibility: visible;
         }
-        
+
         /* Escritorio */
         @media (min-width: 769px) {
             .money-panel-tooltip {
@@ -2959,7 +3224,7 @@ function injectMoneyPanelStyles() {
             .money-panel-tooltip.active {
                 transform: translateY(0);
             }
-            
+
             /* Ajustes grid móvil */
             .money-grid { gap: 12px; }
             .money-btn { height: 55px; font-size: 1.2rem; }
@@ -2970,7 +3235,7 @@ function injectMoneyPanelStyles() {
         .money-section { margin-bottom: 15px; }
         .money-section-title { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
         .money-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-        
+
         .money-btn {
             position: relative;
             border: 1px solid var(--border-color);
@@ -2983,18 +3248,18 @@ function injectMoneyPanelStyles() {
             color: var(--text-color);
             transition: all 0.1s;
             user-select: none;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            box-shadow: var(--shadow-sm);
         }
         .money-btn:active { transform: scale(0.96); }
         .money-btn:hover { background: var(--bg-lightest); border-color: var(--text-muted); }
-        
+
         /* Billetes */
         .money-btn.bill {
             height: 45px;
             border-radius: 4px;
             background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-light) 100%);
             color: var(--success-color);
-            border-color: #c8e6c9;
+            border-color: color-mix(in srgb, var(--success-color) 25%, var(--bg-card));
             font-family: 'Courier New', monospace;
             font-size: 1.1rem;
         }
@@ -3006,36 +3271,37 @@ function injectMoneyPanelStyles() {
             border-radius: 2px;
             pointer-events: none;
         }
-        
+
         /* Monedas */
         .money-btn.coin {
             height: 50px;
             width: 50px;
             border-radius: 50%;
             margin: 0 auto;
-            background: radial-gradient(circle at 30% 30%, #fff 0%, #ffd700 100%);
-            border: 2px solid #d4af37;
-            color: #8a6e22;
+            background: var(--bg-card);
+            border: 2px solid var(--border-color);
+            color: var(--text-color);
             font-size: 1rem;
+            font-weight: 700;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         .money-btn.coin.silver {
-            border-color: #bdc3c7;
-            background: radial-gradient(circle at 30% 30%, #fff 0%, #bdc3c7 100%);
+            border-color: var(--text-muted);
+            background: var(--bg-light);
             color: var(--text-medium);
         }
         .money-btn.coin.copper {
-            border-color: #d35400;
-            background: radial-gradient(circle at 30% 30%, #fff 0%, #e67e22 100%);
-            color: #a04000;
+            border-color: var(--warning-color);
+            background: color-mix(in srgb, var(--warning-color) 12%, var(--bg-card));
+            color: var(--text-color);
         }
-        
+
         .money-count-badge {
             position: absolute;
             bottom: -6px;
             right: -6px;
             background: var(--danger-color);
-            color: white;
+            color: var(--white);
             border-radius: 50%;
             min-width: 20px;
             height: 20px;
@@ -3053,9 +3319,9 @@ function injectMoneyPanelStyles() {
             position: absolute;
             bottom: -6px;
             left: -6px;
-            background: rgba(0, 0, 0, 0.05);
+            background: var(--bg-lighter);
             color: var(--text-light);
-            border: 1px solid rgba(0,0,0,0.1);
+            border: 1px solid var(--border-light);
             border-radius: 50%;
             width: 22px;
             height: 22px;
@@ -3067,14 +3333,14 @@ function injectMoneyPanelStyles() {
             z-index: 3;
             transition: all 0.2s;
         }
-        .money-remove-btn:hover { 
-            background: rgba(211, 47, 47, 0.1);
-            color: #d32f2f;
-            border-color: #d32f2f;
-            transform: scale(1.1); 
+        .money-remove-btn:hover {
+            background: color-mix(in srgb, var(--danger-color) 10%, transparent);
+            color: var(--danger-color);
+            border-color: var(--danger-color);
+            transform: scale(1.1);
         }
         .money-remove-btn:active { transform: scale(0.9); }
-        
+
         .money-actions {
             display: flex;
             justify-content: space-between;
@@ -3092,8 +3358,8 @@ function injectMoneyPanelStyles() {
             color: var(--text-medium);
         }
         .btn-money-action:hover { background: var(--bg-light); }
-        .btn-money-action.clear { color: #d32f2f; border-color: #ffcdd2; background: #ffebee; }
-        .btn-money-action.clear:hover { background: #ffcdd2; }
+        .btn-money-action.clear { color: var(--danger-color); border-color: color-mix(in srgb, var(--danger-color) 20%, var(--bg-card)); background: color-mix(in srgb, var(--danger-color) 8%, var(--bg-card)); }
+        .btn-money-action.clear:hover { background: color-mix(in srgb, var(--danger-color) 15%, var(--bg-card)); }
     `;
   document.head.appendChild(style);
 }
@@ -3101,6 +3367,13 @@ function injectMoneyPanelStyles() {
 function toggleMoneyPanel(e) {
   if (e) e.stopPropagation();
   let panel = document.getElementById('money-panel-tooltip');
+
+  // Destruir panel existente para regenerar con denominaciones actuales
+  if (panel) {
+    panel.remove();
+    panel = null;
+  }
+
   if (!panel) {
     createMoneyPanel();
     panel = document.getElementById('money-panel-tooltip');
@@ -3189,32 +3462,35 @@ function createMoneyPanel() {
   panel.id = 'money-panel-tooltip';
   panel.className = 'money-panel-tooltip';
 
-  // Definición de dinero
-  const coins = [1, 2, 5, 10];
-  const bills = [20, 50, 100, 200, 500, 1000];
+  // Denominaciones según moneda configurada
+  const denoms = getDenominationsByCurrency();
+  const coins = denoms.coins;
+  const bills = denoms.bills;
+  const sym = (window.FormatUtils && FormatUtils.getConfig) ? (FormatUtils.getConfig().currency_symbol || '$') : '$';
+  const maxCoinsPerRow = coins.length > 6 ? 4 : coins.length > 4 ? 3 : coins.length;
 
   let html = `
         <div class="money-panel-header" style="text-align: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color);">
             <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Total Acumulado</div>
-            <div id="money-panel-total" style="font-size: 2.2rem; font-weight: 800; color: var(--primary-color, #2e7d32); line-height: 1.2; margin-top: 5px;">$0.00</div>
+            <div id="money-panel-total" style="font-size: 2.2rem; font-weight: 800; color: var(--primary-color); line-height: 1.2; margin-top: 5px;">${sym}0.00</div>
         </div>
 
         <div class="money-section">
             <div class="money-section-title">Billetes</div>
-            <div class="money-grid">
+            <div class="money-grid" style="grid-template-columns: repeat(${Math.min(bills.length, 4) > 4 ? 3 : Math.min(bills.length, 4) > 3 ? 3 : bills.length}, 1fr);">
                 ${bills.map(val => `
                     <div class="money-btn bill" onclick="addMoney(${val})" data-val="${val}">
-                        ${(window.FormatUtils ? window.FormatUtils.getConfig().currency_symbol || '$' : '$')}${val}
+                        ${sym}${val}
                     </div>
                 `).join('')}
             </div>
         </div>
         <div class="money-section">
             <div class="money-section-title">Monedas</div>
-            <div class="money-grid" style="grid-template-columns: repeat(4, 1fr);">
-                ${coins.map(val => `
-                    <div class="money-btn coin ${val < 5 ? 'silver' : ''}" onclick="addMoney(${val})" data-val="${val}">
-                        ${(window.FormatUtils ? window.FormatUtils.getConfig().currency_symbol || '$' : '$')}${val}
+            <div class="money-grid" style="grid-template-columns: repeat(${maxCoinsPerRow}, 1fr);">
+                ${coins.map((val, i) => `
+                    <div class="money-btn coin ${i < Math.ceil(coins.length / 2) ? 'silver' : ''}" onclick="addMoney(${val})" data-val="${val}">
+                        ${sym}${val}
                     </div>
                 `).join('')}
             </div>

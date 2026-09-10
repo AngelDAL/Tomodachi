@@ -181,22 +181,25 @@ class CodiService
             'amount' => $amount,
             'concept' => $concept,
             'reference' => $reference,
-            'expires_at' => $expiresAt,
         ]);
+        
+        // Mapear respuesta de bite-size.mx a nuestro formato
+        $folioCodi = $providerResult['data']['cadenaMC'] ?? $providerResult['folio_codi'] ?? null;
+        $qrCode = $providerResult['qrCode'] ?? $providerResult['qr_code'] ?? null;
         
         // Actualizar registro con datos del proveedor
         $this->db->update(
             'UPDATE codi_payments SET folio_codi = ?, qr_code = ?, status = ?, banxico_response = ?, updated_at = NOW() WHERE payment_id = ?',
             [
-                $providerResult['folio_codi'] ?? null,
-                $providerResult['qr_code'] ?? null,
+                $folioCodi,
+                $qrCode,
                 self::STATUS_GENERATED,
                 json_encode($providerResult),
                 $paymentId
             ]
         );
         
-        // Auditoría
+        // Auditoria
         $this->logAudit('create_qr', $paymentId, $userId, [
             'amount' => $amount,
             'concept' => $concept,
@@ -206,8 +209,8 @@ class CodiService
         return [
             'success' => true,
             'payment_id' => $paymentId,
-            'folio_codi' => $providerResult['folio_codi'] ?? null,
-            'qr_code' => $providerResult['qr_code'] ?? null,
+            'folio_codi' => $folioCodi,
+            'qr_code' => $qrCode,
             'reference' => $reference,
             'amount' => $amount,
             'concept' => $concept,
@@ -268,14 +271,16 @@ class CodiService
             'reference' => $reference,
             'phone' => $phone,
             'customer_name' => $customerName,
-            'expires_at' => $expiresAt,
         ]);
+        
+        // Mapear respuesta de bite-size.mx
+        $folioCodi = $providerResult['data']['cadenaMC'] ?? $providerResult['folio_codi'] ?? null;
         
         // Actualizar registro
         $this->db->update(
             'UPDATE codi_payments SET folio_codi = ?, status = ?, banxico_response = ?, updated_at = NOW() WHERE payment_id = ?',
             [
-                $providerResult['folio_codi'] ?? null,
+                $folioCodi,
                 self::STATUS_GENERATED,
                 json_encode($providerResult),
                 $paymentId
@@ -626,24 +631,34 @@ class CodiService
     // =========================================
     
     /**
-     * Llamar al proveedor de CoDi (API de portfedh o Banxico directo)
+     * Llamar al proveedor de CoDi (API de bite-size.mx)
      */
     private function callProvider(string $action, array $data): array
     {
-        // Si no hay configuración de proveedor, simular respuesta (sandbox)
+        // Si no hay configuracion de proveedor, simular respuesta (sandbox)
         if (!$this->providerEndpoint || !$this->providerApiKey) {
             return $this->simulateProviderResponse($action, $data);
         }
         
-        // Llamar a la API de portfedh
-        $endpoint = rtrim($this->providerEndpoint, '/') . '/v2/codi/' . str_replace('create_', '', $action);
+        // Mapear acciones a endpoints de bite-size.mx
+        $endpointMap = [
+            'create_qr' => '/v2/codi/qr',
+            'create_push' => '/v2/codi/push',
+            'check_status' => '/v2/codi/consulta',
+        ];
+        
+        $endpointPath = $endpointMap[$action] ?? '/v2/codi/' . str_replace('create_', '', $action);
+        $endpoint = rtrim($this->providerEndpoint, '/') . $endpointPath;
+        
+        // Mapear parametros al formato de bite-size.mx
+        $payload = $this->mapParamsToApi($action, $data);
         
         $ch = curl_init();
         curl_setopt_array($ch, [
             CURLOPT_URL => $endpoint,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => json_encode($data),
+            CURLOPT_POSTFIELDS => json_encode($payload),
             CURLOPT_HTTPHEADER => [
                 'Content-Type: application/json',
                 'x-api-key: ' . $this->providerApiKey,
@@ -657,7 +672,7 @@ class CodiService
         curl_close($ch);
         
         if ($error) {
-            throw new Exception('Error de conexión con proveedor CoDi: ' . $error);
+            throw new Exception('Error de conexion con proveedor CoDi: ' . $error);
         }
         
         $result = json_decode($response, true);
@@ -667,6 +682,39 @@ class CodiService
         }
         
         return $result;
+    }
+    
+    /**
+     * Mapear parametros internos al formato de la API de bite-size.mx
+     */
+    private function mapParamsToApi(string $action, array $data): array
+    {
+        switch ($action) {
+            case 'create_qr':
+                return [
+                    'monto' => $data['amount'] ?? 0,
+                    'concepto' => substr($data['concept'] ?? 'Pago', 0, 40),
+                    'referenciaNumerica' => $data['reference'] ?? '0',
+                    'vigencia' => '0', // Sin limite
+                ];
+                
+            case 'create_push':
+                return [
+                    'monto' => $data['amount'] ?? 0,
+                    'concepto' => substr($data['concept'] ?? 'Pago', 0, 40),
+                    'referenciaNumerica' => $data['reference'] ?? '0',
+                    'telefono' => $data['phone'] ?? '',
+                    'vigencia' => '0',
+                ];
+                
+            case 'check_status':
+                return [
+                    'folioCoDi' => $data['folio_codi'] ?? '',
+                ];
+                
+            default:
+                return $data;
+        }
     }
     
     /**

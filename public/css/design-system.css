@@ -335,7 +335,7 @@ input[type="checkbox"], input[type="radio"], label, select, .form-select,
     padding: 13px 15px;
     transition: all var(--dur, 0.28s ease);
 }
-.ds-input::placeholder { color: var(--text-muted); font-weight: 400; }
+.ds-input::placeholder { color: var(--text-light, #666666); font-weight: 400; opacity: 1; }
 .ds-input:hover { border-color: color-mix(in srgb, var(--primary-color) 40%, var(--border-color)); }
 .ds-input:focus { outline: none; border-color: var(--primary-color); box-shadow: var(--primary-focus-ring); }
 .input-wrap { position: relative; width: 100%; display: flex; align-items: center; }

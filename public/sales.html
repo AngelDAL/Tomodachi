@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="css/sidebar-modern.css?v=4">
     <link rel="stylesheet" href="css/mobile-nav.css?v=4">
     <link rel="stylesheet" href="css/dashboard.css?v=4">
-    <link rel="stylesheet" href="css/sales.css?v=14">
+    <link rel="stylesheet" href="css/sales.css?v=17">
     <link rel="stylesheet" href="css/scanner_overlay.css?v=7">
     <link rel="stylesheet" href="css/bulk_sales.css?v=4">
     <link rel="stylesheet" href="css/cart_responsive.css?v=7">
@@ -239,14 +239,7 @@
                                     </div>
                                     
                                     <div class="adjustment-group">
-                                        <label>Método de pago</label>
-                                        <select id="paymentMethod" class="form-select">
-                                            <option value="cash">Efectivo</option>
-                                            <option value="card">Tarjeta</option>
-                                            <option value="transfer">Transferencia</option>
-                                            <option value="mixed">Mixto</option>
-                                            <option value="credit">Apartado (a crédito)</option>
-                                        </select>
+                                        <small style="color:var(--text-muted);">El método de pago se selecciona directamente al cobrar</small>
                                     </div>
 
                                     <div class="adjustment-group" id="customerSelectorGroup" style="display:none;">
@@ -278,37 +271,56 @@
                             </div>
                             
                             <div class="cart-summary-footer" id="cartFooter">
-                                <div class="footer-static-content">
-                                    <div class="summary-details">
-                                        <div class="summary-row">
-                                            <span>Subtotal</span>
-                                            <span id="cartSubtotal">$0.00</span>
-                                        </div>
-                                        <!-- Espacio para Impuestos/Descuentos si se muestran -->
-                                        <div class="summary-row total-row">
-                                            <span>Total</span>
-                                            <strong id="panelTotal">$0.00</strong>
-                                        </div>
-                                    </div>
+                            <div class="footer-static-content">
+                            <div class="summary-details">
+                                <div class="summary-row">
+                                    <span>Subtotal</span>
+                                    <span id="cartSubtotal">$0.00</span>
+                                </div>
+                                <!-- Espacio para Impuestos/Descuentos si se muestran -->
+                                <div class="summary-row total-row">
+                                    <span>Total</span>
+                                    <strong id="panelTotal">$0.00</strong>
+                                </div>
+                            </div>
                                     
-                                    <div class="checkout-actions">
-                                        <div class="payment-control-group">
-                                            <div class="input-wrapper">
-                                                <span class="currency-symbol">$</span>
-                                                <input type="number" id="checkoutReceived" min="0" step="0.01" placeholder="Monto recibido" class="pay-input">
-                                            </div>
-                                            <div class="change-display">
-                                                <small>Cambio</small>
-                                                <span id="checkoutChange">$0.00</span>
-                                            </div>
-                                        </div>
-                                        
-                                        <button id="finalizeSaleBtn" class="btn-checkout-primary" disabled>
-                                            <span class="btn-label">COBRAR</span>
-                                            <i class="fas fa-arrow-right"></i>
-                                        </button>
+                            <div class="checkout-actions">
+                                <div class="payment-method-selector" id="paymentMethodSelector">
+                                    <button type="button" class="pm-btn active" data-method="cash">
+                                        <i class="fas fa-money-bill-wave"></i>
+                                        <span>Efectivo</span>
+                                    </button>
+                                    <button type="button" class="pm-btn" data-method="credit">
+                                        <i class="fas fa-file-invoice"></i>
+                                        <span>Fiado</span>
+                                    </button>
+                                    <button type="button" class="pm-btn" data-method="codi">
+                                        <i class="fas fa-qrcode"></i>
+                                        <span>CoDi</span>
+                                    </button>
+                                    <button type="button" class="pm-btn" data-method="stripe">
+                                        <i class="fas fa-credit-card"></i>
+                                        <span>Tarjeta</span>
+                                    </button>
+                                    <input type="hidden" id="paymentMethod" value="cash">
+                                </div>
+                                <div class="payment-control-group">
+                                    <div class="input-wrapper">
+                                        <span class="currency-symbol">$</span>
+                                        <input type="number" id="checkoutReceived" min="0" step="0.01" placeholder="Monto recibido" class="pay-input">
+                                    </div>
+                                    <div class="change-display">
+                                        <small>Cambio</small>
+                                        <span id="checkoutChange">$0.00</span>
                                     </div>
                                 </div>
+                                        
+                                <button id="finalizeSaleBtn" class="btn-checkout-primary" disabled>
+                                    <span class="btn-label">COBRAR</span>
+                                    <i class="fas fa-arrow-right"></i>
+                                </button>
+                            </div>
+                            </div>
                             </div>
                         </div>
                     </div>
@@ -400,6 +412,44 @@
         </div>
     </div>
 
+    <!-- Modal CoDi: QR / Push Payment -->
+    <div id="codiModal" class="modal-overlay hidden">
+        <div class="modal-content codi-modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-qrcode"></i> Pago CoDi</h3>
+                <button class="modal-close" id="closeCodiModalBtn"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body codi-modal-body">
+                <div id="codiStatus" class="codi-status">
+                    <div id="codiSpinner" class="codi-spinner">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span>Generando codigo de pago...</span>
+                    </div>
+                    <div id="codiQrDisplay" class="codi-qr-display" style="display:none;">
+                        <div id="codiQrImage" class="codi-qr-image"></div>
+                        <div class="codi-amount" id="codiAmountDisplay">$0.00</div>
+                        <div class="codi-instructions">
+                            <p>El cliente escanea el codigo con su app bancaria</p>
+                            <p class="codi-folio" id="codiFolioDisplay"></p>
+                        </div>
+                    </div>
+                    <div id="codiPaid" class="codi-paid" style="display:none;">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Pago confirmado</span>
+                    </div>
+                    <div id="codiError" class="codi-error" style="display:none;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span id="codiErrorMsg">Error al procesar</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="codiRetryBtn" class="btn-secondary" style="display:none;"><i class="fas fa-redo"></i> Reintentar</button>
+                <button id="codiCancelBtn" class="btn-secondary"><i class="fas fa-times"></i> Cancelar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Context Menu for Products -->
     <div id="productContextMenu" class="context-menu hidden">
         <div class="context-menu-header">
@@ -435,8 +485,8 @@
 
     <!-- Voice overlay removed -->
 
-    <script src="js/sidebar-loader.js?v=6"></script>
-    <script src="js/app.js?v=10"></script>
+    <script src="js/sidebar-loader.js?v=7"></script>
+    <script src="js/app.js?v=11"></script>
     <script src="lib/html5-qrcode/html5-qrcode.min.js"></script>
     <script src="lib/qrcodejs/qrcode.min.js"></script>
     <script src="js/thermal-print.js"></script>
@@ -445,7 +495,7 @@
     <script src="js/tour.js?v=4"></script>
     <script src="lib/animejs/anime.min.js"></script>
     <script src="js/promotion-client-rules.js?v=1"></script>
-    <script src="js/sales.js?v=12"></script>
+    <script src="js/sales.js?v=14"></script>
     <script>
         // En la app nativa: mantener la pantalla encendida mientras se vende
         document.addEventListener('tomodachi-native-ready', () => {

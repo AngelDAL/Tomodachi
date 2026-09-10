@@ -416,11 +416,10 @@ async function loadStoreSettings() {
             }
 
             // 4. Inicializar formato regional (números, moneda, fechas).
-            //    Si la tienda no tiene config, usa los defaults (es-MX/MXN).
+            //    Si la tienda no tiene format configurado, NO sobreescribir
+            //    lo que FormatUtils ya tiene (puede venir del localStorage).
             if (window.FormatUtils && store.settings && store.settings.format) {
                 window.FormatUtils.init(store.settings.format);
-            } else if (window.FormatUtils) {
-                window.FormatUtils.init(null);
             }
         }
     } catch (error) {

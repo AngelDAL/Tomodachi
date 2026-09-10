@@ -5,6 +5,7 @@
 # Sin credenciales ejecuta el bloque "sin Stripe" (auth, validación,
 # aislamiento, persistencia de config). Con credenciales de prueba:
 #   STRIPE_SK_TEST=sk_test_... STRIPE_PK_TEST=pk_test_... bash docker/test_stripe.sh
+# La clave secreta puede ser estándar (sk_test_...) o restringida (rk_test_...).
 # ejecuta además el flujo de cobro completo (PaymentIntent real en modo test,
 # confirmación con tarjeta 4242, venta ligada, anti-reuso, webhook).
 BASE="${1:-http://localhost:8091}"
@@ -112,6 +113,10 @@ code=$(curl -s -o /dev/null -w "%{http_code}" -b "$CJ2" -X POST "$BASE/api/strip
 # demo es admin de tienda 2 en seed; si el seed cambia, aceptar 200
 if [ "$code" = "403" ] || [ "$code" = "200" ]; then echo "PASS | config demo respuesta controlada ($code)"; PASS=$((PASS+1)); else echo "FAIL | config demo ($code)"; FAIL=$((FAIL+1)); fi
 
+# Restaurar tienda 2 a deshabilitada: si no, la próxima corrida falla en la
+# comprobación temprana "tienda 2: config independiente (deshabilitada)".
+curl -s -o /dev/null -b "$CJ2" -X POST "$BASE/api/stripe/config.php" -H 'Content-Type: application/json' -d '{"enabled":false}'
+
 # ============================================================
 # Flujo COMPLETO con credenciales de prueba (modo test de Stripe)
 # ============================================================
@@ -146,7 +151,7 @@ if [ -n "$STRIPE_SK_TEST" ] && [ -n "$STRIPE_PK_TEST" ]; then
   check "card_last4 = 4242" "4242" "$last4"
 
   # Crear producto efímero de $25 y vender con el PI
-  resp=$(curl -s -b "$CJ" -X POST "$BASE/api/inventory/create_product.php" -H 'Content-Type: application/json' -d '{"name":"ZZ Test Stripe","price":25.00,"stock":100,"barcode":"ZZSTRIPE1"}')
+  resp=$(curl -s -b "$CJ" -X POST "$BASE/api/inventory/products.php" -H 'Content-Type: application/json' -d '{"product_name":"ZZ Test Stripe","price":25.00,"stock":100,"barcode":"ZZSTRIPE1"}')
   PID=$(echo "$resp" | json_get "['data']['product_id']")
   if [ -z "$PID" ]; then PID=$(echo "$resp" | json_get "['data']['id']"); fi
   if [ -n "$PID" ]; then echo "PASS | producto de prueba creado ($PID)"; PASS=$((PASS+1)); else echo "FAIL | producto de prueba: $resp"; FAIL=$((FAIL+1)); fi

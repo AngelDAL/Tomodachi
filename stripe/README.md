@@ -23,6 +23,10 @@ de Tomodachi** (cumplimiento PCI SAQ-A).
 2. Claves de API (Dashboard → Developers → API keys):
    - Pruebas: `pk_test_...` / `sk_test_...`
    - Producción: `pk_live_...` / `sk_live_...`
+   - También se aceptan claves **restringidas** (`rk_test_...` / `rk_live_...`) como
+     clave secreta. Conceden únicamente los permisos que les otorgues; para este
+     módulo bastan `payment_intents` (escritura) y `webhook_endpoints` (escritura).
+     La clave pública sigue siendo `pk_...`: es la única que llega al navegador.
 3. Docker con la imagen reconstruida (el SDK `stripe/stripe-php` se instala
    vía Composer en el build). Si actualizas una instalación existente,
    reconstruye con `docker compose up -d --build` para aplicar la migración

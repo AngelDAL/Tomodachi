@@ -243,6 +243,7 @@
                                         <select id="paymentMethod" class="form-select">
                                             <option value="cash">Efectivo</option>
                                             <option value="card">Tarjeta</option>
+                                            <option value="stripe" id="paymentMethodStripe" disabled>Tarjeta en línea (Stripe)</option>
                                             <option value="transfer">Transferencia</option>
                                             <option value="mixed">Mixto</option>
                                             <option value="credit">Apartado (a crédito)</option>
@@ -400,6 +401,30 @@
         </div>
     </div>
 
+    <!-- Modal de cobro con tarjeta (Stripe) -->
+    <div id="stripeModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-credit-card"></i> Cobro con tarjeta</h3>
+                <button class="modal-close" id="closeStripeModalBtn"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="current-price-info">
+                    <p>Total a cobrar: <strong id="stripeModalTotal">$0.00</strong></p>
+                </div>
+                <div id="stripePaymentElement" style="margin: 1rem 0; min-height: 40px;"></div>
+                <div id="stripePaymentMessage" style="display:none; color: var(--danger-color, #d33); font-size: 0.9rem; margin-bottom: 0.5rem;"></div>
+                <div id="stripePaymentLoading" style="display:none; text-align:center; color: var(--text-muted);">
+                    <i class="fas fa-spinner fa-spin"></i> Procesando pago...
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="stripePayBtn" class="btn-primary"><i class="fas fa-lock"></i> Pagar ahora</button>
+                <button id="stripeCancelBtn" class="btn-secondary">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Context Menu for Products -->
     <div id="productContextMenu" class="context-menu hidden">
         <div class="context-menu-header">
@@ -445,6 +470,8 @@
     <script src="js/tour.js?v=4"></script>
     <script src="lib/animejs/anime.min.js"></script>
     <script src="js/promotion-client-rules.js?v=1"></script>
+    <script src="https://js.stripe.com/v3/"></script>
+    <script src="js/stripe-pos.js?v=1"></script>
     <script src="js/sales.js?v=12"></script>
     <script>
         // En la app nativa: mantener la pantalla encendida mientras se vende

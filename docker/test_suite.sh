@@ -29,6 +29,19 @@ check "Login demo/demo123" 200 "$code"
 code=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE/api/auth/login.php" -H 'Content-Type: application/json' -d '{"username":"admin","password":"incorrecta"}')
 check "Login con password incorrecta (401)" 401 "$code"
 
+# En instalación limpia admin y demo nacen con must_change_password=1 y la
+# API responde 403 hasta cambiarla. Se libera aquí para poder probar.
+unlock_pw() {
+  local cj="$1" cur="$2" prof fn em
+  prof=$(curl -s -b "$cj" "$BASE/api/users/profile.php")
+  fn=$(echo "$prof" | python3 -c "import json,sys; d=json.load(sys.stdin).get('data') or {}; print(d.get('full_name') or 'Usuario')" 2>/dev/null)
+  em=$(echo "$prof" | python3 -c "import json,sys; d=json.load(sys.stdin).get('data') or {}; print(d.get('email') or 'u@example.com')" 2>/dev/null)
+  curl -s -o /dev/null -b "$cj" -X POST "$BASE/api/users/profile.php" -H 'Content-Type: application/json' \
+    -d "{\"full_name\":\"$fn\",\"email\":\"$em\",\"password\":\"$cur\",\"current_password\":\"$cur\"}"
+}
+unlock_pw "$CJ" admin123
+unlock_pw "$CJ2" demo123
+
 # 2. Modo OPEN_SOURCE
 mode=$(curl -s "$BASE/api/auth/permissions.php" | python3 -c "import json,sys; print(json.load(sys.stdin).get('mode',''))" 2>/dev/null)
 if [ "$mode" = "OPEN_SOURCE" ]; then echo "PASS | Modo OPEN_SOURCE"; PASS=$((PASS+1)); else echo "FAIL | Modo OPEN_SOURCE (obtuve '$mode')"; FAIL=$((FAIL+1)); fi

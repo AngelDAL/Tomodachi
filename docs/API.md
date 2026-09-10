@@ -151,9 +151,10 @@ Los inputs de fecha SIEMPRE usan ISO en la API, independientemente del formato d
 | POST/GET/DELETE | `api/sales/cart_sync.php` | Sincronizar carrito (UUID) | solo sesión |
 | GET | `api/sales/cart_sse.php` | SSE del carrito (display) | público (UUID=llave) |
 
-- `create_sale`: `{store_id, items:[{product_id, quantity}], payment_method: cash|card|transfer|mixed|credit, cash_amount?, discount?, tax?, customer_id?, amount_paid?, register_id?}`.
+- `create_sale`: `{store_id, items:[{product_id, quantity}], payment_method: cash|card|transfer|mixed|credit, cash_amount?, discount?, tax?, customer_id?, amount_paid?, register_id?, stripe_payment_intent?}`.
   **Los precios se recalculan en el servidor** (ignora el `price` del cliente). Devuelve `data.sale_id`.
   Con `payment_method=credit` + `customer_id` + `amount_paid` registra apartado (validación de límite → 409).
+  Con `payment_method=card` + `stripe_payment_intent` verifica el cobro contra Stripe antes de registrar (ver 4.17).
 - `get_sales`: query `store_id?|date?`.
 - `sale_details`: query `sale_id` → incluye `customer_name` y `created_via` (session|token).
 - `cancel_sale`: `{sale_id}` → devuelve stock.
@@ -274,6 +275,32 @@ Los inputs de fecha SIEMPRE usan ISO en la API, independientemente del formato d
 |---|---|---|---|
 | POST | `api/super_admin/create_backup.php` | Backup de BD | sesión super admin |
 | POST | `api/support/send_message.php` | Formulario de contacto | público (rate-limit 5/h) |
+
+### 4.17 Cobros con tarjeta (Stripe)
+
+Módulo externo de cobro. La tarjeta la captura Stripe.js en el navegador
+(PCI SAQ-A); el servidor solo crea/verifica PaymentIntents. Configuración
+por tienda desde **Integraciones** (`api/stripe/config.php`). Documentación
+completa en `stripe/README.md`.
+
+| Método | Ruta | Descripción | Auth |
+|---|---|---|---|
+| GET/POST | `api/stripe/config.php` | Leer/guardar credenciales (secret_key enmascarada en GET) | sesión admin o token write |
+| GET | `api/stripe/public_config.php` | Config pública para el POS (publishable_key, currency) | sesión/token read |
+| POST | `api/stripe/create_payment_intent.php` | Crear cobro `{amount, concept?, sale_id?}` → `client_secret` | sesión (cajero+) o token write |
+| POST | `api/stripe/confirm_payment.php` | Sincronizar estado del cobro `{payment_intent_id}` | sesión (cajero+) o token write |
+| GET | `api/stripe/payments.php` | Listar cobros (`status?, from?, to?, limit?`) | sesión/token read |
+| POST | `api/stripe/cancel.php` | Cancelar cobro pendiente `{payment_id}` | sesión admin/manager o token write |
+| POST | `api/stripe/webhook.php` | Webhook de Stripe (firma `Stripe-Signature`, idempotente) | público (firma) |
+
+- Flujo POS: `create_payment_intent` → Stripe.js confirma la tarjeta →
+  `create_sale` con `payment_method=card` + `stripe_payment_intent=pi_...`.
+  El servidor **verifica el cobro contra la API de Stripe** (estado
+  `succeeded` y monto exacto del total calculado en servidor) antes de
+  registrar la venta; si no coincide responde **402**. La venta queda ligada
+  por `sales.stripe_payment_id`.
+- El webhook (`payment_intent.succeeded|payment_failed|canceled|...`)
+  mantiene sincronizado `stripe_payments` y es idempotente por `evt_...`.
 
 ---
 

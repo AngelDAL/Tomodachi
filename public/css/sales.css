@@ -3009,3 +3009,32 @@
   70% { transform: scale(1.1); }
   100% { opacity: 1; transform: scale(1); }
 }
+
+/* ============================================
+   Modales (overlay)
+   Al reescribir este archivo se perdieron las reglas de .modal-overlay y los
+   modales quedaban en el flujo normal del documento: aparecían cientos de
+   píxeles más abajo, fuera de la pantalla, en lugar de superpuestos. Afectaba
+   al cobro con Tarjeta (Stripe), a CoDi, al historial de ventas y a las
+   opciones de producto. Restauradas con los valores originales.
+   ============================================ */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.modal-overlay:not(.hidden) {
+    opacity: 1;
+    pointer-events: auto;
+}

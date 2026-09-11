@@ -366,26 +366,9 @@ function initPOS() {
     }
   });
 
-  // Preferencias de impresión térmica (ancho y copias)
-  const ticketWidthSel = document.getElementById('ticketWidthSelect');
-  const ticketCopiesInput = document.getElementById('ticketCopiesInput');
-  if (ticketWidthSel && typeof getTicketPrefs === 'function') {
-    const prefs = getTicketPrefs();
-    ticketWidthSel.value = prefs.width;
-    if (ticketCopiesInput) ticketCopiesInput.value = prefs.copies;
-    ticketWidthSel.addEventListener('change', () => {
-      try { localStorage.setItem('tomodachi_ticket_width', ticketWidthSel.value); } catch (e) {}
-    });
-  }
-  if (ticketCopiesInput) {
-    ticketCopiesInput.addEventListener('change', () => {
-      let v = parseInt(ticketCopiesInput.value, 10) || 1;
-      if (v < 1) v = 1;
-      if (v > 5) v = 5;
-      ticketCopiesInput.value = v;
-      try { localStorage.setItem('tomodachi_ticket_copies', String(v)); } catch (e) {}
-    });
-  }
+  // Ancho y copias del ticket: los controles se retiraron del POS con la pestaña
+  // Ajustes. thermal-print.js los sigue leyendo de localStorage con sus valores
+  // por defecto (80mm, 1 copia), así que la impresión funciona igual.
 
   // Fiado: mostrar selector de cliente y campo de pago parcial cuando el método
   // es credit (apartado). El campo permite adelantar una parte del total; el
@@ -417,16 +400,10 @@ function initPOS() {
         }
       }
 
-      // El fiado exige un cliente, y ese campo vive en la pestaña "Ajustes" del
-      // panel del carrito. Sin esto el cajero elegía fiado y no veía dónde
-      // capturar nada: se abre la pestaña donde está el campo. El botón COBRAR
-      // y los métodos de pago quedan fuera de las pestañas, así que el flujo
-      // se puede completar sin volver a "Items".
-      if (isCredit) {
-        const custSel = document.getElementById('customerSelect');
-        const sinCliente = !custSel || !custSel.value || custSel.value === '0';
-        if (sinCliente) switchPanelTab('adjustments');
-      }
+      // El campo "Monto recibido" solo tiene sentido en efectivo: en fiado lo
+      // sustituye "Pago ahora", así que se oculta para no mostrar dos montos.
+      const cashGroup = document.querySelector('.payment-control-group');
+      if (cashGroup) cashGroup.style.display = isCredit ? 'none' : '';
     };
     paymentMethodSelect.addEventListener('change', updateCustomerSelector);
 
@@ -638,13 +615,6 @@ function bindEvents() {
     btn.addEventListener('click', (e) => {
       const tabName = btn.getAttribute('data-tab');
       switchCartTab(tabName);
-    });
-  });
-
-  // Pestañas internas del panel (Productos / Ajustes)
-  document.querySelectorAll('.panel-tab-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      switchPanelTab(btn.getAttribute('data-tab'));
     });
   });
 
@@ -1842,18 +1812,6 @@ function onPaymentMethodChange() {
   recalcChange();
 }
 
-// Cambia la pestaña interna del panel del carrito ("products" = Items,
-// "adjustments" = Ajustes). Es el mismo mecanismo del click: alternar la clase
-// 'active' en el botón y en el contenido.
-function switchPanelTab(tabId) {
-  document.querySelectorAll('.panel-tab-btn').forEach(b => {
-    b.classList.toggle('active', b.getAttribute('data-tab') === tabId);
-  });
-  document.querySelectorAll('.cart-tab-content').forEach(c => c.classList.remove('active'));
-  const content = document.getElementById(`tab-${tabId}`);
-  if (content) content.classList.add('active');
-}
-
 // Total del carrito aplicando descuento e impuesto (mismo criterio que recalcChange).
 function cartTotalForApartado() {
   const subtotal = CART.reduce((s, i) => s + (i.subtotal != null ? i.subtotal : i.unit_price * i.quantity), 0);
@@ -2087,7 +2045,12 @@ async function codiCompleteSale() {
         qr_payload: `TOMODISALE|${resData.sale_id || ''}|${(resData.total != null ? resData.total : 0).toFixed(2)}`
       };
       saveSaleToHistory(ticketData);
-      const printEnabled = document.getElementById('printTicketCheckbox') && document.getElementById('printTicketCheckbox').checked;
+      // El interruptor "Imprimir ticket" se retiró del POS junto con la pestaña
+      // Ajustes. Se conserva la preferencia almacenada para no cambiar el
+      // comportamiento (antes tampoco se recordaba: siempre entraba apagado).
+      // Se puede reactivar desde ajustes si hace falta impresión automática;
+      // el historial de ventas mantiene su botón de reimprimir.
+      const printEnabled = localStorage.getItem('tomodachi_ticket_autoprint') === '1';
       if (printEnabled) printTicket(ticketData);
       CART = [];
       MULTI_CARTS[CURRENT_TAB] = [];
@@ -2267,7 +2230,12 @@ async function finalizeSale() {
       // Guardar en historial local
       saveSaleToHistory(ticketData);
       // Imprimir ticket si está habilitado
-      const printEnabled = document.getElementById('printTicketCheckbox') && document.getElementById('printTicketCheckbox').checked;
+      // El interruptor "Imprimir ticket" se retiró del POS junto con la pestaña
+      // Ajustes. Se conserva la preferencia almacenada para no cambiar el
+      // comportamiento (antes tampoco se recordaba: siempre entraba apagado).
+      // Se puede reactivar desde ajustes si hace falta impresión automática;
+      // el historial de ventas mantiene su botón de reimprimir.
+      const printEnabled = localStorage.getItem('tomodachi_ticket_autoprint') === '1';
       if (printEnabled) {
         printTicket(ticketData);
       }

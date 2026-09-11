@@ -197,15 +197,12 @@
                     <!-- Cart Column -->
                     <div class="cart-column" id="cartColumn">
                         <div class="cart-panel-inner">
-                            <div class="cart-tabs">
-                                <button class="panel-tab-btn active" data-tab="products">
-                                    <span><i class="fas fa-shopping-bag"></i></span> Items
-                                </button>
-                                <button class="panel-tab-btn" data-tab="adjustments">
-                                    <span><i class="fas fa-cog"></i></span> Ajustes
-                                </button>
-                            </div>
-                            <!-- Tab: Productos -->
+                            <!-- Los productos del carrito están SIEMPRE a la vista. Se
+                                 retiró la pestaña "Ajustes" (imprimir ticket, ancho del
+                                 ticket, copias, descuento e impuesto): estorbaba la vista
+                                 del carrito y esos ajustes estaban en desuso.
+                                 Se conserva la clase cart-tab-content porque es la que da
+                                 el layout del panel; ya nadie la alterna. -->
                             <div class="cart-tab-content active" id="tab-products">
                                 <div class="cart-items-container" id="cartItemsContainer">
                                     <!-- Lista de items renderizada com divs -->
@@ -217,59 +214,8 @@
                                     </div>
                                 </div>
                             </div>
-                            <!-- Tab: Ajustes -->
-                            <div class="cart-tab-content" id="tab-adjustments">
-                                <div class="adjustments-section">
-                                    <div class="print-ticket-option">
-                                        <input type="checkbox" id="printTicketCheckbox">
-                                        <label for="printTicketCheckbox">Imprimir ticket</label>
-                                    </div>
-                                    <div class="adjustment-row" style="margin-top: 8px;">
-                                        <div class="adj-item">
-                                            <label>Ancho ticket</label>
-                                            <select id="ticketWidthSelect" class="form-select">
-                                                <option value="80">80mm</option>
-                                                <option value="58">58mm</option>
-                                            </select>
-                                        </div>
-                                        <div class="adj-item">
-                                            <label>Copias</label>
-                                            <input type="number" id="ticketCopiesInput" min="1" max="5" step="1" value="1">
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="adjustment-group">
-                                        <small style="color:var(--text-muted);">El método de pago se selecciona directamente al cobrar</small>
-                                    </div>
-
-                                    <div class="adjustment-group" id="customerSelectorGroup" style="display:none;">
-                                        <label>Cliente (para apartado)</label>
-                                        <select id="customerSelect" class="form-select">
-                                            <option value="">— Seleccionar cliente —</option>
-                                        </select>
-                                        <div id="apartadoAmountRow" style="display:none; margin-top: 8px;">
-                                            <label for="apartadoPaidInput">Pago ahora (opcional)</label>
-                                            <input type="number" id="apartadoPaidInput" min="0" step="0.01" placeholder="0.00" class="form-input" inputmode="decimal">
-                                            <small id="apartadoHint" style="display:block; color:var(--text-muted); margin-top:4px;">El resto queda como saldo pendiente del cliente (apartado).</small>
-                                        </div>
-                                        <a href="customers.html" style="font-size:0.8rem; color: var(--primary-color); margin-top:6px; display:inline-block;">
-                                            <i class="fas fa-user-plus"></i> Crear cliente
-                                        </a>
-                                    </div>
-
-                                    <div class="adjustment-row">
-                                        <div class="adj-item">
-                                            <label>Descuento</label>
-                                            <input type="number" id="discountInput" min="0" step="0.01" placeholder="0.00">
-                                        </div>
-                                        <div class="adj-item">
-                                            <label>Impuesto</label>
-                                            <input type="number" id="taxInput" min="0" step="0.01" placeholder="0.00">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
                             
+
                             <div class="cart-summary-footer" id="cartFooter">
                             <div class="footer-static-content">
                             <div class="summary-details">
@@ -309,6 +255,26 @@
                                     </button>
                                     <input type="hidden" id="paymentMethod" value="cash">
                                 </div>
+
+                                <!-- Fiado / apartado: cliente obligatorio y, si adelanta una
+                                     parte, el monto a cuenta. Vive aquí, junto a los métodos
+                                     de pago, para verse al instante sin cambiar de pestaña ni
+                                     tapar los productos del carrito. -->
+                                <div class="adjustment-group" id="customerSelectorGroup" style="display:none;">
+                                    <label>Cliente (para apartado)</label>
+                                    <select id="customerSelect" class="form-select">
+                                        <option value="">— Seleccionar cliente —</option>
+                                    </select>
+                                    <div id="apartadoAmountRow" style="display:none; margin-top: 8px;">
+                                        <label for="apartadoPaidInput">Pago ahora (opcional)</label>
+                                        <input type="number" id="apartadoPaidInput" min="0" step="0.01" placeholder="0.00" class="form-input" inputmode="decimal">
+                                        <small id="apartadoHint" style="display:block; color:var(--text-muted); margin-top:4px;">El resto queda como saldo pendiente del cliente (apartado).</small>
+                                    </div>
+                                    <a href="customers.html" style="font-size:0.8rem; color: var(--primary-color); margin-top:6px; display:inline-block;">
+                                        <i class="fas fa-user-plus"></i> Crear cliente
+                                    </a>
+                                </div>
+
                                 <div class="payment-control-group">
                                     <div class="input-wrapper">
                                         <span class="currency-symbol">$</span>
@@ -526,7 +492,7 @@
     <script src="js/promotion-client-rules.js?v=1"></script>
     <script src="https://js.stripe.com/v3/"></script>
     <script src="js/stripe-pos.js?v=1"></script>
-    <script src="js/sales.js?v=19"></script>
+    <script src="js/sales.js?v=20"></script>
     <script>
         // En la app nativa: mantener la pantalla encendida mientras se vende
         document.addEventListener('tomodachi-native-ready', () => {

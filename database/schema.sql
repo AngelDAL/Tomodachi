@@ -908,3 +908,125 @@ CREATE TABLE codi_audit_log (
     INDEX idx_created (created_at),
     FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =============================================
+-- Cuenta por mesa (flujo de pedido del comensal)
+-- Ver database/migrations/040_dining_sessions.sql
+-- =============================================
+
+CREATE TABLE dining_tables (
+    table_id INT AUTO_INCREMENT PRIMARY KEY,
+    store_id INT NOT NULL,
+    label VARCHAR(50) NOT NULL,
+    zone VARCHAR(50) NULL,
+    qr_token VARCHAR(64) NOT NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_table_qr_token (qr_token),
+    INDEX idx_table_store (store_id, is_active),
+    FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: dining_sessions
+-- LA CUENTA. Abierta por el personal; a ella se suman los comensales.
+CREATE TABLE dining_sessions (
+    session_id INT AUTO_INCREMENT PRIMARY KEY,
+    store_id INT NOT NULL,
+    table_id INT NULL,
+    menu_id INT NULL,
+    opened_by INT NOT NULL,
+    customer_id INT NULL,
+    code VARCHAR(8) NOT NULL,
+    status ENUM('open','awaiting_payment','closed','cancelled') NOT NULL DEFAULT 'open',
+    ordering_enabled TINYINT(1) NOT NULL DEFAULT 1,
+    -- split_mode: cómo piensan pagar. Se puede cambiar hasta el cierre.
+    --   none     -> una sola cuenta
+    --   equal    -> partes iguales entre los comensales activos
+    --   by_items -> cada quien paga lo que pidió (usa participant_id)
+    split_mode ENUM('none','equal','by_items') NOT NULL DEFAULT 'none',
+    notes VARCHAR(255) NULL,
+    opened_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    closed_at DATETIME NULL,
+    closed_by INT NULL,
+    expires_at DATETIME NULL,
+    sale_id INT NULL,
+    subtotal DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    discount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    total DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_session_store (store_id, status),
+    INDEX idx_session_table (table_id, status),
+    INDEX idx_session_code (store_id, code, status),
+    FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE,
+    FOREIGN KEY (table_id) REFERENCES dining_tables(table_id) ON DELETE SET NULL,
+    FOREIGN KEY (menu_id) REFERENCES menus(menu_id) ON DELETE SET NULL,
+    FOREIGN KEY (opened_by) REFERENCES users(user_id) ON DELETE RESTRICT,
+    FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE SET NULL,
+    FOREIGN KEY (sale_id) REFERENCES sales(sale_id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: dining_participants
+-- Los comensales que se suman a la cuenta (uno por celular).
+-- join_token es el alcance mínimo que se le da al celular: sirve para ESTA
+-- cuenta y nada más.
+CREATE TABLE dining_participants (
+    participant_id INT AUTO_INCREMENT PRIMARY KEY,
+    session_id INT NOT NULL,
+    display_name VARCHAR(60) NULL,
+    join_token VARCHAR(64) NOT NULL,
+    device_hash VARCHAR(64) NULL,
+    joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_seen_at DATETIME NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    UNIQUE KEY uk_participant_token (join_token),
+    INDEX idx_participant_session (session_id, is_active),
+    FOREIGN KEY (session_id) REFERENCES dining_sessions(session_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: dining_order_items
+-- Lo pedido. participant_id es lo que permite separar la cuenta al final sin
+-- preguntar otra vez quién pidió qué.
+CREATE TABLE dining_order_items (
+    order_item_id INT AUTO_INCREMENT PRIMARY KEY,
+    session_id INT NOT NULL,
+    participant_id INT NULL,
+    product_id INT NULL,
+    product_name VARCHAR(150) NOT NULL,
+    unit_price DECIMAL(10,2) NOT NULL,
+    quantity DECIMAL(12,3) NOT NULL DEFAULT 1,
+    notes VARCHAR(255) NULL,
+    line_total DECIMAL(10,2) NOT NULL,
+    discount_applied DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    promotion_id INT NULL,
+    status ENUM('pending','sent','preparing','ready','served','cancelled') NOT NULL DEFAULT 'pending',
+    added_by ENUM('customer','staff') NOT NULL DEFAULT 'customer',
+    cancel_reason VARCHAR(255) NULL,
+    sent_at DATETIME NULL,
+    served_at DATETIME NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_item_session (session_id, status),
+    INDEX idx_item_participant (participant_id),
+    FOREIGN KEY (session_id) REFERENCES dining_sessions(session_id) ON DELETE CASCADE,
+    FOREIGN KEY (participant_id) REFERENCES dining_participants(participant_id) ON DELETE SET NULL,
+    FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: dining_split_shares
+-- Cómo se reparte el cobro. En 'equal' se calcula el monto por comensal activo;
+-- en 'by_items' sale de sumar los ítems de cada participante. Se guarda el
+-- desglose para el ticket y para saber quién ya pagó su parte.
+CREATE TABLE dining_split_shares (
+    share_id INT AUTO_INCREMENT PRIMARY KEY,
+    session_id INT NOT NULL,
+    participant_id INT NULL,
+    label VARCHAR(60) NULL,
+    amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    paid TINYINT(1) NOT NULL DEFAULT 0,
+    paid_at DATETIME NULL,
+    payment_method VARCHAR(20) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_share_session (session_id),
+    FOREIGN KEY (session_id) REFERENCES dining_sessions(session_id) ON DELETE CASCADE,
+    FOREIGN KEY (participant_id) REFERENCES dining_participants(participant_id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

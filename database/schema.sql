@@ -826,6 +826,68 @@ CREATE TABLE codi_settings (
     FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- =============================================
+-- Menú de clientes (carta digital por QR)
+-- Ver database/migrations/039_customer_menu.sql
+-- =============================================
+
+-- Tabla: menus (la carta configurable que el dueño publica)
+CREATE TABLE menus (
+    menu_id INT AUTO_INCREMENT PRIMARY KEY,
+    store_id INT NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    description TEXT NULL,
+    mode ENUM('menu_only','order_and_pay','open_tab') NOT NULL DEFAULT 'menu_only',
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    public_token VARCHAR(64) NOT NULL COMMENT 'Token público que viaja en el QR',
+    require_staff_unlock TINYINT(1) NOT NULL DEFAULT 0,
+    allow_notes TINYINT(1) NOT NULL DEFAULT 1,
+    max_open_minutes INT NOT NULL DEFAULT 180,
+    welcome_message VARCHAR(255) NULL,
+    cover_image VARCHAR(255) NULL,
+    show_promotions TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_menu_public_token (public_token),
+    INDEX idx_menu_store (store_id, is_active),
+    FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: menu_items (qué entra en la carta: producto, categoría o etiqueta)
+CREATE TABLE menu_items (
+    item_id INT AUTO_INCREMENT PRIMARY KEY,
+    menu_id INT NOT NULL,
+    kind ENUM('product','category','tag') NOT NULL DEFAULT 'product',
+    product_id INT NULL,
+    category_id INT NULL,
+    tag_id INT NULL,
+    section VARCHAR(80) NULL,
+    display_order INT NOT NULL DEFAULT 0,
+    is_featured TINYINT(1) NOT NULL DEFAULT 0,
+    is_hidden TINYINT(1) NOT NULL DEFAULT 0,
+    notes VARCHAR(255) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_menu_item_menu (menu_id, display_order),
+    INDEX idx_menu_item_product (product_id),
+    INDEX idx_menu_item_category (category_id),
+    INDEX idx_menu_item_tag (tag_id),
+    FOREIGN KEY (menu_id) REFERENCES menus(menu_id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES categories(category_id) ON DELETE CASCADE,
+    FOREIGN KEY (tag_id) REFERENCES product_tags(tag_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: menu_visits (conteo de accesos por QR)
+CREATE TABLE menu_visits (
+    visit_id INT AUTO_INCREMENT PRIMARY KEY,
+    menu_id INT NOT NULL,
+    origin_hash VARCHAR(64) NULL COMMENT 'Hash del origen (privacidad)',
+    user_agent VARCHAR(255) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_menu_visit_menu (menu_id, created_at),
+    FOREIGN KEY (menu_id) REFERENCES menus(menu_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Tabla: codi_audit_log (auditoría de operaciones)
 CREATE TABLE codi_audit_log (
     audit_id BIGINT AUTO_INCREMENT PRIMARY KEY,

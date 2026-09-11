@@ -1,0 +1,336 @@
+/* ============================================================
+   Carta pública del comensal (menú de clientes)
+   Se abre al escanear el QR. Mobile-first: la mayoría entra desde el celular.
+   Usa las variables de tema, así respeta claro/oscuro del teléfono.
+   ============================================================ */
+
+.carta-body {
+    background: var(--bg-body);
+    color: var(--text-color);
+    font-family: var(--font-body);
+    margin: 0;
+    padding: 0 0 32px;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Definida aquí a propósito: esta página no carga utilities.css, y sin esta
+   regla los tres estados (cargando, error, contenido) se veían a la vez. */
+.hidden { display: none !important; }
+
+/* ---------- Estados (cargando / error) ---------- */
+
+.carta-estado {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    min-height: 70vh;
+    padding: 32px 24px;
+    text-align: center;
+    color: var(--text-muted);
+}
+.carta-estado h2 {
+    color: var(--text-color);
+    font-size: 1.15rem;
+    margin: 0;
+}
+.carta-estado p {
+    margin: 0;
+    font-size: .95rem;
+    max-width: 32ch;
+    line-height: 1.5;
+}
+.carta-estado-icono {
+    font-size: 2.4rem;
+    color: var(--warning-color);
+}
+.carta-spinner {
+    width: 34px;
+    height: 34px;
+    border: 3px solid var(--border-color);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: carta-girar .8s linear infinite;
+}
+@keyframes carta-girar { to { transform: rotate(360deg); } }
+
+/* ---------- Encabezado ---------- */
+
+.carta-encabezado {
+    padding: 22px 18px 16px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border-color);
+}
+.carta-encabezado-marca {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.carta-logo {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    background: var(--primary-color);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+    background-size: cover;
+    background-position: center;
+}
+.carta-tienda {
+    margin: 0 0 2px;
+    font-size: .78rem;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+.carta-nombre {
+    margin: 0;
+    font-size: 1.35rem;
+    line-height: 1.2;
+    color: var(--text-color);
+}
+.carta-bienvenida {
+    margin: 14px 0 0;
+    font-size: .95rem;
+    line-height: 1.55;
+    color: var(--text-medium);
+}
+.carta-descripcion {
+    margin: 8px 0 0;
+    font-size: .88rem;
+    line-height: 1.5;
+    color: var(--text-light);
+}
+
+/* ---------- Promociones ---------- */
+
+.promo-tira {
+    padding: 14px 18px 0;
+}
+.promo-lista {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+}
+.promo-lista::-webkit-scrollbar { display: none; }
+.promo-chip {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 14px;
+    border-radius: 999px;
+    background: var(--primary-light);
+    border: 1px solid color-mix(in srgb, var(--primary-color) 35%, transparent);
+    color: var(--text-color);
+    font-size: .85rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.promo-chip i { color: var(--primary-color); }
+.promo-chip small {
+    font-weight: 500;
+    color: var(--text-medium);
+}
+
+/* ---------- Navegación de secciones ---------- */
+
+.seccion-nav {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: color-mix(in srgb, var(--bg-body) 92%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border-lighter);
+    padding: 10px 0;
+    margin-top: 12px;
+}
+.seccion-nav-lista {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 0 18px;
+    scrollbar-width: none;
+}
+.seccion-nav-lista::-webkit-scrollbar { display: none; }
+.seccion-chip {
+    flex: 0 0 auto;
+    padding: 7px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    color: var(--text-medium);
+    font-size: .85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .18s ease, color .18s ease, border-color .18s ease;
+}
+.seccion-chip.activa {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #fff;
+}
+
+/* ---------- Secciones y productos ---------- */
+
+.carta-secciones {
+    padding: 18px 18px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 26px;
+}
+.carta-seccion-titulo {
+    margin: 0 0 12px;
+    font-size: 1.05rem;
+    color: var(--text-color);
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--primary-light);
+}
+
+.carta-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+}
+
+.producto-carta {
+    display: flex;
+    gap: 12px;
+    padding: 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-lighter);
+    border-radius: var(--ds-radius-lg, 14px);
+    box-shadow: var(--shadow-sm);
+    position: relative;
+}
+/* Sin hover: la carta es para leer y tocar, no una rejilla de la que se espera
+   una acción al pasar el mouse. */
+
+.producto-imagen {
+    width: 84px;
+    height: 84px;
+    border-radius: 12px;
+    flex-shrink: 0;
+    background-color: var(--bg-light);
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 1.4rem;
+    overflow: hidden;
+    position: relative;
+}
+
+.producto-datos {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+}
+.producto-nombre {
+    margin: 0 0 4px;
+    font-size: 1rem;
+    line-height: 1.25;
+    color: var(--text-color);
+    /* El sello de destacado va en el pie, así que el nombre nunca queda tapado */
+}
+.producto-desc {
+    margin: 0 0 8px;
+    font-size: .85rem;
+    line-height: 1.45;
+    color: var(--text-light);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.producto-pie {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.producto-precio {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-right: auto;
+}
+.producto-promo,
+.producto-destacado {
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .03em;
+    padding: 3px 8px;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+.producto-promo {
+    background: var(--primary-light);
+    color: var(--primary-dark);
+    border: 1px solid color-mix(in srgb, var(--primary-color) 35%, transparent);
+}
+.producto-destacado {
+    background: var(--primary-color);
+    color: #fff;
+}
+
+/* Agotado: se sigue mostrando (informa), pero se entiende de un vistazo.
+   Se atenúa la foto y el nombre, NO todo el bloque: el precio y el aviso deben
+   seguir leyéndose sin esfuerzo. */
+.producto-carta.agotado .producto-imagen {
+    filter: grayscale(1);
+    opacity: .5;
+}
+.producto-carta.agotado .producto-nombre,
+.producto-carta.agotado .producto-desc {
+    color: var(--text-muted);
+}
+.producto-agotado-chip {
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--danger-color) 14%, transparent);
+    color: var(--danger-color);
+    border: 1px solid color-mix(in srgb, var(--danger-color) 40%, transparent);
+    white-space: nowrap;
+}
+
+/* ---------- Pie ---------- */
+
+.carta-pie {
+    padding: 26px 18px 0;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: .8rem;
+}
+
+/* ---------- Pantallas anchas ---------- */
+
+@media (min-width: 640px) {
+    .carta-encabezado, .promo-tira, .carta-secciones, .carta-pie { padding-left: 28px; padding-right: 28px; }
+    .seccion-nav-lista { padding: 0 28px; }
+    .carta-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .carta-secciones { max-width: 940px; margin: 0 auto; }
+    .carta-encabezado { max-width: 940px; margin: 0 auto; }
+}
+
+@media (min-width: 1024px) {
+    .carta-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

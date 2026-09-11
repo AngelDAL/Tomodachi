@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#39C5BB">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Carta</title>
+
+    <!-- Rutas ABSOLUTAS a propósito: la página se sirve en /m/<token>, así que
+         una ruta relativa resolvería contra /m/ y daría 404. -->
+    <link rel="stylesheet" href="/public/css/fonts.css?v=4">
+    <link rel="stylesheet" href="/public/lib/fontawesome/css/all.min.css?v=4">
+    <link rel="stylesheet" href="/public/css/variables.css?v=3">
+    <link rel="stylesheet" href="/public/css/design-system.css?v=7">
+    <link rel="stylesheet" href="/public/css/menu-public.css?v=2">
+
+    <script>
+        // El comensal no tiene sesión: el tema se decide por la preferencia de
+        // SU teléfono (claro/oscuro), no por la configuración de la tienda.
+        // Así el modo oscuro que ya existe se reutiliza tal cual.
+        (function () {
+            var oscuro = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            document.documentElement.setAttribute('data-theme', oscuro ? 'dark' : 'light');
+        })();
+    </script>
+</head>
+<body class="carta-body">
+
+    <!-- Estado: cargando -->
+    <div id="cartaCargando" class="carta-estado">
+        <div class="carta-spinner"></div>
+        <p>Preparando la carta…</p>
+    </div>
+
+    <!-- Estado: error -->
+    <div id="cartaError" class="carta-estado hidden">
+        <i class="fas fa-circle-exclamation carta-estado-icono"></i>
+        <h2 id="cartaErrorTitulo">No se pudo abrir la carta</h2>
+        <p id="cartaErrorTexto">Verifica el enlace o pide ayuda al personal.</p>
+    </div>
+
+    <!-- Carta -->
+    <div id="cartaContenido" class="hidden">
+
+        <header class="carta-encabezado">
+            <div class="carta-encabezado-marca">
+                <div id="cartaLogo" class="carta-logo"></div>
+                <div>
+                    <p id="cartaTienda" class="carta-tienda"></p>
+                    <h1 id="cartaNombre" class="carta-nombre"></h1>
+                </div>
+            </div>
+            <p id="cartaBienvenida" class="carta-bienvenida hidden"></p>
+            <p id="cartaDescripcion" class="carta-descripcion hidden"></p>
+        </header>
+
+        <!-- Promociones vigentes -->
+        <section id="promoSection" class="promo-tira hidden">
+            <div id="promoLista" class="promo-lista"></div>
+        </section>
+
+        <!-- Filtro de secciones -->
+        <nav id="seccionNav" class="seccion-nav hidden">
+            <div id="seccionNavLista" class="seccion-nav-lista"></div>
+        </nav>
+
+        <!-- Secciones y productos -->
+        <main id="secciones" class="carta-secciones"></main>
+
+        <footer class="carta-pie">
+            <p id="cartaPieAviso"></p>
+        </footer>
+    </div>
+
+    <script src="/public/js/menu-public.js?v=2"></script>
+</body>
+</html>

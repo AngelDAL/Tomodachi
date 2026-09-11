@@ -38,6 +38,35 @@ echo "[Tomodachi] Base de datos lista."
 MYSQL="mysql -h${DB_HOST} -u${DB_USER} -p${DB_PASS} --skip-ssl --default-character-set=utf8mb4"
 MIGRATIONS_DIR="/var/www/html/database/migrations"
 
+# ---------------------------------------------------------------------------
+# Fotos de producto: tienen que vivir en el volumen persistente.
+#
+# El directorio public/assets/images/products/ está DENTRO de la imagen, o sea
+# en la capa efímera del contenedor: todo lo subido ahí se perdía en cada
+# despliegue (así se perdieron las fotos que ya estaban cargadas). El volumen
+# persistente es public/uploads/, así que ahí se guardan de verdad y este
+# directorio pasa a ser un enlace hacia él.
+#
+# Idempotente: en el primer arranque se lleva las imágenes que trae la imagen
+# (semillas) y deja el enlace; en los siguientes no hace nada.
+# ---------------------------------------------------------------------------
+FOTOS_DIR="/var/www/html/public/assets/images/products"
+FOTOS_PERSISTENTE="/var/www/html/public/uploads/products"
+
+mkdir -p "${FOTOS_PERSISTENTE}"
+if [ ! -L "${FOTOS_DIR}" ]; then
+  if [ -d "${FOTOS_DIR}" ]; then
+    # -n: no sobrescribir lo que ya exista en el volumen
+    cp -rn "${FOTOS_DIR}/." "${FOTOS_PERSISTENTE}/" 2>/dev/null || true
+    rm -rf "${FOTOS_DIR}"
+  fi
+  ln -sfn "${FOTOS_PERSISTENTE}" "${FOTOS_DIR}"
+  echo "[Tomodachi] Fotos de producto enlazadas al volumen persistente."
+else
+  echo "[Tomodachi] Fotos de producto ya persistentes."
+fi
+chown -R www-data:www-data "${FOTOS_PERSISTENTE}" 2>/dev/null || true
+
 # Generar config/database.php a partir de variables de entorno
 if [ ! -f /var/www/html/config/database.php ]; then
   echo "[Tomodachi] Generando config/database.php..."

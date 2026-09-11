@@ -98,7 +98,7 @@ try {
             'name'        => $p['product_name'],
             'description' => $p['description'],
             'price'       => (float)$p['price'],
-            'image'       => $p['image_path'],
+            'image'       => urlImagen($p['image_path']),
             'featured'    => (int)$p['is_featured'] === 1,
             'available'   => (bool)$p['disponible'],
             'sold_out'    => !$p['disponible'],
@@ -188,6 +188,35 @@ function resolverProductos($conn, $menu_id, $store_id) {
 }
 
 /**
+ * Convierte lo guardado en `image_path` a una URL utilizable desde la carta.
+ *
+ * La BD guarda rutas tipo `public/assets/images/products/x.jpg`. La carta vive en
+ * `/m/<token>`, así que una ruta relativa resolvería contra `/m/` y daría 404 —
+ * el mismo problema que tuvo el JS. Por eso aquí SIEMPRE se devuelve absoluta.
+ *
+ *   - data:...     -> base64, se deja igual
+ *   - http(s)...   -> externa, se deja igual
+ *   - public/...   -> se antepone '/'            -> /public/assets/...
+ *   - otra ruta    -> se asume relativa a public -> /public/<ruta>
+ */
+function urlImagen($ruta) {
+    if (empty($ruta) || !is_string($ruta)) {
+        return null;
+    }
+    $ruta = trim($ruta);
+    if ($ruta === '') {
+        return null;
+    }
+    if (strpos($ruta, 'data:image') === 0 || strpos($ruta, 'http') === 0) {
+        return $ruta;
+    }
+
+    $limpia = ltrim(str_replace('\\', '/', $ruta), '/');
+
+    return strpos($limpia, 'public/') === 0 ? '/' . $limpia : '/public/' . $limpia;
+}
+
+/**
  * Nombre y colores del negocio para pintar la carta.
  * Se lee solo lo publicable: el tema es lo que el comensal ve en pantalla.
  */
@@ -209,7 +238,9 @@ function marcaDeTienda($conn, $store_id) {
         $tema = [];
         foreach ($permitidos as $k) {
             if (!empty($cfg[$k])) {
-                $tema[$k] = $cfg[$k];
+                // El logo se guarda igual que las fotos de producto: hay que
+                // convertirlo a URL o la carta lo pediría en /m/public/... y 404
+                $tema[$k] = ($k === 'logo_path') ? urlImagen($cfg[$k]) : $cfg[$k];
             }
         }
         $marca['theme'] = $tema ?: null;

@@ -615,7 +615,7 @@
                                     if (amount <= 0) return '';
                                     return `<button type="button" class="quick-pay-btn" onclick="setQuickPayment(${amount})">${f === 1 ? 'Total' : (f * 100) + '%'}</button>`;
                                 }).join('')}
-                            </div>` : `<p class="cd-no-balance"><i class="fas fa-check-circle"></i> Cliente sin saldo pendiente</p>`}
+                            </div>
                             <div class="cd-pay-fields">
                                 <div class="pay-amount-wrap" style="flex:1; display:flex; align-items:center; background: var(--bg-lightest); border:1px solid var(--border-color); border-radius:8px; overflow:hidden;">
                                     <span class="pay-amount-symbol" style="padding:0 10px; font-weight:700; color: var(--primary-color); background: var(--bg-light); border-right:1px solid var(--border-color); line-height:42px;">${curSym}</span>
@@ -630,6 +630,9 @@
                             <button onclick="submitPayment(${customer.customer_id})" class="btn btn-primary" style="width:100%; margin-top:10px; padding:11px 16px; border-radius:8px; background:var(--primary-color); color:#fff; border:none; cursor:pointer; font-weight:700;">
                                 <i class="fas fa-check"></i> Registrar abono
                             </button>
+                            ` : `
+                            <p class="cd-no-balance"><i class="fas fa-check-circle"></i> Este cliente no tiene saldo pendiente</p>
+                            `}
                         </div>
                     </div>
 

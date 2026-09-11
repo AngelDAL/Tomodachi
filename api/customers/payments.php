@@ -48,8 +48,32 @@ try {
     $customer = $db->selectOne('SELECT customer_id, full_name, balance FROM customers WHERE customer_id = ? AND store_id = ?', [$customer_id, $store_id]);
     if (!$customer) { Response::notFound('Cliente no existe'); }
 
-    $newBalance = round((float)$customer['balance'] - $amount, 2);
-    if ($newBalance < 0) { $newBalance = 0; }
+    // Un abono no puede superar lo que el cliente debe.
+    //
+    // Antes se recortaba el saldo a 0 en silencio (`if ($newBalance < 0)`): el
+    // abono quedaba registrado y el efectivo entraba a caja, pero el cliente no
+    // recibía nada a cambio. Es decir, se cobraba dinero que no se aplicaba a
+    // ninguna deuda y las cuentas dejaban de cuadrar (los abonos registrados no
+    // explicaban el saldo).
+    //
+    // Se BLOQUEA en lugar de permitir saldo negativo a propósito: un saldo a
+    // favor (monedero) tendría que poder GASTARSE en el punto de venta, y hoy
+    // nada aplica el saldo de un cliente como pago. Dejarlo en negativo sería un
+    // crédito invisible e inutilizable, y además restaría del "por cobrar"
+    // (un saldo a favor es un PASIVO, no una cuenta por cobrar).
+    $balance = round((float)$customer['balance'], 2);
+    if ($amount > $balance) {
+        if ($balance <= 0) {
+            Response::error($customer['full_name'] . ' no tiene saldo pendiente: no hay nada que abonar.', 422);
+        }
+        Response::error(
+            'El abono ($' . number_format($amount, 2) . ') supera el saldo pendiente de '
+            . $customer['full_name'] . ' ($' . number_format($balance, 2) . ').',
+            422
+        );
+    }
+
+    $newBalance = round($balance - $amount, 2);
 
     $db->beginTransaction();
     try {

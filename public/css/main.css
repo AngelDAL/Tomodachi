@@ -3,7 +3,7 @@
  * Tomodachi POS System
  */
 
-@import url('variables.css');
+@import url('variables.css?v=3');
 @import url('utilities.css');
 
 * {

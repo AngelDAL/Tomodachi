@@ -10,16 +10,16 @@
     <link rel="stylesheet" href="css/fonts.css?v=4">
     <!-- FontAwesome -->
     <link rel="stylesheet" href="lib/fontawesome/css/all.min.css?v=4">
-    <link rel="stylesheet" href="css/main.css?v=5">
-    <link rel="stylesheet" href="css/design-system.css?v=6">
+    <link rel="stylesheet" href="css/main.css?v=6">
+    <link rel="stylesheet" href="css/design-system.css?v=7">
     <link rel="stylesheet" href="css/sidebar-modern.css?v=5">
     <link rel="stylesheet" href="css/mobile-nav.css?v=4">
     <link rel="stylesheet" href="css/dashboard.css?v=4">
-    <link rel="stylesheet" href="css/sales.css?v=22">
+    <link rel="stylesheet" href="css/sales.css?v=23">
     <link rel="stylesheet" href="css/scanner_overlay.css?v=7">
     <link rel="stylesheet" href="css/bulk_sales.css?v=4">
     <link rel="stylesheet" href="css/cart_responsive.css?v=7">
-    <script src="js/theme-init.js"></script>
+    <script src="js/theme-init.js?v=3"></script>
     <link rel="icon" type="image/svg+xml" href="assets/images/logos/tomodachi-favicon.svg">
     <script src="js/format-utils.js"></script>
 </head>
@@ -269,10 +269,15 @@
                                         <span>CoDi</span>
                                     </button>
                                     -->
+                                    <!-- Tarjeta (Stripe) queda fuera por ahora: se retoma cuando
+                                         se implemente el pago del lado del cliente (pago por
+                                         adelantado o apartado con monto desde su casa). El
+                                         módulo sigue completo en stripe/ y api/stripe/.
                                     <button type="button" class="pm-btn" data-method="stripe">
                                         <i class="fas fa-credit-card"></i>
                                         <span>Tarjeta</span>
                                     </button>
+                                    -->
                                     <input type="hidden" id="paymentMethod" value="cash">
                                 </div>
 
@@ -555,7 +560,7 @@
     <!-- Voice overlay removed -->
 
     <script src="js/sidebar-loader.js?v=7"></script>
-    <script src="js/app.js?v=11"></script>
+    <script src="js/app.js?v=12"></script>
     <script src="lib/html5-qrcode/html5-qrcode.min.js"></script>
     <script src="lib/qrcodejs/qrcode.min.js"></script>
     <script src="js/thermal-print.js"></script>

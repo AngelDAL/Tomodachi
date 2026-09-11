@@ -2769,9 +2769,8 @@
     border: 1px solid color-mix(in srgb, var(--border-color) 55%, transparent);
     box-shadow: var(--ds-shadow-md);
 }
-.inv-controls:hover {
-    box-shadow: var(--ds-shadow-lg);
-}
+/* .inv-controls es un panel contenedor, no una tarjeta clicable: se le quitó el
+   hover porque solo distraía (antes subía la sombra al pasar el mouse). */
 
 .product-card {
     border-radius: var(--ds-radius-lg);

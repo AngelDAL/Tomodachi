@@ -413,7 +413,11 @@ async function loadStoreSettings() {
                 else if (mode === 'dark') cachedTheme.dark_mode = true;
                 else delete cachedTheme.dark_mode;
                 localStorage.setItem('pos_theme_config', JSON.stringify(cachedTheme));
-                if (store.theme_config_dark) {
+                // Solo se cachea un oscuro personalizado VIGENTE. Si viene de la
+                // versión vieja del modo oscuro (grises fríos, sin marca _v), se
+                // descarta para que aplique el oscuro derivado del tema claro.
+                const darkVer = (window.ThemeColorUtils && window.ThemeColorUtils.DARK_CONFIG_VERSION) || 2;
+                if (store.theme_config_dark && store.theme_config_dark._v === darkVer) {
                     localStorage.setItem('pos_theme_config_dark', JSON.stringify(store.theme_config_dark));
                 } else {
                     localStorage.removeItem('pos_theme_config_dark');

@@ -2892,20 +2892,19 @@
   .pos-customer-create-kbd { display: none; }
 }
 
-/* Los metodos de pago siempre ocupan una fila; reducen texto antes de envolverse. */
+/* Los metodos de pago ocupan SIEMPRE una sola fila: se reparten el ancho
+   disponible entre los que haya. Antes era una rejilla fija de 4 columnas, así
+   que con menos botones quedaban huecos vacíos, y en móvil saltaban a 2x2. */
 .payment-method-selector {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: nowrap;
 }
 .pm-btn {
+  flex: 1 1 0;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-@media (max-width: 720px) {
-  .payment-method-selector { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .pm-btn:nth-child(2) { border-right: 0; }
-  .pm-btn:nth-child(-n + 2) { border-bottom: 1px solid var(--border-color, rgba(0, 0, 0, .1)); }
+  white-space: nowrap;
 }
 
 /* ============================================

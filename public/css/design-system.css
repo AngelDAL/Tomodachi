@@ -130,6 +130,11 @@ input[type="password"], input[type="date"], input[type="datetime-local"],
 input[type="search"], select, textarea {
   border-radius: var(--ds-radius-md) !important;
   border: 1.5px solid var(--border-color);
+  /* El fondo y el color SÍ hay que declararlos: si no, con color-scheme: dark
+     el navegador pinta los campos con su gris propio (#3B3B3B) y el tema nunca
+     los toca — se veían turbios y desentonaban con las superficies. */
+  background: var(--bg-input);
+  color: var(--text-color);
   transition: border-color .22s ease, box-shadow .22s ease, background .22s ease;
   font-family: var(--font-body);
 }

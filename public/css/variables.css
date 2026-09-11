@@ -108,64 +108,72 @@
  * oscuro); sus hovers se generan con filtros en los estilos.
  * ============================================================ */
 [data-theme="dark"] {
-    --primary-color: #4FDDD2;
-    --primary-dark: #35C4B8;
-    --primary-darker: #2AA79B;
-    --primary-light: #143E3B;
-    --primary-lighter: #10322F;
-    --primary-shadow: rgba(79, 221, 210, 0.30);
-    --primary-hover: #35C4B8;
-    --primary-active: #2AA79B;
-    --primary-focus-ring: 0 0 0 3px rgba(79, 221, 210, 0.35);
+    /* Misma familia cian/azul del tema claro (Miku), aclarada lo justo para
+       leerse sobre superficies oscuras. */
+    --primary-color: #49D4C6;
+    --primary-dark: #32BDAF;
+    --primary-darker: #2C9B90;
+    --primary-light: #193331;
+    --primary-lighter: #152826;
+    --primary-shadow: rgba(73, 212, 198, 0.28);
+    --primary-hover: #32BDAF;
+    --primary-active: #2C9B90;
+    --primary-focus-ring: 0 0 0 3px rgba(73, 212, 198, 0.32);
 
-    --secondary-color: #61C2E8;
-    --secondary-dark: #46ACD9;
-    --secondary-darker: #2B93C4;
-    --secondary-light: #123A4A;
-    --secondary-contrast: #06332F;
+    --secondary-color: #51BCD6;
+    --secondary-dark: #33A5C1;
+    --secondary-darker: #2D889F;
+    --secondary-light: #182F34;
+    --secondary-contrast: #062A33;
 
-    --success-color: #66BB6A;
-    --success-dark: #43A047;
-    --danger-color: #EF5350;
-    --danger-dark: #E53935;
-    --warning-color: #FFA726;
-    --warning-dark: #F57C00;
-    --info-color: #42A5F5;
-    --info-dark: #1E88E5;
-    --info-light: #0D2440;
+    --success-color: #5DB660;
+    --success-dark: #4AA34E;
+    --danger-color: #EA5A57;
+    --danger-dark: #D84845;
+    --warning-color: #F69A31;
+    --warning-dark: #E08420;
+    --info-color: #50A0E2;
+    --info-dark: #3B8CD0;
+    --info-light: #14293D;
 
     --white: #ffffff;
     --black: #000000;
-    --dark-color: #0d0d0d;
-    --light-color: #1E1E1E;
+    /* Antes gris casi puro (#0d0d0d): ahora el mismo tinte azul-teal que las
+       superficies, para que no desentone con el tema claro. */
+    --dark-color: #0A1012;
+    --light-color: #1D282B;
 
-    --text-color: #E8E8E8;
-    --text-medium: #C0C0C0;
-    --text-light: #A0A0A0;
-    --text-muted: #808080;
-    --text-on-primary: #06332F;
+    --text-color: #E4F0EF;
+    --text-medium: #BCCED0;
+    --text-light: #A8BABC;
+    --text-muted: #93A7A9;
+    --text-on-primary: #06302C;
 
-    --bg-body: #121212;
-    --bg-card: #1E1E1E;
-    --bg-light: #2A2A2A;
-    --bg-lighter: #242424;
-    --bg-lightest: #1A1A1A;
-    --bg-input: #242424;
+    /* Superficies: rampa con tinte azul-teal (tono 192), la misma familia que el
+       #f4f7f6 del tema claro — en vez del gris neutro (#121212, #1E1E1E...) que
+       quedaba frío y desligado de la marca. Contraste de texto validado: 16:1 el
+       principal, 5:1 el atenuado. */
+    --bg-body: #0D1516;
+    --bg-card: #162022;
+    --bg-light: #1D282B;
+    --bg-lighter: #212D30;
+    --bg-lightest: #273235;
+    --bg-input: #182325;
 
-    --border-color: #3A3A3A;
-    --border-light: #333333;
-    --border-lighter: #2A2A2A;
-    --bg-hover: #262626;
+    --border-color: #2D3B3E;
+    --border-light: #252F31;
+    --border-lighter: #1F2728;
+    --bg-hover: #1F2B2E;
     --border-radius-sm: 6px;
     /* Overlay de difuminado para imágenes de producto (POS) — en oscuro,
        el difuminado es del color del fondo oscuro, no blanco */
-    --overlay-fade: rgba(18, 18, 18, 0);
-    --overlay-fade-mid: rgba(18, 18, 18, 0.35);
-    --overlay-fade-solid: rgba(18, 18, 18, 0.55);
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+    --overlay-fade: rgba(13, 21, 22, 0);
+    --overlay-fade-mid: rgba(13, 21, 22, 0.35);
+    --overlay-fade-solid: rgba(13, 21, 22, 0.55);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.45);
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
     --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6);
-    --shadow-primary: 0 4px 14px rgba(79, 221, 210, 0.35);
+    --shadow-primary: 0 4px 14px rgba(73, 212, 198, 0.32);
 
     color-scheme: dark;
 }

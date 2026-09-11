@@ -80,8 +80,11 @@
             // oscuro hay que derivarlas hacia el OSCURO, o esas tarjetas
             // quedan con fondo casi blanco sobre el tema dark.
             if (darkMode) {
-                out['--primary-light'] = mix(p, '#0d0d0f', 0.82);
-                out['--primary-lighter'] = mix(p, '#0d0d0f', 0.90);
+                // Se derivan hacia el oscuro BASE del tema (azul-teal), no hacia
+                // un negro grisáceo, para que las tarjetas y badges con fondo
+                // "claro" de marca sigan la misma familia que el resto.
+                out['--primary-light'] = mix(p, '#162022', 0.84);
+                out['--primary-lighter'] = mix(p, '#1D282B', 0.90);
             } else {
                 out['--primary-light'] = mix(p, '#ffffff', 0.85);
                 out['--primary-lighter'] = mix(p, '#ffffff', 0.93);
@@ -90,15 +93,16 @@
             out['--primary-hover'] = mix(p, '#000000', 0.15);
             out['--primary-active'] = mix(p, '#000000', 0.35);
         }
-        if (s) out['--secondary-light'] = darkMode ? mix(s, '#0d0d0f', 0.85) : mix(s, '#ffffff', 0.85);
+        if (s) out['--secondary-light'] = darkMode ? mix(s, '#1D282B', 0.86) : mix(s, '#ffffff', 0.85);
         return out;
     }
 
     // Superficies del MODO OSCURO teñidas con el color del negocio.
-    // En vez de negro puro (#121212), el fondo es un negro "inspirado" en
-    // el tema: negro azulado, negro cyan, etc. Tint = el color con más
-    // saturación entre primary y secondary (si el secondary es negro/gris,
-    // usa el primary).
+    // La base NO es gris neutro: es un azul-teal muy oscuro (la misma familia
+    // que el #f4f7f6 del tema claro, del lado oscuro), y encima se tiñe con el
+    // color de marca. Así el modo oscuro se siente de la casa y no un gris frío.
+    // Tint = el color con más saturación entre primary y secondary (si el
+    // secondary es negro/gris, usa el primary).
     function darkSurfaces(cfg) {
         const p = cfg.primary_color, s = cfg.secondary_color;
         const sat = (hex) => {
@@ -106,18 +110,44 @@
             if (!c) return 0;
             return (Math.max(c.r, c.g, c.b) - Math.min(c.r, c.g, c.b)) / 255;
         };
-        const tint = (s && sat(s) > 0.25) ? s : (p || s || '#1976D2');
+        const tint = (s && sat(s) > 0.25) ? s : (p || s || '#0E86A6');
+        // Rampa base (tono 192) — espejo del tema claro
+        const base = {
+            body: mix('#0D1516', tint, 0.10),
+            card: mix('#162022', tint, 0.10),
+            light: mix('#1D282B', tint, 0.10),
+            lighter: mix('#212D30', tint, 0.10),
+            lightest: mix('#273235', tint, 0.10),
+            input: mix('#182325', tint, 0.10),
+            dark: mix('#0A1012', tint, 0.14),
+            border: mix('#2D3B3E', tint, 0.12),
+            borderLight: mix('#252F31', tint, 0.12),
+            borderLighter: mix('#1F2728', tint, 0.12),
+            hover: mix('#1F2B2E', tint, 0.10)
+        };
         return {
-            '--bg-body': mix('#0d0d0f', tint, 0.08),
-            '--bg-card': mix('#16161a', tint, 0.12),
-            '--bg-light': mix('#1e1e23', tint, 0.10),
-            '--bg-lightest': mix('#26262c', tint, 0.10),
-            '--dark-color': mix('#0b0b0d', tint, 0.16),
-            '--border-color': mix('#2b2b31', tint, 0.14),
-            '--text-color': '#e9e9ec',
-            '--text-medium': '#c2c2c7',
-            '--text-light': '#9a9aa0',
-            '--text-muted': '#7a7a80'
+            '--bg-body': base.body,
+            '--bg-card': base.card,
+            '--bg-light': base.light,
+            '--bg-lighter': base.lighter,
+            '--bg-lightest': base.lightest,
+            '--bg-input': base.input,
+            '--bg-hover': base.hover,
+            '--dark-color': base.dark,
+            '--border-color': base.border,
+            '--border-light': base.borderLight,
+            '--border-lighter': base.borderLighter,
+            '--text-color': '#E4F0EF',
+            // Jerarquía escalonada verificada: cada tono pasa 4.5:1 incluso en la
+            // superficie más clara del tema (el pie del carrito, #253A40).
+            '--text-medium': '#BCCED0',
+            '--text-light': '#A8BABC',
+            '--text-muted': '#93A7A9',
+            // El difuminado de las imágenes de producto va del color del fondo,
+            // así que se deriva del mismo valor (antes quedaba en gris #121212)
+            '--overlay-fade': rgbaOf(base.body, 0),
+            '--overlay-fade-mid': rgbaOf(base.body, 0.35),
+            '--overlay-fade-solid': rgbaOf(base.body, 0.55)
         };
     }
 
@@ -189,12 +219,26 @@
 
     function clearDerived() {
         const root = document.documentElement;
-        ['--bg-body', '--bg-card', '--bg-light', '--bg-lightest', '--dark-color',
-         '--border-color', '--text-color', '--text-medium', '--text-light', '--text-muted'
+        // IMPORTANTE: aquí va TODO lo que darkSurfaces() llega a escribir inline.
+        // Si algo se queda fuera, al volver al tema claro esa superficie se
+        // quedaba con el valor del oscuro (contaminaba el tema claro).
+        ['--bg-body', '--bg-card', '--bg-light', '--bg-lighter', '--bg-lightest',
+         '--bg-input', '--bg-hover', '--dark-color',
+         '--border-color', '--border-light', '--border-lighter',
+         '--overlay-fade', '--overlay-fade-mid', '--overlay-fade-solid',
+         '--text-color', '--text-medium', '--text-light', '--text-muted'
         ].forEach(v => root.style.removeProperty(v));
     }
 
-    window.ThemeColorUtils = { hexToRgb, mix, rgbaOf, luminance, contrastText, brandVariants, darkSurfaces, apply, applySurfaces, clearDerived };
+    window.ThemeColorUtils = { hexToRgb, mix, rgbaOf, luminance, contrastText, brandVariants, darkSurfaces, apply, applySurfaces, clearDerived, DARK_CONFIG_VERSION: 2 };
+
+    // Versión del modo oscuro. Los temas oscuros guardados por el usuario
+    // (localStorage 'pos_theme_config_dark' / stores.theme_config_dark) que NO
+    // traigan esta marca son de antes de rediseñar el oscuro, cuando usaba
+    // grises fríos (#121212, #1E1E1E) desconectados del tema claro. Se ignoran
+    // para que entre el oscuro derivado del tema claro actual.
+    // Al subir de versión aquí, los personalizados viejos se descartan solos.
+    const DARK_CONFIG_VERSION = 2;
 
     // ============================================================
     // Aplicación inicial (pre-paint)
@@ -205,7 +249,14 @@
         const savedDark = localStorage.getItem('pos_theme_config_dark');
         if (savedTheme) {
             const themeConfig = JSON.parse(savedTheme);
-            const themeConfigDark = savedDark ? JSON.parse(savedDark) : null;
+            let themeConfigDark = savedDark ? JSON.parse(savedDark) : null;
+            if (themeConfigDark && themeConfigDark._v !== DARK_CONFIG_VERSION) {
+                // Oscuro personalizado obsoleto (de antes del rediseño): se borra
+                // del navegador, no solo se ignora, para que el resto de lectores
+                // (app.js, sales.js, el cambio de modo del menú) tampoco lo vean.
+                themeConfigDark = null;
+                try { localStorage.removeItem('pos_theme_config_dark'); } catch (e) { /* noop */ }
+            }
 
             // 1) Tema oscuro/claro/auto
             const themeMode = themeConfig.theme_mode;

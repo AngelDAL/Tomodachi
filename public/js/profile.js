@@ -672,7 +672,14 @@ document.getElementById('companyForm').addEventListener('submit', async (e) => {
     // personalizó (o ya había uno guardado de antes).
     let persistDark = null;
     if (darkThemeTouched && themeConfigDark && Object.keys(themeConfigDark).length) {
-        persistDark = themeConfigDark;
+        // Marca de versión: sin ella, el oscuro guardado se considera obsoleto y
+        // se descarta al cargar (lo que hacía que un oscuro viejo pisara al
+        // derivado del tema claro). Al personalizar desde el editor se marca para
+        // que SÍ se respete.
+        persistDark = {
+            ...themeConfigDark,
+            _v: (window.ThemeColorUtils && window.ThemeColorUtils.DARK_CONFIG_VERSION) || 2
+        };
     }
 
     // Recolectar configuración de negocio

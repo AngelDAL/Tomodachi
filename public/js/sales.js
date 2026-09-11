@@ -385,7 +385,8 @@ function initPOS() {
 
       // El campo "Monto recibido" solo tiene sentido en efectivo: en fiado lo
       // sustituye "Pago ahora", así que se oculta para no mostrar dos montos.
-      const cashGroup = document.querySelector('.payment-control-group');
+      // (Por id: ahora el bloque de fiado también usa .payment-control-group.)
+      const cashGroup = document.getElementById('cashControlGroup');
       if (cashGroup) cashGroup.style.display = isCredit ? 'none' : '';
     };
     paymentMethodSelect.addEventListener('change', updateCustomerSelector);
@@ -1822,6 +1823,9 @@ function recalcTotals() {
   }
   renderQuickCashButtons(); // Actualizar botones de pago rápido
   recalcChange();
+  // Mantener al día el bloque de fiado: si cambia el total (se agrega o se quita
+  // un producto) lo que queda a deber también cambia.
+  updateApartadoHint();
 }
 
 function onPaymentMethodChange() {
@@ -1837,13 +1841,16 @@ function cartTotalForApartado() {
   return Math.max(0, subtotal - discount + tax);
 }
 
-// Fiado/apartado: muestra en vivo cuánto queda pendiente según lo que el cliente
-// adelanta ahora. El resto se suma a su saldo.
+// Fiado/apartado: refleja en vivo cuánto queda pendiente y cómo queda el saldo
+// del cliente. Se escribe en la caja compacta y en la fila de saldo — nada de
+// párrafos que se parten en varias líneas y desperdician el ancho.
 function updateApartadoHint() {
   const row = document.getElementById('apartadoAmountRow');
   const input = document.getElementById('apartadoPaidInput');
-  const hint = document.getElementById('apartadoHint');
-  if (!row || !input || !hint) return;
+  const pendienteEl = document.getElementById('apartadoPendiente');
+  const box = document.getElementById('apartadoPendienteBox');
+  const saldoEl = document.getElementById('apartadoSaldo');
+  if (!row || !input || !pendienteEl) return;
 
   const isCredit = paymentMethodSelect && paymentMethodSelect.value === 'credit';
   const hayCliente = assignedCustomerId() > 0;
@@ -1854,26 +1861,29 @@ function updateApartadoHint() {
 
   const total = cartTotalForApartado();
   const paid = Math.max(0, parseFloat(input.value) || 0);
+  const excede = paid > total;
+  const pendiente = Math.max(0, total - paid);
 
-  if (paid > total) {
-    hint.textContent = 'El pago no puede superar el total (' + formatCurrency(total) + ').';
-    hint.style.color = 'var(--danger-color, #d33)';
-    return;
+  // Lo que se sumará al saldo del cliente (en verde si la venta queda liquidada)
+  pendienteEl.textContent = formatCurrency(pendiente);
+  pendienteEl.style.color = pendiente > 0 ? '' : 'var(--ds-success, #10b981)';
+  if (box) box.classList.toggle('is-error', excede);
+
+  // Saldo resultante: sirve para no pasarse del límite de crédito y para planear
+  // apartados (cuánto llevaría debiendo tras esta venta).
+  if (saldoEl) {
+    if (excede) {
+      saldoEl.textContent = 'Máximo ' + formatCurrency(total);
+      saldoEl.style.color = 'var(--danger-color, #d33)';
+    } else if (linkedCustomer) {
+      const saldoActual = Number(linkedCustomer.balance) || 0;
+      saldoEl.textContent = formatCurrency(saldoActual) + ' → ' + formatCurrency(saldoActual + pendiente);
+      saldoEl.style.color = '';
+    } else {
+      saldoEl.textContent = '—';
+      saldoEl.style.color = '';
+    }
   }
-
-  const pendiente = total - paid;
-  hint.style.color = '';
-  let texto = pendiente > 0
-    ? 'Queda a deber ' + formatCurrency(pendiente) + '. Se suma al saldo del cliente.'
-    : 'Queda liquidada: no se agrega saldo al cliente.';
-
-  // Saldo resultante del cliente: sirve para no pasarse de su límite de crédito
-  // y para planear apartados (cuánto llevaría debiendo tras esta venta).
-  if (linkedCustomer) {
-    const saldoActual = Number(linkedCustomer.balance) || 0;
-    texto += ' Saldo: ' + formatCurrency(saldoActual) + ' -> ' + formatCurrency(saldoActual + pendiente) + '.';
-  }
-  hint.textContent = texto;
 }
 
 // ============================================

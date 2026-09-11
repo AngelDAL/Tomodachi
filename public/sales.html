@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="css/sidebar-modern.css?v=4">
     <link rel="stylesheet" href="css/mobile-nav.css?v=4">
     <link rel="stylesheet" href="css/dashboard.css?v=4">
-    <link rel="stylesheet" href="css/sales.css?v=20">
+    <link rel="stylesheet" href="css/sales.css?v=21">
     <link rel="stylesheet" href="css/scanner_overlay.css?v=7">
     <link rel="stylesheet" href="css/bulk_sales.css?v=4">
     <link rel="stylesheet" href="css/cart_responsive.css?v=7">
@@ -285,12 +285,29 @@
 
                                     <div id="apartadoAmountRow" style="display:none; margin-top: 10px;">
                                         <label for="apartadoPaidInput">Pago ahora (opcional)</label>
-                                        <input type="number" id="apartadoPaidInput" min="0" step="0.01" placeholder="0.00" class="form-input" inputmode="decimal" style="width:100%;">
-                                        <small id="apartadoHint" style="display:block; color:var(--text-muted); margin-top:4px;">El resto queda como saldo pendiente del cliente (apartado).</small>
+                                        <!-- Mismo lenguaje que el cobro en efectivo: campo con
+                                             símbolo de moneda y, al lado, una caja compacta con
+                                             lo que queda a deber. Así se aprovecha el ancho en
+                                             vez de gastarlo en un párrafo que se parte en varias
+                                             líneas. -->
+                                        <div class="payment-control-group">
+                                            <div class="input-wrapper">
+                                                <span class="currency-symbol">$</span>
+                                                <input type="number" id="apartadoPaidInput" min="0" step="0.01" placeholder="0.00" class="pay-input" inputmode="decimal">
+                                            </div>
+                                            <div class="change-display" id="apartadoPendienteBox">
+                                                <small>Queda a deber</small>
+                                                <span id="apartadoPendiente">$0.00</span>
+                                            </div>
+                                        </div>
+                                        <div class="apartado-saldo">
+                                            <span>Saldo del cliente</span>
+                                            <strong id="apartadoSaldo">—</strong>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div class="payment-control-group">
+                                <div class="payment-control-group" id="cashControlGroup">
                                     <div class="input-wrapper">
                                         <span class="currency-symbol">$</span>
                                         <input type="number" id="checkoutReceived" min="0" step="0.01" placeholder="Monto recibido" class="pay-input">
@@ -529,7 +546,7 @@
     <script src="js/promotion-client-rules.js?v=1"></script>
     <script src="https://js.stripe.com/v3/"></script>
     <script src="js/stripe-pos.js?v=1"></script>
-    <script src="js/sales.js?v=22"></script>
+    <script src="js/sales.js?v=23"></script>
     <script>
         // En la app nativa: mantener la pantalla encendida mientras se vende
         document.addEventListener('tomodachi-native-ready', () => {

@@ -3109,6 +3109,79 @@
     color: var(--text-muted);
 }
 
+/* Etiquetas del bloque de fiado */
+#customerSelectorGroup label {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--text-medium);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+/* Fila del saldo del cliente: etiqueta a la izquierda y valor a la derecha, de
+   modo que ocupa el ancho disponible completo en lugar de partirse en varias
+   líneas (importante en móvil). */
+.apartado-saldo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 8px;
+    padding: 7px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-light);
+    font-size: 0.85rem;
+}
+
+.apartado-saldo > span {
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.apartado-saldo > strong {
+    color: var(--text-color);
+    font-weight: 700;
+    text-align: right;
+}
+
+/* El pago no puede superar el total: se marca la caja de "Queda a deber" */
+.change-display.is-error {
+    border-color: var(--danger-color, #d33);
+    background: color-mix(in srgb, var(--danger-color, #d33) 10%, transparent);
+}
+
+.change-display.is-error span {
+    color: var(--danger-color, #d33);
+}
+
+/* En pantallas angostas se aprieta el bloque para dar más ancho útil al campo
+   del monto en vez de gastarlo en relleno. */
+@media (max-width: 480px) {
+    #customerSelectorGroup label {
+        font-size: 0.8rem;
+        margin-bottom: 5px;
+    }
+
+    #apartadoPendienteBox {
+        min-width: 0;
+        padding: 3px 7px;
+    }
+
+    #apartadoPendienteBox small {
+        font-size: 0.66rem;
+    }
+
+    #apartadoPendienteBox span {
+        font-size: 0.95rem;
+    }
+
+    .apartado-saldo {
+        padding: 6px 9px;
+        font-size: 0.8rem;
+    }
+}
+
 .btn-icon-clear {
     flex: none;
     width: 28px;

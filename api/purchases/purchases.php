@@ -16,6 +16,7 @@ require_once '../../includes/Validator.class.php';
 require_once '../../includes/Auth.class.php';
 require_once '../../includes/ApiAuth.class.php';
 require_once '../../includes/BomHelper.class.php';
+require_once '../../includes/CashRegister.class.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
@@ -291,13 +292,22 @@ try {
                 Response::validationError(['items' => 'Debe proporcionar las cantidades y costos reales']);
             }
 
-            // Verificar caja abierta
-            $register = $db->selectOne(
-                'SELECT register_id FROM cash_registers WHERE store_id = ? AND status = ?',
-                [$store_id, REGISTER_OPEN]
+            // La compra saca dinero de una caja concreta: hay que saber DE CUÁL.
+            // Antes se tomaba la primera caja abierta sin preguntar, así que con
+            // varias cajas abiertas el gasto caía en una cualquiera y el
+            // administrador perdía el control de qué salió de dónde.
+            $reg_result = CashRegister::resolve(
+                $db,
+                $store_id,
+                isset($data['register_id']) ? (int)$data['register_id'] : 0
             );
-            if (!$register) { Response::error('No hay caja abierta. Abra una caja primero.', 409); }
-            $register_id = (int)$register['register_id'];
+            if (!$reg_result['ok']) {
+                Response::error($reg_result['error'], CashRegister::errorCode($reg_result), [
+                    'multiple' => $reg_result['multiple'],
+                    'cajas'    => $reg_result['options'],
+                ]);
+            }
+            $register_id = $reg_result['register_id'];
 
             $bom = new BomHelper($db);
             $total_cost = 0.0;

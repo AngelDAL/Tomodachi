@@ -12,6 +12,7 @@ require_once '../../includes/Response.class.php';
 require_once '../../includes/Validator.class.php';
 require_once '../../includes/Auth.class.php';
 require_once '../../includes/ApiAuth.class.php';
+require_once '../../includes/CashRegister.class.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
@@ -53,18 +54,18 @@ try {
         Response::error('No autorizado para operar cajas de otra tienda', 403);
     }
 
-    // Obtener register si se dio store_id
-    if (!$register_id) {
-        $reg = $db->selectOne('SELECT register_id FROM cash_registers WHERE store_id=? AND status=?',[ $session_store_id, REGISTER_OPEN ]);
-        if (!$reg) { Response::error('No hay caja abierta para la tienda',404); }
-        $register_id = (int)$reg['register_id'];
+    // Resolver la caja del movimiento: si viene register_id se valida (existe,
+    // es de la tienda y está abierta); si no viene, se usa la única abierta o se
+    // pide elegir cuando hay varias. Antes se tomaba la primera abierta sin
+    // preguntar, así que el movimiento caía en una caja cualquiera.
+    $reg_result = CashRegister::resolve($db, $session_store_id, $register_id);
+    if (!$reg_result['ok']) {
+        Response::error($reg_result['error'], CashRegister::errorCode($reg_result), [
+            'multiple' => $reg_result['multiple'],
+            'cajas'    => $reg_result['options'],
+        ]);
     }
-
-    // Validar que la caja esté abierta y sea de la tienda del usuario
-    $register = $db->selectOne('SELECT register_id, store_id, status FROM cash_registers WHERE register_id=?',[ $register_id ]);
-    if (!$register) { Response::error('Caja no encontrada',404); }
-    if ((int)$register['store_id'] !== $session_store_id) { Response::error('No autorizado para operar cajas de otra tienda',403); }
-    if ($register['status'] !== REGISTER_OPEN) { Response::error('La caja no está abierta',409); }
+    $register_id = $reg_result['register_id'];
 
     $mid = $db->insert('INSERT INTO cash_movements (register_id, user_id, movement_type, amount, description) VALUES (?,?,?,?,?)',[
         $register_id, $currentUser['user_id'], $movement_type, $amount, $description

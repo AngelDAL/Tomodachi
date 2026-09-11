@@ -15,6 +15,7 @@ require_once '../../includes/Response.class.php';
 require_once '../../includes/Validator.class.php';
 require_once '../../includes/Auth.class.php';
 require_once '../../includes/ApiAuth.class.php';
+require_once '../../includes/CashRegister.class.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 if ($method !== 'POST') { Response::error('Método no permitido', 405); }
@@ -75,6 +76,26 @@ try {
 
     $newBalance = round($balance - $amount, 2);
 
+    // Abono en efectivo: el dinero entra a una caja concreta, así que hay que
+    // resolver CUÁL antes de registrar nada (antes se tomaba la última caja
+    // abierta sin preguntar). Un abono con tarjeta o transferencia no genera
+    // movimiento de caja, por eso ahí no hace falta.
+    $register_id = 0;
+    if ($payment_method === PAYMENT_CASH) {
+        $reg_result = CashRegister::resolve(
+            $db,
+            $store_id,
+            isset($data['register_id']) ? (int)$data['register_id'] : 0
+        );
+        if (!$reg_result['ok']) {
+            Response::error($reg_result['error'], CashRegister::errorCode($reg_result), [
+                'multiple' => $reg_result['multiple'],
+                'cajas'    => $reg_result['options'],
+            ]);
+        }
+        $register_id = $reg_result['register_id'];
+    }
+
     $db->beginTransaction();
     try {
         $payment_id = $db->insert(
@@ -84,15 +105,12 @@ try {
 
         $db->update('UPDATE customers SET balance = ? WHERE customer_id = ?', [$newBalance, $customer_id]);
 
-        // Movimiento de caja si es efectivo
-        if ($payment_method === PAYMENT_CASH) {
-            $open = $db->selectOne('SELECT register_id FROM cash_registers WHERE store_id = ? AND status = ? ORDER BY opening_date DESC LIMIT 1', [$store_id, REGISTER_OPEN]);
-            if ($open) {
-                $db->insert(
-                    'INSERT INTO cash_movements (register_id, user_id, movement_type, amount, description) VALUES (?,?,?,?,?)',
-                    [$open['register_id'], $currentUser['user_id'], 'entry', $amount, 'Abono de ' . $customer['full_name'] . ' (apartado)']
-                );
-            }
+        // Movimiento de caja si es efectivo (en la caja ya resuelta arriba)
+        if ($payment_method === PAYMENT_CASH && $register_id > 0) {
+            $db->insert(
+                'INSERT INTO cash_movements (register_id, user_id, movement_type, amount, description) VALUES (?,?,?,?,?)',
+                [$register_id, $currentUser['user_id'], 'entry', $amount, 'Abono de ' . $customer['full_name'] . ' (apartado)']
+            );
         }
 
         $db->commit();

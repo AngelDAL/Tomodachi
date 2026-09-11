@@ -452,6 +452,9 @@ function initPOS() {
     });
   }
 
+  // Caja de la sesión (a qué caja se aplican los movimientos de dinero)
+  initPosRegister();
+
   // Iniciar sync si hay sesión activa
   if (displaySessionUUID) {
     startSyncInterval();
@@ -2049,6 +2052,135 @@ function openQuickCustomerFromPicker() {
   }
 }
 
+// ============================================
+// Caja de la sesión del POS
+// Todo movimiento de dinero tiene que decir A QUÉ CAJA se aplica. El cajero la
+// elige UNA vez y se recuerda (cada caja física tiene su navegador), para no
+// estar preguntando en cada venta — igual que en un supermercado, donde cada
+// cajero trabaja en su propia caja.
+// ============================================
+
+const POS_REGISTER_KEY = 'tomodachi_pos_register';
+let POS_REGISTER = null;          // { register_id, name } elegido para esta sesión
+let POS_REGISTER_OPTIONS = [];
+
+function getSavedPosRegister() {
+  try {
+    const raw = localStorage.getItem(POS_REGISTER_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function savePosRegister(reg) {
+  try {
+    if (reg) localStorage.setItem(POS_REGISTER_KEY, JSON.stringify(reg));
+    else localStorage.removeItem(POS_REGISTER_KEY);
+  } catch (e) { /* modo privado: se pierde al recargar, no es crítico */ }
+}
+
+function getPosRegisterId() {
+  return (POS_REGISTER && POS_REGISTER.register_id) ? Number(POS_REGISTER.register_id) : 0;
+}
+
+async function loadPosRegisters() {
+  try {
+    const res = await fetch('../api/terminals/read.php', { credentials: 'include' });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+    POS_REGISTER_OPTIONS = ((data.data && data.data.terminals) || [])
+      .filter(t => t.current_register_id)
+      .map(t => ({
+        register_id: Number(t.current_register_id),
+        name: t.terminal_name || ('Caja ' + t.current_register_id)
+      }));
+  } catch (e) {
+    POS_REGISTER_OPTIONS = [];
+  }
+  return POS_REGISTER_OPTIONS;
+}
+
+// Botón mientras no hay caja elegida, chip con la caja cuando ya la hay.
+function renderPosRegisterUI() {
+  const btn = document.getElementById('posRegisterBtn');
+  const chip = document.getElementById('posRegisterChip');
+  const chipName = document.getElementById('posRegisterChipName');
+  const tiene = getPosRegisterId() > 0;
+  if (btn) btn.classList.toggle('hidden', tiene);
+  if (chip) chip.classList.toggle('hidden', !tiene);
+  if (chipName && tiene) chipName.textContent = POS_REGISTER.name;
+}
+
+function renderPosRegisterOptions() {
+  const cont = document.getElementById('posRegisterOptions');
+  if (!cont) return;
+  if (!POS_REGISTER_OPTIONS.length) {
+    cont.innerHTML = '<div class="pos-register-empty">No hay cajas abiertas.<br>Abre una en <strong>Finanzas</strong> para poder cobrar.</div>';
+    return;
+  }
+  const actual = getPosRegisterId();
+  cont.innerHTML = POS_REGISTER_OPTIONS.map(r =>
+    '<button type="button" class="pos-register-option' + (r.register_id === actual ? ' active' : '') + '"' +
+      ' data-register-id="' + r.register_id + '" data-register-name="' + escapeHtml(r.name) + '">' +
+      '<span>' + escapeHtml(r.name) + '</span>' +
+      (r.register_id === actual ? '<small>En uso</small>' : '') +
+    '</button>'
+  ).join('');
+  cont.querySelectorAll('.pos-register-option').forEach(b => {
+    b.addEventListener('click', () => selectPosRegister(Number(b.dataset.registerId), b.dataset.registerName));
+  });
+}
+
+function togglePosRegisterDropdown(force) {
+  const dd = document.getElementById('posRegisterDropdown');
+  if (!dd) return;
+  const show = force !== undefined ? !!force : dd.classList.contains('hidden');
+  dd.classList.toggle('hidden', !show);
+  if (show) renderPosRegisterOptions();
+}
+
+function selectPosRegister(registerId, name) {
+  POS_REGISTER = { register_id: registerId, name: name };
+  savePosRegister(POS_REGISTER);
+  renderPosRegisterUI();
+  togglePosRegisterDropdown(false);
+  showNotification('Caja de esta sesión: ' + name, 'success');
+}
+
+async function initPosRegister() {
+  const wrap = document.getElementById('posRegisterWrap');
+  if (!wrap) return;
+
+  POS_REGISTER = getSavedPosRegister();
+  renderPosRegisterUI();
+  await loadPosRegisters();
+
+  // Si la caja guardada ya no está abierta, se descarta y se vuelve a pedir
+  if (POS_REGISTER && !POS_REGISTER_OPTIONS.some(r => r.register_id === getPosRegisterId())) {
+    POS_REGISTER = null;
+    savePosRegister(null);
+    renderPosRegisterUI();
+  }
+
+  // Con una sola caja abierta no hay nada que elegir: se toma sola
+  if (!POS_REGISTER && POS_REGISTER_OPTIONS.length === 1) {
+    POS_REGISTER = { register_id: POS_REGISTER_OPTIONS[0].register_id, name: POS_REGISTER_OPTIONS[0].name };
+    savePosRegister(POS_REGISTER);
+    renderPosRegisterUI();
+  }
+
+  const btn = document.getElementById('posRegisterBtn');
+  if (btn) btn.addEventListener('click', (e) => { e.stopPropagation(); togglePosRegisterDropdown(); });
+  const chip = document.getElementById('posRegisterChip');
+  if (chip) chip.addEventListener('click', (e) => { e.stopPropagation(); togglePosRegisterDropdown(); });
+
+  document.addEventListener('click', (e) => {
+    const dd = document.getElementById('posRegisterDropdown');
+    if (dd && !dd.classList.contains('hidden') && !wrap.contains(e.target)) togglePosRegisterDropdown(false);
+  });
+}
+
 function recalcChange() {
   if (!paymentMethodSelect) return;
   const method = paymentMethodSelect.value;
@@ -2301,6 +2433,15 @@ async function finalizeSale() {
   if (!CART.length) return;
   finalizeSaleBtn.disabled = true;
 
+  // Todo lo que toca dinero va a una caja concreta: si hay varias cajas abiertas
+  // y el cajero todavía no eligió la suya, se le pregunta antes de cobrar.
+  if (!getPosRegisterId() && POS_REGISTER_OPTIONS.length > 1) {
+    showNotification('Elige a qué caja se aplica esta venta', 'error');
+    togglePosRegisterDropdown(true);
+    finalizeSaleBtn.disabled = false;
+    return;
+  }
+
   let method = paymentMethodSelect ? paymentMethodSelect.value : 'cash';
   let stripePaymentIntent = null;
 
@@ -2338,6 +2479,11 @@ async function finalizeSale() {
     discount: (discountInput && discountInput.value) ? parseFloat(discountInput.value) : 0,
     tax: (taxInput && taxInput.value) ? parseFloat(taxInput.value) : 0
   };
+
+  // A qué caja entra esta venta (la que el cajero eligió para su sesión)
+  if (getPosRegisterId() > 0) {
+    payload.register_id = getPosRegisterId();
+  }
 
   if (stripePaymentIntent) {
     payload.stripe_payment_intent = stripePaymentIntent;

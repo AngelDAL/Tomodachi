@@ -4062,6 +4062,11 @@
 .detail-field { display:grid; gap:3px; }
 .detail-field-label { font-size:.7rem; font-weight:600; color:var(--text-muted,#667); text-transform:uppercase; letter-spacing:.3px; }
 .detail-field input { width:100%; box-sizing:border-box; padding:7px 8px; border:1px solid var(--border-color,#d4dfdc); border-radius:6px; background:var(--bg-card,#fff); color:var(--text-color,#1a1a2e); font-size:.85rem; }
+/* Selector de caja: todo movimiento de dinero dice de qué caja sale */
+.detail-register-field { margin-top:10px; padding:10px 12px; border-radius:10px; border:1px solid color-mix(in srgb,var(--primary-color,#39c5bb) 25%,transparent); background:color-mix(in srgb,var(--primary-color,#39c5bb) 6%,var(--bg-card,#fff)); }
+.detail-register-field select { width:100%; box-sizing:border-box; padding:8px; border:1px solid var(--border-color,#d4dfdc); border-radius:6px; background:var(--bg-card,#fff); color:var(--text-color,#1a1a2e); font-size:.88rem; font-weight:600; cursor:pointer; }
+.detail-register-field select:focus { border-color:var(--primary-color,#39c5bb); outline:none; box-shadow:0 0 0 3px color-mix(in srgb,var(--primary-color,#39c5bb) 20%,transparent); }
+.detail-register-hint { font-size:.72rem; color:var(--text-muted,#667); line-height:1.35; }
 .detail-item-read-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:8px; margin-top:6px; }
 .detail-read-item { display:grid; gap:2px; }
 .detail-read-label { font-size:.7rem; font-weight:600; color:var(--text-muted,#667); text-transform:uppercase; letter-spacing:.3px; }

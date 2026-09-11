@@ -234,6 +234,34 @@ async function savePurchaseComposer(existingId) {
 async function openPurchaseDetail(id) {
     try { const data=await api(`../api/purchases/purchases.php?purchase_id=${id}`); renderPurchaseDetail(data.data); } catch(e){notify(e.message,'error');}
 }
+
+// Cajas abiertas: todo movimiento de dinero tiene que decir de qué caja sale.
+async function loadOpenRegisters() {
+    try {
+        const data = await api('../api/terminals/read.php');
+        const terms = (data.data && data.data.terminals) || [];
+        return terms
+            .filter(t => t.current_register_id)
+            .map(t => ({ register_id: Number(t.current_register_id), name: t.terminal_name || ('Caja ' + t.current_register_id) }));
+    } catch (e) {
+        return [];
+    }
+}
+
+// Rellena el select de caja del detalle de compra
+async function fillPurchaseRegisterSelect(modal) {
+    const sel = modal.querySelector('#purchaseRegisterSelect');
+    if (!sel) return;
+    const cajas = await loadOpenRegisters();
+    if (!cajas.length) {
+        sel.innerHTML = '<option value="">No hay cajas abiertas</option>';
+        return;
+    }
+    sel.innerHTML = cajas.map(c => `<option value="${c.register_id}">${esc(c.name)}</option>`).join('');
+    // Con una sola caja no hay nada que elegir, pero se muestra igual para que
+    // quede claro de dónde va a salir el dinero.
+    sel.dataset.cajasCount = String(cajas.length);
+}
 function renderPurchaseDetail(p) {
     const editable=['draft','pending'].includes(p.status);
     const hasItems=p.items.length>0;
@@ -250,7 +278,7 @@ function renderPurchaseDetail(p) {
     const plannedGrandTotal=p.items.reduce((sum,i)=>sum+Number(i.planned_total_cost||((Number(i.unit_cost)||0)*Number(i.planned_quantity)||0)),0);
     const visibleTotal=p.status==='executed'?Number(p.total_cost||0):plannedGrandTotal;
     const totalLabel=p.status==='executed'?'Total pagado':'Presupuesto aproximado';
-    const body=`<div class="purchase-detail-meta"><div class="detail-meta-row"><i class="fas fa-store"></i><div><strong>Proveedor</strong><span>${esc(p.supplier_name||'Sin proveedor')}</span></div></div><div class="detail-meta-row"><i class="fas fa-calendar"></i><div><strong>Creada</strong><span>${dateText(p.created_at)}</span></div></div><div class="detail-meta-row"><i class="fas fa-circle"></i><div><strong>Estado</strong><span class="purchase-status" style="background:${PURCHASE_STATUS_COLORS[p.status]}">${esc(PURCHASE_STATUS_LABELS[p.status])}</span></div></div><div class="detail-meta-row total"><i class="fas fa-dollar-sign"></i><div><strong>${totalLabel}</strong><strong class="detail-grand-total" id="detailGrandTotal">${money(visibleTotal)}</strong></div></div></div>${p.status==='pending'?'<p class="execution-intro"><i class="fas fa-circle-info"></i> Captura la cantidad recibida y el costo total real pagado por cada producto. La diferencia se ajustará al confirmar.</p>':''}<div class="detail-list-heading"><h3><i class="fas fa-list"></i> Productos</h3>${editable?'<button type="button" class="btn-secondary" id="detailAddProducts"><i class="fas fa-plus"></i> Agregar productos</button>':''}</div><div class="purchase-detail-items">${hasItems?rows:'<div class="empty-state">Esta orden no tiene productos</div>'}</div>`;
+    const body=`<div class="purchase-detail-meta"><div class="detail-meta-row"><i class="fas fa-store"></i><div><strong>Proveedor</strong><span>${esc(p.supplier_name||'Sin proveedor')}</span></div></div><div class="detail-meta-row"><i class="fas fa-calendar"></i><div><strong>Creada</strong><span>${dateText(p.created_at)}</span></div></div><div class="detail-meta-row"><i class="fas fa-circle"></i><div><strong>Estado</strong><span class="purchase-status" style="background:${PURCHASE_STATUS_COLORS[p.status]}">${esc(PURCHASE_STATUS_LABELS[p.status])}</span></div></div><div class="detail-meta-row total"><i class="fas fa-dollar-sign"></i><div><strong>${totalLabel}</strong><strong class="detail-grand-total" id="detailGrandTotal">${money(visibleTotal)}</strong></div></div></div>${p.status==='pending'?'<p class="execution-intro"><i class="fas fa-circle-info"></i> Captura la cantidad recibida y el costo total real pagado por cada producto. La diferencia se ajustará al confirmar.</p><div class="detail-field detail-register-field"><span class="detail-field-label">Caja que paga esta compra</span><select id="purchaseRegisterSelect" class="form-select"><option value="">Cargando cajas…</option></select><small class="detail-register-hint">El dinero sale de esta caja, para que puedas separar tus gastos.</small></div>':''}<div class="detail-list-heading"><h3><i class="fas fa-list"></i> Productos</h3>${editable?'<button type="button" class="btn-secondary" id="detailAddProducts"><i class="fas fa-plus"></i> Agregar productos</button>':''}</div><div class="purchase-detail-items">${hasItems?rows:'<div class="empty-state">Esta orden no tiene productos</div>'}</div>`;
     let actions='';
     if(p.status==='pending')actions+='<button type="button" class="btn-primary" id="detailExecute"><i class="fas fa-check"></i> Confirmar</button>';
     if(editable)actions='<button type="button" class="btn-danger-outline" id="detailCancel"><i class="fas fa-ban"></i> Cancelar</button>'+actions;
@@ -262,6 +290,7 @@ function renderPurchaseDetail(p) {
     }
     modal.querySelector('#detailAddProducts')?.addEventListener('click',()=>{modal.remove();openPurchaseComposer(p.purchase_id);});
     modal.querySelector('#detailExecute')?.addEventListener('click',()=>confirmPurchaseFromDetail(p));
+    if(p.status==='pending')fillPurchaseRegisterSelect(modal);
     modal.querySelector('#detailCancel')?.addEventListener('click',()=>decisionModal('Cancelar orden','La orden se conservará en el historial como cancelada.','Cancelar orden',async()=>{try{await api('../api/purchases/purchases.php',{method:'PUT',body:JSON.stringify({purchase_id:p.purchase_id,action:'cancel'})});modal.remove();loadPurchases();notify('Orden cancelada','success');}catch(e){notify(e.message,'error');}},true));
     modal.querySelectorAll('[data-remove-detail]').forEach(b=>b.addEventListener('click',()=>decisionModal('Quitar producto','¿Deseas quitar este producto de la lista?','Quitar',async()=>{try{await api('../api/purchases/purchases.php',{method:'PUT',body:JSON.stringify({purchase_id:p.purchase_id,action:'remove_item',item_id:Number(b.dataset.removeDetail)})});modal.remove();openPurchaseDetail(p.purchase_id);loadPurchases();}catch(e){notify(e.message,'error');}},true)));
 }
@@ -271,7 +300,13 @@ async function confirmPurchaseFromDetail(p) {
     const items=[...modal.querySelectorAll('.detail-item-row')].map(row=>{const qty=Number(row.querySelector('[data-detail-qty]')?.value)||0;const total=Number(row.querySelector('[data-detail-total]')?.value)||0;return {item_id:Number(row.dataset.itemId),actual_quantity:qty,unit_cost:qty>0?total/qty:0};}).filter(i=>i.actual_quantity>0);
     if(!items.length){notify('Captura al menos un producto recibido','error');return;}
     if(items.some(i=>i.unit_cost<0)){notify('Los costos no pueden ser negativos','error');return;}
-    try{const data=await api('../api/purchases/purchases.php',{method:'PUT',body:JSON.stringify({purchase_id:p.purchase_id,action:'execute',items})});modal.remove();loadPurchases();loadMovements();notify(`Compra confirmada por ${money(data.data.total_cost)}`,'success');}catch(e){notify(e.message,'error');}
+    // De qué caja sale el dinero: la compra es un gasto y hay que decir de cuál.
+    const regSel=modal.querySelector('#purchaseRegisterSelect');
+    const register_id=regSel?(Number(regSel.value)||0):0;
+    if(!register_id){notify('Elige la caja que paga esta compra','error');if(regSel)regSel.focus();return;}
+    const executeBtn=modal.querySelector('#detailExecute');
+    if(executeBtn)executeBtn.disabled=true;
+    try{const data=await api('../api/purchases/purchases.php',{method:'PUT',body:JSON.stringify({purchase_id:p.purchase_id,action:'execute',items,register_id})});modal.remove();loadPurchases();loadMovements();notify(`Compra confirmada por ${money(data.data.total_cost)}`,'success');}catch(e){notify(e.message,'error');if(executeBtn)executeBtn.disabled=false;}
 }
 
 async function loadMovements() {

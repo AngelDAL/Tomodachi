@@ -3332,3 +3332,139 @@
     align-items: center;
     gap: 7px;
 }
+
+/* ============================================
+   Caja de la sesión del punto de venta
+   Todo movimiento de dinero tiene que decir A QUÉ CAJA se aplica. Se elige una
+   vez y se recuerda (cada caja física tiene su navegador), siguiendo el mismo
+   patrón que el cliente: botón mientras no hay nada elegido → selector → chip
+   con lo elegido.
+   ============================================ */
+.pos-register-wrap {
+    position: relative;
+    flex: 0 0 auto;
+}
+
+.pos-register-btn {
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 12px;
+    border: 1px solid var(--border-color, rgba(0, 0, 0, .14));
+    border-radius: var(--ds-radius-md, 8px);
+    background: var(--bg-card, #fff);
+    color: var(--text-muted, #667085);
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+
+.pos-register-btn:hover,
+.pos-register-btn:focus-visible {
+    background: var(--primary-color, #6366f1);
+    border-color: var(--primary-color, #6366f1);
+    color: #fff;
+}
+
+/* Chip con la caja activa: siempre a la vista, para no equivocarse de caja */
+.pos-register-chip {
+    height: 38px;
+    max-width: 200px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0 12px;
+    border: 1px solid color-mix(in srgb, var(--primary-color, #6366f1) 35%, transparent);
+    border-radius: var(--ds-radius-md, 8px);
+    background: color-mix(in srgb, var(--primary-color, #6366f1) 12%, transparent);
+    color: var(--primary-color, #6366f1);
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.pos-register-chip span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pos-register-dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 60;
+    width: min(300px, 86vw);
+    padding: 11px;
+    border: 1px solid var(--border-color, rgba(0, 0, 0, .14));
+    border-radius: 12px;
+    background: var(--bg-card, #fff);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .16);
+}
+
+.pos-register-title {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 9px;
+    color: var(--text-muted, #667085);
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+}
+
+.pos-register-options {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 46vh;
+    overflow-y: auto;
+}
+
+.pos-register-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    padding: 9px 11px;
+    border: 1.5px solid var(--border-color, rgba(0, 0, 0, .14));
+    border-radius: 9px;
+    background: var(--bg-card, #fff);
+    color: var(--text-color, #1a1a2e);
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color .16s ease, background .16s ease;
+}
+
+.pos-register-option:hover {
+    border-color: var(--primary-color, #6366f1);
+    background: color-mix(in srgb, var(--primary-color, #6366f1) 8%, transparent);
+}
+
+.pos-register-option.active {
+    border-color: var(--primary-color, #6366f1);
+    background: color-mix(in srgb, var(--primary-color, #6366f1) 12%, transparent);
+}
+
+.pos-register-option small {
+    color: var(--text-muted, #667085);
+    font-weight: 500;
+}
+
+.pos-register-empty {
+    padding: 12px 6px;
+    text-align: center;
+    color: var(--text-muted, #667085);
+    font-size: 0.82rem;
+    line-height: 1.45;
+}

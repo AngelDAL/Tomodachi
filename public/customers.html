@@ -290,8 +290,26 @@
             return d.innerHTML;
         }
 
+        // Cajas abiertas: un abono en efectivo entra a una caja concreta, así que
+        // hay que decir a cuál (antes el servidor tomaba la primera abierta).
+        let abonoRegisters = [];
+        async function loadAbonoRegisters() {
+            try {
+                const res = await fetch('../api/terminals/read.php', { credentials: 'include' });
+                const data = await res.json();
+                abonoRegisters = ((data.data && data.data.terminals) || [])
+                    .filter(t => t.current_register_id)
+                    .map(t => ({ register_id: Number(t.current_register_id), name: t.terminal_name || ('Caja ' + t.current_register_id) }));
+            } catch (e) { abonoRegisters = []; }
+        }
+        function registerOptionsHtml() {
+            if (!abonoRegisters.length) return '<option value="">Sin cajas abiertas</option>';
+            return abonoRegisters.map(r => `<option value="${r.register_id}">${esc(r.name)}</option>`).join('');
+        }
+
         async function initCustomers() {
             await loadCustomers();
+            loadAbonoRegisters();
             bindCustomerEvents();
         }
 
@@ -627,6 +645,10 @@
                                     <option value="transfer">Transferencia</option>
                                 </select>
                             </div>
+                            <div style="margin-top:8px;">
+                                <label for="paymentRegisterSelect" style="display:block; font-size:0.72rem; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.3px; margin-bottom:4px;">Caja que recibe el abono</label>
+                                <select id="paymentRegisterSelect" style="width:100%; padding:9px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-input); color: var(--text-color);">${registerOptionsHtml()}</select>
+                            </div>
                             <button onclick="submitPayment(${customer.customer_id})" class="btn btn-primary" style="width:100%; margin-top:10px; padding:11px 16px; border-radius:8px; background:var(--primary-color); color:#fff; border:none; cursor:pointer; font-weight:700;">
                                 <i class="fas fa-check"></i> Registrar abono
                             </button>
@@ -689,11 +711,15 @@
             const amount = parseFloat(document.getElementById('paymentAmountInput').value);
             if (!amount || amount <= 0) { alert('Monto inválido'); return; }
             const payment_method = document.getElementById('paymentMethodInput').value;
+            // De qué caja entra el dinero (solo aplica al efectivo)
+            const regSel = document.getElementById('paymentRegisterSelect');
+            const register_id = regSel ? (Number(regSel.value) || 0) : 0;
+            if (payment_method === 'cash' && !register_id) { alert('Elige la caja que recibe el abono'); return; }
             try {
                 const res = await fetch('../api/customers/payments.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ customer_id: customerId, amount, payment_method })
+                    body: JSON.stringify({ customer_id: customerId, amount, payment_method, register_id })
                 });
                 const data = await res.json();
                 if (!data.success) throw new Error(data.message);

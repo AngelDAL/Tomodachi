@@ -8,9 +8,9 @@
     <link rel="stylesheet" href="css/fonts.css?v=4">
     <!-- FontAwesome -->
     <link rel="stylesheet" href="lib/fontawesome/css/all.min.css?v=4">
-    <link rel="stylesheet" href="css/main.css?v=4">
-    <link rel="stylesheet" href="css/design-system.css?v=5">
-    <link rel="stylesheet" href="css/sidebar-modern.css?v=4">
+    <link rel="stylesheet" href="css/main.css?v=5">
+    <link rel="stylesheet" href="css/design-system.css?v=6">
+    <link rel="stylesheet" href="css/sidebar-modern.css?v=5">
     <link rel="stylesheet" href="css/mobile-nav.css?v=4">
     <link rel="stylesheet" href="css/dashboard.css?v=4">
     <script src="js/theme-init.js"></script>
@@ -286,7 +286,9 @@
             width: 100%;
             height: 100%;
             background: rgba(0,0,0,0.5);
-            z-index: 2100; /* Mayor que el navbar (2000) */
+            z-index: 20300; /* Por encima del menú lateral (20000). Antes 2100,
+                               pensado para un navbar de 2000 que ya no existe:
+                               el menú moderno está en 20000 y tapaba el modal. */
             overflow-y: auto;
         }
         .modal-content {
@@ -980,7 +982,7 @@
     </div>
 
     <!-- Modal Crear Usuario -->
-    <div id="userModal" class="modal" style="display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 1000;">
+    <div id="userModal" class="modal" style="display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5);">
         <div class="modal-content" style="background:var(--bg-card); margin: 10% auto; padding: 2rem; width: 90%; max-width: 500px; border-radius: 8px;">
             <h3>Nuevo Usuario</h3>
             <form id="createUserForm">

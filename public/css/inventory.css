@@ -578,7 +578,8 @@
     width: 100%;
     height: 100%;
     background: rgba(0, 0, 0, 0.5);
-    z-index: 10000;
+    /* Por encima del menú lateral (20000): antes 10000 y el menú lo tapaba */
+    z-index: 20300;
     align-items: center;
     justify-content: center;
 }
@@ -932,7 +933,9 @@
     width: 100%;
     height: 100%;
     background: rgba(0, 0, 0, 0.5);
-    z-index: 10000;
+    /* Por encima del menú lateral (20000). Estaba en 10000 y el menú tapaba el
+       modal y su fondo oscuro. */
+    z-index: 20300;
     align-items: center;
     justify-content: center;
     padding: 20px;
@@ -1368,7 +1371,8 @@
     width: 100%;
     height: 100%;
     background: rgba(0, 0, 0, 0.5);
-    z-index: 10001;
+    /* Por encima del menú lateral (20000): antes 10001 y el menú lo tapaba */
+    z-index: 20100;
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.3s ease, visibility 0.3s ease;

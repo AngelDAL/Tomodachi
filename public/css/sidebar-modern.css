@@ -39,13 +39,22 @@ html.sidebar-loading .main-content {
         margin-right: 18px; /* Space between icon and text */
     }
 
-    /* "Mi Perfil" usa un contenedor de imagen/icono propio: dale el mismo
-       espaciado que los demás íconos para que no quede pegado al texto. */
+    /* "Mi Perfil" usa un contenedor de imagen/icono propio: dale la MISMA caja
+       que a los demás íconos (28px, contenido centrado) para que el icono y el
+       texto queden alineados con el resto del menú. */
     .nav-item .profile-icon-container {
+        min-width: 28px;
+        width: 28px;
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        flex-shrink: 0;
         margin-right: 18px;
     }
     .nav-item .profile-icon-container .nav-profile-img {
-        margin-right: 0; /* el margen lo aplica el contenedor, no doblue */
+        width: 28px;
+        height: 28px;
+        margin-right: 0; /* el margen lo aplica el contenedor */
     }
 
     .nav-text {
@@ -202,6 +211,11 @@ html.sidebar-loading .main-content {
         display: flex;
         justify-content: center;
         width: 100%;
+        min-width: 0;
+        /* Faltaba quitar el margen: los demás íconos lo pierden al colapsar
+           (`html.sidebar-collapsed .nav-icon { margin: 0 }`) y el de perfil lo
+           conservaba, así que quedaba 18px desviado hacia la izquierda. */
+        margin-right: 0;
     }
     
     html.sidebar-collapsed .nav-profile-img {

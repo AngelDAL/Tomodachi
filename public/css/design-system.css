@@ -100,6 +100,28 @@ body {
 .btn:hover::after { left: 130%; opacity: 1; }
 
 /* ================================================================
+   CAPAS (z-index) — escala única del sistema
+   ----------------------------------------------------------------
+   El menú lateral vive en 20000 (sidebar-modern.css). Cualquier cosa
+   que deba FLOTAR por encima de él tiene que estar POR ARRIBA de ese
+   número; si no, el menú la tapa y su fondo oscuro no la cubre (pasó
+   con los drawers del POS, los modales de Inventario, el QR de
+   Reportes y los avisos).
+
+     1200   desplegables dentro del contenido (POS: cliente, caja)
+     1300   menú lateral heredado (main.css)
+    20000   menú lateral (sidebar-modern.css)
+    20100   paneles laterales (drawer-overlay)
+    20300   modales y su backdrop
+    20900   avisos / notificaciones
+    99999+  navegación móvil, escáner y pantallas completas
+   200000   modales heredados de main.css y ayudas de teclado
+
+   Al añadir un componente flotante, elegir una capa de esta lista en
+   lugar de inventar un número nuevo.
+   ================================================================ */
+
+/* ================================================================
    INPUTS / SELECTS / TEXTAREA
    ================================================================ */
 .input, .form-control, .form-input,

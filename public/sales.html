@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="css/sidebar-modern.css?v=4">
     <link rel="stylesheet" href="css/mobile-nav.css?v=4">
     <link rel="stylesheet" href="css/dashboard.css?v=4">
-    <link rel="stylesheet" href="css/sales.css?v=18">
+    <link rel="stylesheet" href="css/sales.css?v=20">
     <link rel="stylesheet" href="css/scanner_overlay.css?v=7">
     <link rel="stylesheet" href="css/bulk_sales.css?v=4">
     <link rel="stylesheet" href="css/cart_responsive.css?v=7">
@@ -256,23 +256,38 @@
                                     <input type="hidden" id="paymentMethod" value="cash">
                                 </div>
 
-                                <!-- Fiado / apartado: cliente obligatorio y, si adelanta una
-                                     parte, el monto a cuenta. Vive aquí, junto a los métodos
-                                     de pago, para verse al instante sin cambiar de pestaña ni
-                                     tapar los productos del carrito. -->
-                                <div class="adjustment-group" id="customerSelectorGroup" style="display:none;">
-                                    <label>Cliente (para apartado)</label>
-                                    <select id="customerSelect" class="form-select">
+                                <!-- Fiado / apartado: mientras no haya cliente asignado
+                                     solo se ve un botón; al pulsarlo se abre el selector.
+                                     El cliente elegido se guarda en #customerSelect (oculto),
+                                     que es lo que lee el resto del flujo de venta. -->
+                                <div id="customerSelectorGroup" style="display:none;">
+                                    <select id="customerSelect" class="hidden" aria-hidden="true" tabindex="-1">
                                         <option value="">— Seleccionar cliente —</option>
                                     </select>
-                                    <div id="apartadoAmountRow" style="display:none; margin-top: 8px;">
+
+                                    <button type="button" id="assignCustomerBtn" class="btn-assign-customer">
+                                        <i class="fas fa-user-plus"></i>
+                                        <span>Asignar cliente</span>
+                                    </button>
+
+                                    <div id="assignedCustomerCard" class="assigned-customer-card hidden">
+                                        <div class="assigned-customer-main">
+                                            <i class="fas fa-user-check"></i>
+                                            <div>
+                                                <strong id="assignedCustomerName">—</strong>
+                                                <small id="assignedCustomerDebt">Sin saldo pendiente</small>
+                                            </div>
+                                        </div>
+                                        <button type="button" id="clearCustomerBtn" class="btn-icon-clear" title="Quitar cliente">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+
+                                    <div id="apartadoAmountRow" style="display:none; margin-top: 10px;">
                                         <label for="apartadoPaidInput">Pago ahora (opcional)</label>
-                                        <input type="number" id="apartadoPaidInput" min="0" step="0.01" placeholder="0.00" class="form-input" inputmode="decimal">
+                                        <input type="number" id="apartadoPaidInput" min="0" step="0.01" placeholder="0.00" class="form-input" inputmode="decimal" style="width:100%;">
                                         <small id="apartadoHint" style="display:block; color:var(--text-muted); margin-top:4px;">El resto queda como saldo pendiente del cliente (apartado).</small>
                                     </div>
-                                    <a href="customers.html" style="font-size:0.8rem; color: var(--primary-color); margin-top:6px; display:inline-block;">
-                                        <i class="fas fa-user-plus"></i> Crear cliente
-                                    </a>
                                 </div>
 
                                 <div class="payment-control-group">
@@ -360,6 +375,28 @@
             </div>
             <div class="modal-footer">
                 <button id="saveItemOptionsBtn" class="btn-primary">Aplicar Cambios</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: asignar cliente al fiado -->
+    <div id="customerPickerModal" class="modal-overlay hidden">
+        <div class="modal-content customer-picker-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-user-tag"></i> Asignar cliente</h3>
+                <button class="modal-close" id="closeCustomerPickerBtn"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="customer-search-wrapper">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="customerSearchInput" class="customer-search-input" placeholder="Buscar por nombre o teléfono" autocomplete="off">
+                </div>
+                <div id="customerPickerList" class="customer-picker-list"></div>
+            </div>
+            <div class="modal-footer customer-picker-footer">
+                <button type="button" id="newCustomerFromPickerBtn" class="btn-secondary btn-block">
+                    <i class="fas fa-user-plus"></i> Nuevo cliente
+                </button>
             </div>
         </div>
     </div>
@@ -492,7 +529,7 @@
     <script src="js/promotion-client-rules.js?v=1"></script>
     <script src="https://js.stripe.com/v3/"></script>
     <script src="js/stripe-pos.js?v=1"></script>
-    <script src="js/sales.js?v=20"></script>
+    <script src="js/sales.js?v=22"></script>
     <script>
         // En la app nativa: mantener la pantalla encendida mientras se vende
         document.addEventListener('tomodachi-native-ready', () => {

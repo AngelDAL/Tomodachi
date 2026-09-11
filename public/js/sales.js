@@ -370,35 +370,18 @@ function initPOS() {
   // Ajustes. thermal-print.js los sigue leyendo de localStorage con sus valores
   // por defecto (80mm, 1 copia), así que la impresión funciona igual.
 
-  // Fiado: mostrar selector de cliente y campo de pago parcial cuando el método
-  // es credit (apartado). El campo permite adelantar una parte del total; el
-  // resto se suma al saldo del cliente.
+  // Fiado / apartado. La interfaz es deliberadamente mínima: mientras no haya
+  // cliente asignado solo se ve un botón; al pulsarlo se abre un modal con el
+  // listado (nombre, contacto y cuánto debe cada quien) y la opción de crear un
+  // cliente express. El cliente elegido se guarda en #customerSelect (oculto),
+  // que es lo que leen recalcTotals y finalizeSale.
   const custSelectorGroup = document.getElementById('customerSelectorGroup');
   if (paymentMethodSelect && custSelectorGroup) {
     const updateCustomerSelector = () => {
       const isCredit = paymentMethodSelect.value === 'credit';
-      custSelectorGroup.style.display = isCredit ? 'block' : 'none';
-      if (isCredit) {
-        loadCustomersIntoSelect();
-        updateApartadoHint();
-      } else {
-        const apartadoRow = document.getElementById('apartadoAmountRow');
-        if (apartadoRow) apartadoRow.style.display = 'none';
-      }
-      // Si hay cliente vinculado, auto-seleccionarlo en el select
-      if (isCredit && linkedCustomer) {
-        const custSel = document.getElementById('customerSelect');
-        if (custSel) {
-          if (!Array.from(custSel.options).some(o => o.value === String(linkedCustomer.customer_id))) {
-            const opt = document.createElement('option');
-            opt.value = linkedCustomer.customer_id;
-            opt.textContent = linkedCustomer.full_name;
-            opt.setAttribute('data-balance', linkedCustomer.balance || 0);
-            custSel.appendChild(opt);
-          }
-          custSel.value = String(linkedCustomer.customer_id);
-        }
-      }
+      refreshFiadoUI();
+      syncPaymentButtons();
+      updateApartadoHint();
 
       // El campo "Monto recibido" solo tiene sentido en efectivo: en fiado lo
       // sustituye "Pago ahora", así que se oculta para no mostrar dos montos.
@@ -422,16 +405,50 @@ function initPOS() {
       });
     }
 
-    // No había ningún listener en el selector de cliente: al elegirlo no se
-    // recalculaba nada, así que COBRAR se quedaba deshabilitado (en fiado exige
-    // cliente) y no se veía el saldo resultante.
+    // Al asignar o quitar cliente hay que recalcular: en fiado COBRAR solo se
+    // habilita con cliente.
     const custSelectEl = document.getElementById('customerSelect');
     if (custSelectEl) {
       custSelectEl.addEventListener('change', () => {
+        refreshFiadoUI();
         updateApartadoHint();
         recalcTotals();
       });
     }
+
+    // Selector de cliente
+    const assignBtn = document.getElementById('assignCustomerBtn');
+    if (assignBtn) assignBtn.addEventListener('click', openCustomerPicker);
+    const clearBtn = document.getElementById('clearCustomerBtn');
+    if (clearBtn) clearBtn.addEventListener('click', clearAssignedCustomer);
+    const closePickerBtn = document.getElementById('closeCustomerPickerBtn');
+    if (closePickerBtn) closePickerBtn.addEventListener('click', closeCustomerPicker);
+    const pickerModal = document.getElementById('customerPickerModal');
+    if (pickerModal) {
+      pickerModal.addEventListener('click', (e) => {
+        if (e.target === pickerModal) closeCustomerPicker();
+      });
+    }
+    const searchInput = document.getElementById('customerSearchInput');
+    if (searchInput) {
+      let searchTimer = null;
+      searchInput.addEventListener('input', () => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => {
+          const term = searchInput.value.trim();
+          if (term.length === 0 || term.length >= 2) loadCustomerPickerList(term);
+        }, 250);
+      });
+    }
+    const newCustomerBtn = document.getElementById('newCustomerFromPickerBtn');
+    if (newCustomerBtn) newCustomerBtn.addEventListener('click', openQuickCustomerFromPicker);
+
+    // Cerrar el selector con Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      const m = document.getElementById('customerPickerModal');
+      if (m && !m.classList.contains('hidden')) closeCustomerPicker();
+    });
   }
 
   // Iniciar sync si hay sesión activa
@@ -1829,8 +1846,11 @@ function updateApartadoHint() {
   if (!row || !input || !hint) return;
 
   const isCredit = paymentMethodSelect && paymentMethodSelect.value === 'credit';
-  row.style.display = isCredit ? 'block' : 'none';
-  if (!isCredit) return;
+  const hayCliente = assignedCustomerId() > 0;
+  // El monto a cuenta solo se ofrece cuando el fiado ya tiene cliente: así la
+  // vista no pide nada que todavía no toque.
+  row.style.display = (isCredit && hayCliente) ? 'block' : 'none';
+  if (!isCredit || !hayCliente) return;
 
   const total = cartTotalForApartado();
   const paid = Math.max(0, parseFloat(input.value) || 0);
@@ -1849,13 +1869,174 @@ function updateApartadoHint() {
 
   // Saldo resultante del cliente: sirve para no pasarse de su límite de crédito
   // y para planear apartados (cuánto llevaría debiendo tras esta venta).
-  const sel = document.getElementById('customerSelect');
-  const opt = sel && sel.selectedOptions && sel.selectedOptions[0];
-  if (opt && opt.value) {
-    const saldoActual = parseFloat(opt.getAttribute('data-balance') || '0') || 0;
+  if (linkedCustomer) {
+    const saldoActual = Number(linkedCustomer.balance) || 0;
     texto += ' Saldo: ' + formatCurrency(saldoActual) + ' -> ' + formatCurrency(saldoActual + pendiente) + '.';
   }
   hint.textContent = texto;
+}
+
+// ============================================
+// Fiado: asignación de cliente (botón + modal)
+// ============================================
+
+// Cliente asignado a la venta. La fuente de verdad es `linkedCustomer`, el mismo
+// que muestra el chip de la sección de Productos y que alimenta el resto del
+// POS; #customerSelect (oculto) sigue siendo lo que leen recalcTotals y
+// finalizeSale.
+function assignedCustomerId() {
+  if (linkedCustomer && linkedCustomer.customer_id) return Number(linkedCustomer.customer_id) || 0;
+  const sel = document.getElementById('customerSelect');
+  return sel ? (parseInt(sel.value, 10) || 0) : 0;
+}
+
+// Pone el resaltado del botón de método de pago de acuerdo con el valor real.
+// Hace falta porque hay rutas (quitar cliente) que cambian el método por código.
+function syncPaymentButtons() {
+  if (!paymentMethodSelect) return;
+  const actual = paymentMethodSelect.value;
+  document.querySelectorAll('#paymentMethodSelector .pm-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.method === actual);
+  });
+}
+
+// Alterna botón / tarjeta del cliente asignado y el campo del monto a cuenta.
+function refreshFiadoUI() {
+  const isCredit = paymentMethodSelect && paymentMethodSelect.value === 'credit';
+  const group = document.getElementById('customerSelectorGroup');
+  if (group) group.style.display = isCredit ? 'block' : 'none';
+
+  const btn = document.getElementById('assignCustomerBtn');
+  const card = document.getElementById('assignedCustomerCard');
+  const row = document.getElementById('apartadoAmountRow');
+  const id = assignedCustomerId();
+
+  if (btn) btn.classList.toggle('hidden', id > 0);
+  if (card) card.classList.toggle('hidden', id === 0);
+  if (row) row.style.display = (isCredit && id > 0) ? 'block' : 'none';
+
+  if (id > 0 && linkedCustomer) {
+    const balance = Number(linkedCustomer.balance) || 0;
+    const nameEl = document.getElementById('assignedCustomerName');
+    const debtEl = document.getElementById('assignedCustomerDebt');
+    if (nameEl) nameEl.textContent = linkedCustomer.full_name || 'Cliente';
+    if (debtEl) {
+      debtEl.textContent = balance > 0
+        ? 'Debe ' + formatCurrency(balance)
+        : 'Sin saldo pendiente';
+    }
+  }
+}
+
+// Asigna el cliente usando la MISMA vía que la sección de Productos
+// (linkPosCustomer): así el chip de allá, el select del cobro y este bloque
+// quedan siempre de acuerdo.
+function assignCustomerToSale(customer) {
+  if (!customer || !customer.customer_id) return;
+  linkPosCustomer(
+    customer.customer_id,
+    customer.full_name || 'Cliente',
+    customer.phone || '',
+    customer.email || '',
+    Number(customer.balance) || 0,
+    Number(customer.credit_limit) || 0,
+    Number(customer.total_purchases) || 0
+  );
+  refreshFiadoUI();
+  updateApartadoHint();
+  recalcTotals();
+}
+
+// Quita el cliente y el monto a cuenta (misma vía que el POS).
+function clearAssignedCustomer() {
+  const input = document.getElementById('apartadoPaidInput');
+  if (input) input.value = '';
+  if (typeof unlinkPosCustomer === 'function') {
+    unlinkPosCustomer();
+  } else {
+    const sel = document.getElementById('customerSelect');
+    if (sel) sel.value = '';
+  }
+  refreshFiadoUI();
+  updateApartadoHint();
+  recalcTotals();
+}
+
+function openCustomerPicker() {
+  const modal = document.getElementById('customerPickerModal');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  const search = document.getElementById('customerSearchInput');
+  if (search) search.value = '';
+  loadCustomerPickerList('');
+  setTimeout(() => { if (search) search.focus(); }, 80);
+}
+
+function closeCustomerPicker() {
+  const modal = document.getElementById('customerPickerModal');
+  if (modal) modal.classList.add('hidden');
+}
+
+let CUSTOMER_PICKER_DATA = [];
+
+async function loadCustomerPickerList(term) {
+  const list = document.getElementById('customerPickerList');
+  if (!list) return;
+  list.innerHTML = '<div class="customer-picker-empty"><i class="fas fa-spinner fa-spin"></i> Cargando clientes...</div>';
+  try {
+    const url = '../api/customers/customers.php' + (term ? '?search=' + encodeURIComponent(term) : '');
+    const res = await fetch(url, { credentials: 'include' });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message || 'No se pudieron cargar los clientes');
+    CUSTOMER_PICKER_DATA = data.data || [];
+    renderCustomerPickerList();
+  } catch (e) {
+    list.innerHTML = '<div class="customer-picker-empty">No se pudieron cargar los clientes.</div>';
+  }
+}
+
+function renderCustomerPickerList() {
+  const list = document.getElementById('customerPickerList');
+  if (!list) return;
+
+  if (!CUSTOMER_PICKER_DATA.length) {
+    list.innerHTML = '<div class="customer-picker-empty">Sin resultados. Créalo con «Nuevo cliente».</div>';
+    return;
+  }
+
+  list.innerHTML = CUSTOMER_PICKER_DATA.map(c => {
+    const balance = Number(c.balance) || 0;
+    const contacto = c.phone || c.email || '';
+    return '<button type="button" class="picker-customer" data-customer-id="' + c.customer_id + '">' +
+      '<div class="picker-customer-info">' +
+        '<strong>' + escapeHtml(c.full_name) + '</strong>' +
+        (contacto ? '<small>' + escapeHtml(contacto) + '</small>' : '') +
+      '</div>' +
+      '<span class="picker-customer-debt' + (balance > 0 ? ' has-debt' : '') + '">' +
+        (balance > 0 ? 'Debe ' + formatCurrency(balance) : 'Sin saldo') +
+      '</span>' +
+    '</button>';
+  }).join('');
+
+  list.querySelectorAll('.picker-customer').forEach(card => {
+    card.addEventListener('click', () => {
+      const id = parseInt(card.dataset.customerId, 10);
+      const customer = CUSTOMER_PICKER_DATA.find(c => Number(c.customer_id) === id);
+      if (!customer) return;
+      assignCustomerToSale(customer);
+      closeCustomerPicker();
+    });
+  });
+}
+
+// Alta rápida de cliente: se reutiliza el drawer que YA existe en el POS
+// (#posQuickCustomerModal). Al guardar, ese flujo llama a linkPosCustomer, así
+// que el cliente queda asignado sin duplicar aquí la lógica de creación.
+function openQuickCustomerFromPicker() {
+  closeCustomerPicker();
+  if (typeof openPosQuickCustomerModal === 'function') {
+    openPosQuickCustomerModal();
+  }
 }
 
 function recalcChange() {
@@ -4473,28 +4654,6 @@ function isTarget(item, promo) {
 }
 
 // ==========================================
-// Fiado: cargar clientes en el selector del POS
-// ==========================================
-async function loadCustomersIntoSelect() {
-  const custSel = document.getElementById('customerSelect');
-  if (!custSel) return;
-  try {
-    const res = await fetch('../api/customers/customers.php');
-    const data = await res.json();
-    if (!data.success) throw new Error(data.message);
-    const prev = custSel.value;
-    custSel.innerHTML = '<option value="">— Seleccionar cliente —</option>' +
-      (data.data || []).map(c =>
-        `<option value="${c.customer_id}" ${Number(c.balance) > 0 ? 'data-balance="' + c.balance + '"' : ''}>${c.full_name}${Number(c.balance) > 0 ? ' (adeuda ' + (window.FormatUtils ? window.FormatUtils.currency(c.balance) : new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(c.balance)) + ')' : ''}</option>`
-      ).join('');
-    if (prev) custSel.value = prev;
-  } catch (e) {
-    console.error('Error cargando clientes:', e);
-  }
-}
-
-
-// ==========================================
 // Crear/Editar cliente rápido desde el POS (sin salir del carrito)
 // ==========================================
 let posQuickEditId = null; // null = crear; número = editar cliente vinculado
@@ -4669,6 +4828,13 @@ function linkPosCustomer(id, name, phone, email, balance, creditLimit, totalPurc
   showNotification('Cliente vinculado: ' + name, 'success');
   // El panel del cliente NO se abre automáticamente: se muestra solo
   // cuando el usuario hace clic en el chip del cliente (decisión de Angel).
+  // El bloque de fiado del cobro se mantiene de acuerdo con este cliente,
+  // venga de donde venga la asignación (buscador de Productos o su modal).
+  if (typeof refreshFiadoUI === 'function') {
+    refreshFiadoUI();
+    updateApartadoHint();
+    recalcTotals();
+  }
 }
 
 function unlinkPosCustomer(opts = {}) {
@@ -4678,8 +4844,17 @@ function unlinkPosCustomer(opts = {}) {
   if (custSel) custSel.value = '';
   // Si el método era apartado y se desvincula, volver a efectivo
   const paySel = document.getElementById('paymentMethod');
-  if (paySel && paySel.value === 'credit') paySel.value = 'cash';
+  if (paySel && paySel.value === 'credit') {
+    paySel.value = 'cash';
+    // Emitir el cambio para que los botones de método y el bloque de fiado se
+    // enteren: antes solo se cambiaba el valor y la interfaz quedaba desfasada.
+    paySel.dispatchEvent(new Event('change', { bubbles: true }));
+  }
   // Sin notificación: se ve claramente en el chip del cliente si se quita.
+  if (typeof refreshFiadoUI === 'function') {
+    refreshFiadoUI();
+    updateApartadoHint();
+  }
 }
 
 function renderLinkedCustomer() {

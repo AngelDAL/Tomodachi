@@ -387,13 +387,21 @@ function initPOS() {
     });
   }
 
-  // Fiado: mostrar selector de cliente cuando el método es credit
+  // Fiado: mostrar selector de cliente y campo de pago parcial cuando el método
+  // es credit (apartado). El campo permite adelantar una parte del total; el
+  // resto se suma al saldo del cliente.
   const custSelectorGroup = document.getElementById('customerSelectorGroup');
   if (paymentMethodSelect && custSelectorGroup) {
     const updateCustomerSelector = () => {
       const isCredit = paymentMethodSelect.value === 'credit';
       custSelectorGroup.style.display = isCredit ? 'block' : 'none';
-      if (isCredit) loadCustomersIntoSelect();
+      if (isCredit) {
+        loadCustomersIntoSelect();
+        updateApartadoHint();
+      } else {
+        const apartadoRow = document.getElementById('apartadoAmountRow');
+        if (apartadoRow) apartadoRow.style.display = 'none';
+      }
       // Si hay cliente vinculado, auto-seleccionarlo en el select
       if (isCredit && linkedCustomer) {
         const custSel = document.getElementById('customerSelect');
@@ -408,8 +416,45 @@ function initPOS() {
           custSel.value = String(linkedCustomer.customer_id);
         }
       }
+
+      // El fiado exige un cliente, y ese campo vive en la pestaña "Ajustes" del
+      // panel del carrito. Sin esto el cajero elegía fiado y no veía dónde
+      // capturar nada: se abre la pestaña donde está el campo. El botón COBRAR
+      // y los métodos de pago quedan fuera de las pestañas, así que el flujo
+      // se puede completar sin volver a "Items".
+      if (isCredit) {
+        const custSel = document.getElementById('customerSelect');
+        const sinCliente = !custSel || !custSel.value || custSel.value === '0';
+        if (sinCliente) switchPanelTab('adjustments');
+      }
     };
     paymentMethodSelect.addEventListener('change', updateCustomerSelector);
+
+    // El campo de pago parcial se recalcula al escribir y se ajusta al salir
+    const apartadoInput = document.getElementById('apartadoPaidInput');
+    if (apartadoInput) {
+      apartadoInput.addEventListener('input', updateApartadoHint);
+      apartadoInput.addEventListener('change', () => {
+        const total = cartTotalForApartado();
+        let paid = parseFloat(apartadoInput.value) || 0;
+        if (paid > total) {
+          paid = total;
+          apartadoInput.value = paid.toFixed(2);
+          updateApartadoHint();
+        }
+      });
+    }
+
+    // No había ningún listener en el selector de cliente: al elegirlo no se
+    // recalculaba nada, así que COBRAR se quedaba deshabilitado (en fiado exige
+    // cliente) y no se veía el saldo resultante.
+    const custSelectEl = document.getElementById('customerSelect');
+    if (custSelectEl) {
+      custSelectEl.addEventListener('change', () => {
+        updateApartadoHint();
+        recalcTotals();
+      });
+    }
   }
 
   // Iniciar sync si hay sesión activa
@@ -599,16 +644,7 @@ function bindEvents() {
   // Pestañas internas del panel (Productos / Ajustes)
   document.querySelectorAll('.panel-tab-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
-      const tabId = btn.getAttribute('data-tab');
-
-      // Update buttons
-      document.querySelectorAll('.panel-tab-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-
-      // Update content
-      document.querySelectorAll('.cart-tab-content').forEach(c => c.classList.remove('active'));
-      const content = document.getElementById(`tab-${tabId}`);
-      if (content) content.classList.add('active');
+      switchPanelTab(btn.getAttribute('data-tab'));
     });
   });
 
@@ -1790,6 +1826,13 @@ function recalcTotals() {
   if (panelTotalEl) {
     panelTotalEl.textContent = formatCurrency(total);
   }
+  // El subtotal del panel solo se escribía en la rama de carrito vacío, así que
+  // con productos dentro se quedaba congelado en $0.00 mientras el total sí
+  // cambiaba. Se actualiza aquí, junto al total.
+  const cartSubtotalEl = document.getElementById('cartSubtotal');
+  if (cartSubtotalEl) {
+    cartSubtotalEl.textContent = formatCurrency(subtotal);
+  }
   renderQuickCashButtons(); // Actualizar botones de pago rápido
   recalcChange();
 }
@@ -1797,6 +1840,64 @@ function recalcTotals() {
 function onPaymentMethodChange() {
   if (!paymentMethodSelect) return;
   recalcChange();
+}
+
+// Cambia la pestaña interna del panel del carrito ("products" = Items,
+// "adjustments" = Ajustes). Es el mismo mecanismo del click: alternar la clase
+// 'active' en el botón y en el contenido.
+function switchPanelTab(tabId) {
+  document.querySelectorAll('.panel-tab-btn').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('data-tab') === tabId);
+  });
+  document.querySelectorAll('.cart-tab-content').forEach(c => c.classList.remove('active'));
+  const content = document.getElementById(`tab-${tabId}`);
+  if (content) content.classList.add('active');
+}
+
+// Total del carrito aplicando descuento e impuesto (mismo criterio que recalcChange).
+function cartTotalForApartado() {
+  const subtotal = CART.reduce((s, i) => s + (i.subtotal != null ? i.subtotal : i.unit_price * i.quantity), 0);
+  const discount = (discountInput && discountInput.value) ? parseFloat(discountInput.value) : 0;
+  const tax = (taxInput && taxInput.value) ? parseFloat(taxInput.value) : 0;
+  return Math.max(0, subtotal - discount + tax);
+}
+
+// Fiado/apartado: muestra en vivo cuánto queda pendiente según lo que el cliente
+// adelanta ahora. El resto se suma a su saldo.
+function updateApartadoHint() {
+  const row = document.getElementById('apartadoAmountRow');
+  const input = document.getElementById('apartadoPaidInput');
+  const hint = document.getElementById('apartadoHint');
+  if (!row || !input || !hint) return;
+
+  const isCredit = paymentMethodSelect && paymentMethodSelect.value === 'credit';
+  row.style.display = isCredit ? 'block' : 'none';
+  if (!isCredit) return;
+
+  const total = cartTotalForApartado();
+  const paid = Math.max(0, parseFloat(input.value) || 0);
+
+  if (paid > total) {
+    hint.textContent = 'El pago no puede superar el total (' + formatCurrency(total) + ').';
+    hint.style.color = 'var(--danger-color, #d33)';
+    return;
+  }
+
+  const pendiente = total - paid;
+  hint.style.color = '';
+  let texto = pendiente > 0
+    ? 'Queda a deber ' + formatCurrency(pendiente) + '. Se suma al saldo del cliente.'
+    : 'Queda liquidada: no se agrega saldo al cliente.';
+
+  // Saldo resultante del cliente: sirve para no pasarse de su límite de crédito
+  // y para planear apartados (cuánto llevaría debiendo tras esta venta).
+  const sel = document.getElementById('customerSelect');
+  const opt = sel && sel.selectedOptions && sel.selectedOptions[0];
+  if (opt && opt.value) {
+    const saldoActual = parseFloat(opt.getAttribute('data-balance') || '0') || 0;
+    texto += ' Saldo: ' + formatCurrency(saldoActual) + ' -> ' + formatCurrency(saldoActual + pendiente) + '.';
+  }
+  hint.textContent = texto;
 }
 
 function recalcChange() {
@@ -2027,6 +2128,11 @@ function codiInitModal() {
         selector.querySelectorAll('.pm-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         hiddenInput.value = btn.dataset.method;
+        // Los botones cambian el valor por código, y eso NO dispara 'change'.
+        // Había listeners colgados de ese evento (mostrar el selector de cliente
+        // y el campo de pago parcial del fiado, recalcular el cambio) que por eso
+        // nunca se ejecutaban. Se emite el evento de forma explícita.
+        hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
         recalcTotals();
       });
     });
@@ -2034,40 +2140,8 @@ function codiInitModal() {
 }
 
 // ============================================
-// Stripe — integracion POS
+// Cobro con tarjeta: ver public/js/stripe-pos.js
 // ============================================
-let stripeSalePayload = null;
-
-function stripeStartCheckout(total, concept) {
-  // Crear session de checkout via API
-  fetch('../api/stripe/create_checkout.php', {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      amount: total,
-      concept: concept || 'Venta Tomodachi',
-      store_id: CURRENT_STORE_ID,
-      items: CART.map(i => ({ product_id: i.product_id, quantity: i.quantity, name: i.product_name })),
-      discount: (discountInput && discountInput.value) ? parseFloat(discountInput.value) : 0,
-      tax: (taxInput && taxInput.value) ? parseFloat(taxInput.value) : 0
-    })
-  })
-  .then(res => res.json())
-  .then(data => {
-    if (data.success && data.checkout_url) {
-      // Redirigir a Stripe Checkout
-      window.location.href = data.checkout_url;
-    } else {
-      showNotification(data.message || 'Error al crear pago con Stripe', 'error');
-      finalizeSaleBtn.disabled = false;
-    }
-  })
-  .catch(e => {
-    showNotification('Error de conexion: ' + e.message, 'error');
-    finalizeSaleBtn.disabled = false;
-  });
-}
 
 async function finalizeSale() {
   if (!CART.length) return;
@@ -2120,11 +2194,25 @@ async function finalizeSale() {
     payload.cash_amount = parseFloat(checkoutReceivedInput.value) || 0;
   }
 
-  // Fiado: cliente y pago parcial
+  // Fiado (apartado): cliente y pago parcial. Si el cliente adelanta una parte,
+  // el resto se suma a su saldo; si no adelanta nada, todo queda fiado.
   if (method === 'credit') {
     const custSel = document.getElementById('customerSelect');
     payload.customer_id = custSel ? parseInt(custSel.value, 10) || 0 : 0;
-    payload.amount_paid = parseFloat((document.getElementById('apartadoPaidInput') || {}).value) || 0;
+    if (!payload.customer_id) {
+      showNotification('Selecciona un cliente para registrar el fiado', 'error');
+      finalizeSaleBtn.disabled = false;
+      return;
+    }
+    const apartadoEl = document.getElementById('apartadoPaidInput');
+    let apartadoPaid = Math.max(0, parseFloat(apartadoEl ? apartadoEl.value : '') || 0);
+    const apartadoTotal = cartTotalForApartado();
+    if (apartadoPaid > apartadoTotal) {
+      apartadoPaid = apartadoTotal;
+      if (apartadoEl) apartadoEl.value = apartadoPaid.toFixed(2);
+      showNotification('El pago no puede superar el total: se ajustó a ' + formatCurrency(apartadoTotal), 'info');
+    }
+    payload.amount_paid = apartadoPaid;
   }
 
   // CoDi: redirigir al flujo QR
@@ -2140,19 +2228,10 @@ async function finalizeSale() {
     return;
   }
 
-  // Stripe: redirigir a Checkout de Stripe
-  if (method === 'stripe') {
-    const total = payload.items.reduce((sum, item) => {
-      const cartItem = CART.find(c => c.product_id === item.product_id);
-      return sum + (cartItem ? (cartItem.subtotal || cartItem.unit_price * cartItem.quantity) : 0);
-    }, 0) - (payload.discount || 0) + (payload.tax || 0);
-    payload.total = total;
-    stripeSalePayload = payload;
-    finalizeSaleBtn.disabled = false;
-    stripeStartCheckout(total, 'Venta Tomodachi');
-    return;
-  }
-
+  // Nota: el cobro con tarjeta ya se resolvió arriba con Stripe.js (StripePOS)
+  // y la venta se registra como 'card'. Aquí vivía el flujo antiguo de Stripe
+  // Checkout (stripeStartCheckout), que llamaba a api/stripe/create_checkout.php,
+  // un endpoint que ya no existe: era código muerto e inalcanzable.
   try {
     const res = await fetch('../api/sales/create_sale.php', { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' }, credentials: 'include' });
     if (!await checkSessionStatus(res)) { finalizeSaleBtn.disabled = false; return; }

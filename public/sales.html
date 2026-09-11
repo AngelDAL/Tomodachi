@@ -248,9 +248,9 @@
                                             <option value="">— Seleccionar cliente —</option>
                                         </select>
                                         <div id="apartadoAmountRow" style="display:none; margin-top: 8px;">
-                                            <label>Pago ahora (opcional)</label>
-                                            <input type="number" id="apartadoPaidInput" min="0" step="0.01" placeholder="0.00" class="form-input">
-                                            <small style="display:block; color:var(--text-muted); margin-top:4px;">El resto queda como saldo pendiente del cliente (apartado).</small>
+                                            <label for="apartadoPaidInput">Pago ahora (opcional)</label>
+                                            <input type="number" id="apartadoPaidInput" min="0" step="0.01" placeholder="0.00" class="form-input" inputmode="decimal">
+                                            <small id="apartadoHint" style="display:block; color:var(--text-muted); margin-top:4px;">El resto queda como saldo pendiente del cliente (apartado).</small>
                                         </div>
                                         <a href="customers.html" style="font-size:0.8rem; color: var(--primary-color); margin-top:6px; display:inline-block;">
                                             <i class="fas fa-user-plus"></i> Crear cliente
@@ -294,10 +294,15 @@
                                         <i class="fas fa-file-invoice"></i>
                                         <span>Fiado</span>
                                     </button>
+                                    <!-- CoDi retirado temporalmente por decisión del negocio.
+                                         El módulo sigue completo en api/codi/ y codi/ (y su
+                                         configuración en Perfil > Mi Empresa); para reactivarlo
+                                         basta con devolver este botón.
                                     <button type="button" class="pm-btn" data-method="codi">
                                         <i class="fas fa-qrcode"></i>
                                         <span>CoDi</span>
                                     </button>
+                                    -->
                                     <button type="button" class="pm-btn" data-method="stripe">
                                         <i class="fas fa-credit-card"></i>
                                         <span>Tarjeta</span>
@@ -521,7 +526,7 @@
     <script src="js/promotion-client-rules.js?v=1"></script>
     <script src="https://js.stripe.com/v3/"></script>
     <script src="js/stripe-pos.js?v=1"></script>
-    <script src="js/sales.js?v=15"></script>
+    <script src="js/sales.js?v=19"></script>
     <script>
         // En la app nativa: mantener la pantalla encendida mientras se vende
         document.addEventListener('tomodachi-native-ready', () => {

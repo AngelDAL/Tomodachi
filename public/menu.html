@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="/public/lib/fontawesome/css/all.min.css?v=4">
     <link rel="stylesheet" href="/public/css/variables.css?v=3">
     <link rel="stylesheet" href="/public/css/design-system.css?v=7">
-    <link rel="stylesheet" href="/public/css/menu-public.css?v=2">
+    <link rel="stylesheet" href="/public/css/menu-public.css?v=3">
 
     <script>
         // El comensal no tiene sesión: el tema se decide por la preferencia de
@@ -55,6 +55,18 @@
             <p id="cartaDescripcion" class="carta-descripcion hidden"></p>
         </header>
 
+        <!-- Barra del comensal: solo aparece si la carta permite pedir -->
+        <section id="dinerBar" class="diner-barra hidden">
+            <div class="diner-barra-info">
+                <i class="fas fa-utensils"></i>
+                <div class="diner-barra-textos">
+                    <p id="dinerBarTitulo" class="diner-barra-titulo">Pide desde tu teléfono</p>
+                    <p id="dinerBarSub" class="diner-barra-sub"></p>
+                </div>
+            </div>
+            <button type="button" id="dinerBarBoton" class="btn btn-solid" data-accion="pedir">Pedir</button>
+        </section>
+
         <!-- Promociones vigentes -->
         <section id="promoSection" class="promo-tira hidden">
             <div id="promoLista" class="promo-lista"></div>
@@ -73,6 +85,139 @@
         </footer>
     </div>
 
-    <script src="/public/js/menu-public.js?v=2"></script>
+    <!-- Panel del pedido (fijo abajo). Discreto cuando está vacío. -->
+    <div id="orderBar" class="pedido-barra hidden">
+        <div class="pedido-barra-resumen">
+            <span id="orderBarPiezas" class="pedido-barra-piezas">0</span>
+            <span class="pedido-barra-label">piezas</span>
+            <span id="orderBarTotal" class="pedido-barra-total">$0.00</span>
+        </div>
+        <button type="button" id="orderBarVer" class="btn btn-primary" data-accion="ver">Ver pedido</button>
+    </div>
+
+    <!-- Aviso flotante -->
+    <div id="mpAviso" class="mp-aviso hidden"></div>
+
+    <!-- ===================== Modales del pedido ===================== -->
+
+    <!-- 1) Pedir: iniciar cuenta o unirse a una existente -->
+    <div id="modalPedir" class="mp-overlay hidden">
+        <div class="mp-modal" role="dialog" aria-modal="true" aria-labelledby="modalPedirTitulo">
+            <div class="mp-modal-head">
+                <div>
+                    <h3 id="modalPedirTitulo">Empieza tu pedido</h3>
+                </div>
+                <button type="button" class="mp-cerrar" data-cerrar="modalPedir" aria-label="Cerrar">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </div>
+            <div class="mp-modal-body">
+                <div class="mp-campo">
+                    <label class="mp-label" for="inpNombre">Tu nombre (opcional)</label>
+                    <input id="inpNombre" class="mp-input" type="text" maxlength="60"
+                           placeholder="¿Cómo te llamas?" autocomplete="given-name">
+                </div>
+
+                <p id="modalPedirHint" class="mp-hint hidden"></p>
+
+                <div id="bloqueIniciar">
+                    <button type="button" id="btnIniciar" class="mp-accion" data-accion="iniciar">
+                        <i class="fas fa-circle-plus"></i> Iniciar mi pedido
+                    </button>
+                    <div class="mp-sep"><span>o</span></div>
+                </div>
+
+                <div class="mp-campo">
+                    <label class="mp-label" for="inpCodigo">Unirme a una cuenta</label>
+                    <input id="inpCodigo" class="mp-input mp-input-codigo" type="text" maxlength="4"
+                           inputmode="text" autocapitalize="characters" autocomplete="off" placeholder="ABCD">
+                </div>
+                <button type="button" id="btnUnirse" class="mp-accion mp-accion-sec" data-accion="unirse">
+                    <i class="fas fa-user-plus"></i> Unirme a una cuenta
+                </button>
+
+                <p id="modalPedirError" class="mp-aviso-error hidden"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2) Código grande de la cuenta recién abierta -->
+    <div id="modalCodigo" class="mp-overlay hidden">
+        <div class="mp-modal mp-modal-centrado" role="dialog" aria-modal="true" aria-labelledby="codigoGrande">
+            <div class="mp-modal-body mp-centrado">
+                <p class="mp-codigo-label">Tu cuenta</p>
+                <div id="codigoGrande" class="mp-codigo">----</div>
+                <p class="mp-codigo-ayuda">Dile este código a quien se quiera unir a tu cuenta.</p>
+                <button type="button" class="mp-accion" data-cerrar="modalCodigo">Listo</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3) Agregar producto: cantidad y notas -->
+    <div id="modalProducto" class="mp-overlay hidden">
+        <div class="mp-modal" role="dialog" aria-modal="true" aria-labelledby="prodTitulo">
+            <div class="mp-modal-head">
+                <div>
+                    <h3 id="prodTitulo">Agregar</h3>
+                </div>
+                <button type="button" class="mp-cerrar" data-cerrar="modalProducto" aria-label="Cerrar">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </div>
+            <div class="mp-modal-body">
+                <p id="prodPrecio" class="mp-prod-precio"></p>
+                <div class="mp-cantidad">
+                    <button type="button" class="mp-step" id="prodMenos" data-accion="prodmenos" aria-label="Menos">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                    <span id="prodCant" class="mp-cant-valor">1</span>
+                    <button type="button" class="mp-step" id="prodMas" data-accion="prodmas" aria-label="Más">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+                <div id="prodNotasW" class="mp-campo hidden">
+                    <label class="mp-label" for="prodNotas">Notas (opcional)</label>
+                    <textarea id="prodNotas" class="mp-input" rows="2" maxlength="200"
+                              placeholder="Sin cebolla, extra salsa..."></textarea>
+                </div>
+                <p id="prodError" class="mp-aviso-error hidden"></p>
+                <button type="button" id="prodConfirmar" class="mp-accion" data-accion="prodconfirmar">
+                    Agregar al pedido
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4) El pedido de la mesa -->
+    <div id="modalPedido" class="mp-overlay hidden">
+        <div class="mp-modal mp-modal-grande" role="dialog" aria-modal="true" aria-labelledby="pedidoTitulo">
+            <div class="mp-modal-head">
+                <div>
+                    <h3 id="pedidoTitulo">Pedido de la mesa</h3>
+                    <p id="pedidoCodigo" class="mp-pedido-codigo"></p>
+                </div>
+                <button type="button" class="mp-cerrar" data-cerrar="modalPedido" aria-label="Cerrar">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </div>
+            <div class="mp-modal-body">
+                <div id="pedidoLista" class="mp-pedido-lista">
+                    <p class="mp-vacio">Cargando el pedido…</p>
+                </div>
+                <div class="mp-pedido-totales">
+                    <span>Total de la cuenta</span>
+                    <strong id="pedidoTotal">$0.00</strong>
+                </div>
+                <p id="pedidoError" class="mp-aviso-error hidden"></p>
+                <p id="pedidoExito" class="mp-aviso-exito hidden"></p>
+                <p id="pedidoPieAyuda" class="mp-pedido-ayuda"></p>
+                <button type="button" id="btnEnviarCocina" class="mp-accion mp-boton-grande" data-accion="enviar">
+                    <i class="fas fa-paper-plane"></i> Enviar a cocina
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/public/js/menu-public.js?v=3"></script>
 </body>
 </html>

@@ -19,6 +19,16 @@ HOST = os.getenv("WS_HOST", "0.0.0.0")
 PORT = int(os.getenv("WS_PORT", "8765"))
 MAX_MESSAGE_BYTES = 1_000_000
 UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$", re.I)
+# Canal del relay. Este servicio es genérico: sólo reparte mensajes entre quien
+# esté suscrito al mismo canal. Hay dos usos hoy:
+#   - display de cliente -> canal = UUID del carrito
+#   - cuenta de mesa     -> canal = session_id (numérico)
+# Por eso se aceptan las dos formas. Antes sólo pasaba el UUID, así que la cuenta
+# de mesa recibía 400 en el handshake y los avisos nunca llegaban.
+CHANNEL_RE = re.compile(
+    r"^(?:[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|[0-9]{1,20})$",
+    re.I,
+)
 CLIENTS: dict[str, set[asyncio.StreamWriter]] = defaultdict(set)
 CLIENT_LOCK = asyncio.Lock()
 
@@ -91,7 +101,7 @@ async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
         parsed = urlparse(match.group(1))
         session = parse_qs(parsed.query).get("session", [""])[0]
         key = headers.get("sec-websocket-key", "")
-        if parsed.path != "/" or not UUID_RE.fullmatch(session) or not key:
+        if parsed.path != "/" or not CHANNEL_RE.fullmatch(session) or not key:
             writer.write(b"HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n")
             await writer.drain()
             return
@@ -114,7 +124,11 @@ async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
             if opcode != 0x1:
                 continue
             message = json.loads(payload)
-            if message.get("type") != "cart_update":
+            # El relay es genérico por canal: cada tipo es un mensaje que algunos
+            # clientes quieren reenviar a los demás del mismo canal.
+            #   cart_update  -> carrito del punto de venta
+            #   order_update -> cambios de la cuenta por mesa (pedido/comanda)
+            if message.get("type") not in {"cart_update", "order_update"}:
                 continue
             await broadcast(session, json.dumps(message, separators=(",", ":")), writer)
     except (asyncio.IncompleteReadError, ConnectionError, ValueError, json.JSONDecodeError):

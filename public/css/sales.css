@@ -866,8 +866,10 @@
 /* Badge de stock sobre la imagen */
 .stock-badge {
     position: absolute;
-    top: 6px;
-    right: 6px;
+    /* Abajo a la izquierda: arriba a la derecha estorbaba la foto y pasaba
+       desapercibido. El tooltip nativo se muestra al pasar el mouse. */
+    bottom: 6px;
+    left: 6px;
     background: rgba(0, 0, 0, 0.7);
     color: white;
     font-size: 0.7rem;
@@ -875,7 +877,11 @@
     padding: 2px 6px;
     border-radius: 10px;
     z-index: 2;
-    pointer-events: none;
+    /* auto (antes none): con pointer-events:none el navegador nunca dispara el
+       title, que es donde se explica que el número son las existencias. */
+    pointer-events: auto;
+    cursor: help;
+    white-space: nowrap;
 }
 
 .stock-badge.low {

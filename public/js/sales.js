@@ -38,6 +38,15 @@ let lastStepPointerAt = 0;
 // ===== Vista del grid: 'grid' (por defecto) | 'catalog' (agrupado por catálogo) =====
 let currentViewMode = 'grid';
 
+// Texto del tooltip del badge de stock: aclara que el número son las existencias
+// disponibles y avisa cuando conviene reabastecer.
+function stockBadgeTip(cantidad) {
+  const n = Number(cantidad) || 0;
+  if (n <= 0) return 'Sin existencias. Hay que reabastecer.';
+  if (n < 5) return 'Existencias disponibles: ' + n + '. Quedan pocas, conviene reabastecer.';
+  return 'Existencias disponibles: ' + n;
+}
+
 // Build de una card de producto (reutilizable en grid y catálogo)
 function buildProductCard(p) {
   const imagePath = getRelativeImagePath(p.image_path);
@@ -52,15 +61,21 @@ function buildProductCard(p) {
   } else {
        priceHtml = `<span class="current-price">${formatCurrency(p.price)}</span>`;
   }
-  const stockBadge = (p.stock_quantity !== undefined && p.stock_quantity !== null && p.stock_quantity !== '')
-        ? `<div class="stock-badge ${p.stock_quantity < 5 ? 'low' : ''}">${window.FormatUtils ? window.FormatUtils.qty(p.stock_quantity) : p.stock_quantity}</div>`
+  // El API de inventario entrega `current_stock`, NO `stock_quantity`: sin este
+  // respaldo el badge de existencias no se pintaba nunca (nadie lo veía).
+  const stockRaw = (p.stock_quantity !== undefined && p.stock_quantity !== null && p.stock_quantity !== '')
+        ? p.stock_quantity
+        : p.current_stock;
+  const hayStock = stockRaw !== undefined && stockRaw !== null && stockRaw !== '';
+  const stockBadge = hayStock
+        ? `<div class="stock-badge ${Number(stockRaw) < 5 ? 'low' : ''}" title="${escapeHtml(stockBadgeTip(stockRaw))}">${window.FormatUtils ? window.FormatUtils.qty(stockRaw) : stockRaw}</div>`
         : '';
   const esc = (s) => escapeHtml(s);
   return `
     <div class="gallery-item"
          data-id="${p.product_id}"
          data-price="${p.price}"
-         data-stock="${p.stock_quantity !== undefined ? p.stock_quantity : ''}"
+         data-stock="${hayStock ? stockRaw : ''}"
          data-image="${p.image_path || ''}"
          data-is_bulk="${p.is_bulk || 0}"
          data-bulk_unit="${p.bulk_unit || 'kg'}"
@@ -68,7 +83,7 @@ function buildProductCard(p) {
          title="${esc(p.product_name)}">
       <div class="img-wrap">
         ${imagePath
-          ? `<img src="${imagePath}" loading="lazy" decoding="async" alt="${esc(p.product_name)}" onerror="this.parentNode.innerHTML='<i class=\\'fas fa-box\\'></i>'">`
+          ? `<i class="fas fa-box" style="color:var(--text-light); font-size:1.5rem; position:absolute;"></i><img src="${imagePath}" loading="lazy" decoding="async" alt="${esc(p.product_name)}" onerror="this.remove()">`
           : '<i class="fas fa-box" style="color:var(--text-light); font-size:1.5rem;"></i>'}
         ${stockBadge}
       </div>

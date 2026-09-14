@@ -2772,6 +2772,23 @@
 /* .inv-controls es un panel contenedor, no una tarjeta clicable: se le quitó el
    hover porque solo distraía (antes subía la sombra al pasar el mouse). */
 
+/* Stock en la tarjeta de producto de "Próximas Compras".
+   El dueño lo pidió en rojo para detectar de un vistazo qué hay que reabastecer
+   y armar la compra más rápido. Dos niveles:
+     .low      -> sin existencia o en/por debajo del mínimo de la ficha
+     .negative -> stock negativo (se vendió más de lo que había) */
+.product-card-stock {
+    font-weight: 600;
+}
+.product-card-stock.low {
+    color: var(--danger-color);
+    font-weight: 700;
+}
+.product-card-stock.negative::before {
+    content: '▲ ';
+    font-size: .8em;
+}
+
 .product-card {
     border-radius: var(--ds-radius-lg);
     border: 1px solid color-mix(in srgb, var(--border-color) 50%, transparent);

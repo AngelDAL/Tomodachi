@@ -72,6 +72,18 @@
         return (p.get('t') || '').trim();
     }
 
+    /**
+     * Código de la cuenta que viene en el enlace.
+     *
+     * Es el QR "ya autorizado" que muestra el mesero: el cliente escanea y entra DIRECTO a
+     * la cuenta de su mesa sin escribir nada. `?punto=<token del punto>` es lo que lleva el
+     * QR impreso de la mesa (ahí el personal autoriza).
+     */
+    function codigoDeUrl() {
+        var p = new URLSearchParams(window.location.search);
+        return (p.get('code') || '').trim().toUpperCase().slice(0, 8);
+    }
+
     function qs(id) { return document.getElementById(id); }
 
     function mostrar(id) {
@@ -598,12 +610,20 @@
     }
 
     function quitarItem(itemId) {
-        var it = ((estado.cuenta && estado.cuenta.items) || []).filter(function (x) {
-            return String(x.order_item_id) === String(itemId);
-        })[0];
-        if (!it) return;
-        // Quitar = dejar la línea pendiente en 0.
-        agregarItem(it.product_id, 0, '').catch(function (e) {
+        // Quita una línea que todavía no se mandó a cocina.
+        // Antes se mandaba cantidad 0 y el API lo rechazaba ("la cantidad debe ser mayor que
+        // cero"), así que quitar un platillo NO funcionaba. Ahora hay una acción propia.
+        if (!estado.socio) return;
+        apiPost(API_ORDER, {
+            action: 'remove',
+            join_token: estado.socio.join_token,
+            order_item_id: Number(itemId)
+        }).then(function (data) {
+            if (data) estado.cuenta = data;
+            actualizarPedidoBar();
+            pintarControlesProducto();
+            if (qs('modalPedido') && !qs('modalPedido').classList.contains('hidden')) renderPedidoModal();
+        }).catch(function (e) {
             mostrarAvisoModal('pedidoError', e.message);
         });
     }
@@ -840,8 +860,14 @@
     function abrirPedirModal() {
         mostrarEl(qs('modalPedirError'), false);
         qs('inpNombre').value = estado.socio ? (estado.socio.display_name || '') : '';
-        qs('inpCodigo').value = '';
+        var deUrl = codigoDeUrl();
+        qs('inpCodigo').value = deUrl || '';
         qs('inpCodigo').placeholder = 'ABCD';
+
+        // Si el mesero ya te pasó el enlace con el código de la cuenta, no lo escribas: solo
+        // tu nombre. Ese es el QR "ya autorizado" de la mesa.
+        var campoCodigo = qs('inpCodigo').closest('.mp-campo');
+        if (campoCodigo) campoCodigo.classList.toggle('hidden', !!deUrl);
 
         var bloqueIniciar = qs('bloqueIniciar');
         var hint = qs('modalPedirHint');
@@ -955,43 +981,60 @@
     // Tiempo real: WebSocket + sondeo de respaldo
     // ============================================================
 
-    function socketUrl() {
-        var sid = encodeURIComponent(estado.socio.session_id);
+    function socketUrl(credencial) {
         var host = window.location.hostname;
+        var consulta = 'session=' + encodeURIComponent(credencial.canal)
+            + '&token=' + encodeURIComponent(credencial.token)
+            + '&exp=' + encodeURIComponent(credencial.exp);
         // Local: el relay corre aparte en 8765.
         if (host === 'localhost' || host === '127.0.0.1') {
-            return 'ws://localhost:8765/?session=' + sid;
+            return 'ws://localhost:8765/?' + consulta;
         }
         var scheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        return scheme + '//' + window.location.host + '/ws/?session=' + sid;
+        return scheme + '//' + window.location.host + '/ws/?' + consulta;
     }
 
+    /**
+     * Pide el token del canal al servidor y conecta.
+     * El relay ya no acepta el canal de una cuenta sin token: el `session_id` es un entero
+     * corto y cualquiera podía adivinarlo para escuchar el pedido de otra mesa. Si el token
+     * no se consigue, se sigue funcionando con el sondeo (nunca se bloquea la carta).
+     */
     function conectarSocket() {
         if (!estado.socio || typeof WebSocket === 'undefined') return;
         detenerSocket();
-        try {
-            estado.socket = new WebSocket(socketUrl());
-        } catch (e) {
-            estado.socket = null;
-            return;
-        }
-        var s = estado.socket;
+        var sesion = estado.socio.session_id;
+        fetch('/api/ws/token.php?canal=' + encodeURIComponent(sesion)
+              + '&join_token=' + encodeURIComponent(estado.socio.join_token || ''),
+              { credentials: 'include' })
+            .then(function (r) { return r.json(); })
+            .then(function (datos) {
+                if (!datos || datos.success === false || !datos.data) return;
+                try {
+                    estado.socket = new WebSocket(socketUrl(datos.data));
+                } catch (e) {
+                    estado.socket = null;
+                    return;
+                }
+                var s = estado.socket;
 
-        s.onmessage = function (ev) {
-            var msg = null;
-            try { msg = JSON.parse(ev.data); } catch (e) { return; }
-            // El servidor avisa que la cuenta cambió: se vuelve a pedir y repinta.
-            if (msg && msg.type === 'order_update') {
-                refrescarCuenta({ silencioso: true });
-            }
-        };
-        s.onerror = function () {
-            try { s.close(); } catch (e) { /* ignore */ }
-        };
-        s.onclose = function () {
-            if (estado.socket === s) estado.socket = null;
-            // Sin reconexión agresiva: el sondeo ya mantiene la cuenta fresca.
-        };
+                s.onmessage = function (ev) {
+                    var msg = null;
+                    try { msg = JSON.parse(ev.data); } catch (e) { return; }
+                    // El servidor avisa que la cuenta cambió: se vuelve a pedir y repinta.
+                    if (msg && msg.type === 'order_update') {
+                        refrescarCuenta({ silencioso: true });
+                    }
+                };
+                s.onerror = function () {
+                    try { s.close(); } catch (e) { /* ignore */ }
+                };
+                s.onclose = function () {
+                    if (estado.socket === s) estado.socket = null;
+                    // Sin reconexión agresiva: el sondeo ya mantiene la cuenta fresca.
+                };
+            })
+            .catch(function () { /* sin tiempo real: el sondeo sostiene la vista */ });
     }
 
     function detenerSocket() {

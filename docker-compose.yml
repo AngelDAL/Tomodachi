@@ -42,6 +42,10 @@ services:
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
       # URL pública de la app (enlaces de correo). Ej: https://pos.midominio.com
       APP_URL: ${APP_URL:-}
+      # Secreto compartido con el servicio de WebSocket: firma los tokens de
+      # suscripción (el relay ya no acepta canales de tienda ni de cuenta sin
+      # token). El MISMO valor debe estar en el servicio `ws`.
+      WS_SECRET: ${WS_SECRET:-}
     ports:
       - "127.0.0.1:${PORT:-8091}:80"
     volumes:
@@ -61,6 +65,9 @@ services:
     environment:
       WS_HOST: 0.0.0.0
       WS_PORT: 8765
+      # Mismo secreto que la app: sin él el relay rechaza los canales que exigen
+      # token (cuenta de mesa y canal de tienda) y no hay tiempo real.
+      WS_SECRET: ${WS_SECRET:-}
 
 volumes:
   db_data:

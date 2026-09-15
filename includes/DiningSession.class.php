@@ -19,6 +19,8 @@
  * {"type":"order_update","session":"<session_id>","event":"..."}.
  * Ver broadcast() para la advertencia de integración con el relay.
  */
+require_once __DIR__ . '/WsToken.class.php';
+
 class DiningSession {
 
     /**
@@ -552,6 +554,81 @@ class DiningSession {
      * @return void
      */
     public static function broadcast($session_id, $event) {
+        $session_id = (int)$session_id;
+        if ($session_id <= 0) {
+            return;
+        }
+
+        $payload = json_encode([
+            'type'    => 'order_update',
+            'session' => (string)$session_id,
+            'event'   => (string)$event,
+        ], JSON_UNESCAPED_UNICODE);
+        if ($payload === false) {
+            return;
+        }
+
+        // 1) Canal de la cuenta: el comensal (o el mesero) viendo el pedido de esa mesa.
+        self::enviarAlRelay((string)$session_id, $payload);
+
+        // 2) Canal de la TIENDA: las pantallas del personal (mapa de puntos de servicio)
+        //    ven los cambios de todo el salón sin refrescar ni sondear. Es el mismo aviso
+        //    con el store_id añadido, para que la pantalla sepa de qué tienda es.
+        $store_id = self::storeDeCuenta($session_id);
+        if ($store_id > 0) {
+            $payloadTienda = json_encode([
+                'type'     => 'order_update',
+                'session'  => (string)$session_id,
+                'event'    => (string)$event,
+                'store_id' => $store_id,
+            ], JSON_UNESCAPED_UNICODE);
+            if ($payloadTienda !== false) {
+                self::enviarAlRelay(WsToken::canalTienda($store_id), $payloadTienda);
+            }
+        }
+    }
+
+    /** Tienda de una cuenta (para avisar a las pantallas del personal). */
+    private static function storeDeCuenta($session_id) {
+        try {
+            $conn = self::conexion();
+            if (!$conn) {
+                return 0;
+            }
+            $stmt = $conn->prepare("SELECT store_id FROM dining_sessions WHERE session_id = :sid LIMIT 1");
+            $stmt->execute([':sid' => (int)$session_id]);
+            return (int)($stmt->fetchColumn() ?: 0);
+        } catch (Throwable $e) {
+            return 0;
+        }
+    }
+
+    /** Conexión propia: broadcast() es estático y puede llamarse fuera de una petición. */
+    private static function conexion() {
+        static $conn = null;
+        if ($conn !== null) {
+            return $conn;
+        }
+        try {
+            if (class_exists('Database')) {
+                $db = new Database();
+                $conn = $db->getConnection();
+            }
+        } catch (Throwable $e) {
+            $conn = null;
+        }
+        return $conn;
+    }
+
+    /**
+     * Manda un frame de texto al relay por el canal indicado.
+     *
+     * El canal viaja con token firmado (WsToken) porque el relay ya no acepta canales de
+     * cuenta ni de tienda sin él: el session_id es un entero corto y adivinable.
+     * Todo va envuelto en try/catch y en silencio a propósito: un aviso que no sale no puede
+     * tumbar la operación que sí ocurrió.
+     */
+    private static function enviarAlRelay($canal, $payload) {
         try {
             $host = getenv('WS_HOST') ?: 'ws';
             $port = (int)(getenv('WS_PORT') ?: 8765);
@@ -559,12 +636,9 @@ class DiningSession {
                 return;
             }
 
-            $payload = json_encode([
-                'type'    => 'order_update',
-                'session' => (string)$session_id,
-                'event'   => (string)$event,
-            ], JSON_UNESCAPED_UNICODE);
-            if ($payload === false) {
+            $ruta = WsToken::urlRelay($canal);
+            if ($ruta === null) {
+                // Sin WS_SECRET no hay token: el relay rechazaría la conexión igual.
                 return;
             }
 
@@ -575,8 +649,7 @@ class DiningSession {
             stream_set_timeout($fp, 2);
 
             $key = base64_encode(random_bytes(16));
-            $path = '/?session=' . rawurlencode((string)$session_id);
-            $request = "GET {$path} HTTP/1.1\r\n"
+            $request = "GET {$ruta} HTTP/1.1\r\n"
                      . "Host: {$host}:{$port}\r\n"
                      . "Upgrade: websocket\r\n"
                      . "Connection: Upgrade\r\n"

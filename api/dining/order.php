@@ -11,8 +11,14 @@
  *        -> agrega ítems (una transacción); devuelve la cuenta actualizada.
  *   POST {"join_token":"...","action":"send"}
  *        -> manda a la comanda los ítems 'pending'; devuelve enviados + cuenta.
+ *
+ * SOLO PERSONAL autenticado (requireActor + scope write):
+ *   POST {"session_id":N,"items":[...]}
+ *        -> el mesero anota por los clientes sobre la MISMA cuenta (no necesita el
+ *           join_token del comensal). Sus líneas quedan como añadidas por el personal.
+ *   POST {"session_id":N,"action":"send"}      -> manda a la comanda.
  *   POST {"action":"cancel","order_item_id":N,"reason":"..."}
- *        -> SOLO personal autenticado; cancela una línea.
+ *        -> cancela una línea.
  */
 
 require_once '../../config/database.php';
@@ -81,7 +87,48 @@ function handlePost($db, $dining, $auth, $apiAuth) {
         return;
     }
 
+    // Quitar una línea que todavía NO se mandó a cocina. Va antes de exigir join_token
+    // porque lo usan los dos: el comensal (solo lo suyo) y el mesero (cualquier línea
+    // pendiente de su tienda).
+    if ($action === 'remove') {
+        actionRemove($db, $dining, $apiAuth, $auth, $data);
+        return;
+    }
+
     $token = trim($data['join_token'] ?? '');
+    $session_directa = (int)($data['session_id'] ?? 0);
+
+    // ── El personal anota por los clientes ──────────────────────────────────────
+    // El mesero NO tiene (ni debe tener) el join_token del comensal: se autoriza por
+    // tienda. Así puede tomar el pedido él mismo, a la par que el cliente, sobre la MISMA
+    // cuenta; los dos ven lo mismo en tiempo real.
+    if ($token === '' && $session_directa > 0) {
+        $actor = $apiAuth->requireActor($auth);
+        $apiAuth->requireScope($actor, 'write');
+        $store_id = (int)$actor['store_id'];
+
+        $stmt = $db->getConnection()->prepare(
+            "SELECT * FROM dining_sessions WHERE session_id = :sid AND store_id = :store_id LIMIT 1"
+        );
+        $stmt->execute([':sid' => $session_directa, ':store_id' => $store_id]);
+        $session = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$session) {
+            Response::notFound('Cuenta no encontrada');
+        }
+        if (!in_array($session['status'], ['open', 'awaiting_payment'], true)) {
+            Response::error('La cuenta ya está cerrada', 409);
+        }
+        // La pausa de pedidos es para los comensales: el mesero sigue anotando.
+        $session['por_personal'] = true;
+
+        if ($action === 'send') {
+            actionSend($dining, $session_directa);
+            return;
+        }
+        actionAddItems($db, $dining, $session, $data);
+        return;
+    }
+
     if ($token === '') {
         Response::validationError(['join_token' => 'Falta el acceso de la cuenta']);
     }
@@ -104,19 +151,25 @@ function handlePost($db, $dining, $auth, $apiAuth) {
     actionAddItems($db, $dining, $session, $data);
 }
 
-/** Agrega ítems a la cuenta del comensal. */
+/** Agrega ítems a la cuenta, del comensal o del personal (el mesero anota). */
 function actionAddItems($db, $dining, $session, array $data) {
     $session_id = (int)$session['session_id'];
-    $participant_id = isset($session['token_participant_id']) ? (int)$session['token_participant_id'] : null;
+    $por_personal = !empty($session['por_personal']);
+    // Lo que anota el personal no se atribuye a un comensal: en el desglose de la cuenta
+    // aparece como "Personal", que es la verdad.
+    $participant_id = $por_personal
+        ? null
+        : (isset($session['token_participant_id']) ? (int)$session['token_participant_id'] : null);
 
     $items = $data['items'] ?? null;
     if (!is_array($items) || count($items) === 0) {
         Response::validationError(['items' => 'No hay productos en el pedido']);
     }
 
-    // ¿La carta permite notas?
+    // ¿La carta permite notas? Es un límite para el COMENSAL; el mesero siempre puede
+    // anotar (escribir "sin cebolla" es su trabajo).
     $allow_notes = true;
-    if (!empty($session['menu_id'])) {
+    if (!$por_personal && !empty($session['menu_id'])) {
         $stmt = $db->getConnection()->prepare("SELECT allow_notes FROM menus WHERE menu_id = :mid LIMIT 1");
         $stmt->execute([':mid' => (int)$session['menu_id']]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -149,7 +202,7 @@ function actionAddItems($db, $dining, $session, array $data) {
 
         $line = ['product_id' => $pid, 'quantity' => (float)$qty];
         $notes = isset($it['notes']) ? trim((string)$it['notes']) : '';
-        if ($notes !== '' && $allow_notes) {
+        if ($notes !== '' && ($allow_notes || $por_personal)) {
             $line['notes'] = $notes;
         }
         $clean[] = $line;
@@ -162,7 +215,7 @@ function actionAddItems($db, $dining, $session, array $data) {
     $conn = $db->getConnection();
     $conn->beginTransaction();
     try {
-        $created = $dining->addItems($session_id, $participant_id, $clean, 'customer');
+        $created = $dining->addItems($session_id, $participant_id, $clean, $por_personal ? 'staff' : 'customer');
         $dining->recalcTotals($session_id);
         $conn->commit();
     } catch (Exception $e) {
@@ -174,8 +227,83 @@ function actionAddItems($db, $dining, $session, array $data) {
 
     DiningSession::broadcast($session_id, 'items_added');
 
-    // Deja que el comensal (o el endpoint de comanda) sepa qué entró.
+    // Deja que el comensal (o la pantalla del personal) sepa qué entró.
     Response::success($dining->listSession($session_id), 'Productos agregados a la cuenta', 201);
+}
+
+/**
+ * Quita una línea que todavía no se mandó a cocina.
+ *
+ * Antes esto se hacía mandando cantidad 0 y la API lo rechazaba ("la cantidad debe ser
+ * mayor que cero"), así que quitar un platillo NO funcionaba: ni en la carta del comensal.
+ *
+ * Reglas:
+ *   - Solo líneas 'pending'. Una vez enviada a cocina ya no se quita: se cancela con motivo
+ *     desde el engranaje, porque en ese punto ya es dinero.
+ *   - El comensal solo puede quitar lo suyo; el personal, cualquier línea pendiente de su
+ *     tienda.
+ */
+function actionRemove($db, $dining, $apiAuth, $auth, array $data) {
+    $item_id = (int)($data['order_item_id'] ?? 0);
+    if ($item_id <= 0) {
+        Response::validationError(['order_item_id' => 'Falta la línea a quitar']);
+    }
+
+    $conn = $db->getConnection();
+    $stmt = $conn->prepare(
+        "SELECT i.*, s.store_id, s.status AS session_status
+           FROM dining_order_items i
+           JOIN dining_sessions s ON s.session_id = i.session_id
+          WHERE i.order_item_id = :iid
+          LIMIT 1"
+    );
+    $stmt->execute([':iid' => $item_id]);
+    $linea = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$linea) {
+        Response::notFound('Esa línea no existe');
+    }
+
+    $join_token = trim($data['join_token'] ?? '');
+    if ($join_token !== '') {
+        $sesion = $dining->findSessionByJoinToken($join_token);
+        if (!$sesion || (int)$sesion['session_id'] !== (int)$linea['session_id']) {
+            Response::unauthorized('Esa línea no es de tu cuenta');
+        }
+        $participante = isset($sesion['token_participant_id']) ? (int)$sesion['token_participant_id'] : null;
+        if ($participante !== null && (int)$linea['participant_id'] !== $participante) {
+            Response::error('Solo puedes quitar tus propios platillos', 403);
+        }
+    } else {
+        $actor = $apiAuth->requireActor($auth);
+        $apiAuth->requireScope($actor, 'write');
+        if ((int)$actor['store_id'] !== (int)$linea['store_id']) {
+            Response::unauthorized('Esa línea no es de tu tienda');
+        }
+    }
+
+    if ($linea['status'] !== 'pending') {
+        Response::error('Ya se mandó a cocina: para quitarlo hay que cancelarlo con motivo', 409);
+    }
+    if (!in_array($linea['session_status'], ['open', 'awaiting_payment'], true)) {
+        Response::error('La cuenta ya está cerrada', 409);
+    }
+
+    $conn->beginTransaction();
+    try {
+        $conn->prepare("DELETE FROM dining_order_items WHERE order_item_id = :iid")
+             ->execute([':iid' => $item_id]);
+        $dining->recalcTotals((int)$linea['session_id']);
+        $conn->commit();
+    } catch (Exception $e) {
+        if ($conn->inTransaction()) {
+            $conn->rollBack();
+        }
+        Response::error('No se pudo quitar el platillo: ' . $e->getMessage(), 422);
+    }
+
+    DiningSession::broadcast((int)$linea['session_id'], 'item_removed');
+
+    Response::success($dining->listSession((int)$linea['session_id']), 'Platillo quitado de la cuenta');
 }
 
 /** Manda los ítems pendientes a la comanda. */

@@ -37,6 +37,7 @@ require_once '../../includes/Auth.class.php';
 require_once '../../includes/ApiAuth.class.php';
 require_once '../../includes/Cors.class.php';
 require_once '../../includes/DiningSession.class.php';
+require_once '../../includes/UrlHelper.class.php';
 
 Cors::apply();
 header('Content-Type: application/json; charset=utf-8');
@@ -119,6 +120,11 @@ function handleGet($db, $dining, $auth = null, $apiAuth = null) {
             'notas'           => $session['notes'],
             'split_mode'      => $session['split_mode'],
             'customer_id'     => $session['customer_id'] !== null ? (int)$session['customer_id'] : null,
+            // El enlace "ya autorizado": la carta de la tienda con el código de ESTA cuenta.
+            // El mesero lo muestra como QR y el cliente entra directo a pedir a su mesa, sin
+            // escribir nada; la otra opción es el QR impreso de la mesa y que el personal
+            // autorice el código a mano.
+            'url_cuenta'      => urlCuentaDeCliente($conn, $store_id, (int)$cabecera['menu_id'], (string)$cabecera['code']),
         ]);
     }
 
@@ -633,6 +639,33 @@ function actionClose($db, $dining, $apiAuth, $auth, array $data) {
 // ============================================================
 // Helpers
 // ============================================================
+
+/**
+ * Enlace para que el cliente entre a pedir a ESTA cuenta desde su celular.
+ *
+ * Es la carta pública de la tienda con el código de la cuenta: al abrirlo, el cliente ya
+ * está dentro y solo pone su nombre. El mesero lo muestra como QR cuando quiere que el
+ * comensal pida por su cuenta (la otra vía es el QR impreso del punto y que el personal
+ * autorice el código a mano).
+ */
+function urlCuentaDeCliente($conn, $store_id, $menu_id, $code) {
+    if ($menu_id <= 0 || $code === '') {
+        return null;
+    }
+    $stmt = $conn->prepare(
+        "SELECT public_token FROM menus
+          WHERE menu_id = :mid AND store_id = :sid AND is_active = 1 AND public_token IS NOT NULL
+          LIMIT 1"
+    );
+    $stmt->execute([':mid' => $menu_id, ':sid' => $store_id]);
+    $token = $stmt->fetchColumn();
+    if (!$token) {
+        // Sin carta activa no hay a dónde mandar al cliente. No es un error: la cuenta existe.
+        return null;
+    }
+    return rtrim(UrlHelper::base(), '/') . '/m/' . rawurlencode((string)$token)
+        . '?code=' . rawurlencode(strtoupper($code));
+}
 
 /**
  * Resuelve la carta activa por su token público.

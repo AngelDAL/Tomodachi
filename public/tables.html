@@ -82,10 +82,13 @@
 
         /* Modales (mismo lenguaje que el resto del sistema) */
         .tp-overlay {
-            position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 3000;
+            position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 21000;
             display: flex; align-items: center; justify-content: center; padding: 16px;
         }
         .tp-overlay.hidden { display: none; }
+        /* Los que se abren DESDE la cuenta (QR, cancelar, agregar) deben quedar por encima:
+           el overlay de la cuenta es de pantalla completa. */
+        .tp-overlay-encima { z-index: 21500; }
         .tp-modal {
             background: var(--bg-card); border-radius: var(--ds-radius-lg); width: 100%; max-width: 520px;
             max-height: 90vh; overflow-y: auto; box-shadow: var(--ds-shadow-lg);
@@ -142,6 +145,336 @@
             .tp-acciones .tp-btn { flex: 1 1 45%; }
             .tp-modal { max-height: 94vh; }
         }
+        /* ============================================================
+           La cuenta: la herramienta de trabajo del mesero.
+           Dos paneles —menú a la izquierda, pedido a la derecha con el total siempre
+           visible— dentro de un modal grande. En móvil toma TODA la pantalla y se ve un
+           panel a la vez con el selector de arriba: la visualización es lo que importa.
+           ============================================================ */
+        .tp-modal-cuenta {
+            max-width: 1180px;
+            width: 96vw;
+            height: 88vh;
+            max-height: 88vh;
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+            overflow: hidden;
+        }
+        .tp-cuenta-cabecera {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border-lighter, #eee);
+            background: var(--bg-lighter, #f8f8f8);
+            flex: 0 0 auto;
+        }
+        .tp-cuenta-identidad { display: flex; align-items: center; gap: 14px; min-width: 0; }
+        .tp-cuenta-identidad h3 { margin: 0; font-size: 1.05rem; color: var(--text-color, #1a1a2e); }
+        .tp-cuenta-sub { margin: 2px 0 0; font-size: .82rem; color: var(--text-muted, #555); }
+
+        /* El código de la cuenta se ve GRANDE: es lo que el mesero dicta y el cliente escribe */
+        .tp-codigo-grande {
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: .18em;
+            padding: 8px 14px;
+            border-radius: 12px;
+            background: var(--primary-light, #E4F8F6);
+            color: var(--primary-darker, #1F8A82);
+            border: 2px dashed var(--primary-color, #39C5BB);
+        }
+
+        .tp-cuenta-acciones-cab { display: flex; align-items: center; gap: 8px; }
+
+        /* Aviso de tiempo real: sin botón de actualizar, aquí se ve que está vivo */
+        .tp-vivo {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: .78rem;
+            font-weight: 600;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: var(--primary-light, #E4F8F6);
+            color: var(--primary-darker, #1F8A82);
+            white-space: nowrap;
+        }
+        .tp-vivo.desconectado { background: #FDECEA; color: #B3261E; }
+        .tp-vivo.conectando { background: #FFF7E6; color: #8A6100; }
+
+        .tp-btn.tp-icono { padding: 8px 11px; }
+
+        /* Engranaje: lo que NO es flujo (pausar, cerrar, cancelar) vive aquí */
+        .tp-engranaje { position: relative; }
+        .tp-menu-config {
+            position: absolute;
+            right: 0;
+            top: calc(100% + 6px);
+            z-index: 30;
+            min-width: 230px;
+            background: var(--bg-card, #fff);
+            border: 1px solid var(--border-light, #ddd);
+            border-radius: 12px;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, .16);
+            padding: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .tp-menu-config button {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            padding: 11px 12px;
+            border: 0;
+            background: transparent;
+            border-radius: 8px;
+            font-size: .9rem;
+            text-align: left;
+            cursor: pointer;
+            color: var(--text-color, #1a1a2e);
+            font-family: inherit;
+        }
+        .tp-menu-config button:hover { background: var(--bg-light, #f5f5f5); }
+        .tp-menu-config button.peligro { color: var(--danger-color, #D32F2F); }
+        .tp-menu-config .tp-config-nota {
+            font-size: .72rem;
+            color: var(--text-muted, #555);
+            padding: 6px 12px 2px;
+            line-height: 1.35;
+        }
+
+        /* Cuerpo de dos paneles */
+        .tp-cuenta-cuerpo {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+            gap: 0;
+            flex: 1 1 auto;
+            min-height: 0;
+        }
+        .tp-panel {
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            min-width: 0;
+        }
+        .tp-panel-menu { border-right: 1px solid var(--border-lighter, #eee); }
+        .tp-panel-titulo {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 12px 16px;
+            font-size: .82rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            color: var(--text-muted, #555);
+            border-bottom: 1px solid var(--border-lighter, #eee);
+            flex: 0 0 auto;
+        }
+        .tp-panel-nota { text-transform: none; letter-spacing: 0; font-weight: 500; font-size: .76rem; }
+        .tp-total-destacado {
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: var(--primary-darker, #1F8A82);
+            letter-spacing: -.01em;
+        }
+        .tp-panel-scroll {
+            flex: 1 1 auto;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 12px 14px;
+            min-height: 0;
+        }
+        .tp-panel-pie {
+            flex: 0 0 auto;
+            border-top: 1px solid var(--border-lighter, #eee);
+            padding: 12px 14px;
+            background: var(--bg-lightest, #fafafa);
+        }
+        .tp-pie-linea { font-size: .82rem; color: var(--text-muted, #555); margin-bottom: 8px; min-height: 18px; }
+        .tp-panel-pie .tp-btn { width: 100%; justify-content: center; }
+
+        /* El menú: buscador, categorías como botones (nunca selects) y tarjetas */
+        .tp-menu-buscador {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 10px 14px 0;
+            padding: 9px 12px;
+            border: 1px solid var(--border-color, #ccc);
+            border-radius: 10px;
+            background: var(--bg-input, #fff);
+            flex: 0 0 auto;
+        }
+        .tp-menu-buscador i { color: var(--text-muted, #555); }
+        .tp-menu-buscador input { border: 0; outline: 0; width: 100%; font-size: .92rem; background: transparent; color: var(--text-color, #1a1a2e); font-family: inherit; }
+        .tp-menu-cats {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 10px 14px;
+            flex: 0 0 auto;
+            scrollbar-width: thin;
+        }
+        .tp-menu-cats::-webkit-scrollbar { height: 4px; }
+        .tp-menu-cats .tp-chip {
+            white-space: nowrap;
+            padding: 8px 14px;
+            border-radius: 999px;
+            border: 1px solid var(--border-color, #ccc);
+            background: var(--bg-card, #fff);
+            font-size: .84rem;
+            cursor: pointer;
+            color: var(--text-medium, #333);
+            font-family: inherit;
+        }
+        .tp-menu-cats .tp-chip.activo {
+            background: var(--primary-color, #39C5BB);
+            border-color: var(--primary-color, #39C5BB);
+            color: var(--text-on-primary, #08352F);
+            font-weight: 700;
+        }
+        .tp-producto {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            padding: 11px 12px;
+            margin-bottom: 8px;
+            border: 1px solid var(--border-lighter, #eee);
+            border-radius: 12px;
+            background: var(--bg-card, #fff);
+            cursor: pointer;
+            text-align: left;
+            font-family: inherit;
+        }
+        .tp-producto:hover { border-color: var(--primary-color, #39C5BB); }
+        .tp-producto:active { transform: scale(.995); }
+        .tp-producto-info { flex: 1 1 auto; min-width: 0; }
+        .tp-producto-nombre { font-size: .94rem; font-weight: 600; color: var(--text-color, #1a1a2e); }
+        .tp-producto-meta { font-size: .78rem; color: var(--text-muted, #555); }
+        .tp-producto-precio { font-weight: 700; font-size: .95rem; color: var(--primary-darker, #1F8A82); white-space: nowrap; }
+        .tp-vacio-mini { padding: 18px; text-align: center; color: var(--text-muted, #555); font-size: .88rem; }
+
+        /* Las líneas del pedido */
+        .tp-grupo-persona { margin-bottom: 14px; }
+        .tp-grupo-titulo {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: .78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            color: var(--text-muted, #555);
+            margin-bottom: 6px;
+        }
+        .tp-linea {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px 12px;
+            margin-bottom: 6px;
+            border-radius: 10px;
+            background: var(--bg-lightest, #fafafa);
+            border: 1px solid var(--border-lighter, #eee);
+            border-left: 3px solid var(--border-color, #ccc);
+        }
+        .tp-linea.pendiente { border-left-color: var(--warning-color, #B45309); }
+        .tp-linea.enviado { border-left-color: var(--info-color, #1976D2); }
+        .tp-linea.listo { border-left-color: var(--success-color, #2E7D32); }
+        .tp-linea.cancelada { border-left-color: var(--danger-color, #D32F2F); opacity: .7; }
+        .tp-linea-cant { font-weight: 800; min-width: 26px; color: var(--text-color, #1a1a2e); }
+        .tp-linea-info { flex: 1 1 auto; min-width: 0; }
+        .tp-linea-nombre { font-size: .93rem; font-weight: 600; color: var(--text-color, #1a1a2e); }
+        .tp-linea-notas { font-size: .78rem; color: var(--warning-color, #B45309); margin-top: 2px; }
+        .tp-linea-estado { font-size: .72rem; color: var(--text-muted, #555); text-transform: uppercase; letter-spacing: .04em; }
+        .tp-linea-importe { font-weight: 700; white-space: nowrap; color: var(--text-color, #1a1a2e); }
+        .tp-linea-quitar {
+            border: 0;
+            background: transparent;
+            color: var(--danger-color, #D32F2F);
+            cursor: pointer;
+            padding: 4px 6px;
+            border-radius: 6px;
+            font-size: .9rem;
+        }
+        .tp-linea-quitar:hover { background: #FDECEA; }
+
+        /* Selector de panel: solo se necesita en móvil */
+        .tp-cuenta-tabs { display: none; }
+        .tp-tab {
+            flex: 1 1 0;
+            padding: 12px 10px;
+            border: 0;
+            background: var(--bg-card, #fff);
+            font-size: .9rem;
+            font-weight: 600;
+            color: var(--text-muted, #555);
+            cursor: pointer;
+            font-family: inherit;
+            border-bottom: 3px solid transparent;
+        }
+        .tp-tab.activo { color: var(--primary-darker, #1F8A82); border-bottom-color: var(--primary-color, #39C5BB); }
+        .tp-tab-total { font-weight: 800; }
+
+        /* Cantidad y notas al agregar */
+        .tp-agregar-cantidad { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 16px; }
+        .tp-paso {
+            width: 46px;
+            height: 46px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color, #ccc);
+            background: var(--bg-card, #fff);
+            font-size: 1rem;
+            cursor: pointer;
+            color: var(--text-color, #1a1a2e);
+        }
+        .tp-paso:active { background: var(--primary-light, #E4F8F6); }
+        .tp-agregar-cantidad input {
+            width: 86px;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            padding: 8px;
+            border: 1px solid var(--border-color, #ccc);
+            border-radius: 12px;
+            font-family: inherit;
+            color: var(--text-color, #1a1a2e);
+            background: var(--bg-input, #fff);
+        }
+        .tp-modal-compacto { max-width: 460px; width: 94vw; }
+
+        /* ── Móvil: el modal toma TODA la pantalla y se ve un panel a la vez ── */
+        @media (max-width: 900px) {
+            .tp-modal-cuenta {
+                width: 100vw;
+                height: 100vh;
+                max-height: 100vh;
+                max-width: none;
+                border-radius: 0;
+                margin: 0;
+            }
+            .tp-cuenta-cabecera { padding: 10px 12px; }
+            .tp-codigo-grande { font-size: 1.15rem; padding: 6px 10px; letter-spacing: .12em; }
+            .tp-cuenta-identidad h3 { font-size: .95rem; }
+            .tp-vivo span { display: none; }
+            .tp-cuenta-tabs { display: flex; flex: 0 0 auto; border-bottom: 1px solid var(--border-lighter, #eee); }
+            .tp-cuenta-cuerpo { grid-template-columns: 1fr; }
+            /* Un panel a la vez: se alterna con el selector de arriba */
+            .tp-cuenta-cuerpo[data-lado="pedido"] .tp-panel-menu { display: none; }
+            .tp-cuenta-cuerpo[data-lado="menu"] .tp-panel-pedido { display: none; }
+            .tp-panel-menu { border-right: 0; }
+            .tp-menu-cats { padding: 8px 12px; }
+        }
     </style>
     <script src="js/theme-init.js?v=3"></script>
     <script src="js/format-utils.js"></script>
@@ -168,7 +501,9 @@
                             <p class="tp-sub">Dónde se atiende: mesas, barra, habitaciones. El QR de cada punto abre la carta ya sabiendo dónde está el cliente.</p>
                         </div>
                         <div class="tp-botones">
-                            <button type="button" class="tp-btn" id="tpBtnActualizar" title="Actualizar ahora"><i class="fas fa-rotate"></i> Actualizar</button>
+                            <!-- Sin botón de actualizar a propósito: el mapa se actualiza solo
+                                 por WebSocket (canal de la tienda). Aquí se ve el estado. -->
+                            <span class="tp-vivo tp-vivo-mapa" id="tpMapaVivo" title="Se actualiza solo, en tiempo real"><i class="fas fa-bolt"></i> <span id="tpMapaVivoTexto">en vivo</span></span>
                             <button type="button" class="tp-btn" id="tpBtnApagados" title="Ver también los desactivados"><i class="fas fa-eye"></i> Ver desactivados</button>
                             <button type="button" class="tp-btn primario" id="tpBtnNuevo"><i class="fas fa-plus"></i> Nuevo punto</button>
                         </div>
@@ -209,7 +544,7 @@
     </div>
 
     <!-- Modal: QR del punto -->
-    <div class="tp-overlay hidden" id="tpModalQr">
+    <div class="tp-overlay tp-overlay-encima hidden" id="tpModalQr">
         <div class="tp-modal">
             <div class="tp-modal-head">
                 <h3 id="tpQrTitulo">QR del punto</h3>
@@ -231,15 +566,91 @@
         </div>
     </div>
 
-    <!-- Modal: detalle de la cuenta -->
+    <!-- Modal: la cuenta. Es la herramienta de trabajo del mesero: a la izquierda el menú
+         completo para anotar, a la derecha el pedido con el total siempre visible. Sin botón
+         de refrescar: se actualiza solo por WebSocket. -->
     <div class="tp-overlay hidden" id="tpModalCuenta">
-        <div class="tp-modal">
-            <div class="tp-modal-head">
-                <h3 id="tpCuentaTitulo">Cuenta</h3>
-                <button type="button" class="tp-modal-cerrar" data-cerrar="tpModalCuenta" aria-label="Cerrar"><i class="fas fa-times"></i></button>
+        <div class="tp-modal tp-modal-cuenta">
+            <div class="tp-modal-head tp-cuenta-cabecera">
+                <div class="tp-cuenta-identidad">
+                    <div class="tp-codigo tp-codigo-grande" id="tpCuentaCodigo">----</div>
+                    <div>
+                        <h3 id="tpCuentaTitulo">Cuenta</h3>
+                        <p class="tp-cuenta-sub" id="tpCuentaSub"></p>
+                    </div>
+                </div>
+                <div class="tp-cuenta-acciones-cab">
+                    <span class="tp-vivo" id="tpCuentaVivo" title="Se actualiza solo, en tiempo real"><i class="fas fa-bolt"></i> <span>en vivo</span></span>
+                    <button type="button" class="tp-btn tp-icono" id="tpCuentaQr" aria-label="QR de la cuenta" title="QR para que el cliente pida desde su celular"><i class="fas fa-qrcode"></i></button>
+                    <div class="tp-engranaje">
+                        <button type="button" class="tp-btn tp-icono" id="tpCuentaEngranaje" aria-haspopup="true" aria-expanded="false" title="Configuración de la cuenta"><i class="fas fa-gear"></i></button>
+                        <div class="tp-menu-config hidden" id="tpCuentaConfig">
+                            <button type="button" data-config="pause"><i class="fas fa-pause"></i> <span id="tpConfigPausaTexto">Pausar pedidos</span></button>
+                            <button type="button" data-config="close"><i class="fas fa-flag-checkered"></i> Cerrar cuenta</button>
+                            <button type="button" data-config="cancel" class="peligro"><i class="fas fa-ban"></i> Cancelar cuenta…</button>
+                        </div>
+                    </div>
+                    <button type="button" class="tp-modal-cerrar" data-cerrar="tpModalCuenta" aria-label="Cerrar"><i class="fas fa-times"></i></button>
+                </div>
             </div>
-            <div class="tp-modal-body" id="tpCuentaCuerpo"></div>
-            <div class="tp-modal-pie" id="tpCuentaPie"></div>
+
+            <!-- En móvil manda este selector: una cosa a la vez, a pantalla completa -->
+            <div class="tp-cuenta-tabs" id="tpCuentaTabs">
+                <button type="button" class="tp-tab activo" data-lado="pedido">Pedido <span class="tp-tab-total" id="tpTabTotal">$0.00</span></button>
+                <button type="button" class="tp-tab" data-lado="menu">Menú</button>
+            </div>
+
+            <div class="tp-cuenta-cuerpo" id="tpCuentaCuerpoDos">
+                <div class="tp-panel tp-panel-menu">
+                    <div class="tp-panel-titulo">Menú <span class="tp-panel-nota">para anotar a nombre del cliente</span></div>
+                    <div class="tp-menu-buscador">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="tpMenuBuscar" placeholder="Buscar platillo o servicio…" autocomplete="off">
+                    </div>
+                    <div class="tp-menu-cats" id="tpMenuCategorias"></div>
+                    <div class="tp-panel-scroll" id="tpMenuProductos">
+                        <div class="tp-vacio-mini"><i class="fas fa-spinner fa-spin"></i> Cargando el menú…</div>
+                    </div>
+                </div>
+
+                <div class="tp-panel tp-panel-pedido">
+                    <div class="tp-panel-titulo">
+                        Pedido
+                        <strong class="tp-total-destacado" id="tpCuentaTotal">$0.00</strong>
+                    </div>
+                    <div class="tp-panel-scroll" id="tpCuentaPedido"></div>
+                    <div class="tp-panel-pie">
+                        <div class="tp-pie-linea" id="tpCuentaPendientes"></div>
+                        <button type="button" class="tp-btn primario" id="tpCuentaEnviar"><i class="fas fa-paper-plane"></i> Enviar a preparación</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hoja para agregar un platillo: cantidad y notas, sin salir de la cuenta -->
+    <div class="tp-overlay tp-overlay-encima hidden" id="tpModalAgregar">
+        <div class="tp-modal tp-modal-compacto">
+            <div class="tp-modal-head">
+                <h3 id="tpAgregarTitulo">Agregar</h3>
+                <button type="button" class="tp-modal-cerrar" data-cerrar="tpModalAgregar" aria-label="Cerrar"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="tp-modal-body">
+                <div class="tp-agregar-cantidad">
+                    <button type="button" class="tp-paso" id="tpAgregarMenos"><i class="fas fa-minus"></i></button>
+                    <input type="number" id="tpAgregarCantidad" value="1" min="1" step="1" inputmode="numeric">
+                    <button type="button" class="tp-paso" id="tpAgregarMas"><i class="fas fa-plus"></i></button>
+                </div>
+                <div class="tp-campo">
+                    <label for="tpAgregarNotas">Notas para preparación (opcional)</label>
+                    <input type="text" id="tpAgregarNotas" maxlength="150" placeholder="Sin cebolla, sin salsa, término medio…" autocomplete="off">
+                </div>
+                <div class="tp-aviso">Lo que anotes aquí lo ve la preparación tal cual. Si el cliente pidió algo que no está en la lista, escríbelo en las notas.</div>
+            </div>
+            <div class="tp-modal-pie">
+                <button type="button" class="tp-btn" data-cerrar="tpModalAgregar">Cancelar</button>
+                <button type="button" class="tp-btn primario" id="tpAgregarConfirmar"><i class="fas fa-plus"></i> Agregar a la cuenta</button>
+            </div>
         </div>
     </div>
 
@@ -255,7 +666,7 @@
     </div>
 
     <!-- Modal: cancelar cuenta (con motivo) -->
-    <div class="tp-overlay hidden" id="tpModalCancelar">
+    <div class="tp-overlay tp-overlay-encima hidden" id="tpModalCancelar">
         <div class="tp-modal">
             <div class="tp-modal-head">
                 <h3>Cancelar la cuenta</h3>
@@ -278,7 +689,8 @@
     <script src="lib/qrcodejs/qrcode.min.js"></script>
     <script src="js/sidebar-loader.js?v=7"></script>
     <script src="js/app.js?v=12"></script>
-    <script src="js/tables.js?v=1"></script>
+    <script src="js/ws-realtime.js?v=1"></script>
+    <script src="js/tables.js?v=2"></script>
     <script src="lib/animejs/anime.min.js"></script>
     <script src="js/design-system.js?v=5"></script>
 </body>

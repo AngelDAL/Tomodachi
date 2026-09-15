@@ -2,8 +2,14 @@
 -- MySQL Schema
 
 SET NAMES utf8mb4;
-CREATE DATABASE IF NOT EXISTS tomodachi_pos CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE tomodachi_pos;
+
+-- Este archivo NO crea ni selecciona la base: se carga SOBRE una base ya elegida, y el
+-- nombre lo decide quien instala (DB_NAME en docker-compose.yml). Antes traía
+-- `CREATE DATABASE tomodachi_pos` + `USE tomodachi_pos` fijos, y eso rompía dos cosas:
+-- una instalación con otro nombre de base quedaba vacía, y la herramienta que prueba el
+-- schema en una base limpia escribía siempre en la base real.
+--   Docker:   lo carga docker/entrypoint.sh con ${DB_NAME}
+--   Manual:   mysql -u usuario -p nombre_de_la_base < database/schema.sql
 
 -- Tabla: stores (Tiendas)
 CREATE TABLE stores (
@@ -64,6 +70,10 @@ CREATE TABLE products (
     product_id INT AUTO_INCREMENT PRIMARY KEY,
     store_id INT NOT NULL,
     category_id INT DEFAULT NULL,
+    -- Estación donde se prepara (Cocina, Barra...). NULL = la estación por defecto de la
+    -- tienda. Sin FK a propósito: `stations` se define más abajo en este mismo archivo y
+    -- la columna es opcional (ver migración 041).
+    station_id INT DEFAULT NULL,
     product_name VARCHAR(150) NOT NULL,
     description TEXT,
     image_path VARCHAR(255) NULL,
@@ -984,12 +994,108 @@ CREATE TABLE dining_participants (
     FOREIGN KEY (session_id) REFERENCES dining_sessions(session_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Tabla: stations
+-- Dónde se prepara cada cosa (Cocina, Barra, Plancha). Un negocio sin preparación no
+-- necesita ninguna. Ver database/migrations/041_comandas_y_salidas.sql
+CREATE TABLE stations (
+    station_id INT AUTO_INCREMENT PRIMARY KEY,
+    store_id INT NOT NULL,
+    name VARCHAR(50) NOT NULL,
+    sort_order INT NOT NULL DEFAULT 0,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_station_store_name (store_id, name),
+    FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: station_outputs
+-- Cómo sale cada comanda de cada estación: pantalla, impresora... o ninguna (sin filas).
+CREATE TABLE station_outputs (
+    output_id INT AUTO_INCREMENT PRIMARY KEY,
+    station_id INT NOT NULL,
+    kind ENUM('screen','print') NOT NULL,
+    target VARCHAR(120) NULL COMMENT 'Nombre del dispositivo o impresora, libre',
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_output_station (station_id, is_active),
+    FOREIGN KEY (station_id) REFERENCES stations(station_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: comandas
+-- LA RONDA que se prepara. No depende del punto de servicio: `session_id` es NULL cuando
+-- el pedido viene de mostrador, para llevar o de una plataforma de reparto. Esa decisión
+-- es lo que permite que el día de mañana entre un pedido de Uber Eats por la misma puerta.
+CREATE TABLE comandas (
+    comanda_id INT AUTO_INCREMENT PRIMARY KEY,
+    store_id INT NOT NULL,
+    session_id INT NULL,
+    channel ENUM('service_point','counter','phone','own_delivery','delivery_uber','delivery_didi','delivery_rappi','other','system') NOT NULL DEFAULT 'service_point',
+    external_ref VARCHAR(80) NULL,
+    business_date DATE NOT NULL,
+    number INT NOT NULL COMMENT 'Folio del día, por tienda',
+    station_id INT NULL,
+    status ENUM('draft','sent','preparing','ready','served','dispatched','delivered','cancelled') NOT NULL DEFAULT 'draft',
+    created_by_type ENUM('customer','staff','system') NOT NULL DEFAULT 'customer',
+    created_by_id INT NULL,
+    notes VARCHAR(255) NULL,
+    printed_count INT NOT NULL DEFAULT 0,
+    sent_at DATETIME NULL,
+    ready_at DATETIME NULL,
+    served_at DATETIME NULL,
+    cancelled_at DATETIME NULL,
+    cancel_reason VARCHAR(255) NULL,
+    delivery_name VARCHAR(120) NULL,
+    delivery_phone VARCHAR(30) NULL,
+    delivery_address VARCHAR(255) NULL,
+    delivery_fee DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    courier_id INT NULL,
+    promised_at DATETIME NULL,
+    dispatched_at DATETIME NULL,
+    delivered_at DATETIME NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_comanda_folio (store_id, business_date, number),
+    INDEX idx_comanda_session (session_id, status),
+    INDEX idx_comanda_station (store_id, station_id, status),
+    INDEX idx_comanda_channel (store_id, channel, status),
+    FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE,
+    FOREIGN KEY (session_id) REFERENCES dining_sessions(session_id) ON DELETE CASCADE,
+    FOREIGN KEY (station_id) REFERENCES stations(station_id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: check_service_points
+-- Una cuenta puede abarcar varios puntos de servicio: juntar mesas es añadir el segundo
+-- punto a la misma cuenta (un folio, un cobro), no fusionar dos cuentas.
+CREATE TABLE check_service_points (
+    session_id INT NOT NULL,
+    table_id INT NOT NULL,
+    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (session_id, table_id),
+    FOREIGN KEY (session_id) REFERENCES dining_sessions(session_id) ON DELETE CASCADE,
+    FOREIGN KEY (table_id) REFERENCES dining_tables(table_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: couriers
+-- Repartidores del propio negocio (el reparto por plataforma lo asigna la plataforma).
+CREATE TABLE couriers (
+    courier_id INT AUTO_INCREMENT PRIMARY KEY,
+    store_id INT NOT NULL,
+    name VARCHAR(80) NOT NULL,
+    phone VARCHAR(30) NULL,
+    user_id INT NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_courier_store (store_id, is_active),
+    FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Tabla: dining_order_items
 -- Lo pedido. participant_id es lo que permite separar la cuenta al final sin
 -- preguntar otra vez quién pidió qué.
 CREATE TABLE dining_order_items (
     order_item_id INT AUTO_INCREMENT PRIMARY KEY,
     session_id INT NOT NULL,
+    comanda_id INT NULL COMMENT 'Ronda a la que se envió. NULL = todavía no se manda',
     participant_id INT NULL,
     product_id INT NULL,
     product_name VARCHAR(150) NOT NULL,
@@ -999,15 +1105,19 @@ CREATE TABLE dining_order_items (
     line_total DECIMAL(10,2) NOT NULL,
     discount_applied DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     promotion_id INT NULL,
+    station_id INT NULL COMMENT 'Estación que lo prepara (NULL = la del producto o la de la tienda)',
     status ENUM('pending','sent','preparing','ready','served','cancelled') NOT NULL DEFAULT 'pending',
     added_by ENUM('customer','staff') NOT NULL DEFAULT 'customer',
     cancel_reason VARCHAR(255) NULL,
     sent_at DATETIME NULL,
     served_at DATETIME NULL,
+    ready_at DATETIME NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_item_session (session_id, status),
     INDEX idx_item_participant (participant_id),
+    INDEX idx_item_comanda (comanda_id),
     FOREIGN KEY (session_id) REFERENCES dining_sessions(session_id) ON DELETE CASCADE,
+    FOREIGN KEY (comanda_id) REFERENCES comandas(comanda_id) ON DELETE SET NULL,
     FOREIGN KEY (participant_id) REFERENCES dining_participants(participant_id) ON DELETE SET NULL,
     FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

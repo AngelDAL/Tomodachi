@@ -38,14 +38,10 @@ let lastStepPointerAt = 0;
 // ===== Vista del grid: 'grid' (por defecto) | 'catalog' (agrupado por catálogo) =====
 let currentViewMode = 'grid';
 
-// Texto del tooltip del badge de stock: aclara que el número son las existencias
-// disponibles y avisa cuando conviene reabastecer.
-function stockBadgeTip(cantidad) {
-  const n = Number(cantidad) || 0;
-  if (n <= 0) return 'Sin existencias. Hay que reabastecer.';
-  if (n < 5) return 'Existencias disponibles: ' + n + '. Quedan pocas, conviene reabastecer.';
-  return 'Existencias disponibles: ' + n;
-}
+// NOTA: el texto del tooltip y el nivel de la marca roja viven en `js/stock-rule.js`,
+// compartidos con las tarjetas de Próximas Compras. El umbral es el `min_stock` que el
+// producto declara, no un número fijo (antes había un `< 5` escrito aquí, y por eso el
+// badge no coincidía con la ficha del producto).
 
 // Build de una card de producto (reutilizable en grid y catálogo)
 function buildProductCard(p) {
@@ -67,8 +63,13 @@ function buildProductCard(p) {
         ? p.stock_quantity
         : p.current_stock;
   const hayStock = stockRaw !== undefined && stockRaw !== null && stockRaw !== '';
+  // La marca roja sale del mínimo que el producto declara (`min_stock`), no de un número
+  // fijo en el código. Un producto sin mínimo definido no se marca: el umbral es del dueño.
+  const stockMin = (p.min_stock !== undefined && p.min_stock !== null) ? p.min_stock : 0;
+  const claseStock = (hayStock && typeof stockClasses === 'function') ? stockClasses(stockRaw, stockMin) : '';
+  const tipStock = (hayStock && typeof stockTooltip === 'function') ? stockTooltip(stockRaw, stockMin) : '';
   const stockBadge = hayStock
-        ? `<div class="stock-badge ${Number(stockRaw) < 5 ? 'low' : ''}" title="${escapeHtml(stockBadgeTip(stockRaw))}">${window.FormatUtils ? window.FormatUtils.qty(stockRaw) : stockRaw}</div>`
+        ? `<div class="stock-badge ${claseStock}" title="${escapeHtml(tipStock)}">${window.FormatUtils ? window.FormatUtils.qty(stockRaw) : stockRaw}</div>`
         : '';
   const esc = (s) => escapeHtml(s);
   return `

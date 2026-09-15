@@ -339,6 +339,7 @@
                                     <i class="fas fa-exclamation-triangle"></i> Stock mínimo
                                 </label>
                                 <input type="number" id="productMinStockInput" name="min_stock" placeholder="5" min="0" value="5">
+                                <small class="form-hint">De aquí para abajo, el producto se marca en rojo en el punto de venta y en Próximas Compras. Es tu umbral: pon 0 si no quieres aviso.</small>
                             </div>
                         </div>
 
@@ -668,6 +669,7 @@
                                     <div class="form-group" id="editMinStockGroup">
                                         <label for="editProductMinStock">Stock Mínimo</label>
                                         <input type="number" id="editProductMinStock" name="min_stock" min="0">
+                                        <small class="form-hint">De aquí para abajo se marca en rojo, en la caja y en Próximas Compras.</small>
                                     </div>
                                 </div>
                             </div>
@@ -1167,7 +1169,8 @@
     <script src="js/scanner.js"></script>
     <script src="js/tour.js?v=4"></script>
     <script src="js/inventory.js?v=10"></script>
-    <script src="js/purchases.js?v=10"></script>
+    <script src="js/stock-rule.js?v=1"></script>
+    <script src="js/purchases.js?v=11"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             const session = await checkSession();

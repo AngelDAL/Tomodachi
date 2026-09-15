@@ -133,10 +133,13 @@ function getLastUnitCost(product) {
 }
 function productCard(p, selected) {
     const type=p.tracking_type==='component'?'Componente':'Producto final';
-    const stockVal=Number(p.available??p.current_stock??0),minStock=Number(p.min_stock??0);
-    const stockBajo=stockVal<=0||(minStock>0&&stockVal<=minStock);
-    const stockTip=stockVal<=0?'Sin existencias. Hay que reabastecer.':(stockBajo?'Existencias: '+stockVal+' (mínimo '+minStock+'). Conviene reabastecer.':'Existencias: '+stockVal);
-    return `<button type="button" class="purchase-product-card ${selected?'selected':''}" data-product-id="${p.product_id}" aria-pressed="${selected}"><span class="product-check"><i class="fas ${selected?'fa-check':'fa-plus'}"></i></span><img src="${esc(p.image_path||'assets/images/products/default-product.svg')}" onerror="this.src='assets/images/products/default-product.svg'" alt=""><span class="product-card-name">${esc(p.product_name)}</span><span class="product-card-type">${type} · <span class="product-card-stock${stockBajo?' low':''}${stockVal<0?' negative':''}" title="${esc(stockTip)}">Stock ${stockVal}</span></span><span class="product-card-previous">Último costo: ${money(getLastUnitCost(p))} / unidad</span></button>`;
+    // Misma regla que el badge del punto de venta (js/stock-rule.js): el rojo sale del
+    // mínimo que declara el producto, y sin mínimo definido no se marca nada.
+    const stockVal=p.available??p.current_stock??0,minStock=p.min_stock??0;
+    const stockCls=typeof stockClasses==='function'?stockClasses(stockVal,minStock):'';
+    const stockTip=typeof stockTooltip==='function'?stockTooltip(stockVal,minStock):'';
+    const stockTxt=typeof stockQty==='function'?stockQty(stockVal):String(stockVal);
+    return `<button type="button" class="purchase-product-card ${selected?'selected':''}" data-product-id="${p.product_id}" aria-pressed="${selected}"><span class="product-check"><i class="fas ${selected?'fa-check':'fa-plus'}"></i></span><img src="${esc(p.image_path||'assets/images/products/default-product.svg')}" onerror="this.src='assets/images/products/default-product.svg'" alt=""><span class="product-card-name">${esc(p.product_name)}</span><span class="product-card-type">${type} · <span class="product-card-stock ${stockCls}" title="${esc(stockTip)}">Stock ${stockTxt}</span></span><span class="product-card-previous">Último costo: ${money(getLastUnitCost(p))} / unidad</span></button>`;
 }
 
 function renderComposerCatalog() {

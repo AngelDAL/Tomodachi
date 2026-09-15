@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="view-transition" content="same-origin">
+    <title>Puntos de servicio - Tomodachi</title>
+    <link rel="stylesheet" href="css/fonts.css?v=4">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css?v=4">
+    <link rel="stylesheet" href="css/main.css?v=6">
+    <link rel="stylesheet" href="css/design-system.css?v=7">
+    <link rel="stylesheet" href="css/sidebar-modern.css?v=5">
+    <link rel="stylesheet" href="css/mobile-nav.css?v=4">
+    <link rel="stylesheet" href="css/dashboard.css?v=4">
+    <style>
+        /* ============================================================
+           Puntos de servicio — el mapa del salón.
+           "Punto de servicio" y no "mesa": la etiqueta es libre (Mesa 1,
+           Barra, Habitación 12) porque el producto es para giros distintos.
+           Estilos locales con los tokens --ds-* y los colores del tema.
+           ============================================================ */
+        .tp-header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+        .tp-titulo { margin: 0; font-family: var(--font-heading); font-size: 1.5rem; color: var(--text-color); }
+        .tp-sub { margin: 4px 0 0; color: var(--text-muted); font-size: .9rem; }
+        .tp-resumen { display: flex; flex-wrap: wrap; gap: 8px; }
+        .tp-chip {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: var(--ds-radius-pill); padding: 8px 14px;
+            font-family: var(--font-heading); font-size: .85rem; color: var(--text-medium);
+        }
+        .tp-chip strong { color: var(--text-color); font-size: 1rem; }
+        .tp-chip.ocupado strong { color: var(--danger-color); }
+
+        .tp-botones { display: flex; flex-wrap: wrap; gap: 8px; }
+        .tp-btn {
+            border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-color);
+            border-radius: var(--ds-radius-pill); padding: 10px 16px; cursor: pointer;
+            font-family: var(--font-heading); font-size: .9rem; display: inline-flex; align-items: center; gap: 8px;
+            min-height: 42px;
+        }
+        .tp-btn:hover { border-color: var(--primary-color); color: var(--primary-color); }
+        .tp-btn.primario { background: var(--primary-color); border-color: var(--primary-color); color: #fff; }
+        .tp-btn.primario:hover { color: #fff; opacity: .92; }
+        .tp-btn.peligro { color: var(--danger-color); border-color: color-mix(in srgb, var(--danger-color) 40%, var(--border-color)); }
+        .tp-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+        .tp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+        .tp-card {
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: var(--ds-radius-lg); box-shadow: var(--ds-shadow-sm);
+            padding: 14px; display: flex; flex-direction: column; gap: 10px;
+        }
+        .tp-card.ocupado { border-left: 4px solid var(--danger-color); }
+        .tp-card.apagado { opacity: .55; }
+        .tp-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+        .tp-nombre { font-family: var(--font-heading); font-size: 1.1rem; color: var(--text-color); margin: 0; }
+        .tp-zona { color: var(--text-muted); font-size: .8rem; margin: 2px 0 0; }
+        .tp-estado {
+            font-family: var(--font-heading); font-size: .72rem; text-transform: uppercase; letter-spacing: .04em;
+            padding: 4px 10px; border-radius: var(--ds-radius-pill); white-space: nowrap;
+            background: color-mix(in srgb, var(--success-color) 15%, transparent); color: var(--success-color);
+        }
+        .tp-estado.ocupado { background: color-mix(in srgb, var(--danger-color) 15%, transparent); color: var(--danger-color); }
+        .tp-estado.apagado { background: color-mix(in srgb, var(--text-muted) 18%, transparent); color: var(--text-muted); }
+        .tp-datos { display: flex; flex-wrap: wrap; gap: 10px; font-size: .85rem; color: var(--text-medium); }
+        .tp-datos span { display: inline-flex; align-items: center; gap: 6px; }
+        .tp-codigo {
+            font-family: var(--font-heading); letter-spacing: .12em; font-size: 1.05rem; color: var(--text-color);
+            background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+            border-radius: var(--ds-radius-sm); padding: 4px 10px; display: inline-block;
+        }
+        .tp-acciones { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; }
+        .tp-acciones .tp-btn { padding: 8px 12px; font-size: .82rem; flex: 1 1 auto; justify-content: center; }
+        .tp-icono { padding: 8px 11px; flex: 0 0 auto; }
+        .tp-vacio {
+            background: var(--bg-card); border: 1px dashed var(--border-color); border-radius: var(--ds-radius-lg);
+            padding: 40px 24px; text-align: center; color: var(--text-medium);
+        }
+        .tp-vacio i { font-size: 2rem; color: var(--primary-color); margin-bottom: 12px; display: block; }
+        .tp-vacio h3 { margin: 0 0 8px; font-family: var(--font-heading); color: var(--text-color); }
+
+        /* Modales (mismo lenguaje que el resto del sistema) */
+        .tp-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 3000;
+            display: flex; align-items: center; justify-content: center; padding: 16px;
+        }
+        .tp-overlay.hidden { display: none; }
+        .tp-modal {
+            background: var(--bg-card); border-radius: var(--ds-radius-lg); width: 100%; max-width: 520px;
+            max-height: 90vh; overflow-y: auto; box-shadow: var(--ds-shadow-lg);
+        }
+        .tp-modal-head { display: flex; justify-content: space-between; align-items: center; padding: 16px 18px; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; background: var(--bg-card); }
+        .tp-modal-head h3 { margin: 0; font-family: var(--font-heading); font-size: 1.1rem; color: var(--text-color); }
+        .tp-modal-cerrar { background: none; border: none; color: var(--text-muted); font-size: 1.1rem; cursor: pointer; min-height: 40px; min-width: 40px; }
+        .tp-modal-body { padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+        .tp-modal-pie { padding: 14px 18px; border-top: 1px solid var(--border-color); display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+        .tp-campo { display: flex; flex-direction: column; gap: 6px; }
+        .tp-campo label { font-size: .85rem; color: var(--text-medium); font-family: var(--font-heading); }
+        .tp-campo input {
+            padding: 11px 12px; border: 1px solid var(--border-color); border-radius: var(--ds-radius-md);
+            background: var(--bg-body); color: var(--text-color); font-size: 1rem; min-height: 44px;
+        }
+        .tp-campo input:focus { outline: 2px solid var(--primary-color); outline-offset: 1px; border-color: var(--primary-color); }
+
+        /* Detalle de la cuenta */
+        .tp-cuenta-codigo { text-align: center; padding: 10px 0 4px; }
+        .tp-cuenta-codigo .tp-codigo { font-size: 1.6rem; padding: 8px 18px; }
+        .tp-puntos { display: flex; flex-wrap: wrap; gap: 8px; }
+        .tp-punto-ficha {
+            display: inline-flex; align-items: center; gap: 8px; background: var(--bg-body);
+            border: 1px solid var(--border-color); border-radius: var(--ds-radius-pill); padding: 6px 12px; font-size: .85rem;
+        }
+        .tp-punto-ficha.principal { border-color: var(--primary-color); color: var(--primary-color); }
+        .tp-punto-quitar { background: none; border: none; color: var(--danger-color); cursor: pointer; min-height: 32px; min-width: 32px; }
+        .tp-tabla-items { display: flex; flex-direction: column; gap: 8px; }
+        .tp-item {
+            display: grid; grid-template-columns: 1fr auto; gap: 6px; padding: 10px 12px;
+            background: var(--bg-body); border-radius: var(--ds-radius-md); border: 1px solid var(--border-color);
+        }
+        .tp-item-nombre { font-weight: 600; color: var(--text-color); font-size: .95rem; }
+        .tp-item-meta { font-size: .78rem; color: var(--text-muted); }
+        .tp-item-importe { font-family: var(--font-heading); color: var(--text-color); text-align: right; }
+        .tp-item-estado { font-size: .7rem; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); text-align: right; }
+        .tp-item-estado.pending { color: var(--warning-color, #d97706); }
+        .tp-item-estado.sent, .tp-item-estado.preparing { color: var(--primary-color); }
+        .tp-item-estado.served, .tp-item-estado.ready { color: var(--success-color); }
+        .tp-item-estado.cancelled { color: var(--danger-color); text-decoration: line-through; }
+        .tp-totales { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--border-color); padding-top: 12px; }
+        .tp-total-linea { display: flex; justify-content: space-between; font-size: .9rem; color: var(--text-medium); }
+        .tp-total-linea.grande { font-family: var(--font-heading); font-size: 1.15rem; color: var(--text-color); }
+        .tp-persona { font-family: var(--font-heading); font-size: .9rem; color: var(--text-medium); margin: 10px 0 4px; }
+        .tp-aviso { font-size: .82rem; color: var(--text-muted); background: var(--bg-body); border-radius: var(--ds-radius-md); padding: 10px 12px; }
+        .tp-punto-opcion { display: block; width: 100%; text-align: left; padding: 12px 14px; border: 1px solid var(--border-color); background: var(--bg-card); border-radius: var(--ds-radius-md); cursor: pointer; color: var(--text-color); font-family: var(--font-heading); min-height: 48px; }
+        .tp-punto-opcion:hover { border-color: var(--primary-color); color: var(--primary-color); }
+        #tpQrLienzo { display: flex; justify-content: center; }
+        #tpQrLienzo img, #tpQrLienzo canvas { border-radius: var(--ds-radius-md); background: #fff; padding: 10px; }
+
+        @media (max-width: 640px) {
+            .tp-grid { grid-template-columns: 1fr; }
+            .tp-header { flex-direction: column; align-items: stretch; }
+            .tp-acciones .tp-btn { flex: 1 1 45%; }
+            .tp-modal { max-height: 94vh; }
+        }
+    </style>
+    <script src="js/theme-init.js?v=3"></script>
+    <script src="js/format-utils.js"></script>
+</head>
+<body>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <div class="app-container">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <button class="sidebar-close" id="sidebarClose" aria-label="Cerrar menú"><i class="fas fa-times"></i></button>
+                <h2>Tomodachi</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <!-- Los enlaces los pone js/sidebar-loader.js -->
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="inventory-container">
+                <section>
+                    <div class="tp-header">
+                        <div>
+                            <h1 class="tp-titulo">Puntos de servicio</h1>
+                            <p class="tp-sub">Dónde se atiende: mesas, barra, habitaciones. El QR de cada punto abre la carta ya sabiendo dónde está el cliente.</p>
+                        </div>
+                        <div class="tp-botones">
+                            <button type="button" class="tp-btn" id="tpBtnActualizar" title="Actualizar ahora"><i class="fas fa-rotate"></i> Actualizar</button>
+                            <button type="button" class="tp-btn" id="tpBtnApagados" title="Ver también los desactivados"><i class="fas fa-eye"></i> Ver desactivados</button>
+                            <button type="button" class="tp-btn primario" id="tpBtnNuevo"><i class="fas fa-plus"></i> Nuevo punto</button>
+                        </div>
+                    </div>
+
+                    <div class="tp-resumen" id="tpResumen"></div>
+                    <div id="tpContenido" style="margin-top: 18px;">
+                        <div class="tp-vacio"><i class="fas fa-spinner fa-spin"></i><p>Cargando puntos de servicio…</p></div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal: crear / editar punto -->
+    <div class="tp-overlay hidden" id="tpModalPunto">
+        <div class="tp-modal">
+            <div class="tp-modal-head">
+                <h3 id="tpPuntoTitulo">Nuevo punto de servicio</h3>
+                <button type="button" class="tp-modal-cerrar" data-cerrar="tpModalPunto" aria-label="Cerrar"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="tp-modal-body">
+                <div class="tp-campo">
+                    <label for="tpPuntoNombre">¿Cómo se llama?</label>
+                    <input type="text" id="tpPuntoNombre" maxlength="50" placeholder="Mesa 1, Barra, Habitación 12…" autocomplete="off">
+                </div>
+                <div class="tp-campo">
+                    <label for="tpPuntoZona">Zona (opcional)</label>
+                    <input type="text" id="tpPuntoZona" maxlength="50" placeholder="Salón, Terraza, Planta alta…" autocomplete="off">
+                </div>
+                <div class="tp-aviso" id="tpPuntoAviso">El QR de este punto se genera al guardarlo.</div>
+            </div>
+            <div class="tp-modal-pie">
+                <button type="button" class="tp-btn" data-cerrar="tpModalPunto">Cancelar</button>
+                <button type="button" class="tp-btn primario" id="tpPuntoGuardar"><i class="fas fa-check"></i> Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: QR del punto -->
+    <div class="tp-overlay hidden" id="tpModalQr">
+        <div class="tp-modal">
+            <div class="tp-modal-head">
+                <h3 id="tpQrTitulo">QR del punto</h3>
+                <button type="button" class="tp-modal-cerrar" data-cerrar="tpModalQr" aria-label="Cerrar"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="tp-modal-body">
+                <div id="tpQrLienzo"></div>
+                <div class="tp-campo">
+                    <label for="tpQrUrl">Enlace de la carta</label>
+                    <input type="text" id="tpQrUrl" readonly>
+                </div>
+                <div class="tp-aviso" id="tpQrAviso"></div>
+            </div>
+            <div class="tp-modal-pie">
+                <button type="button" class="tp-btn" id="tpQrCopiar"><i class="fas fa-link"></i> Copiar enlace</button>
+                <button type="button" class="tp-btn" id="tpQrImprimir"><i class="fas fa-print"></i> Imprimir</button>
+                <button type="button" class="tp-btn primario" id="tpQrDescargar"><i class="fas fa-download"></i> Descargar PNG</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: detalle de la cuenta -->
+    <div class="tp-overlay hidden" id="tpModalCuenta">
+        <div class="tp-modal">
+            <div class="tp-modal-head">
+                <h3 id="tpCuentaTitulo">Cuenta</h3>
+                <button type="button" class="tp-modal-cerrar" data-cerrar="tpModalCuenta" aria-label="Cerrar"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="tp-modal-body" id="tpCuentaCuerpo"></div>
+            <div class="tp-modal-pie" id="tpCuentaPie"></div>
+        </div>
+    </div>
+
+    <!-- Modal: juntar otro punto a la cuenta -->
+    <div class="tp-overlay hidden" id="tpModalJuntar">
+        <div class="tp-modal">
+            <div class="tp-modal-head">
+                <h3>Juntar un punto a esta cuenta</h3>
+                <button type="button" class="tp-modal-cerrar" data-cerrar="tpModalJuntar" aria-label="Cerrar"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="tp-modal-body" id="tpJuntarCuerpo"></div>
+        </div>
+    </div>
+
+    <!-- Modal: cancelar cuenta (con motivo) -->
+    <div class="tp-overlay hidden" id="tpModalCancelar">
+        <div class="tp-modal">
+            <div class="tp-modal-head">
+                <h3>Cancelar la cuenta</h3>
+                <button type="button" class="tp-modal-cerrar" data-cerrar="tpModalCancelar" aria-label="Cerrar"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="tp-modal-body">
+                <div class="tp-aviso">Cancelar no borra nada: la cuenta queda con el motivo escrito, para poder auditarla después. Si el cliente ya consumió, lo correcto es cobrarla.</div>
+                <div class="tp-campo">
+                    <label for="tpCancelarMotivo">¿Por qué se cancela?</label>
+                    <input type="text" id="tpCancelarMotivo" maxlength="200" placeholder="Se fue sin consumir, mesa equivocada…" autocomplete="off">
+                </div>
+            </div>
+            <div class="tp-modal-pie">
+                <button type="button" class="tp-btn" data-cerrar="tpModalCancelar">Volver</button>
+                <button type="button" class="tp-btn peligro" id="tpCancelarConfirmar"><i class="fas fa-ban"></i> Cancelar la cuenta</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="lib/qrcodejs/qrcode.min.js"></script>
+    <script src="js/sidebar-loader.js?v=7"></script>
+    <script src="js/app.js?v=12"></script>
+    <script src="js/tables.js?v=1"></script>
+    <script src="lib/animejs/anime.min.js"></script>
+    <script src="js/design-system.js?v=5"></script>
+</body>
+</html>

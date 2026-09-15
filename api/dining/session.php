@@ -11,8 +11,17 @@
  *        -> suma un comensal; devuelve su join_token.
  *
  * SOLO PERSONAL (requireActor + scope write):
- *   POST {"action":"pause","session_id":N}   / {"action":"resume","session_id":N}
+ *   GET  /api/dining/session.php?abiertas=1
+ *        -> cuentas abiertas de la tienda (lo que pinta el mapa de puntos de servicio)
+ *   POST {"action":"open","table_id":N,"menu_id":N?,"customer_id":N?,"notes":"..."}
+ *        -> abre la cuenta de un punto de servicio (el personal sí puede en cualquier modo)
+ *   POST {"action":"add_point","session_id":N,"table_id":M}
+ *        -> JUNTAR: suma otro punto de servicio a la misma cuenta (una cuenta, un cobro)
+ *   POST {"action":"remove_point","session_id":N,"table_id":M}
+ *        -> separa un punto juntado (el punto principal no se quita: se mueve la cuenta)
+ *   POST {"action":"pause"|"resume","session_id":N}
  *   POST {"action":"close","session_id":N}
+ *   POST {"action":"cancel","session_id":N,"reason":"..."}   (con motivo, queda registrado)
  *
  * Por qué 'open' se restringe a order_and_pay: en ese modo el comensal paga por
  * adelantado, así que no hay riesgo de abuso. En 'open_tab' la cuenta se cobra
@@ -42,7 +51,7 @@ try {
     $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
     if ($method === 'GET') {
-        handleGet($db, $dining);
+        handleGet($db, $dining, $auth, $apiAuth);
     } elseif ($method === 'POST') {
         handlePost($db, $dining, $auth, $apiAuth);
     } else {
@@ -56,7 +65,63 @@ try {
 // ============================================================
 // GET: estado público de la cuenta
 // ============================================================
-function handleGet($db, $dining) {
+function handleGet($db, $dining, $auth = null, $apiAuth = null) {
+    // El mapa de puntos de servicio pide la lista de cuentas abiertas. Es personal.
+    if (!empty($_GET['abiertas'])) {
+        $actor = $apiAuth->requireActor($auth);
+        $apiAuth->requireScope($actor, 'read');
+        $store_id = (int)$actor['store_id'];
+        $checks = listOpenChecks($db, $store_id);
+        Response::success([
+            'checks' => $checks,
+            'totales' => [
+                'abiertas' => count($checks),
+                'personas' => array_sum(array_map(fn($c) => (int)$c['personas'], $checks)),
+                'importe'   => round(array_sum(array_map(fn($c) => (float)$c['total'], $checks)), 2),
+            ],
+        ]);
+    }
+
+    // Detalle de UNA cuenta para el personal: ítems y personas, para el modal del mapa.
+    if (!empty($_GET['cuenta'])) {
+        $actor = $apiAuth->requireActor($auth);
+        $apiAuth->requireScope($actor, 'read');
+        $store_id = (int)$actor['store_id'];
+        $session_id = (int)$_GET['cuenta'];
+
+        $session = fetchStoreSession($db, $session_id, $store_id);
+        if (!$session) {
+            Response::notFound('Cuenta no encontrada');
+        }
+        $full = $dining->listSession($session_id);
+        $conn = $db->getConnection();
+
+        // listSession entrega la fila de la sesión ANIDADA (`session`) porque el cliente del
+        // comensal lee `cuenta.session.ordering_enabled`. Aquí se aplana a un solo nivel: la
+        // pantalla del personal lee `session.code`, `session.ordering_enabled` y compañía.
+        $cabecera = $full['session'];
+        $cabecera['participants'] = $full['participants'];
+        $cabecera['items'] = $full['items'];
+        $cabecera['totals'] = $full['totals'];
+        $cabecera['ordering_enabled'] = $cabecera['ordering_enabled'] ? 1 : 0;
+
+        // Los minutos se calculan en la BASE: el reloj del navegador va en otra zona que la
+        // base y restarlos daba cuentas abiertas "hace 0 minutos".
+        $stmt = $conn->prepare("SELECT TIMESTAMPDIFF(MINUTE, opened_at, NOW()) FROM dining_sessions
+                                WHERE session_id = :sid AND store_id = :store_id");
+        $stmt->execute([':sid' => $session_id, ':store_id' => $store_id]);
+        $minutos = (int)$stmt->fetchColumn();
+
+        Response::success([
+            'session'         => $cabecera,
+            'puntos'          => puntosDeCuenta($conn, $session_id),
+            'minutos_abierta' => $minutos,
+            'notas'           => $session['notes'],
+            'split_mode'      => $session['split_mode'],
+            'customer_id'     => $session['customer_id'] !== null ? (int)$session['customer_id'] : null,
+        ]);
+    }
+
     $menu = resolvePublicMenu($db, trim($_GET['menu_token'] ?? ''));
     if (!$menu) {
         Response::notFound('Esta carta no está disponible');
@@ -106,9 +171,312 @@ function handlePost($db, $dining, $auth, $apiAuth) {
             actionClose($db, $dining, $apiAuth, $auth, $data);
             break;
 
+        // Acción aparte de 'open' a propósito: 'open' es del comensal y solo vale en
+        // cartas order_and_pay. Si aceptara table_id, un comensal podría abrirse una
+        // cuenta con mesa sin pasar por el personal.
+        case 'open_table':
+            actionOpenTable($db, $dining, $apiAuth, $auth, $data);
+            break;
+
+        case 'add_point':
+            actionPointJuntar($db, $apiAuth, $auth, $data, true);
+            break;
+
+        case 'remove_point':
+            actionPointJuntar($db, $apiAuth, $auth, $data, false);
+            break;
+
+        case 'cancel':
+            actionCancel($db, $dining, $apiAuth, $auth, $data);
+            break;
+
         default:
             Response::error('Acción inválida', 422);
     }
+}
+
+// ============================================================
+// Cuentas por punto de servicio (personal)
+// ============================================================
+
+/**
+ * Abre la cuenta de un punto de servicio. El personal sí puede en cualquier modo de carta:
+ * es quien manda en el salón.
+ */
+function actionOpenTable($db, $dining, $apiAuth, $auth, array $data) {
+    $actor = $apiAuth->requireActor($auth);
+    $apiAuth->requireScope($actor, 'write');
+    $store_id = (int)$actor['store_id'];
+    $user_id  = (int)($actor['user_id'] ?? 0);
+    $conn = $db->getConnection();
+
+    $table_id = (int)($data['table_id'] ?? 0);
+    if ($table_id <= 0) Response::validationError(['table_id' => 'Falta el punto de servicio']);
+
+    $punto = fetchPunto($conn, $table_id, $store_id);
+    if (!$punto) Response::notFound('Punto de servicio no encontrado');
+    if ((int)$punto['is_active'] !== 1) Response::error('Ese punto está desactivado', 409);
+
+    $ocupada = cuentaPorPunto($conn, $store_id, $table_id);
+    if ($ocupada) {
+        Response::error('Ese punto ya tiene la cuenta ' . $ocupada['code'] . ' abierta', 409);
+    }
+
+    // Carta de la cuenta: la que elija el personal o, si no, la primera activa que acepte
+    // pedidos. Puede quedar sin carta: la cuenta existe igual y el comensal solo no podrá
+    // pedir desde su celular.
+    $menu_id = (int)($data['menu_id'] ?? 0);
+    if ($menu_id <= 0) {
+        $stmt = $conn->prepare(
+            "SELECT menu_id FROM menus
+             WHERE store_id = :store_id AND is_active = 1 AND mode IN ('open_tab','order_and_pay')
+             ORDER BY menu_id ASC LIMIT 1"
+        );
+        $stmt->execute([':store_id' => $store_id]);
+        $menu_id = (int)($stmt->fetchColumn() ?: 0);
+    }
+
+    $customer_id = (int)($data['customer_id'] ?? 0);
+    $notas = isset($data['notes']) ? trim((string)$data['notes']) : '';
+
+    $session = $dining->openSession($store_id, $menu_id, $table_id, $user_id);
+    $session_id = (int)$session['session_id'];
+
+    // El punto principal también entra en la tabla puente: así "juntar una mesa" es un
+    // INSERT más, y el número de puntos de la cuenta sale siempre de la misma consulta.
+    $stmt = $conn->prepare("INSERT IGNORE INTO check_service_points (session_id, table_id)
+                            VALUES (:sid, :tid)");
+    $stmt->execute([':sid' => $session_id, ':tid' => $table_id]);
+
+    if ($customer_id > 0 || $notas !== '') {
+        $campos = [];
+        $params = [':sid' => $session_id, ':store_id' => $store_id];
+        if ($customer_id > 0) { $campos[] = 'customer_id = :cid'; $params[':cid'] = $customer_id; }
+        if ($notas !== '')    { $campos[] = 'notes = :notas';      $params[':notas'] = $notas; }
+        $conn->prepare("UPDATE dining_sessions SET " . implode(', ', $campos) .
+                       " WHERE session_id = :sid AND store_id = :store_id")->execute($params);
+    }
+
+    DiningSession::broadcast($session_id, 'session_opened');
+
+    Response::success([
+        'session_id' => $session_id,
+        'code'       => $session['code'],
+        'table_id'   => $table_id,
+        'label'      => $punto['label'],
+        'menu_id'    => $menu_id > 0 ? $menu_id : null,
+        'expires_at' => $session['expires_at'] ?? null,
+    ], 'Cuenta abierta en ' . $punto['label'], 201);
+}
+
+/**
+ * Junta o separa un punto de servicio de una cuenta.
+ * Un solo camino para las dos cosas porque comparten todas las validaciones.
+ */
+function actionPointJuntar($db, $apiAuth, $auth, array $data, $sumar) {
+    $actor = $apiAuth->requireActor($auth);
+    $apiAuth->requireScope($actor, 'write');
+    $store_id = (int)$actor['store_id'];
+    $conn = $db->getConnection();
+
+    $session_id = (int)($data['session_id'] ?? 0);
+    $table_id   = (int)($data['table_id'] ?? 0);
+    if ($session_id <= 0) Response::validationError(['session_id' => 'Falta la cuenta']);
+    if ($table_id <= 0)   Response::validationError(['table_id' => 'Falta el punto de servicio']);
+
+    $session = fetchStoreSession($db, $session_id, $store_id);
+    if (!$session) Response::notFound('Cuenta no encontrada');
+    if (!in_array($session['status'], ['open', 'awaiting_payment'], true)) {
+        Response::error('La cuenta ya está cerrada', 409);
+    }
+
+    $punto = fetchPunto($conn, $table_id, $store_id);
+    if (!$punto) Response::notFound('Punto de servicio no encontrado');
+    if ((int)$punto['is_active'] !== 1) Response::error('Ese punto está desactivado', 409);
+
+    // ¿Ya está en ESTA cuenta? Se mira la tabla puente y el punto principal, porque una
+    // cuenta vieja puede tener el principal sin fila en la puente.
+    $stmt = $conn->prepare("SELECT 1 FROM check_service_points WHERE session_id = :sid AND table_id = :tid");
+    $stmt->execute([':sid' => $session_id, ':tid' => $table_id]);
+    $en_puente = (bool)$stmt->fetchColumn();
+    $es_principal = ((int)$session['table_id'] === $table_id);
+
+    if ($sumar) {
+        $otra = cuentaPorPunto($conn, $store_id, $table_id);
+        if ($otra && (int)$otra['session_id'] !== $session_id) {
+            Response::error('Ese punto ya está en la cuenta ' . $otra['code'], 409);
+        }
+        if ($en_puente || $es_principal) {
+            // Ya estaba: no se duplica, y se dice tal cual en vez de fingir que se juntó.
+            Response::success([
+                'session_id' => $session_id,
+                'puntos'     => puntosDeCuenta($conn, $session_id),
+                'cambio'     => false,
+            ], $punto['label'] . ' ya estaba en la cuenta ' . $session['code']);
+        }
+        $stmt = $conn->prepare("INSERT IGNORE INTO check_service_points (session_id, table_id)
+                                VALUES (:sid, :tid)");
+        $stmt->execute([':sid' => $session_id, ':tid' => $table_id]);
+    } else {
+        if ($es_principal) {
+            Response::error('Ese es el punto principal de la cuenta: no se separa. Mueve la cuenta a otro punto o ciérrala.', 409);
+        }
+        if (!$en_puente) {
+            // Sin esto, separar un punto que no estaba respondía "se separó" sin tocar nada:
+            // una operación que no ocurrió no puede reportarse como éxito.
+            Response::error('Ese punto no está en esa cuenta', 409);
+        }
+        $stmt = $conn->prepare("DELETE FROM check_service_points
+                                WHERE session_id = :sid AND table_id = :tid");
+        $stmt->execute([':sid' => $session_id, ':tid' => $table_id]);
+    }
+
+    DiningSession::broadcast($session_id, $sumar ? 'point_joined' : 'point_left');
+
+    $puntos = puntosDeCuenta($conn, $session_id);
+    Response::success([
+        'session_id' => $session_id,
+        'puntos'     => $puntos,
+        'cambio'     => true,
+    ], $sumar
+        ? $punto['label'] . ' se juntó a la cuenta ' . $session['code']
+        : $punto['label'] . ' se separó de la cuenta ' . $session['code']);
+}
+
+/** Cancela la cuenta con motivo. Queda registrado quién y por qué. */
+function actionCancel($db, $dining, $apiAuth, $auth, array $data) {
+    $actor = $apiAuth->requireActor($auth);
+    $apiAuth->requireScope($actor, 'write');
+    $store_id = (int)$actor['store_id'];
+
+    $session_id = (int)($data['session_id'] ?? 0);
+    if ($session_id <= 0) Response::validationError(['session_id' => 'Falta la cuenta']);
+
+    $motivo = trim((string)($data['reason'] ?? ''));
+    if ($motivo === '') {
+        // Sin motivo no se cancela: una cuenta cancelada sin explicación es dinero que
+        // nadie puede auditar después.
+        Response::validationError(['reason' => 'Escribe por qué se cancela']);
+    }
+
+    $session = fetchStoreSession($db, $session_id, $store_id);
+    if (!$session) Response::notFound('Cuenta no encontrada');
+    if (!in_array($session['status'], ['open', 'awaiting_payment'], true)) {
+        Response::error('La cuenta ya está cerrada', 409);
+    }
+
+    $closed_by = isset($actor['user_id']) ? (int)$actor['user_id'] : null;
+    $nota = ($session['notes'] ? $session['notes'] . ' | ' : '') . 'Cancelada: ' . $motivo;
+
+    $stmt = $db->getConnection()->prepare(
+        "UPDATE dining_sessions
+         SET status = 'cancelled', closed_at = NOW(), closed_by = :closed_by, notes = :notas
+         WHERE session_id = :sid AND store_id = :store_id
+           AND status IN ('open','awaiting_payment')"
+    );
+    $stmt->execute([':closed_by' => $closed_by, ':notas' => $nota,
+                    ':sid' => $session_id, ':store_id' => $store_id]);
+
+    DiningSession::broadcast($session_id, 'session_cancelled');
+
+    Response::success(['session_id' => $session_id, 'status' => 'cancelled'], 'Cuenta cancelada');
+}
+
+/**
+ * Lo que pinta el mapa: las cuentas abiertas de la tienda, con sus puntos de servicio.
+ * Los puntos pueden ser varios (mesas juntadas), así que van como lista.
+ */
+function listOpenChecks($db, $store_id) {
+    $stmt = $db->getConnection()->prepare("
+        SELECT s.session_id, s.code, s.status, s.ordering_enabled, s.subtotal, s.discount, s.total,
+               s.opened_at, s.expires_at, s.notes, s.table_id, s.menu_id, s.customer_id, s.split_mode,
+               TIMESTAMPDIFF(MINUTE, s.opened_at, NOW()) AS minutos_abierta,
+               (SELECT COUNT(*) FROM dining_participants p
+                 WHERE p.session_id = s.session_id AND p.is_active = 1) AS personas,
+               (SELECT COUNT(*) FROM dining_order_items i
+                 WHERE i.session_id = s.session_id AND i.status <> 'cancelled') AS items,
+               (SELECT COUNT(*) FROM dining_order_items i
+                 WHERE i.session_id = s.session_id AND i.status = 'pending') AS pendientes_de_enviar
+        FROM dining_sessions s
+        WHERE s.store_id = :store_id
+          AND s.status IN ('open','awaiting_payment')
+        ORDER BY s.opened_at ASC
+    ");
+    $stmt->execute([':store_id' => (int)$store_id]);
+    $checks = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    foreach ($checks as &$c) {
+        $puntos = puntosDeCuenta($db->getConnection(), (int)$c['session_id']);
+        $c['puntos'] = $puntos;
+        $c['puntos_texto'] = implode(', ', array_column($puntos, 'label'));
+        $c['minutos_abierta'] = (int)$c['minutos_abierta'];
+        $c['personas'] = (int)$c['personas'];
+        $c['items'] = (int)$c['items'];
+        $c['pendientes_de_enviar'] = (int)$c['pendientes_de_enviar'];
+        $c['total'] = (float)$c['total'];
+    }
+    unset($c);
+
+    return $checks;
+}
+
+/**
+ * Puntos de servicio de una cuenta, el principal primero.
+ *
+ * Se leen las DOS fuentes: el punto principal (`dining_sessions.table_id`) y la tabla
+ * puente de los juntados. Las cuentas creadas por esta API dejan el principal también en
+ * la puente, pero las viejas (o las que abre el comensal) no, y una cuenta no puede
+ * perder su punto por eso.
+ */
+function puntosDeCuenta($conn, $session_id) {
+    $stmt = $conn->prepare("
+        SELECT t.table_id, t.label, t.zone, t.qr_token,
+               (t.table_id = (SELECT table_id FROM dining_sessions WHERE session_id = :sid_uno)) AS es_principal
+        FROM dining_tables t
+        WHERE t.table_id = (SELECT table_id FROM dining_sessions WHERE session_id = :sid_dos)
+           OR t.table_id IN (SELECT csp.table_id FROM check_service_points csp WHERE csp.session_id = :sid_tres)
+        ORDER BY es_principal DESC, t.label ASC
+    ");
+    // Tres marcadores distintos para el mismo valor: PDO con prepares nativos no permite
+    // reutilizar un marcador nombrado en la misma consulta (SQLSTATE[HY093]).
+    $stmt->execute([':sid_uno' => (int)$session_id, ':sid_dos' => (int)$session_id, ':sid_tres' => (int)$session_id]);
+    $puntos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($puntos as &$p) {
+        $p['es_principal'] = (int)$p['es_principal'];
+        $p['table_id'] = (int)$p['table_id'];
+    }
+    unset($p);
+    return $puntos;
+}
+
+/** El punto de servicio, solo si es de esta tienda. */
+function fetchPunto($conn, $table_id, $store_id) {
+    $stmt = $conn->prepare("SELECT * FROM dining_tables
+                            WHERE table_id = :tid AND store_id = :store_id LIMIT 1");
+    $stmt->execute([':tid' => (int)$table_id, ':store_id' => (int)$store_id]);
+    return $stmt->fetch(PDO::FETCH_ASSOC) ?: false;
+}
+
+/** Cuenta abierta de un punto: por su `table_id` o porque se juntó a otra cuenta. */
+function cuentaPorPunto($conn, $store_id, $table_id) {
+    $stmt = $conn->prepare("
+        SELECT s.session_id, s.code, s.status
+        FROM dining_sessions s
+        LEFT JOIN check_service_points csp ON csp.session_id = s.session_id
+        WHERE s.store_id = :store_id
+          AND s.status IN ('open','awaiting_payment')
+          AND (s.table_id = :tabla_directa OR csp.table_id = :tabla_juntada)
+        ORDER BY s.opened_at ASC
+        LIMIT 1
+    ");
+    // Dos marcadores distintos para el mismo valor: PDO con prepares nativos no permite
+    // reutilizar un marcador nombrado en la misma consulta (SQLSTATE[HY093]).
+    $stmt->execute([
+        ':store_id' => (int)$store_id,
+        ':tabla_directa' => (int)$table_id,
+        ':tabla_juntada' => (int)$table_id,
+    ]);
+    return $stmt->fetch(PDO::FETCH_ASSOC) ?: false;
 }
 
 /** Abre una cuenta pública (solo menús order_and_pay). */

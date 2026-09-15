@@ -18,6 +18,7 @@ require_once '../../includes/Response.class.php';
 require_once '../../includes/Auth.class.php';
 require_once '../../includes/ApiAuth.class.php';
 require_once '../../includes/Validator.class.php';
+require_once '../../includes/UrlHelper.class.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -156,9 +157,10 @@ function leerCuerpo() {
 
 function urlPublica($token) {
     // El QR apunta aquí. URL corta /m/<token> (rewrite en Apache).
-    $base = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
-    $base .= $_SERVER['HTTP_HOST'] ?? 'localhost';
-    return $base . '/m/' . $token;
+    // El esquema lo resuelve UrlHelper: con el túnel de Cloudflare el servidor ve http y
+    // esta función devolvía http:// aunque el sitio tenga https, así que los QR impresos
+    // apuntaban a una URL insegura.
+    return UrlHelper::carta($token);
 }
 
 function obtenerMenu($conn, $store_id, $menu_id) {

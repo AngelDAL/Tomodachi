@@ -21,6 +21,7 @@ require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
 require_once '../../includes/Auth.class.php';
 require_once '../../includes/ApiAuth.class.php';
+require_once '../../includes/UrlHelper.class.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -31,11 +32,11 @@ $apiAuth = new ApiAuth($db);
 /**
  * URL pública de la carta, con el punto de servicio incluido para que la cuenta nazca
  * sabiendo en qué punto se está atendiendo.
+ * El esquema lo resuelve UrlHelper: detrás de un proxy, `$_SERVER['HTTPS']` no viene y el
+ * QR salía con http:// aunque la instalación tuviera https.
  */
 function urlCartaPunto($menuToken, $tableToken) {
-    $base = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
-    $base .= $_SERVER['HTTP_HOST'] ?? 'localhost';
-    return $base . '/m/' . $menuToken . '?punto=' . $tableToken;
+    return UrlHelper::carta($menuToken, $tableToken);
 }
 
 /** Carta con la que se imprime el QR: la elegida, o la primera activa de la tienda. */

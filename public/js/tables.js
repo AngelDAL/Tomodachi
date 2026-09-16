@@ -265,13 +265,15 @@ async function tpGuardarPunto() {
     const zone = document.getElementById('tpPuntoZona').value.trim();
     if (!label) { tpAviso('Escribe cómo se llama este punto', 'error'); return; }
     try {
+        let d;
         if (tpEstado.puntoEditando) {
-            await tpPeticion(TP_API_TABLES, { method: 'PUT', body: JSON.stringify({ table_id: tpEstado.puntoEditando.table_id, label: label, zone: zone }) });
-            tpAviso('Punto actualizado', 'success');
+            d = await tpPeticion(TP_API_TABLES, { method: 'PUT', body: JSON.stringify({ table_id: tpEstado.puntoEditando.table_id, label: label, zone: zone }) });
         } else {
-            await tpPeticion(TP_API_TABLES, { method: 'POST', body: JSON.stringify({ label: label, zone: zone }) });
-            tpAviso('Punto creado', 'success');
+            d = await tpPeticion(TP_API_TABLES, { method: 'POST', body: JSON.stringify({ label: label, zone: zone }) });
         }
+        // El mensaje lo pone el servidor: si el punto existía desactivado, avisa que lo
+        // reactivó en vez de crear otro (y que su QR impreso sigue sirviendo).
+        tpAviso((d && d.mensaje) || 'Punto guardado', 'success');
         tpCerrarModal('tpModalPunto');
         await tpCargar(true);
     } catch (e) { tpAviso(tpMensajeDeError(e), 'error'); }

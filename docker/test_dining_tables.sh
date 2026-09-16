@@ -52,9 +52,10 @@ r=$(api -X POST "$BASE/api/dining/tables.php" -H 'Content-Type: application/json
 T1=$(echo "$r" | jget data.table_id); TOK1=$(echo "$r" | jget data.qr_token)
 if [ -n "$T1" ] && [ -n "$TOK1" ]; then ok "crear punto con etiqueta y zona (id $T1)"; else mal "crear punto ($r)"; fi
 
-# 3. Duplicado
+# 3. Duplicado: se rechaza Y el aviso dice qué hacer (antes decía sólo "ya existe" y
+#    dejaba al dueño sin salida). El texto exacto importa poco; que sea accionable, no.
 r=$(api -X POST "$BASE/api/dining/tables.php" -H 'Content-Type: application/json' -d "{\"label\":\"Mesa $sufijo\"}")
-if echo "$r" | grep -q "Ya existe"; then ok "rechaza nombre duplicado"; else mal "rechaza nombre duplicado ($r)"; fi
+if echo "$r" | grep -q "ACTIVO" && echo "$r" | grep -qi "otro nombre"; then ok "rechaza nombre duplicado con aviso accionable"; else mal "rechaza nombre duplicado ($r)"; fi
 
 # 4. Nombre vacío
 r=$(api -X POST "$BASE/api/dining/tables.php" -H 'Content-Type: application/json' -d '{"label":"   "}')

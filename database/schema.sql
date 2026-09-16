@@ -39,7 +39,7 @@ CREATE TABLE users (
     full_name VARCHAR(100) NOT NULL,
     email VARCHAR(100),
     phone VARCHAR(20) NULL,
-    role ENUM('super_admin', 'admin', 'manager', 'cashier') NOT NULL,
+    role ENUM('super_admin', 'admin', 'manager', 'cashier', 'waiter') NOT NULL,
     status ENUM('active', 'inactive') DEFAULT 'active',
     show_onboarding TINYINT(1) DEFAULT 1,
     reset_token_hash VARCHAR(255) NULL,

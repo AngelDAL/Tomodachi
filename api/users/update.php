@@ -76,7 +76,7 @@ try {
         $params[] = $data['status'];
     }
     if (isset($data['role']) && $auth->hasRole([ROLE_ADMIN, ROLE_SUPER_ADMIN])) {
-        $allowed_roles = [ROLE_ADMIN, ROLE_MANAGER, ROLE_CASHIER];
+        $allowed_roles = [ROLE_ADMIN, ROLE_MANAGER, ROLE_CASHIER, ROLE_WAITER];
         if ($auth->hasRole(ROLE_SUPER_ADMIN)) {
             $allowed_roles[] = ROLE_SUPER_ADMIN;
         }

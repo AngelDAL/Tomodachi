@@ -40,7 +40,7 @@ try {
     if (!Validator::required($password)) { $errors['password']='Requerido'; }
     if (!Validator::required($full_name)) { $errors['full_name']='Requerido'; }
     if ($email && !Validator::validateEmail($email)) { $errors['email']='Email inválido'; }
-    if (!in_array($role,[ROLE_ADMIN,ROLE_MANAGER,ROLE_CASHIER])) { $errors['role']='Rol inválido'; }
+    if (!in_array($role,[ROLE_ADMIN,ROLE_MANAGER,ROLE_CASHIER,ROLE_WAITER])) { $errors['role']='Rol inválido'; }
     if ($store_id <= 0) { $errors['store_id']='Store inválida'; }
 
     if ($errors) { Response::validationError($errors); }

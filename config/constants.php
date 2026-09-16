@@ -17,6 +17,19 @@ define('ROLE_SUPER_ADMIN', 'super_admin');
 define('ROLE_ADMIN', 'admin');
 define('ROLE_MANAGER', 'manager');
 define('ROLE_CASHIER', 'cashier');
+// Mesero: atiende el salón. No administra la tienda (no toca inventario, precios ni
+// usuarios), pero sí es dueño de su trabajo en piso: dar de alta y editar puntos de
+// servicio, abrir cuentas, anotar a nombre del cliente y enviar a preparación.
+define('ROLE_WAITER', 'waiter');
+// Quien puede administrar los puntos de servicio (el salón: dar de alta, renombrar y
+// desactivar mesas). Es la gente de piso y quien manda en la tienda; el cajero NO entra
+// (su trabajo es el dinero, no el acomodo del salón). Se define aquí para que la pantalla
+// y el endpoint usen exactamente la misma lista: si se cambia, se cambia en un solo lugar.
+// OJO: operar el salón (abrir cuentas, anotar, enviar a preparación) es otra cosa y sigue
+// abierto a cualquier rol de la tienda.
+define('ROLES_PUNTOS_SERVICIO', 'super_admin,admin,manager,waiter');
+// Quien puede mover dinero del negocio (inventario, precios, compras, cortes).
+define('ROLES_ADMINISTRACION', 'super_admin,admin,manager,cashier');
 
 // Estados
 define('STATUS_ACTIVE', 'active');

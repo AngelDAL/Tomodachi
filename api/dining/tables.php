@@ -30,6 +30,29 @@ $auth = new Auth($db);
 $apiAuth = new ApiAuth($db);
 
 /**
+ * ¿Quién puede dar de alta, editar o desactivar puntos de servicio?
+ *
+ * La regla es de PISO, no de dinero: el mesero organiza su salón (agrega la mesa que
+ * acaban de poner, corrige el nombre, manda una mesa a mantenimiento) sin poder tocar
+ * precios, inventario ni usuarios. Por eso entran los cuatro roles de operación
+ * (admin, gerente, cajero y mesero) y queda fuera quien no atiende mesas.
+ *
+ * Los tokens de API sí pasan con scope `write`: un token se emite a propósito y con
+ * permisos explícitos, así que exigirle además un rol de sesión rompería la automatización
+ * (impresoras, integraciones, agentes).
+ */
+function puedeAdministrarPuntos($apiAuth, $actor) {
+    if (!$actor) {
+        return false;
+    }
+    if ($actor['via'] === 'token') {
+        return $apiAuth->hasScope($actor, 'write');
+    }
+    $roles = explode(',', ROLES_PUNTOS_SERVICIO);
+    return in_array((string)($actor['role'] ?? ''), $roles, true);
+}
+
+/**
  * URL pública de la carta, con el punto de servicio incluido para que la cuenta nazca
  * sabiendo en qué punto se está atendiendo.
  * El esquema lo resuelve UrlHelper: detrás de un proxy, `$_SERVER['HTTPS']` no viene y el
@@ -123,7 +146,9 @@ try {
 
     // ─────────────────────────── CREAR ───────────────────────────
     if ($metodo === 'POST') {
-        $apiAuth->requireScope($actor, 'write');
+        if (!puedeAdministrarPuntos($apiAuth, $actor)) {
+            Response::error('Tu rol no puede administrar los puntos de servicio. Pídelo a un administrador', 403);
+        }
         $data = json_decode(file_get_contents('php://input'), true) ?: [];
 
         $label = trim((string)($data['label'] ?? ''));
@@ -134,13 +159,55 @@ try {
         if ($label === '') $errores['label'] = 'Escribe cómo se llama este punto (Mesa 1, Barra, Habitación 12)';
         elseif (mb_strlen($label) > 50) $errores['label'] = 'Máximo 50 caracteres';
         if ($zone !== null && mb_strlen($zone) > 50) $errores['zone'] = 'Máximo 50 caracteres';
+
+        // ¿Ya existe un punto con ese nombre en esta tienda?
+        //
+        // Dos casos MUY distintos:
+        //   - Activo: es un duplicado de verdad, no se puede (dos "Mesa 1" en el mismo salón
+        //     es un error humano garantizado).
+        //   - Desactivado: se REACTIVA el mismo punto. Antes esto devolvía "ya existe" y el
+        //     dueño se quedaba sin poder dar de alta su mesa ni entender por qué. Además, al
+        //     reactivar se conserva el `qr_token`, o sea que el QR ya impreso y pegado en la
+        //     mesa sigue sirviendo.
+        $existente = null;
         if (empty($errores)) {
-            $dup = $conn->prepare("SELECT table_id FROM dining_tables
-                                   WHERE store_id = :store_id AND label = :label AND is_active = 1");
+            $dup = $conn->prepare(
+                "SELECT table_id, is_active FROM dining_tables
+                  WHERE store_id = :store_id AND label = :label
+                  ORDER BY is_active DESC, table_id ASC LIMIT 1"
+            );
             $dup->execute([':store_id' => $store_id, ':label' => $label]);
-            if ($dup->fetch()) $errores['label'] = 'Ya existe un punto con ese nombre';
+            $fila = $dup->fetch(PDO::FETCH_ASSOC);
+            if ($fila) {
+                if ((int)$fila['is_active'] === 1) {
+                    $errores['label'] = 'Ya hay un punto ACTIVO llamado «' . $label . '» en el salón. '
+                        . 'Usa otro nombre (Mesa 1 Bis, Mesa 1 Terraza) o renombra el que ya existe.';
+                } else {
+                    $existente = (int)$fila['table_id'];
+                }
+            }
         }
         if (!empty($errores)) Response::validationError($errores);
+
+        if ($existente !== null) {
+            $conn->prepare("UPDATE dining_tables SET is_active = 1, zone = :zone WHERE table_id = :id")
+                 ->execute([':zone' => $zone, ':id' => $existente]);
+            $stmt = $conn->prepare("SELECT qr_token FROM dining_tables WHERE table_id = :id");
+            $stmt->execute([':id' => $existente]);
+            $token = (string)$stmt->fetchColumn();
+            $carta = cartaParaQr($conn, $store_id, 0);
+            Response::success([
+                'table_id' => $existente,
+                'label' => $label,
+                'zone' => $zone,
+                'qr_token' => $token,
+                'reactivado' => true,
+                // El mensaje viaja también dentro de `data` porque la pantalla lee esa capa.
+                'mensaje' => 'Se reactivó «' . $label . '», que estaba desactivado. Su QR impreso sigue sirviendo',
+                'url' => $carta ? urlCartaPunto($carta['public_token'], $token) : null,
+                'sin_carta' => $carta === null,
+            ], 'Se reactivó el punto «' . $label . '», que estaba desactivado. Su QR impreso sigue siendo el mismo', 200);
+        }
 
         $token = bin2hex(random_bytes(16));
         $stmt = $conn->prepare("INSERT INTO dining_tables (store_id, label, zone, qr_token, is_active)
@@ -161,7 +228,9 @@ try {
 
     // ─────────────────────────── EDITAR ───────────────────────────
     if ($metodo === 'PUT') {
-        $apiAuth->requireScope($actor, 'write');
+        if (!puedeAdministrarPuntos($apiAuth, $actor)) {
+            Response::error('Tu rol no puede administrar los puntos de servicio. Pídelo a un administrador', 403);
+        }
         $data = json_decode(file_get_contents('php://input'), true) ?: [];
         $table_id = (int)($data['table_id'] ?? 0);
         if ($table_id <= 0) Response::validationError(['table_id' => 'Requerido']);
@@ -219,7 +288,9 @@ try {
 
     // ─────────────────────────── ELIMINAR / DESACTIVAR ───────────────────────────
     if ($metodo === 'DELETE') {
-        $apiAuth->requireScope($actor, 'write');
+        if (!puedeAdministrarPuntos($apiAuth, $actor)) {
+            Response::error('Tu rol no puede administrar los puntos de servicio. Pídelo a un administrador', 403);
+        }
         $table_id = isset($_GET['table_id']) ? (int)$_GET['table_id'] : 0;
         if ($table_id <= 0) Response::validationError(['table_id' => 'Requerido']);
 

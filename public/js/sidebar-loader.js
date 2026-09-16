@@ -36,7 +36,7 @@ async function initSidebar() {
     // roles: opcional — si existe, solo esos roles ven el item (permisos granulares B4)
     const menuItems = [
         { href: 'dashboard.html', icon: 'fa-chart-line', text: 'Dashboard' },
-        { href: 'tables.html', icon: 'fa-chair', text: 'Puntos de servicio' },
+        { href: 'tables.html', icon: 'fa-chair', text: 'Puntos de servicio', roles: ['super_admin', 'admin', 'manager', 'waiter'] },
         { href: 'sales.html', icon: 'fa-cash-register', text: 'Punto de Venta' },
         { href: 'inventory.html', icon: 'fa-box', text: 'Inventario' },
         { href: 'customers.html', icon: 'fa-users', text: 'Clientes' },

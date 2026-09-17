@@ -44,7 +44,7 @@ try {
             $archivedOnly = isset($_GET['archived']) && $_GET['archived'] === '1';
 
             $params = [];
-            $sql = 'SELECT p.product_id, p.product_name, p.description, p.image_path, p.barcode, p.qr_code, p.price, p.cost, p.min_stock, p.status, p.category_id, c.category_name, p.current_stock, p.is_bulk, p.bulk_unit, p.tracking_type, p.consume_mode, p.pieces_per_box, p.is_ingredient, p.hidden_in_pos, p.discontinued_at';
+            $sql = 'SELECT p.product_id, p.product_name, p.description, p.image_path, p.barcode, p.qr_code, p.price, p.cost, p.min_stock, p.status, p.category_id, c.category_name, p.current_stock, p.is_bulk, p.bulk_unit, p.tracking_type, p.consume_mode, p.pieces_per_box, p.is_ingredient, p.hidden_in_pos, p.discontinued_at, p.station_id';
             $sql .= ' FROM products p LEFT JOIN categories c ON p.category_id = c.category_id';
             $conditions = [];
 

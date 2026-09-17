@@ -11,12 +11,16 @@
  *        -> agrega ítems (una transacción); devuelve la cuenta actualizada.
  *   POST {"join_token":"...","action":"send"}
  *        -> manda a la comanda los ítems 'pending'; devuelve enviados + cuenta.
+ *   POST {"join_token":"...","action":"set_notes","order_item_id":N,"notes":"..."}
+ *        -> las notas de UN platillo mientras siga 'pending'.
  *
  * SOLO PERSONAL autenticado (requireActor + scope write):
  *   POST {"session_id":N,"items":[...]}
  *        -> el mesero anota por los clientes sobre la MISMA cuenta (no necesita el
  *           join_token del comensal). Sus líneas quedan como añadidas por el personal.
  *   POST {"session_id":N,"action":"send"}      -> manda a la comanda.
+ *   POST {"session_id":N,"action":"set_notes","order_item_id":N,"notes":"..."}
+ *        -> las notas de un platillo pendiente.
  *   POST {"action":"cancel","order_item_id":N,"reason":"..."}
  *        -> cancela una línea.
  */
@@ -29,6 +33,8 @@ require_once '../../includes/Auth.class.php';
 require_once '../../includes/ApiAuth.class.php';
 require_once '../../includes/Cors.class.php';
 require_once '../../includes/DiningSession.class.php';
+require_once '../../includes/WsToken.class.php';
+require_once '../../includes/ComandaService.class.php';
 
 Cors::apply();
 header('Content-Type: application/json; charset=utf-8');
@@ -95,6 +101,14 @@ function handlePost($db, $dining, $auth, $apiAuth) {
         return;
     }
 
+    // Las notas de UN platillo. Se pueden escribir (y corregir) mientras la línea siga
+    // 'pending': en cuanto entra a la comanda el platillo ya es dinero y lo que cambia
+    // es una anulación con motivo, no una nota.
+    if ($action === 'set_notes') {
+        actionSetNotes($db, $dining, $apiAuth, $auth, $data);
+        return;
+    }
+
     $token = trim($data['join_token'] ?? '');
     $session_directa = (int)($data['session_id'] ?? 0);
 
@@ -122,7 +136,7 @@ function handlePost($db, $dining, $auth, $apiAuth) {
         $session['por_personal'] = true;
 
         if ($action === 'send') {
-            actionSend($dining, $session_directa);
+            actionSend($db, $dining, $session, 'staff', (int)($actor['user_id'] ?? 0));
             return;
         }
         actionAddItems($db, $dining, $session, $data);
@@ -144,7 +158,7 @@ function handlePost($db, $dining, $auth, $apiAuth) {
     }
 
     if ($action === 'send') {
-        actionSend($dining, $session_id);
+        actionSend($db, $dining, $session, 'customer', null);
         return;
     }
 
@@ -306,19 +320,138 @@ function actionRemove($db, $dining, $apiAuth, $auth, array $data) {
     Response::success($dining->listSession((int)$linea['session_id']), 'Platillo quitado de la cuenta');
 }
 
-/** Manda los ítems pendientes a la comanda. */
-function actionSend($dining, $session_id) {
-    $sent = $dining->sendToKitchen($session_id);
+/**
+ * Manda los ítems pendientes a la comanda: crea la ronda (una por estación) y la avisa.
+ *
+ * Aquí está la costura que antes no existía: hasta hoy los ítems pasaban de 'pending' a
+ * 'sent' sin dejar rastro de QUÉ ronda los mandó, así que la cocina no tenía folio que
+ * seguir ni forma de saber qué platillos iban juntos. Ahora cada envío crea una comanda
+ * con folio del día, y los platillos de estaciones distintas se reparten en comandas
+ * distintas (Cocina y Barra preparan por separado).
+ *
+ * Se conserva `sent` en la respuesta con la MISMA forma de antes (los ítems enviados)
+ * porque la carta del comensal y el panel del mesero ya lo leían; `comandas` va además,
+ * para quien lo quiera.
+ */
+function actionSend($db, $dining, $session, $by_type = 'customer', $by_id = null) {
+    $session_id = (int)($session['session_id'] ?? 0);
+    $store_id   = (int)($session['store_id'] ?? 0);
+
+    $comandas = [];
+    $sent = [];
+    $conn = $db->getConnection();
+    $conn->beginTransaction();
+    try {
+        $svc = new ComandaService($db);
+        $comandas = $svc->crearDesdeCuenta($session_id, $by_type, $by_id > 0 ? $by_id : null);
+        $conn->commit();
+    } catch (Throwable $e) {
+        if ($conn->inTransaction()) {
+            $conn->rollBack();
+        }
+        Response::error('No se pudo mandar a preparación: ' . $e->getMessage(), 422);
+    }
+
     $dining->recalcTotals($session_id);
+
+    // Los ítems enviados, con la forma plana de siempre, y a la vez el aviso por comanda.
+    foreach ($comandas as $c) {
+        foreach ($c['items'] as $it) {
+            $sent[] = $it;
+        }
+        $svc->avisar($store_id, $c['station_id'], 'comanda_sent', (int)$c['comanda_id']);
+    }
 
     if ($sent) {
         DiningSession::broadcast($session_id, 'sent_to_kitchen');
     }
 
     Response::success([
-        'sent'    => $sent,
-        'session' => $dining->listSession($session_id),
-    ], $sent ? 'Pedido enviado a cocina' : 'No había productos pendientes');
+        'sent'     => $sent,
+        'comandas' => $comandas,
+        'session'  => $dining->listSession($session_id),
+    ], $sent ? 'Pedido enviado a preparación' : 'No había productos pendientes');
+}
+
+/**
+ * Las notas de UN platillo (el "sin cebolla", "sin salsa", "para llevar").
+ *
+ * Se guardan por LÍNEA y no por cuenta porque cada platillo se prepara distinto: la nota
+ * viaja con el platillo hasta la comanda. Solo se puede escribir mientras la línea siga
+ * 'pending'; una vez enviada, el platillo está en la cocina y lo correcto es hablar con el
+ * personal (que puede anularlo con motivo), no reescribir la nota por atrás.
+ *
+ * Autorización: el comensal solo sus propias líneas (join_token); el personal, cualquier
+ * línea pendiente de su tienda.
+ */
+function actionSetNotes($db, $dining, $apiAuth, $auth, array $data) {
+    $item_id = (int)($data['order_item_id'] ?? 0);
+    if ($item_id <= 0) {
+        Response::validationError(['order_item_id' => 'Falta la línea']);
+    }
+
+    $conn = $db->getConnection();
+    $stmt = $conn->prepare(
+        "SELECT i.*, s.store_id, s.status AS session_status, s.menu_id
+           FROM dining_order_items i
+           JOIN dining_sessions s ON s.session_id = i.session_id
+          WHERE i.order_item_id = :iid
+          LIMIT 1"
+    );
+    $stmt->execute([':iid' => $item_id]);
+    $linea = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$linea) {
+        Response::notFound('Esa línea no existe');
+    }
+
+    $join_token = trim($data['join_token'] ?? '');
+    $por_personal = ($join_token === '');
+
+    if (!$por_personal) {
+        $sesion = $dining->findSessionByJoinToken($join_token);
+        if (!$sesion || (int)$sesion['session_id'] !== (int)$linea['session_id']) {
+            Response::unauthorized('Esa línea no es de tu cuenta');
+        }
+        $participante = isset($sesion['token_participant_id']) ? (int)$sesion['token_participant_id'] : null;
+        if ($participante !== null && (int)$linea['participant_id'] !== $participante) {
+            Response::error('Solo puedes anotar tus propios platillos', 403);
+        }
+        // ¿La carta permite notas? Es un límite del negocio para el comensal.
+        if (!empty($linea['menu_id'])) {
+            $stmt = $conn->prepare("SELECT allow_notes FROM menus WHERE menu_id = :mid LIMIT 1");
+            $stmt->execute([':mid' => (int)$linea['menu_id']]);
+            if ((int)$stmt->fetchColumn() === 0) {
+                Response::error('Esta carta no admite notas', 403);
+            }
+        }
+    } else {
+        $actor = $apiAuth->requireActor($auth);
+        $apiAuth->requireScope($actor, 'write');
+        if ((int)$actor['store_id'] !== (int)$linea['store_id']) {
+            Response::unauthorized('Esa línea no es de tu tienda');
+        }
+    }
+
+    if ($linea['status'] !== 'pending') {
+        Response::error('Ese platillo ya se mandó a preparación: pídelo al personal', 409);
+    }
+    if (!in_array($linea['session_status'], ['open', 'awaiting_payment'], true)) {
+        Response::error('La cuenta ya está cerrada', 409);
+    }
+
+    $notas = trim((string)($data['notes'] ?? ''));
+    if (function_exists('mb_substr')) {
+        $notas = mb_substr($notas, 0, 200);
+    } else {
+        $notas = substr($notas, 0, 200);
+    }
+
+    $conn->prepare("UPDATE dining_order_items SET notes = :notas WHERE order_item_id = :iid")
+         ->execute([':notas' => ($notas !== '' ? $notas : null), ':iid' => $item_id]);
+
+    DiningSession::broadcast((int)$linea['session_id'], 'item_notes');
+
+    Response::success($dining->listSession((int)$linea['session_id']), $notas !== '' ? 'Nota guardada' : 'Nota borrada');
 }
 
 /** Cancela una línea. SOLO personal autenticado. */

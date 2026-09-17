@@ -337,41 +337,28 @@ class DiningSession {
     }
 
     /**
-     * Manda a la comanda los ítems en 'pending': los pasa a 'sent' y sella sent_at.
-     * Devuelve exactamente los ítems enviados en esta llamada (la comanda).
+     * Manda a preparación los ítems en 'pending' y devuelve los ítems enviados.
+     *
+     * DELEGA en ComandaService a propósito. Antes esto pasaba los ítems a 'sent' sin crear
+     * la ronda: la cuenta y la comanda estaban fundidas, así que la cocina no tenía folio
+     * ni estación que seguir. Si esta copia se quedara viva, quien la llamara mandaría
+     * platillos a la cocina sin que aparecieran en el tablero — un fantasma silencioso.
      *
      * @return array ítems enviados
      */
     public function sendToKitchen($session_id) {
-        $session_id = (int)$session_id;
-
-        $stmt = $this->db->getConnection()->prepare(
-            "SELECT oi.order_item_id, oi.participant_id, p.display_name AS participant_name,
-                    oi.product_id, oi.product_name, oi.unit_price, oi.quantity,
-                    oi.notes, oi.line_total, oi.created_at
-             FROM dining_order_items oi
-             LEFT JOIN dining_participants p ON p.participant_id = oi.participant_id
-             WHERE oi.session_id = :sid AND oi.status = 'pending'
-             ORDER BY oi.created_at ASC, oi.order_item_id ASC"
-        );
-        $stmt->execute([':sid' => $session_id]);
-        $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        if (!$items) {
-            return [];
+        if (!class_exists('ComandaService')) {
+            require_once __DIR__ . '/ComandaService.class.php';
         }
+        $svc = new ComandaService($this->db);
+        $comandas = $svc->crearDesdeCuenta((int)$session_id, 'system', null);
 
-        $update = $this->db->getConnection()->prepare(
-            "UPDATE dining_order_items
-             SET status = 'sent', sent_at = NOW()
-             WHERE session_id = :sid AND status = 'pending'"
-        );
-        $update->execute([':sid' => $session_id]);
-
-        foreach ($items as &$it) {
-            $it['status'] = 'sent';
+        $items = [];
+        foreach ($comandas as $c) {
+            foreach ($c['items'] as $it) {
+                $items[] = $it;
+            }
         }
-        unset($it);
-
         return $items;
     }
 
@@ -627,8 +614,12 @@ class DiningSession {
      * cuenta ni de tienda sin él: el session_id es un entero corto y adivinable.
      * Todo va envuelto en try/catch y en silencio a propósito: un aviso que no sale no puede
      * tumbar la operación que sí ocurrió.
+     *
+     * Es PÚBLICO porque las comandas avisan a canales que no son de una cuenta (el de la
+     * tienda y el de una estación). Duplicar aquí el handshake WebSocket habría dejado dos
+     * copias del mismo código para que una se quedara vieja.
      */
-    private static function enviarAlRelay($canal, $payload) {
+    public static function enviarAlRelay($canal, $payload) {
         try {
             $host = getenv('WS_HOST') ?: 'ws';
             $port = (int)(getenv('WS_PORT') ?: 8765);

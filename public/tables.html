@@ -652,6 +652,70 @@
         }
         .kd-vacio { padding: 16px; text-align: center; color: var(--text-muted); font-size: .86rem; }
 
+        /* Detalle de una comanda: tira que se despliega BAJO la tarjeta. No es un modal:
+        el tablero queda visible y la cocina sigue trabajando mientras se consulta. */
+        .kd-detalle {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-left: 3px solid var(--primary-color);
+            border-radius: var(--ds-radius-md);
+            box-shadow: var(--ds-shadow-sm);
+            padding: 12px;
+            display: flex; flex-direction: column; gap: 10px;
+            font-size: calc(var(--kd-escala, 1) * 1rem);
+        }
+        .kd-detalle-cab { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .kd-detalle-titulo {
+            font-family: var(--font-heading);
+            font-size: .95rem; font-weight: 700; color: var(--text-color);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .kd-detalle-cerrar {
+            width: 40px; height: 40px; padding: 0; flex: 0 0 auto;
+            border: 1px solid transparent; background: transparent;
+            color: var(--text-muted); border-radius: 10px; cursor: pointer; font-size: 1.05rem;
+            display: inline-flex; align-items: center; justify-content: center;
+        }
+        .kd-detalle-cerrar:hover { background: color-mix(in srgb, var(--text-muted) 12%, transparent); color: var(--text-color); }
+        .kd-detalle-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 16px; }
+        .kd-detalle-campo { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+        .kd-detalle-etiqueta {
+            font-size: .72rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: .04em; color: var(--text-muted);
+        }
+        .kd-detalle-valor {
+            font-size: .9rem; font-weight: 600; color: var(--text-color);
+            display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+        }
+        .kd-detalle-muted { font-weight: 400; color: var(--text-muted); }
+        .kd-monospace { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .kd-detalle-estado {
+            display: inline-flex; align-items: center; gap: 6px;
+            border-radius: var(--ds-radius-pill); padding: 3px 10px;
+            font-size: .78rem; font-weight: 700;
+            background: color-mix(in srgb, var(--text-muted) 15%, transparent);
+            color: var(--text-medium);
+        }
+        .kd-detalle-estado.es-sent { background: color-mix(in srgb, var(--warning-color) 18%, transparent); color: var(--warning-color); }
+        .kd-detalle-estado.es-preparing { background: color-mix(in srgb, var(--primary-color) 18%, transparent); color: var(--primary-color); }
+        .kd-detalle-estado.es-ready { background: color-mix(in srgb, var(--success-color) 18%, transparent); color: var(--success-color); }
+        .kd-detalle-seccion {
+            font-family: var(--font-heading); font-size: .8rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted);
+            border-top: 1px solid var(--border-color); padding-top: 9px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .kd-detalle-items { gap: 8px; }
+        .kd-detalle-para {
+            display: inline-flex; align-items: center; gap: 5px; margin-left: 8px;
+            font-size: .78rem; font-weight: 500; color: var(--text-muted);
+        }
+        .kd-detalle-anulada { opacity: .62; }
+        .kd-detalle-anulada .kd-item-cant,
+        .kd-detalle-anulada .kd-item-info > ul .kd-item-sub { text-decoration: line-through; }
+        .kd-detalle-tel { color: var(--primary-color); font-weight: 600; text-decoration: none; }
+        .kd-detalle-sep { color: var(--text-muted); font-weight: 400; }
+
         /* Entregadas del día: solo se mira cuando se busca algo */
         .kd-historico { margin-top: 20px; }
         .kd-historico h3 { font-family: var(--font-heading); font-size: 1rem; color: var(--text-color); margin: 0 0 10px; }
@@ -700,6 +764,7 @@
         @media (max-width: 900px) {
             .kd-columnas { grid-template-columns: 1fr; }
             .kd-col { min-height: 0; }
+            .kd-detalle-grid { grid-template-columns: 1fr; }
         }
 
         /* ── Las líneas del pedido, por platillo ──────────────────────────────

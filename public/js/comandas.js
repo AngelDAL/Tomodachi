@@ -52,6 +52,7 @@ const kdEstado = {
     cronometro: null,          // intervalo que avanza los mm:ss en vivo
     arrastre: null,            // estado del arrastre entre columnas
     escala: 1,                 // factor de letra del tablero
+    detalle: null,             // comanda cuyo detalle está desplegado (id en string)
 };
 
 // ============================================================
@@ -121,6 +122,13 @@ function kdIniciarCronometro() {
             const base = '<i class="fas fa-clock"></i> ' + kdMMSS(s) +
                 (arrive ? ' · se está tardando' : '');
             if (nodo.innerHTML !== base) nodo.innerHTML = base;
+        });
+        // El minutero del detalle va a su propio compás, con la misma hora que su tarjeta.
+        document.querySelectorAll('[data-detalle-cronometro]').forEach(function (nodo) {
+            const card = document.querySelector('.kd-card[data-comanda="' + nodo.getAttribute('data-detalle-cronometro') + '"]');
+            if (!card) return;
+            const s = Number(card.getAttribute('data-segundos')) || 0;
+            if (nodo.textContent !== kdMMSS(s)) nodo.textContent = kdMMSS(s);
         });
     }, 1000);
 }
@@ -312,7 +320,9 @@ function kdPintar() {
             cont.innerHTML = '<div class="kd-vacio">' + kdVacioDe(estado) + '</div>';
             return;
         }
-        cont.innerHTML = porEstado[estado].map(kdCardHTML).join('');
+        cont.innerHTML = porEstado[estado].map(function (c) {
+            return kdCardHTML(c) + (kdEstado.detalle === String(c.comanda_id) ? kdDetalleHTML(c) : '');
+        }).join('');
     });
 
     const activas = porEstado.sent.length + porEstado.preparing.length + porEstado.ready.length;
@@ -320,6 +330,14 @@ function kdPintar() {
     if (insignia) {
         insignia.textContent = activas;
         insignia.classList.toggle('hidden', activas === 0);
+    }
+
+    // El detalle abierto apunta a una comanda que ya no está en el tablero (se sirvió
+    // o se anuló): se olvida, para no dejar una tira huérfana la próxima vez.
+    if (kdEstado.detalle) {
+        const sigueViva = porEstado.sent.concat(porEstado.preparing, porEstado.ready)
+            .some(function (c) { return String(c.comanda_id) === kdEstado.detalle; });
+        if (!sigueViva) kdEstado.detalle = null;
     }
 
     kdPintarHistorico(historicas);
@@ -333,9 +351,105 @@ function kdVacioDe(estado) {
 
 function kdMMSS(s) {
     s = Math.max(0, Math.floor(Number(s) || 0));
-    const m = Math.floor(s / 60);
+    const m = String(Math.floor(s / 60)).padStart(2, '0');
     const ss = String(s % 60).padStart(2, '0');
     return m + ':' + ss;
+}
+
+/** Quién la anotó: la comanda guarda el tipo ('staff'|'customer'|'system'). */
+function kdEtiquetaAutor(tipo) {
+    const mapa = {
+        staff: 'Anotada por el personal',
+        customer: 'Pedido del comensal',
+        system: 'Entrada del sistema',
+    };
+    return mapa[tipo] || '';
+}
+
+/**
+ * La hora de la comanda se guarda en la base en UTC y se ve en hora de México
+ * (6 h de desfase, zona sin horario de verano desde 2022). No se calcula en PHP contra
+ * la base: aquí solo se interpreta el timestamp que ya trae el payload.
+ */
+function kdHoraDe(fechaSql) {
+    if (!fechaSql) return null;
+    const [fecha, hora] = String(fechaSql).split(' ');
+    const p = (fecha || '').split('-').map(Number);
+    const h = (hora || '00:00:00').split(':').map(Number);
+    if (p.length !== 3 || p.some(isNaN)) return null;
+    const utc = Date.UTC(p[0], p[1] - 1, p[2], h[0] || 0, h[1] || 0, h[2] || 0);
+    const local = new Date(utc - 6 * 60 * 60 * 1000);
+    return local.toISOString().slice(11, 16);
+}
+
+/** El detalle de una comanda: una tira que se despliega bajo la tarjeta, sin tapar el tablero. */
+function kdDetalleHTML(c) {
+    const id = String(c.comanda_id);
+    const donde = c.punto || kdEtiquetaCanal(c.channel);
+    const estadoClase = { sent: 'es-sent', preparing: 'es-preparing', ready: 'es-ready' }[c.status] || '';
+    const enviada = kdHoraDe(c.sent_at);
+
+    const campos = [
+        ['Estado', '<span class="kd-detalle-estado ' + estadoClase + '">' + tpEsc(kdEtiquetaEstado(c.status)) + '</span>'],
+        ['Punto de servicio', tpEsc(donde)],
+        ['Estación', c.station_name ? tpEsc(c.station_name) : '<span class="kd-detalle-muted">Sin estación</span>'],
+        ['Enviada a las', enviada ? '<span class="kd-monospace">' + enviada + '</span>' : '<span class="kd-detalle-muted">—</span>'],
+        ['Lleva', '<span class="kd-monospace" data-detalle-cronometro="' + id + '">' + kdMMSS(c.segundos) + '</span>'],
+        ['Anotada por', c.created_by_type ? tpEsc(kdEtiquetaAutor(c.created_by_type)) : '<span class="kd-detalle-muted">—</span>'],
+        ['Cuenta', c.code ? tpEsc('Cuenta ' + c.code) : '<span class="kd-detalle-muted">—</span>'],
+        ['Personas', c.personas ? tpEsc(c.personas) : '<span class="kd-detalle-muted">—</span>'],
+    ];
+
+    const ent = c.entrega || {};
+    if (ent.nombre || ent.telefono || ent.direccion) {
+        const filas = [];
+        if (ent.nombre) filas.push(tpEsc(ent.nombre));
+        if (ent.telefono) {
+            filas.push('<a href="tel:' + tpEsc(String(ent.telefono).replace(/[^\d+]/g, '')) + '" class="kd-detalle-tel">' + tpEsc(ent.telefono) + '</a>');
+        }
+        if (ent.direccion) filas.push(tpEsc(ent.direccion));
+        campos.push(['Entrega', filas.join('<span class="kd-detalle-sep"> · </span>')]);
+    }
+
+    const grid = campos.map(function (par) {
+        return '<div class="kd-detalle-campo">' +
+            '<span class="kd-detalle-etiqueta">' + tpEsc(par[0]) + '</span>' +
+            '<span class="kd-detalle-valor">' + par[1] + '</span>' +
+        '</div>';
+    }).join('');
+
+    // Cada pieza en su renglón: la línea de la comanda es la pieza con su anotación.
+    // Lo que ya se anuló NO se esconde: se tacha, porque la cocina debe saber qué se descartó.
+    const items = (c.items || []).map(function (it) {
+        const anulada = it.status === 'cancelled';
+        const notas = it.notes
+            ? '<ul class="kd-items"><li class="kd-item-sub"><i class="fas fa-pen"></i> ' + tpEsc(it.notes) + '</li></ul>'
+            : '';
+        const para = it.participant_name
+            ? '<span class="kd-detalle-para"><i class="fas fa-user"></i> ' + tpEsc(it.participant_name) + '</span>'
+            : '';
+        return '<li class="kd-item' + (anulada ? ' kd-detalle-anulada' : '') + '">' +
+            '<span class="kd-item-cant">' + tpCantidad(it.quantity) + '&times;</span>' +
+            '<span class="kd-item-info">' + tpEsc(it.product_name || 'Platillo') + para + notas + '</span>' +
+        '</li>';
+    }).join('');
+
+    return '<div class="kd-detalle" data-kd-detalle-panel="' + id + '">' +
+        '<div class="kd-detalle-cab">' +
+            '<strong class="kd-detalle-titulo"><i class="fas fa-file-lines"></i> Detalle de la comanda #' + c.folio + '</strong>' +
+            '<button type="button" class="kd-detalle-cerrar" data-kd-detalle-cerrar="' + id + '" aria-label="Cerrar el detalle" title="Cerrar el detalle"><i class="fas fa-xmark"></i></button>' +
+        '</div>' +
+        '<div class="kd-detalle-grid">' + grid + '</div>' +
+        '<span class="kd-detalle-seccion"><i class="fas fa-utensils"></i> Platillos</span>' +
+        '<ul class="kd-items kd-detalle-items">' + (items || '<li class="kd-item"><span class="kd-item-info">Sin platillos en esta comanda</span></li>') + '</ul>' +
+    '</div>';
+}
+
+/** Abre y cierra el detalle de una comanda, sin cubrir el tablero. */
+function kdAlternarDetalle(comandaId) {
+    const id = String(comandaId);
+    kdEstado.detalle = kdEstado.detalle === id ? null : id;
+    kdPintar();
 }
 
 function kdCardHTML(c) {
@@ -393,6 +507,7 @@ function kdCardHTML(c) {
             '<div class="kd-card-menu">' +
                 '<button type="button" class="kd-card-menu-btn" data-kd-cardmenu="' + c.comanda_id + '" aria-haspopup="true" aria-expanded="false" title="Opciones de la comanda"><i class="fas fa-ellipsis-v"></i></button>' +
                 '<div class="tp-menu-config kd-card-acciones hidden" data-kd-acciones="' + c.comanda_id + '">' +
+                    '<button type="button" data-kd-detalle="' + c.comanda_id + '" title="Ver el detalle completo de la comanda"><i class="fas fa-file-lines"></i> Ver detalle</button>' +
                     '<button type="button" data-kd-imprimir="' + c.comanda_id + '" title="Imprimir el ticket (el navegador pedirá confirmación)"><i class="fas fa-print"></i> Imprimir</button>' +
                     '<button type="button" data-kd-anular="' + c.comanda_id + '" title="Anular la comanda"><i class="fas fa-ban"></i> Anular</button>' +
                 '</div>' +
@@ -1008,6 +1123,16 @@ document.addEventListener('DOMContentLoaded', function () {
             if (avanzar) {
                 avanzar.disabled = true;
                 kdAvanzar(avanzar.getAttribute('data-kd-comanda'), avanzar.getAttribute('data-kd-avanzar'));
+                return;
+            }
+            const detalle = ev.target.closest('[data-kd-detalle]');
+            if (detalle) {
+                kdAlternarDetalle(detalle.getAttribute('data-kd-detalle'));
+                return;
+            }
+            const detalleCerrar = ev.target.closest('[data-kd-detalle-cerrar]');
+            if (detalleCerrar) {
+                kdAlternarDetalle(detalleCerrar.getAttribute('data-kd-detalle-cerrar'));
                 return;
             }
             const imprimir = ev.target.closest('[data-kd-imprimir]');

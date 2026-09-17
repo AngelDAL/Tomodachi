@@ -961,7 +961,12 @@ function tpUnidadesDeGrupo(lineas) {
     const porProducto = {};
     const orden = [];
     lineas.forEach(function (it) {
-        const pid = it.product_id === null || it.product_id === undefined ? 'n' + it.order_item_id : 'p' + it.product_id;
+        // La clave lleva el ESTADO además del platillo: agrupar una pieza que ya se sirvió
+        // con otra que sigue en cocina bajo una sola etiqueta engaña al mesero ("2× en
+        // cocina" cuando una ya está en la mesa). Se agrupa lo que está en el mismo paso.
+        const pid = it.product_id === null || it.product_id === undefined
+            ? 'n' + it.order_item_id
+            : 'p' + it.product_id + '-' + (it.status || 'pending');
         if (!porProducto[pid]) {
             porProducto[pid] = { id: pid, product_id: it.product_id, nombre: it.product_name, lineas: [] };
             orden.push(pid);
@@ -1012,6 +1017,9 @@ function tpUnidadesDeGrupo(lineas) {
             pendientes: pendientes,
             enviadas: enviadas,
             estadoVista: estadoVista,
+            // El estado real del grupo cuando todas sus piezas van en el mismo paso:
+            // sirve para etiquetar "listo" o "servido" en vez del genérico "en cocina".
+            estadoUnico: (Object.keys(estados).length === 1 ? Object.keys(estados)[0] : null),
         };
     });
 }
@@ -1111,7 +1119,9 @@ function tpLineaPedido(u, ctx) {
     // El borde de la izquierda dice el estado de un vistazo, sin leer.
     const clase = { pendiente: 'pendiente', enviado: 'enviado', mixto: 'mixto' }[u.estadoVista] || 'pendiente';
     const etiquetaEstado = (u.estadoVista === 'mixto' ? 'parte en cocina'
-        : tpEtiquetaEstado(u.estadoVista === 'enviado' ? 'sent' : 'pending'));
+        : tpEtiquetaEstado(u.estadoVista === 'enviado'
+            ? (u.estadoUnico || 'sent')
+            : 'pending'));
 
     const quitarLineas = [];
     if (u.estadoVista === 'pendiente') {

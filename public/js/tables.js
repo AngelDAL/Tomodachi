@@ -861,12 +861,17 @@ function tpConectarTiempoReal() {
     tpEstado.tiempoReal = window.TomodachiRealtime.conectar({
         // "store" a secas: el servidor resuelve la tienda del que está conectado.
         canal: 'store',
-        onEvento: function () {
+        onEvento: function (msg) {
             tpCargar(true);
             // Si hay una cuenta abierta en pantalla, también se refresca: el comensal pudo
             // pedir o alguien pudo cerrarla desde otro dispositivo.
             const d = tpEstado.cuentaActual;
             if (d && tpAlgunModalAbierto()) tpCargarCuenta(d.session.session_id);
+
+            // El tablero de comandas vive en esta misma página y se alimenta de ESTE socket:
+            // abrir un segundo WebSocket para lo mismo sería duplicar el aviso y el trabajo
+            // del relay. Se reemite como evento del documento y cada vista hace lo suyo.
+            document.dispatchEvent(new CustomEvent('tomodachi:realtime', { detail: msg || null }));
         },
         onEstado: tpMarcarVivo,
     });
@@ -894,7 +899,7 @@ function tpMarcarVivo(estado) {
     const texto = conocido ? etiquetas[estado] : 'sin tiempo real';
     const caido = !conocido || estado !== 'conectado';
 
-    ['tpMapaVivo', 'tpCuentaVivo'].forEach(function (id) {
+    ['tpMapaVivo', 'tpCuentaVivo', 'kdVivo'].forEach(function (id) {
         const nodo = document.getElementById(id);
         if (!nodo) return;
         nodo.classList.toggle('desconectado', caido && estado !== 'reconectando');
@@ -902,4 +907,8 @@ function tpMarcarVivo(estado) {
         const span = nodo.querySelector('span');
         if (span) span.textContent = texto;
     });
+
+    // El tablero de comandas decide con esto si sondea: si el socket está vivo, sondear es
+    // trabajo tirado; si no, callarse sería peor.
+    document.dispatchEvent(new CustomEvent('tomodachi:realtime-estado', { detail: estado }));
 }

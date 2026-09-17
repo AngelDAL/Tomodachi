@@ -476,6 +476,191 @@
             .tp-menu-cats { padding: 8px 12px; }
         }
     </style>
+    <style>
+        /* ============================================================
+           Comandas — la pantalla de la estación.
+           Se usa DE PIE, con las manos ocupadas y a veces con guantes: botones grandes,
+           nada que dependa de `hover`, y el avance se hace tocando la comanda.
+           Solo tokens del tema: claro y oscuro salen gratis.
+           ============================================================ */
+
+        /* Pestañas del módulo: salón y comandas */
+        .tp-vistas {
+            display: flex;
+            gap: 6px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 18px;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        .tp-vistas::-webkit-scrollbar { display: none; }
+        .tp-vista {
+            border: 0;
+            background: transparent;
+            color: var(--text-muted);
+            font-family: var(--font-heading);
+            font-size: .95rem;
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            white-space: nowrap;
+            min-height: 44px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .tp-vista:hover { color: var(--text-color); }
+        .tp-vista.activo { color: var(--primary-darker, var(--primary-color)); border-bottom-color: var(--primary-color); font-weight: 700; }
+        .tp-vista-num {
+            background: var(--primary-color);
+            color: var(--text-on-primary, #fff);
+            border-radius: var(--ds-radius-pill);
+            font-size: .72rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            min-width: 22px;
+            text-align: center;
+        }
+        .tp-vista-panel.hidden { display: none; }
+
+        /* Filtros: estación y qué se ve. Botones, nunca selects. */
+        .kd-filtros { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+        .kd-chip {
+            display: inline-flex; align-items: center; gap: 7px;
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: var(--ds-radius-pill); padding: 8px 14px;
+            font-family: var(--font-heading); font-size: .85rem; color: var(--text-medium);
+            cursor: pointer; min-height: 40px;
+        }
+        .kd-chip:hover { border-color: var(--primary-color); color: var(--primary-color); }
+        .kd-chip.activo { background: var(--primary-color); border-color: var(--primary-color); color: var(--text-on-primary, #fff); font-weight: 700; }
+        .kd-chip .kd-chip-n { font-weight: 700; opacity: .85; }
+
+        /* Tres columnas: lo que espera, lo que se hace y lo que ya está listo. */
+        .kd-columnas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: start; }
+        .kd-col {
+            background: var(--bg-lightest, var(--bg-card));
+            border: 1px solid var(--border-color);
+            border-radius: var(--ds-radius-lg);
+            display: flex; flex-direction: column; min-height: 180px;
+        }
+        .kd-col-cab {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 14px; border-bottom: 1px solid var(--border-color);
+            font-family: var(--font-heading); font-size: .82rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted);
+        }
+        .kd-col-cab strong { font-size: 1rem; color: var(--text-color); }
+        .kd-col[data-estado="sent"] .kd-col-cab strong { color: var(--warning-color, #B45309); }
+        .kd-col[data-estado="preparing"] .kd-col-cab strong { color: var(--primary-color); }
+        .kd-col[data-estado="ready"] .kd-col-cab strong { color: var(--success-color); }
+        .kd-lista { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+
+        /* La comanda: un ticket que se puede leer de lejos */
+        .kd-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--ds-radius-md);
+            box-shadow: var(--ds-shadow-sm);
+            padding: 12px;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        .kd-card-cab { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .kd-folio {
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: 1.05rem; font-weight: 700; color: var(--text-color);
+        }
+        .kd-min { font-size: .78rem; color: var(--text-muted); white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; }
+        /* Lo que lleva mucho esperando se ve: es lo urgente. */
+        .kd-min.tarde { color: var(--danger-color); font-weight: 700; }
+        .kd-donde { font-size: .84rem; color: var(--text-color); font-weight: 600; }
+        .kd-quien { font-size: .76rem; color: var(--text-muted); margin-top: 2px; }
+
+        .kd-items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+        .kd-item { display: flex; gap: 8px; align-items: flex-start; font-size: .95rem; color: var(--text-color); }
+        .kd-item-cant { font-weight: 800; min-width: 30px; }
+        .kd-item-info { flex: 1 1 auto; min-width: 0; }
+        /* Las notas NO van perdidas entre el nombre: son lo que se puede arruinar. */
+        .kd-nota {
+            display: inline-block; margin-top: 3px;
+            background: color-mix(in srgb, var(--warning-color, #B45309) 16%, transparent);
+            color: var(--warning-color, #B45309);
+            border-radius: var(--ds-radius-sm);
+            padding: 4px 8px; font-size: .82rem; font-weight: 600;
+        }
+        .kd-pie { display: flex; gap: 8px; align-items: stretch; }
+        .kd-btn {
+            flex: 1 1 auto; min-height: 48px; padding: 10px 14px;
+            border: 1px solid var(--border-color); border-radius: var(--ds-radius-md);
+            background: var(--bg-card); color: var(--text-color);
+            font-family: var(--font-heading); font-size: .95rem; font-weight: 600;
+            cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .kd-btn:hover { border-color: var(--primary-color); color: var(--primary-color); }
+        .kd-btn.primario { background: var(--primary-color); border-color: var(--primary-color); color: var(--text-on-primary, #fff); }
+        .kd-btn.primario:hover { color: var(--text-on-primary, #fff); opacity: .93; }
+        .kd-btn.ancho { flex: 1 1 100%; }
+        .kd-btn.icono { flex: 0 0 auto; min-width: 48px; padding: 10px; }
+        .kd-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+        /* La comanda recién llegada avisa: parpadeo + borde encendido */
+        .kd-card.nueva { animation: kdEntra .6s ease-out 4; border-color: var(--primary-color); }
+        @keyframes kdEntra {
+            0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary-color) 45%, transparent); }
+            50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--primary-color) 0%, transparent); }
+        }
+        .kd-vacio { padding: 16px; text-align: center; color: var(--text-muted); font-size: .86rem; }
+
+        /* Entregadas del día: solo se mira cuando se busca algo */
+        .kd-historico { margin-top: 20px; }
+        .kd-historico h3 { font-family: var(--font-heading); font-size: 1rem; color: var(--text-color); margin: 0 0 10px; }
+        .kd-hist-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+        .kd-hist-item {
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: var(--ds-radius-md); padding: 10px 12px; font-size: .86rem; color: var(--text-medium);
+        }
+        .kd-hist-item.anulada { border-left: 3px solid var(--danger-color); }
+        .kd-hist-item.servida { border-left: 3px solid var(--success-color); }
+        .kd-hist-item strong { color: var(--text-color); }
+
+        /* Modal de estaciones: cambia de contenido, no abre otro modal encima */
+        .kd-modal-estaciones { max-width: 720px; width: min(720px, calc(100vw - 32px)); }
+        .kd-est-card {
+            border: 1px solid var(--border-color); border-radius: var(--ds-radius-md);
+            background: var(--bg-card); padding: 12px; display: flex; flex-direction: column; gap: 8px;
+        }
+        .kd-est-card.apagada { opacity: .6; }
+        .kd-est-cab { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .kd-est-nombre { font-family: var(--font-heading); font-size: 1rem; color: var(--text-color); font-weight: 600; }
+        .kd-est-meta { font-size: .8rem; color: var(--text-muted); display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+        .kd-salida {
+            display: inline-flex; align-items: center; gap: 6px; font-size: .76rem;
+            background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+            color: var(--primary-darker, var(--primary-color));
+            border-radius: var(--ds-radius-pill); padding: 4px 10px;
+        }
+        .kd-salida.sin { background: color-mix(in srgb, var(--text-muted) 15%, transparent); color: var(--text-muted); }
+        .kd-est-acciones { display: flex; flex-wrap: wrap; gap: 8px; }
+        .kd-est-acciones .tp-btn { padding: 8px 12px; font-size: .82rem; }
+        .kd-lista-mini { display: flex; flex-direction: column; gap: 6px; }
+        .kd-prod {
+            display: flex; align-items: center; gap: 10px; width: 100%;
+            padding: 10px 12px; border: 1px solid var(--border-lighter, var(--border-color));
+            border-radius: var(--ds-radius-md); background: var(--bg-card);
+            cursor: pointer; text-align: left; font-family: inherit; min-height: 46px;
+        }
+        .kd-prod:hover { border-color: var(--primary-color); }
+        .kd-prod.dentro { border-color: var(--primary-color); background: color-mix(in srgb, var(--primary-color) 8%, transparent); }
+        .kd-prod-info { flex: 1 1 auto; min-width: 0; }
+        .kd-prod-nombre { font-size: .9rem; color: var(--text-color); font-weight: 600; }
+        .kd-prod-meta { font-size: .76rem; color: var(--text-muted); }
+        .kd-prod-marca { color: var(--primary-color); }
+
+        @media (max-width: 900px) {
+            .kd-columnas { grid-template-columns: 1fr; }
+            .kd-col { min-height: 0; }
+        }
+    </style>
     <script src="js/theme-init.js?v=3"></script>
     <script src="js/format-utils.js"></script>
 </head>
@@ -494,7 +679,20 @@
 
         <main class="main-content">
             <div class="inventory-container">
-                <section>
+                <!-- Dos vistas del mismo módulo del piso. No son páginas separadas a
+                     propósito: la cocina y el salón son la misma operación vista desde dos
+                     lados, y en la tableta de la estación se abre con ?vista=comandas. -->
+                <div class="tp-vistas" id="tpVistas">
+                    <button type="button" class="tp-vista activo" data-vista="salon">
+                        <i class="fas fa-chair"></i> Puntos de servicio
+                    </button>
+                    <button type="button" class="tp-vista" data-vista="comandas">
+                        <i class="fas fa-fire-burner"></i> Comandas
+                        <span class="tp-vista-num hidden" id="tpVistaComandasN">0</span>
+                    </button>
+                </div>
+
+                <section class="tp-vista-panel" data-vista-panel="salon">
                     <div class="tp-header">
                         <div>
                             <h1 class="tp-titulo">Puntos de servicio</h1>
@@ -513,6 +711,47 @@
                     <div id="tpContenido" style="margin-top: 18px;">
                         <div class="tp-vacio"><i class="fas fa-spinner fa-spin"></i><p>Cargando puntos de servicio…</p></div>
                     </div>
+                </section>
+
+                <!-- ============ Vista: COMANDAS (la pantalla de la estación) ============
+                     Columnas por estado y botones grandes: esto se usa de pie, con las manos
+                     ocupadas y a veces con guantes. El avance se hace tocando la comanda. -->
+                <section class="tp-vista-panel hidden" data-vista-panel="comandas">
+                    <div class="tp-header">
+                        <div>
+                            <h1 class="tp-titulo">Comandas</h1>
+                            <p class="tp-sub">Lo que está en preparación ahora. Se actualiza solo; no hay botón de actualizar.</p>
+                        </div>
+                        <div class="tp-botones">
+                            <span class="tp-vivo" id="kdVivo" title="Se actualiza solo, en tiempo real"><i class="fas fa-bolt"></i> <span>en vivo</span></span>
+                            <button type="button" class="tp-btn" id="kdBtnSonido" aria-pressed="false" title="Avisa con un tono cuando entra una comanda">
+                                <i class="fas fa-volume-xmark"></i> <span id="kdSonidoTexto">Sin aviso sonoro</span>
+                            </button>
+                            <button type="button" class="tp-btn" id="kdBtnHistoricas"><i class="fas fa-clock-rotate-left"></i> Ver entregadas</button>
+                            <button type="button" class="tp-btn" id="kdBtnEstaciones"><i class="fas fa-sliders"></i> Estaciones</button>
+                        </div>
+                    </div>
+
+                    <div class="kd-filtros" id="kdFiltros"></div>
+
+                    <div class="kd-columnas" id="kdColumnas">
+                        <section class="kd-col" data-estado="sent">
+                            <header class="kd-col-cab"><span>Por preparar</span><strong id="kdN_sent">0</strong></header>
+                            <div class="kd-lista" id="kdListaSent">
+                                <div class="tp-vacio-mini"><i class="fas fa-spinner fa-spin"></i> Cargando…</div>
+                            </div>
+                        </section>
+                        <section class="kd-col" data-estado="preparing">
+                            <header class="kd-col-cab"><span>Preparando</span><strong id="kdN_preparing">0</strong></header>
+                            <div class="kd-lista" id="kdListaPreparing"></div>
+                        </section>
+                        <section class="kd-col" data-estado="ready">
+                            <header class="kd-col-cab"><span>Listas para servir</span><strong id="kdN_ready">0</strong></header>
+                            <div class="kd-lista" id="kdListaReady"></div>
+                        </section>
+                    </div>
+
+                    <div class="kd-historico hidden" id="kdHistorico"></div>
                 </section>
             </div>
         </main>
@@ -686,11 +925,47 @@
         </div>
     </div>
 
+    <!-- Estaciones: dónde se prepara y cómo sale cada comanda. Es UN modal que cambia de
+         contenido (lista / formulario / reparto de productos) en vez de abrir modales
+         encima de modales. -->
+    <div class="tp-overlay hidden" id="kdModalEstaciones">
+        <div class="tp-modal kd-modal-estaciones">
+            <div class="tp-modal-head">
+                <h3 id="kdEstTitulo">Estaciones</h3>
+                <button type="button" class="tp-modal-cerrar" data-cerrar="kdModalEstaciones" aria-label="Cerrar"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="tp-modal-body" id="kdEstCuerpo"></div>
+            <div class="tp-modal-pie" id="kdEstPie"></div>
+        </div>
+    </div>
+
+    <!-- Anular una comanda ya enviada: exige motivo, porque es merma y es dinero. -->
+    <div class="tp-overlay hidden" id="kdModalAnular">
+        <div class="tp-modal tp-modal-compacto">
+            <div class="tp-modal-head">
+                <h3 id="kdAnularTitulo">Anular la comanda</h3>
+                <button type="button" class="tp-modal-cerrar" data-cerrar="kdModalAnular" aria-label="Cerrar"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="tp-modal-body">
+                <div class="tp-aviso" id="kdAnularAviso"></div>
+                <div class="tp-campo">
+                    <label for="kdAnularMotivo">¿Por qué se anula?</label>
+                    <input type="text" id="kdAnularMotivo" maxlength="200" placeholder="Se terminó el ingrediente, el cliente se arrepintió…" autocomplete="off">
+                </div>
+            </div>
+            <div class="tp-modal-pie">
+                <button type="button" class="tp-btn" data-cerrar="kdModalAnular">Volver</button>
+                <button type="button" class="tp-btn peligro" id="kdAnularConfirmar"><i class="fas fa-ban"></i> Anular la comanda</button>
+            </div>
+        </div>
+    </div>
+
     <script src="lib/qrcodejs/qrcode.min.js"></script>
     <script src="js/sidebar-loader.js?v=7"></script>
     <script src="js/app.js?v=12"></script>
     <script src="js/ws-realtime.js?v=1"></script>
-    <script src="js/tables.js?v=2"></script>
+    <script src="js/tables.js?v=3"></script>
+    <script src="js/comandas.js?v=1"></script>
     <script src="lib/animejs/anime.min.js"></script>
     <script src="js/design-system.js?v=5"></script>
 </body>

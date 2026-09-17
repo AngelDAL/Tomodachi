@@ -322,6 +322,10 @@ deben volver a aparecer.
     platillo se ve como **una sola tarjeta con "3×"**, y cada pieza conserva su
     anotación individual ("1 sin cebolla", "1 sin pepinillos", "1 completa"). Agrupar
     es una decisión de la VISTA: no se pierde ni se mezcla la nota de cada pieza.
+    **Tampoco se mezcla el ESTADO**: una pieza ya servida no puede aparecer dentro de
+    la misma etiqueta que otra que sigue en cocina ("2× en cocina" cuando una ya está
+    en la mesa engaña al mesero). Se agrupa lo que va en el mismo paso, y la etiqueta
+    dice el estado real (por preparar, en cocina, preparando, listo, servido).
 15. **Repintar solo lo que cambió.** Al agregar, anotar o quitar una pieza no se
     vuelve a dibujar la lista completa: se actualiza únicamente la tarjeta afectada
     (y los totales). Con cuentas grandes, repintar todo se siente como esperar.

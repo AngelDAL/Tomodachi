@@ -391,8 +391,9 @@
         .tp-linea.pendiente { border-left-color: var(--warning-color, #B45309); }
         .tp-linea.enviado { border-left-color: var(--info-color, #1976D2); }
         .tp-linea.listo { border-left-color: var(--success-color, #2E7D32); }
+        .tp-linea.mixto { border-left-color: var(--primary-color, #39C5BB); }
         .tp-linea.cancelada { border-left-color: var(--danger-color, #D32F2F); opacity: .7; }
-        .tp-linea-cant { font-weight: 800; min-width: 26px; color: var(--text-color, #1a1a2e); }
+        .tp-linea-cant { font-weight: 800; min-width: 26px; color: var(--text-color, #1a1a2e); font-variant-numeric: tabular-nums; }
         .tp-linea-info { flex: 1 1 auto; min-width: 0; }
         .tp-linea-nombre { font-size: .93rem; font-weight: 600; color: var(--text-color, #1a1a2e); }
         .tp-linea-notas { font-size: .78rem; color: var(--warning-color, #B45309); margin-top: 2px; }
@@ -718,6 +719,29 @@
             background: color-mix(in srgb, var(--primary-color) 12%, transparent);
         }
         .tp-linea-notas-caja { display: flex; gap: 8px; align-items: stretch; margin-top: 8px; }
+        /* El desglose de notas de un mismo platillo: cada grupo con su cantidad y su nota,
+           sin mezclar la anotación de una pieza con la de al lado. */
+        .tp-nota-grupo {
+            margin-top: 8px;
+            padding: 8px 10px;
+            border-radius: var(--ds-radius-md);
+            background: var(--bg-lightest, #fafafa);
+            border: 1px solid var(--border-lighter, #eee);
+        }
+        .tp-nota-head { display: flex; align-items: center; gap: 8px; min-height: 24px; }
+        .tp-nota-cant {
+            font-weight: 800; font-size: .82rem; color: var(--text-color);
+            font-variant-numeric: tabular-nums;
+        }
+        .tp-nota-texto { font-size: .82rem; color: var(--warning-color, #B45309); }
+        .tp-linea-btn.bloqueado {
+            border-style: dashed; color: var(--text-muted, #555); cursor: default;
+        }
+        .tp-linea-cancelada { opacity: .6; }
+        .tp-nota-cancelada { opacity: .6; }
+        .tp-nota-cancelada .tp-nota-texto { color: var(--danger-color, #D32F2F); text-decoration: line-through; }
+        .tp-linea-notas-caja, .tp-nota-grupo { min-height: 40px; }
+        .tp-linea-quitar-caja { margin-top: 6px; text-align: right; }
         .tp-notas-input {
             flex: 1 1 auto; min-width: 0; min-height: 38px; padding: 8px 11px;
             border: 1px solid var(--border-color); border-radius: var(--ds-radius-md);

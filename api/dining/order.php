@@ -23,6 +23,10 @@
  *   POST {"session_id":N,"action":"send"}      -> manda a la comanda.
  *   POST {"session_id":N,"action":"set_notes","order_item_id":N,"notes":"..."}
  *        -> las notas de un platillo pendiente.
+ *   POST {"session_id":N,"action":"split_piece","order_item_id":N}
+ *        -> separa UNA pieza de una línea (cantidad > 1) para anotarla aparte:
+ *           deja la original con cantidad-1 y su misma nota, y crea una línea nueva
+ *           de 1 con la MISMA nota. Devuelve la cuenta actualizada.
  *   POST {"action":"cancel","order_item_id":N,"reason":"..."}
  *        -> cancela una línea.
  */
@@ -108,6 +112,12 @@ function handlePost($db, $dining, $auth, $apiAuth) {
     // es una anulación con motivo, no una nota.
     if ($action === 'set_notes') {
         actionSetNotes($db, $dining, $apiAuth, $auth, $data);
+        return;
+    }
+
+    // Separar UNA pieza de una línea para anotarla aparte. Solo la usa el personal.
+    if ($action === 'split_piece') {
+        actionSplitPiece($db, $dining, $apiAuth, $auth, $data);
         return;
     }
 
@@ -469,6 +479,112 @@ function actionSetQuantity($db, $dining, $apiAuth, $auth, array $data) {
         $dining->listSession($session_id),
         $cantidad <= 0 ? 'Platillo quitado de la cuenta' : 'Cantidad actualizada'
     );
+}
+
+/**
+ * Separa UNA pieza de una línea pendiente de cantidad > 1, para anotarla aparte.
+ *
+ * Es el camino del panel del mesero para "anotar una sola pieza": el tarjeta muestra
+ * "3× Hamburguesa" y se quiere poner "sin cebolla" a UNA de esas tres. Dos piezas se
+ * quedan en la línea original (con su misma nota) y la tercera pasa a una línea nueva
+ * de cantidad 1 con la MISMA nota (así la cocina la separa: es su propio renglón).
+ *
+ * ¿Por qué un endpoint nuevo y no `addItems`? Porque `addItems` FUSIONA la pieza nueva
+ * con cualquier línea pendiente del mismo platillo y las mismas notas: la pieza a
+ * anotar se reabsorbería en el grupo y no habría nada que separar. Aquí se corta la
+ * fusión de la vista y del servidor. El mesero ya empezó bajando el grupo con
+ * `set_quantity` (cantidad-1), así que esta acción recibe la línea YA reducida y solo
+ * crea la pieza suelta con la misma nota.
+ *
+ * Solo el personal autenticado (scope write); el comensal no parte sus platillos.
+ */
+function actionSplitPiece($db, $dining, $apiAuth, $auth, array $data) {
+    $actor = $apiAuth->requireActor($auth);
+    $apiAuth->requireScope($actor, 'write');
+
+    $item_id = (int)($data['order_item_id'] ?? 0);
+    if ($item_id <= 0) {
+        Response::validationError(['order_item_id' => 'Falta la línea a separar']);
+    }
+
+    $conn = $db->getConnection();
+    $stmt = $conn->prepare(
+        "SELECT i.*, s.store_id, s.status AS session_status
+           FROM dining_order_items i
+           JOIN dining_sessions s ON s.session_id = i.session_id
+          WHERE i.order_item_id = :iid
+          LIMIT 1"
+    );
+    $stmt->execute([':iid' => $item_id]);
+    $linea = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$linea) {
+        Response::notFound('Esa línea no existe');
+    }
+    if ((int)$actor['store_id'] !== (int)$linea['store_id']) {
+        Response::unauthorized('Esa línea no es de tu tienda');
+    }
+    if ($linea['status'] !== 'pending') {
+        Response::error('Ese platillo ya se mandó a preparación: pídelo al personal', 409);
+    }
+    if (!in_array($linea['session_status'], ['open', 'awaiting_payment'], true)) {
+        Response::error('La cuenta ya está cerrada', 409);
+    }
+    if ((float)$linea['quantity'] <= 1) {
+        Response::validationError(['order_item_id' => 'Esa línea no se puede separar: ya es una sola pieza']);
+    }
+
+    $session_id   = (int)$linea['session_id'];
+    $product_id   = (int)$linea['product_id'];
+    $cant_nueva   = (float)$linea['quantity'] - 1.0;
+    $lineTotal    = round($cant_nueva * (float)$linea['unit_price'], 2);
+
+    $conn->beginTransaction();
+    try {
+        // La línea original se queda con cantidad-1 y su total recalculado.
+        $conn->prepare(
+            "UPDATE dining_order_items SET quantity = :q, line_total = :lt
+              WHERE order_item_id = :iid"
+        )->execute([':q' => $cant_nueva, ':lt' => $lineTotal, ':iid' => $item_id]);
+
+        // La pieza separada: una línea nueva de cantidad 1 con la MISMA nota. Así la
+        // cocina la ve como su propio renglón y la anotación que escriba el mesero no
+        // contamina a las demás.
+        $insert = $conn->prepare(
+            "INSERT INTO dining_order_items
+                (session_id, participant_id, product_id, product_name, unit_price,
+                 quantity, notes, line_total, discount_applied, promotion_id, status, added_by)
+             VALUES
+                (:sid, :pid, :prodid, :nombre, :unit, 1, :notas, :ltotal, :desc, NULL, 'pending', :by)"
+        );
+        $insert->execute([
+            ':sid'     => $session_id,
+            ':pid'     => $linea['participant_id'],
+            ':prodid'  => $product_id,
+            ':nombre'  => substr((string)$linea['product_name'], 0, 150),
+            ':unit'    => (float)$linea['unit_price'],
+            ':notas'   => $linea['notes'] !== null && $linea['notes'] !== '' ? $linea['notes'] : null,
+            ':ltotal'  => round((float)$linea['unit_price'], 2),
+            ':desc'    => 0.00,
+            ':by'      => 'staff',
+        ]);
+        $nueva_id = (int)$conn->lastInsertId();
+
+        $dining->recalcTotals($session_id);
+        $conn->commit();
+    } catch (Throwable $e) {
+        if ($conn->inTransaction()) {
+            $conn->rollBack();
+        }
+        Response::error('No se pudo separar la pieza: ' . $e->getMessage(), 422);
+    }
+
+    DiningSession::broadcast($session_id, 'item_split');
+
+    $respuesta = $dining->listSession($session_id);
+    // El frontend anota la pieza nueva, no la original: sin este dato tendría que
+    // adivinar cuál de las dos líneas acaba de nacer.
+    $respuesta['nueva_linea'] = $nueva_id;
+    Response::success($respuesta, 'Pieza separada para anotarla');
 }
 
 /**

@@ -38,6 +38,12 @@ const tpEstado = {
     categoria: 'todas',
     busqueda: '',
     notasAbiertas: null,       // línea del pedido cuya caja de notas está abierta
+    // El pedido se pinta por TARJETAS (un platillo agrupado), no por línea suelta. Aquí
+    // queda la última estructura pintada para el repintado quirúrgico: al tocar una pieza
+    // se actualiza SOLO su tarjeta, nunca la lista completa.
+    pedidoGrupos: null,
+    pedidoCtx: null,
+    repintados: 0,             // auditoría: cuántas veces se repintó la lista completa
     tiempoReal: null,
     vivo: true,
 };
@@ -166,6 +172,13 @@ function tpCuentaDePunto(tableId) {
     return tpEstado.cuentas.find(function (c) {
         return (c.puntos || []).some(function (p) { return Number(p.table_id) === Number(tableId); });
     }) || null;
+}
+
+/** El contador de repintados completos: para no dejar crecer el número sin freno. */
+function tpContarRepintado() {
+    if ((tpEstado.repintados = tpEstado.repintados + 1) > 1000000) {
+        tpEstado.repintados = 0;
+    }
 }
 
 function tpPintar() {
@@ -390,18 +403,50 @@ async function tpVerCuenta(tableId) {
     await tpCargarCuenta(cuenta.session_id);
 }
 
-async function tpCargarCuenta(sessionId) {
+async function tpCargarCuenta(sessionId, opciones) {
+    const o = opciones || {};
     const cont = document.getElementById('tpCuentaPedido');
-    if (cont) cont.innerHTML = '<div class="tp-vacio-mini"><i class="fas fa-spinner fa-spin"></i> Cargando la cuenta…</div>';
+    const pegar = o.pegarContenido || null;
+    const scroll = o.scrollActual;
+    // Pidiendo un cambio que ya se hizo en pantalla: no se borra lo que el mesero está
+    // viendo (eso es justo el parpadeo que el repintado quirúrgico viene a quitar).
+    if (!pegar && cont) cont.innerHTML = '<div class="tp-vacio-mini"><i class="fas fa-spinner fa-spin"></i> Cargando la cuenta…</div>';
     try {
-        const d = await tpPeticion(TP_API_SESSION + '?cuenta=' + sessionId);
+        const d = pegar ? (o.respuesta || await tpPeticion(TP_API_SESSION + '?cuenta=' + sessionId))
+                        : await tpPeticion(TP_API_SESSION + '?cuenta=' + sessionId);
         tpEstado.cuentaActual = d;
         // El catálogo se carga una vez por sesión de pantalla; luego se filtra en memoria.
         if (!tpEstado.catalogo.length) await tpCargarCatalogo();
+        // Con `pegar` se toma la respuesta del servidor como estado vigente y se rearman
+        // SOLO las tarjetas que cambiaron: ni parpadeo ni lista completa. `tpPintarCuenta`
+        // (que sí pinta todo) queda para la carga inicial y para los cambios de fondo.
+        if (pegar && pegar()) {
+            // La nota que se estaba escribiendo pudo quedar cerrada al rearmar: el dato
+            // de cuál pieza se separó viaja para volver a abrir SU caja.
+            if (o.abrirNota) tpAbrirCajaNota(String(o.abrirNota));
+            if (typeof scroll === 'number' && cont) cont.scrollTop = scroll;
+            return;
+        }
         tpPintarCuenta();
+        if (o.abrirNota) tpAbrirCajaNota(String(o.abrirNota));
+        tpContarRepintado();
     } catch (e) {
         if (cont) cont.innerHTML = '<div class="tp-vacio-mini">' + tpEsc(tpMensajeDeError(e)) + '</div>';
     }
+}
+
+/** Vuelve a abrir la caja de notas de una pieza (tras rearmar su tarjeta). */
+function tpAbrirCajaNota(itemId) {
+    tpEstado.notasAbiertas = String(itemId);
+    const linea = tpTarjetaDe(itemId);
+    if (linea) {
+        const rep = tpTarjetaDeUnidad(linea.getAttribute('data-linea'));
+        if (rep) linea.outerHTML = rep;
+    } else {
+        tpPintarPedido(tpEstado.cuentaActual || { session: {} });
+    }
+    const campo = document.getElementById('tpNotasLinea' + itemId);
+    if (campo) setTimeout(function () { campo.focus(); }, 40);
 }
 
 // ============================================================
@@ -480,12 +525,20 @@ async function tpAgregarDirecto(productId) {
     await tpAgregarALaCuenta(productId, 1, '');
 }
 
-/** La cantidad de UNA línea pendiente (0 la quita). Respeta las notas de ese renglón. */
+/**
+ * Cambia la cantidad de un GRUPO DE NOTA (mismo platillo + mismas notas) y repinta solo
+ * su tarjeta.
+ *
+ * Bajar a 0 en un grupo de 1 pieza quita esa pieza; en un grupo de 2 deja 1. Ese −1 es el
+ * camino para separar una pieza y anotarla aparte (el grupo baja y la pieza suelta se
+ * anota con `set_notes`).
+ */
 async function tpCambiarCantidadLinea(itemId, cantidad) {
     const d = tpEstado.cuentaActual;
     if (!d) return;
+    const scroll = tpScrollPedido();
     try {
-        await tpPeticion(TP_API_ORDER, {
+        const r = await tpPeticion(TP_API_ORDER, {
             method: 'POST',
             body: JSON.stringify({
                 session_id: d.session.session_id,
@@ -494,8 +547,185 @@ async function tpCambiarCantidadLinea(itemId, cantidad) {
                 quantity: Math.max(0, Number(cantidad) || 0)
             })
         });
-        await tpCargarCuenta(d.session.session_id);
-        await tpCargar(true);
+        // El camino rápido: se rearma solo la tarjeta afectada con la respuesta, sin volver
+        // a pedir ni a pintar la cuenta entera.
+        await tpCargarCuenta(d.session.session_id, { pegarContenido: function () { return tpPegarRespuesta(r, null, scroll); } });
+    } catch (e) {
+        tpAviso(tpMensajeDeError(e), 'error');
+    }
+}
+
+/** La tarjeta (`.tp-linea`) que contiene esa línea, si está en pantalla. */
+function tpTarjetaDe(itemId) {
+    const nodo = document.getElementById('tpNotasLinea' + itemId);
+    if (nodo) return nodo.closest('.tp-linea');
+    const boton = document.querySelector('[data-linea-notas="' + itemId + '"]');
+    return boton ? boton.closest('.tp-linea') : null;
+}
+
+function tpScrollPedido() {
+    const cont = document.getElementById('tpCuentaPedido');
+    return cont ? cont.scrollTop : 0;
+}
+
+/**
+ * Toma la respuesta del servidor (la cuenta completa) como estado vigente y refresca SOLO
+ * las tarjetas que cambiaron y los totales. Devuelve true cuando NO hubo que repintar la
+ * lista completa: es el caso normal de "el mesero tocó algo".
+ */
+function tpPegarRespuesta(respuesta, foto, scroll) {
+    const cont = document.getElementById('tpCuentaPedido');
+    if (!cont) return true;
+
+    const d = (respuesta && respuesta.session && respuesta.session.items !== undefined)
+        ? respuesta
+        : null;
+    if (!d) {
+        // No vino la cuenta completa: repintado total (queda contado en el contador).
+        return false;
+    }
+
+    try {
+        tpEstado.cuentaActual = d;
+        tpEstado.pedidoCtx = tpContextoPedido(d);
+        tpActualizarTarjetas(d);
+        tpPintarPiePedido(d.session);
+        if (typeof scroll === 'number') cont.scrollTop = scroll;
+        return true;
+    } catch (e) {
+        // Cualquier sorpresa al parchear la tarjeta: se cae al pintado completo, que nunca
+        // miente, en vez de dejar la pantalla a medias.
+        return false;
+    }
+}
+
+/**
+ * Repinta las tarjetas que cambiaron, en su lugar, y quita las que ya no existen.
+ * Nunca repinta la lista completa: es el camino de cada toque.
+ */
+function tpActualizarTarjetas(d) {
+    const est = tpEstado.pedidoGrupos;
+    if (!est) return;
+
+    const lineas = [];
+    (d.session.items || []).forEach(function (it) { lineas.push(it); });
+    const grupos = {};
+    lineas.forEach(function (it) {
+        const clave = it.participant_id ? 'p' + it.participant_id : (it.added_by === 'staff' ? 'personal' : 'sin');
+        if (!grupos[clave]) grupos[clave] = [];
+        grupos[clave].push(it);
+    });
+
+    // Unidades nuevas por persona, para saber cuáles cambiar y cuáles quedaron huérfanas.
+    const nuevas = {};
+    Object.keys(grupos).forEach(function (clave) {
+        nuevas[clave] = tpUnidadesDeGrupo(grupos[clave]);
+    });
+
+    const presentes = {};
+    Object.keys(nuevas).forEach(function (clave) {
+        nuevas[clave].forEach(function (u) { presentes[u.id] = { clave: clave, unidad: u }; });
+    });
+
+    // 1. Se quitan las tarjetas que ya no existen (la línea se quitó, fusionó o se fue).
+    document.querySelectorAll('#tpCuentaPedido [data-linea]').forEach(function (nodo) {
+        if (!presentes[nodo.getAttribute('data-linea')]) nodo.remove();
+    });
+
+    // 2. Se actualizan las que cambiaron (o se insertan las nuevas en su bloque).
+    Object.keys(grupos).forEach(function (clave) {
+        const bloqueAntes = document.querySelector('[data-grupo-persona="' + clave + '"]');
+        const unidades = nuevas[clave];
+        const html = unidades.map(function (u) { return tpLineaPedido(u, tpEstado.pedidoCtx); }).join('');
+        if (bloqueAntes) {
+            const cuerpo = bloqueAntes.querySelector('[data-grupo-cuerpo]');
+            if (cuerpo) cuerpo.innerHTML = html; else bloqueAntes.insertAdjacentHTML('beforeend', html);
+        } else {
+            // Apareció una persona que no estaba: se rearma el pedido completo (es el único
+            // caso en que la lista entera cambia) y se repone el scroll.
+            const pos = tpScrollPedido();
+            tpPintarPedido(d);
+            tpScrollPedidoA(pos);
+            return;
+        }
+        // El total de la persona, en su cabecera.
+        const total = (grupos[clave] || []).reduce(function (a, it) {
+            return a + (it.status !== 'cancelled' ? Number(it.line_total || 0) : 0);
+        }, 0);
+        const cab = bloqueAntes ? bloqueAntes.querySelector('[data-grupo-total]') : null;
+        if (cab) cab.textContent = tpDinero(total);
+
+        // Estructura en memoria al día.
+        const b = est.bloques.filter(function (x) { return x.clave === clave; })[0];
+        if (b) { b.unidades = unidades; b.total = total; }
+        else est.bloques.push({ clave: clave, titulo: '', total: total, unidades: unidades });
+        est.porPersona[clave] = unidades;
+    });
+}
+
+/** Repone el scroll del panel del pedido tras un repintado total. */
+function tpScrollPedidoA(pos) {
+    const cont = document.getElementById('tpCuentaPedido');
+    if (cont && typeof pos === 'number') cont.scrollTop = pos;
+}
+
+/**
+ * Separa UNA pieza de un grupo de nota y le pide su anotación.
+ *
+ * Es el camino táctil de "anotar una sola pieza": el grupo baja en uno (las demás piezas
+ * conservan su nota) y la pieza suelta aparece como su propio grupo, con la caja de nota
+ * abierta. Todo con `set_quantity` + `set_notes`; no hace falta endpoint nuevo.
+ */
+async function tpAnotarUnaPieza(itemId) {
+    const d = tpEstado.cuentaActual;
+    if (!d) return;
+    const card = tpTarjetaDe(itemId);
+    const cantidadDe = function () {
+        const nodo = tpTarjetaDe(itemId);
+        const menos = nodo ? nodo.querySelector('[data-nota-menos="' + itemId + '"]') : null;
+        return menos ? Number(menos.getAttribute('data-nota-cantidad')) || 1 : 0;
+    };
+    let cantidad = cantidadDe();
+    if (cantidad <= 1) {
+        // Ya es una sola pieza: solo se abre su nota.
+        tpAlternarNotasLinea(itemId);
+        return;
+    }
+    if (cantidad >= 50) {
+        // Tope de la API (MAX_LINE_QUANTITY): partir deja la pieza suelta, pero el resto
+        // ya no se puede volver a agregar. Mejor avisar que fallar en silencio.
+        tpAviso('Ya son 50 piezas de este platillo: anótalas por un lado', 'error');
+        return;
+    }
+    // La pieza suelta la crea el servidor (acción `split_piece`) a partir de la línea de
+    // la que se separó; aquí solo se identifica por el id que devuelve.
+    const sessionId = d.session.session_id;
+    const scroll = tpScrollPedido();
+    try {
+        // Baja el grupo en uno dejando las demás piezas con su nota (la línea ORIGINAL se
+        // queda con cantidad-1 y su misma nota) y pide la pieza suelta.
+        //
+        // El `null` del navegador NO es un error de datos: significa "sin nota" y el
+        // servidor lo acepta porque viene del personal autenticado. Además hay una trampa
+        // real que no se puede resolver con `addItems`: esa acción FUSIONA la pieza nueva
+        // con cualquier línea pendiente del mismo platillo y las mismas notas, así que la
+        // pieza a anotar se perdería dentro del grupo. Por eso el troceo vive en el API.
+        await tpPeticion(TP_API_ORDER, {
+            method: 'POST',
+            body: JSON.stringify({ session_id: sessionId, action: 'set_quantity', order_item_id: Number(itemId), quantity: cantidad - 1 })
+        });
+        const rUsuario = await tpPeticion(TP_API_ORDER, {
+            method: 'POST',
+            body: JSON.stringify({ session_id: sessionId, action: 'split_piece', order_item_id: Number(itemId) })
+        });
+        const nueva = (rUsuario && rUsuario.nueva_linea) ? rUsuario.nueva_linea : null;
+        await tpCargarCuenta(sessionId, {
+            pegarContenido: function () { return tpPegarRespuesta(rUsuario, null, scroll); },
+            respuesta: rUsuario,
+            abrirNota: nueva
+        });
+        const campo = document.getElementById('tpNotasLinea' + (nueva || itemId));
+        if (campo) setTimeout(function () { campo.focus(); }, 60);
     } catch (e) {
         tpAviso(tpMensajeDeError(e), 'error');
     }
@@ -503,22 +733,32 @@ async function tpCambiarCantidadLinea(itemId, cantidad) {
 
 /** Abre o cierra la caja de notas de una línea, DENTRO del panel del pedido. */
 function tpAlternarNotasLinea(itemId) {
-    tpEstado.notasAbiertas = String(tpEstado.notasAbiertas) === String(itemId) ? null : String(itemId);
-    tpPintarPedido(tpEstado.cuentaActual || { session: {} });
-    if (tpEstado.notasAbiertas) {
+    const abierta = tpEstado.notasAbiertas === String(itemId) ? null : String(itemId);
+    tpEstado.notasAbiertas = abierta;
+    const linea = tpTarjetaDe(itemId);
+    const scroll = tpScrollPedido();
+    if (linea) {
+        const rep = tpTarjetaDeUnidad(linea.getAttribute('data-linea'));
+        if (rep) linea.outerHTML = rep;
+        tpScrollPedidoA(scroll);
+    } else {
+        tpPintarPedido(tpEstado.cuentaActual || { session: {} });
+    }
+    if (abierta) {
         const campo = document.getElementById('tpNotasLinea' + itemId);
         if (campo) setTimeout(function () { campo.focus(); }, 60);
     }
 }
 
-/** Guarda las notas de esa línea (vacío = borrar la nota). */
+/** Guarda las notas de esas piezas (vacío = borrar la nota). Repinta solo la tarjeta. */
 async function tpGuardarNotasLinea(itemId) {
     const d = tpEstado.cuentaActual;
     const campo = document.getElementById('tpNotasLinea' + itemId);
     if (!d || !campo) return;
     const texto = (campo.value || '').trim().slice(0, 200);
+    const scroll = tpScrollPedido();
     try {
-        await tpPeticion(TP_API_ORDER, {
+        const r = await tpPeticion(TP_API_ORDER, {
             method: 'POST',
             body: JSON.stringify({
                 session_id: d.session.session_id,
@@ -528,7 +768,9 @@ async function tpGuardarNotasLinea(itemId) {
             })
         });
         tpEstado.notasAbiertas = null;
-        await tpCargarCuenta(d.session.session_id);
+        await tpCargarCuenta(d.session.session_id, {
+            pegarContenido: function () { return tpPegarRespuesta(r, null, scroll); }
+        });
         tpAviso(texto ? 'Nota guardada' : 'Nota borrada', 'success');
     } catch (e) {
         tpAviso(tpMensajeDeError(e), 'error');
@@ -539,12 +781,18 @@ async function tpGuardarNotasLinea(itemId) {
 async function tpAgregarALaCuenta(productId, cantidad, notas) {
     const d = tpEstado.cuentaActual;
     if (!d) return;
+    // El id de la cuenta se fija ANTES de la petición: mientras el mesero toca, `tpCargar`
+    // actualiza la lista del mapa en segundo plano y no puede llevarse la cuenta abierta.
+    const sessionId = d.session.session_id;
     const item = { product_id: Number(productId), quantity: Number(cantidad) };
     if (notas) item.notes = notas;
+    const scroll = tpScrollPedido();
     try {
-        await tpPeticion(TP_API_ORDER, { method: 'POST', body: JSON.stringify({ session_id: d.session.session_id, items: [item] }) });
-        await tpCargarCuenta(d.session.session_id);
-        await tpCargar(true);
+        const r = await tpPeticion(TP_API_ORDER, { method: 'POST', body: JSON.stringify({ session_id: sessionId, items: [item] }) });
+        // Ya no se pide la cuenta otra vez: la respuesta del alta es la cuenta completa.
+        await tpCargarCuenta(sessionId, {
+            pegarContenido: function () { return tpPegarRespuesta(r, null, scroll); }
+        });
         tpAviso('Agregado a la cuenta ' + d.session.code, 'success');
     } catch (e) {
         tpAviso(tpMensajeDeError(e), 'error');
@@ -554,10 +802,12 @@ async function tpAgregarALaCuenta(productId, cantidad, notas) {
 async function tpQuitarLinea(itemId) {
     const d = tpEstado.cuentaActual;
     if (!d) return;
+    const scroll = tpScrollPedido();
     try {
-        await tpPeticion(TP_API_ORDER, { method: 'POST', body: JSON.stringify({ session_id: d.session.session_id, action: 'remove', order_item_id: Number(itemId) }) });
-        await tpCargarCuenta(d.session.session_id);
-        await tpCargar(true);
+        const r = await tpPeticion(TP_API_ORDER, { method: 'POST', body: JSON.stringify({ session_id: d.session.session_id, action: 'remove', order_item_id: Number(itemId) }) });
+        await tpCargarCuenta(d.session.session_id, {
+            pegarContenido: function () { return tpPegarRespuesta(r, null, scroll); }
+        });
     } catch (e) {
         tpAviso(tpMensajeDeError(e), 'error');
     }
@@ -624,17 +874,15 @@ function tpPintarPedido(d) {
     const cont = document.getElementById('tpCuentaPedido');
     if (!cont) return;
 
-    const personas = {};
-    (s.participants || []).forEach(function (p) { personas[Number(p.participant_id)] = p.display_name || 'Comensal'; });
-
     // El pedido se agrupa por persona; lo que anotó el personal va aparte, con su nombre.
     const grupos = {};
+    const ctx = tpEstado.pedidoCtx = tpContextoPedido(d);
     (s.items || []).forEach(function (it) {
         const clave = it.participant_id ? 'p' + it.participant_id : (it.added_by === 'staff' ? 'personal' : 'sin');
         if (!grupos[clave]) {
             grupos[clave] = {
                 titulo: it.participant_id
-                    ? (personas[Number(it.participant_id)] || it.participant_name || 'Comensal')
+                    ? (tpEstado.pedidoCtx.personas[Number(it.participant_id)] || it.participant_name || 'Comensal')
                     : (it.added_by === 'staff' ? 'Anotado por el personal' : 'Sin asignar'),
                 lineas: [],
                 total: 0,
@@ -645,18 +893,37 @@ function tpPintarPedido(d) {
     });
 
     const claves = Object.keys(grupos);
+    const bloques = [];
+    const porClave = {};
+    claves.forEach(function (k) {
+        const g = grupos[k];
+        // Dentro de cada persona, las líneas del MISMO platillo viven en una sola tarjeta.
+        const unidades = tpUnidadesDeGrupo(g.lineas);
+        const bloque = { clave: k, titulo: g.titulo, total: g.total, unidades: unidades };
+        bloques.push(bloque);
+        porClave[k] = unidades;
+    });
+
+    tpEstado.pedidoGrupos = { bloques: bloques, porPersona: porClave };
+
     if (!claves.length) {
         cont.innerHTML = '<div class="tp-aviso">Todavía no hay nada pedido en esta cuenta. Anota del menú de la izquierda.</div>';
     } else {
-        cont.innerHTML = claves.map(function (k) {
-            const g = grupos[k];
-            return '<div class="tp-grupo-persona">' +
-                '<div class="tp-grupo-titulo"><span><i class="fas fa-user"></i> ' + tpEsc(g.titulo) + '</span><span>' + tpDinero(g.total) + '</span></div>' +
-                g.lineas.map(tpLineaPedido).join('') +
-                '</div>';
+        cont.innerHTML = bloques.map(function (b) {
+            return '<div class="tp-grupo-persona" data-grupo-persona="' + tpEsc(b.clave) + '">' +
+                '<div class="tp-grupo-titulo"><span><i class="fas fa-user"></i> ' + tpEsc(b.titulo) + '</span>' +
+                '<span data-grupo-total>' + tpDinero(b.total) + '</span></div>' +
+                '<div data-grupo-cuerpo>' +
+                b.unidades.map(function (u) { return tpLineaPedido(u, tpEstado.pedidoCtx); }).join('') +
+                '</div></div>';
         }).join('');
     }
 
+    tpPintarPiePedido(s);
+}
+
+/** El contador de "sin enviar" y el botón de mandar a preparación. */
+function tpPintarPiePedido(s) {
     const pendientes = (s.items || []).filter(function (it) { return it.status === 'pending'; });
     const importe = pendientes.reduce(function (a, it) { return a + Number(it.line_total || 0); }, 0);
     document.getElementById('tpCuentaPendientes').innerHTML = pendientes.length
@@ -665,43 +932,207 @@ function tpPintarPedido(d) {
     document.getElementById('tpCuentaEnviar').disabled = pendientes.length === 0;
 }
 
-function tpLineaPedido(it) {
-    const cancelada = it.status === 'cancelled';
-    const pendiente = it.status === 'pending';
+/**
+ * El contexto de pintado: nombres de las personas y la cuenta donde se está anotando.
+ * Las llaves de notas separan la caja abierta por persona, para que dos "Anotar" de dos
+ * personas (o del mismo platillo repetido) no se pisen.
+ */
+function tpContextoPedido(d) {
+    const personas = {};
+    (d.session.participants || []).forEach(function (p) { personas[Number(p.participant_id)] = p.display_name || 'Comensal'; });
+    return { personas: personas, sessionId: d.session.session_id };
+}
+
+/** Una unidad de nota: las piezas del mismo platillo con EXACTAMENTE la misma nota. */
+function tpNotaClave(it) {
+    return it.notes === null || it.notes === undefined || it.notes === '' ? '' : String(it.notes);
+}
+
+/**
+ * Agrupa las líneas de una persona en TARJETAS por producto (no por línea).
+ *
+ * El modelo de datos guarda una línea por (platillo + persona + notas), así que tres
+ * piezas con la misma nota ya son una línea de cantidad 3, y una con nota distinta es
+ * otra línea. Sin embargo, ajustar cantidades con los botones `+`/`-` puede dejar dos
+ * líneas del mismo platillo y la misma nota; aquí se juntan para la vista: una tarjeta
+ * por platillo, con la cantidad total y sus grupos de nota adentro.
+ */
+function tpUnidadesDeGrupo(lineas) {
+    const porProducto = {};
+    const orden = [];
+    lineas.forEach(function (it) {
+        const pid = it.product_id === null || it.product_id === undefined ? 'n' + it.order_item_id : 'p' + it.product_id;
+        if (!porProducto[pid]) {
+            porProducto[pid] = { id: pid, product_id: it.product_id, nombre: it.product_name, lineas: [] };
+            orden.push(pid);
+        }
+        porProducto[pid].lineas.push(it);
+    });
+
+    return orden.map(function (pid) {
+        const u = porProducto[pid];
+        const canceladas = [];
+        const vivas = [];
+        u.lineas.forEach(function (it) { (it.status === 'cancelled' ? canceladas : vivas).push(it); });
+
+        const porNota = {};
+        const notasOrden = [];
+        vivas.forEach(function (it) {
+            const k = tpNotaClave(it);
+            if (!porNota[k]) { porNota[k] = { notas: k, items: [], cantidad: 0, total: 0, enviadas: 0 }; notasOrden.push(k); }
+            const n = porNota[k];
+            n.items.push(it);
+            n.cantidad += Number(it.quantity) || 0;
+            n.total += Number(it.line_total) || 0;
+            if (it.status !== 'pending') n.enviadas++;
+        });
+
+        let cantidad = 0, total = 0, pendientes = 0, enviadas = 0;
+        const estados = {};
+        vivas.forEach(function (it) {
+            cantidad += Number(it.quantity) || 0;
+            total += Number(it.line_total) || 0;
+            if (it.status === 'pending') pendientes++; else enviadas++;
+            estados[it.status] = true;
+        });
+
+        // Solo se puede ajustar en la pantalla lo que todavía no se mandó a preparación.
+        const estadoVista = pendientes === 0 ? 'enviado'
+            : (Object.keys(estados).length === 1 ? 'pendiente' : 'mixto');
+
+        return {
+            id: u.id,
+            product_id: u.product_id,
+            nombre: u.nombre,
+            lineas: u.lineas,
+            notas: notasOrden.map(function (k) { return porNota[k]; }),
+            canceladas: canceladas,
+            cantidad: cantidad,
+            total: total,
+            pendientes: pendientes,
+            enviadas: enviadas,
+            estadoVista: estadoVista,
+        };
+    });
+}
+
+/** Pinta (o repinta) UNA tarjeta en su lugar. Es el camino normal al tocar algo. */
+function tpPintarTarjeta(linea) {
+    if (!linea) return;
+    const id = linea.getAttribute('data-linea');
+    const reemplazo = tpTarjetaDeUnidad(id);
+    if (reemplazo) linea.outerHTML = reemplazo;
+}
+
+function tpTarjetaDeUnidad(id) {
+    const est = tpEstado.pedidoGrupos;
+    if (!est) return '';
+    for (let i = 0; i < est.bloques.length; i++) {
+        const u = est.bloques[i].unidades.filter(function (x) { return x.id === id; })[0];
+        if (u) return tpLineaPedido(u, tpEstado.pedidoCtx || {});
+    }
+    return '';
+}
+
+function tpLineaPedido(u, ctx) {
+    ctx = ctx || {};
+    const cant = Number(u.cantidad) || 0;
+    const variasNotas = u.notas.length > 1;
+    const unicaNota = u.notas.length === 1 ? u.notas[0] : null;
+    const puedePartir = u.pendientes > 0 && u.notas.some(function (n) { return n.cantidad > 1; });
+
+    let lineasNota = '';
+    u.notas.forEach(function (n) {
+        const items = n.items;
+        const pendientes = items.filter(function (it) { return it.status === 'pending'; });
+        const todasPendientes = pendientes.length === items.length;
+        const itemId = String(items[0].order_item_id);
+        // La caja de notas se identifica por LÍNEA (no por grupo): partir una pieza abre la
+        // de esa pieza exacta y la de al lado no se contamina.
+        const abiertaEsta = tpEstado.notasAbiertas === String(itemId);
+        const etiqueta = (n.notas === '' ? 'Sin nota' : tpEsc(n.notas));
+
+        const notaCambiar = pendientes.length
+            ? '<button type="button" class="tp-linea-btn' + (abiertaEsta ? ' activo' : '') + '" data-linea-notas="' + itemId + '" title="Anotar estas piezas"><i class="fas fa-pen"></i> ' + (n.notas ? 'Cambiar nota' : 'Anotar') + '</button>'
+            : '<span class="tp-linea-btn bloqueado" title="Estas piezas ya se enviaron: para cambiarlas pídelo al personal"><i class="fas fa-lock"></i> ' + (n.notas ? '' : 'Sin nota') + '</span>';
+
+        // Lo pendiente se ajusta POR GRUPO DE NOTA: subir, bajar o anotar esas piezas.
+        const accionesNota = todasPendientes
+            ? '<div class="tp-linea-acciones">' +
+                  '<button type="button" class="tp-linea-btn" data-nota-menos="' + itemId + '" data-nota-cantidad="' + n.cantidad + '" aria-label="Una menos de estas piezas"><i class="fas fa-minus"></i></button>' +
+                  '<button type="button" class="tp-linea-btn" data-nota-mas="' + itemId + '" data-nota-cantidad="' + n.cantidad + '" aria-label="Una más de estas piezas"><i class="fas fa-plus"></i></button>' +
+                  notaCambiar +
+              '</div>'
+            : '<div class="tp-linea-acciones">' + notaCambiar + '</div>';
+
+        const caja = abiertaEsta
+            ? '<div class="tp-linea-notas-caja">' +
+                  '<input type="text" id="tpNotasLinea' + itemId + '" class="tp-notas-input" maxlength="200"' +
+                      ' placeholder="Sin cebolla, sin salsa, término medio…" value="' + tpEsc(n.notas) + '" data-nota-origen="' + itemId + '">' +
+                  '<button type="button" class="tp-btn primario" data-linea-guardar-notas="' + itemId + '">Guardar</button>' +
+              '</div>'
+            : '';
+
+        // Con UNA sola nota, el renglón se ve como siempre: "3× Hamburguesa · sin cebolla".
+        // Con notas distintas, cada grupo se lista adentro con su "2×".
+        if (variasNotas) {
+            lineasNota += '<div class="tp-nota-grupo">' +
+                '<div class="tp-nota-head"><span class="tp-nota-cant">' + tpCantidad(n.cantidad) + '×</span>' +
+                '<span class="tp-nota-texto"><i class="fas fa-pen"></i> ' + etiqueta + '</span></div>' +
+                accionesNota + caja +
+                '</div>';
+        } else {
+            lineasNota += accionesNota + caja;
+        }
+    });
+
+    u.canceladas.forEach(function (it) {
+        lineasNota += '<div class="tp-nota-grupo tp-nota-cancelada">' +
+            '<div class="tp-nota-head"><span class="tp-nota-cant">' + tpCantidad(it.quantity) + '×</span>' +
+            '<span class="tp-nota-texto"><i class="fas fa-ban"></i> ' + (it.notes ? tpEsc(it.notes) : 'cancelado') + '</span></div></div>';
+    });
+
+    // Anotar UNA pieza del grupo sin separarla a mano: parte la cantidad, deja el resto
+    // con su nota y abre la caja de esa pieza. Es el camino táctil del caso del dueño.
+    if (puedePartir) {
+        // Se separa la pieza del grupo MÁS GRANDE para no dejar un renglón huérfano de 1.
+        const enNota = u.notas.filter(function (n) { return n.cantidad > 1; })
+            .sort(function (a, b) { return b.cantidad - a.cantidad; })[0];
+        lineasNota += '<div class="tp-linea-acciones">' +
+            '<button type="button" class="tp-linea-btn" data-partir-pieza="' + String(enNota.items[0].order_item_id) + '" title="Anotar una sola pieza de este platillo"><i class="fas fa-pen"></i> Anotar una pieza</button>' +
+            '</div>';
+    }
+
+    // La nota única se ve junto al nombre, como antes; con varias, se lista adentro.
+    const notaJunto = (!variasNotas && unicaNota && unicaNota.notas)
+        ? '<div class="tp-linea-notas"><i class="fas fa-pen"></i> ' + tpEsc(unicaNota.notas) + '</div>'
+        : '';
+
     // El borde de la izquierda dice el estado de un vistazo, sin leer.
-    const clase = { pending: 'pendiente', sent: 'enviado', preparing: 'enviado', ready: 'listo', served: 'listo', cancelled: 'cancelada' }[it.status] || 'pendiente';
-    const cant = Number(it.quantity) || 0;
-    const abierta = tpEstado.notasAbiertas === String(it.order_item_id);
+    const clase = { pendiente: 'pendiente', enviado: 'enviado', mixto: 'mixto' }[u.estadoVista] || 'pendiente';
+    const etiquetaEstado = (u.estadoVista === 'mixto' ? 'parte en cocina'
+        : tpEtiquetaEstado(u.estadoVista === 'enviado' ? 'sent' : 'pending'));
 
-    // Lo pendiente se ajusta POR LÍNEA: subir, bajar, anotar. Cada platillo con lo suyo.
-    const acciones = pendiente
-        ? '<div class="tp-linea-acciones">' +
-              '<button type="button" class="tp-linea-btn" data-linea-menos="' + it.order_item_id + '" data-cantidad="' + cant + '" aria-label="Una menos"><i class="fas fa-minus"></i></button>' +
-              '<button type="button" class="tp-linea-btn" data-linea-mas="' + it.order_item_id + '" data-cantidad="' + cant + '" aria-label="Una más"><i class="fas fa-plus"></i></button>' +
-              '<button type="button" class="tp-linea-btn' + (abierta ? ' activo' : '') + '" data-linea-notas="' + it.order_item_id + '"><i class="fas fa-pen"></i> ' + (it.notes ? 'Cambiar nota' : 'Anotar') + '</button>' +
-              '<button type="button" class="tp-linea-quitar" data-quitar-linea="' + it.order_item_id + '" title="Quitar de la cuenta"><i class="fas fa-xmark"></i></button>' +
-          '</div>'
-        : '';
+    const quitarLineas = [];
+    if (u.estadoVista === 'pendiente') {
+        u.notas.forEach(function (n) {
+            if (n.items.every(function (it) { return it.status === 'pending'; })) {
+                quitarLineas.push('<button type="button" class="tp-linea-quitar" data-quitar-linea="' + n.items[0].order_item_id + '" title="Quitar estas piezas de la cuenta"><i class="fas fa-xmark"></i></button>');
+            }
+        });
+    }
 
-    // La caja de notas vive DENTRO de la línea (sin abrir otro modal encima del pedido).
-    const caja = (pendiente && abierta)
-        ? '<div class="tp-linea-notas-caja">' +
-              '<input type="text" id="tpNotasLinea' + it.order_item_id + '" class="tp-notas-input" maxlength="200"' +
-                  ' placeholder="Sin cebolla, sin salsa, término medio…" value="' + tpEsc(it.notes || '') + '">' +
-              '<button type="button" class="tp-btn primario" data-linea-guardar-notas="' + it.order_item_id + '">Guardar</button>' +
-          '</div>'
-        : '';
-
-    return '<div class="tp-linea ' + clase + '">' +
+    return '<div class="tp-linea ' + clase + '" data-linea="' + tpEsc(u.id) + '">' +
         '<div class="tp-linea-cant">' + tpCantidad(cant) + '×</div>' +
         '<div class="tp-linea-info">' +
-            '<div class="tp-linea-nombre"' + (cancelada ? ' style="text-decoration:line-through;opacity:.55"' : '') + '>' + tpEsc(it.product_name) + '</div>' +
-            (it.notes ? '<div class="tp-linea-notas"><i class="fas fa-pen"></i> ' + tpEsc(it.notes) + '</div>' : '') +
-            '<div class="tp-linea-estado">' + tpEsc(tpEtiquetaEstado(it.status)) + '</div>' +
-            acciones +
-            caja +
+            '<div class="tp-linea-nombre">' + tpEsc(u.nombre) + '</div>' +
+            notaJunto +
+            '<div class="tp-linea-estado">' + tpEsc(etiquetaEstado) + '</div>' +
+            lineasNota +
         '</div>' +
-        '<div class="tp-linea-importe">' + tpDinero(it.line_total) + '</div>' +
+        '<div class="tp-linea-importe">' + tpDinero(u.total) +
+            (quitarLineas.length ? '<div class="tp-linea-quitar-caja">' + quitarLineas.join('') + '</div>' : '') +
+        '</div>' +
         '</div>';
 }
 
@@ -836,16 +1267,17 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
     });
 
-    // Acciones DENTRO de la cuenta: cada línea del pedido se ajusta y se anota por separado.
+    // Acciones DENTRO de la cuenta: cada grupo de nota del platillo se ajusta y se anota
+    // por separado. Al tocar algo se repinta SOLO esa tarjeta.
     document.getElementById('tpCuentaPedido').addEventListener('click', function (ev) {
-        const menos = ev.target.closest('[data-linea-menos]');
+        const menos = ev.target.closest('[data-nota-menos]');
         if (menos) {
-            tpCambiarCantidadLinea(menos.getAttribute('data-linea-menos'), Number(menos.getAttribute('data-cantidad')) - 1);
+            tpCambiarCantidadLinea(menos.getAttribute('data-nota-menos'), Number(menos.getAttribute('data-nota-cantidad')) - 1);
             return;
         }
-        const mas = ev.target.closest('[data-linea-mas]');
+        const mas = ev.target.closest('[data-nota-mas]');
         if (mas) {
-            tpCambiarCantidadLinea(mas.getAttribute('data-linea-mas'), Number(mas.getAttribute('data-cantidad')) + 1);
+            tpCambiarCantidadLinea(mas.getAttribute('data-nota-mas'), Number(mas.getAttribute('data-nota-cantidad')) + 1);
             return;
         }
         const notas = ev.target.closest('[data-linea-notas]');
@@ -856,6 +1288,11 @@ document.addEventListener('DOMContentLoaded', async function () {
         const guardar = ev.target.closest('[data-linea-guardar-notas]');
         if (guardar) {
             tpGuardarNotasLinea(guardar.getAttribute('data-linea-guardar-notas'));
+            return;
+        }
+        const partir = ev.target.closest('[data-partir-pieza]');
+        if (partir) {
+            tpAnotarUnaPieza(partir.getAttribute('data-partir-pieza'));
             return;
         }
         const q = ev.target.closest('[data-quitar-linea]');

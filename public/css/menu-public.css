@@ -843,6 +843,66 @@ body.con-pedido { padding-bottom: 96px; }
     transition: background .18s ease;
 }
 .mp-item-quitar:hover { background: color-mix(in srgb, var(--danger-color) 22%, transparent); }
+
+/* ── Controles POR LÍNEA ──────────────────────────────────────────────────
+   Cada platillo del pedido se ajusta y se anota por separado: las notas de uno no
+   pueden caerle al de al lado. La caja de notas se abre DENTRO de la propia línea,
+   nunca en un modal encima de otro. */
+.mp-linea-acciones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    margin-top: 8px;
+}
+.mp-linea-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 38px;
+    padding: 6px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    background: var(--bg-card);
+    color: var(--text-color);
+    font-family: inherit;
+    font-size: .8rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.mp-linea-btn:hover { border-color: var(--primary-color); color: var(--primary-color); }
+.mp-linea-btn.activo {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+}
+.mp-linea-btn.primario {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #fff;
+}
+.mp-linea-btn.primario:hover { color: #fff; opacity: .93; }
+.mp-linea-notas-caja { display: flex; gap: 8px; align-items: stretch; margin-top: 8px; }
+.mp-notas-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 40px;
+    padding: 9px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--bg-card);
+    color: var(--text-color);
+    font-family: inherit;
+    font-size: .88rem;
+}
+.mp-notas-input:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 1px;
+    border-color: var(--primary-color);
+}
+/* El bote, en la fila de acciones: área táctil de verdad (38 px) */
+.mp-linea-acciones .mp-item-quitar { width: 38px; height: 38px; }
 .mp-pedido-totales {
     display: flex;
     align-items: center;

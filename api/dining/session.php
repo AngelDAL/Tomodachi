@@ -491,6 +491,31 @@ function actionOpen($db, $dining, array $data) {
     if (!$menu) {
         Response::notFound('Esta carta no está disponible');
     }
+    $store_id = (int)$menu['store_id'];
+
+    /**
+     * El QR IMPRESO del punto de servicio trae `?punto=<qr_token>`, y este es el momento en
+     * que ese dato sirve para algo: la cuenta nace sabiendo DÓNDE está el cliente.
+     *
+     * Antes se ignoraba, así que la cuenta del comensal nacía suelta y en el mapa del salón
+     * aparecía como "(sin punto)": el mesero no podía saber qué mesa estaba pidiendo.
+     *
+     * Si el personal ya abrió la cuenta de ese punto, el comensal entra a ESA (una sola
+     * cuenta por mesa, que es como se cobra) en vez de abrir una paralela en la misma mesa.
+     */
+    $punto = puntoDeQr($db, $store_id, trim($data['table_token'] ?? ''));
+
+    if ($punto) {
+        $existente = cuentaPorPunto($db->getConnection(), $store_id, (int)$punto['table_id']);
+        if ($existente) {
+            Response::success([
+                'session_id' => (int)$existente['session_id'],
+                'code'       => $existente['code'],
+                'existente'  => true,
+                'punto'      => $punto['label'],
+            ], 'Ya hay una cuenta abierta en ' . $punto['label'] . ': únete a ella');
+        }
+    }
 
     if ($menu['mode'] !== 'order_and_pay') {
         // 'open_tab' (y 'menu_only') exigen que abra el personal.
@@ -502,13 +527,44 @@ function actionOpen($db, $dining, array $data) {
 
     // opened_by: un comensal no tiene usuario; la clase lo atribuye al admin de
     // la tienda (columna NOT NULL con FK a users).
-    $session = $dining->openSession((int)$menu['store_id'], (int)$menu['menu_id'], null, null);
+    $session = $dining->openSession(
+        $store_id,
+        (int)$menu['menu_id'],
+        $punto ? (int)$punto['table_id'] : null,
+        null
+    );
 
     Response::success(
-        ['session_id' => (int)$session['session_id'], 'code' => $session['code']],
+        [
+            'session_id' => (int)$session['session_id'],
+            'code'       => $session['code'],
+            'existente'  => false,
+            'punto'      => $punto ? $punto['label'] : null,
+        ],
         'Cuenta abierta',
         201
     );
+}
+
+/**
+ * El punto de servicio dueño de un `qr_token`.
+ *
+ * El token es aleatorio de 32 caracteres hexadecimales, pero se valida el formato igual:
+ * un token mal formado no tiene por qué llegar a la consulta.
+ */
+function puntoDeQr($db, $store_id, $token) {
+    $token = trim((string)$token);
+    if ($token === '' || !preg_match('/^[A-Za-z0-9_-]{4,64}$/', $token)) {
+        return false;
+    }
+    $stmt = $db->getConnection()->prepare(
+        "SELECT table_id, label, zone, qr_token
+           FROM dining_tables
+          WHERE qr_token = :token AND store_id = :store_id AND is_active = 1
+          LIMIT 1"
+    );
+    $stmt->execute([':token' => $token, ':store_id' => (int)$store_id]);
+    return $stmt->fetch(PDO::FETCH_ASSOC) ?: false;
 }
 
 /** Suma un comensal a una cuenta abierta. */

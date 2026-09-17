@@ -203,12 +203,25 @@ for c in d.get('comandas') or []:
         if 'sin hielo' in n: print(n)" 2>/dev/null)
 if echo "$notas" | grep -q "vaso aparte"; then ok "la nota del platillo llega a la comanda"; else mal "nota en la comanda ('$notas')"; fi
 
-# El filtro por estación: de las comandas de esta ronda, en la cocina hay UNA.
-n=$(api "$BASE/api/dining/comandas.php?estacion=$COCINA" | python3 -c "
+# El filtro por estación se comprueba por ID y por contenido, no por conteo: en una
+# instancia con corridas previas las comandas del día se acumulan y un número absoluto
+# no dice nada. Se verifica que TODO lo que devuelve sea de esa estación y que la comanda
+# de la barra de esta ronda NO aparezca.
+filtro=$(api "$BASE/api/dining/comandas.php?estacion=$COCINA")
+solo_cocina=$(echo "$filtro" | python3 -c "
 import json,sys
 d=json.load(sys.stdin).get('data') or {}
-print(len([c for c in (d.get('comandas') or []) if c.get('folio') and c.get('station_id')==$COCINA and c.get('status')!='served']))" 2>/dev/null)
-if [ "$n" = "1" ]; then ok "el tablero filtra por estación"; else mal "filtro por estación (n=$n)"; fi
+cs=d.get('comandas') or []
+print(1 if cs and all(str(c.get('station_id'))=='$COCINA' for c in cs) else 0)" 2>/dev/null)
+sin_barra=$(echo "$filtro" | python3 -c "
+import json,sys
+d=json.load(sys.stdin).get('data') or {}
+print(1 if not any(str(c.get('comanda_id'))=='${CID_BARRA:-0}' for c in (d.get('comandas') or [])) else 0)" 2>/dev/null)
+if [ "$solo_cocina" = "1" ] && [ "$sin_barra" = "1" ]; then
+  ok "el tablero filtra por estación (solo lo de esa cocina)"
+else
+  mal "filtro por estación (solo_cocina=$solo_cocina, sin_la_de_barra=$sin_barra)"
+fi
 
 # ─────────────────────────────────────────────────────────────
 # 6. Las notas se cierran al enviar

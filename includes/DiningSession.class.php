@@ -286,7 +286,8 @@ class DiningSession {
         }
 
         $participant_id = (int)$participant_id > 0 ? (int)$participant_id : null;
-        $insert = $this->db->getConnection()->prepare(
+        $conn = $this->db->getConnection();
+        $insert = $conn->prepare(
             "INSERT INTO dining_order_items
                 (session_id, participant_id, product_id, product_name, unit_price,
                  quantity, notes, line_total, discount_applied, promotion_id, status, added_by)
@@ -304,9 +305,77 @@ class DiningSession {
             $p    = $map[$pid];
             $qty  = (float)$it['quantity'];
             $unit = (float)$p['price'];
-            $lineTotal = round($qty * $unit, 2);
             $notes = isset($it['notes']) ? $this->clamp($it['notes'], 255) : '';
             $notes = $notes !== '' ? $notes : null;
+
+            /**
+             * SE FUSIONA con la línea pendiente equivalente: mismo platillo, mismo comensal
+             * y MISMAS notas.
+             *
+             * Sin esto, mandar el pedido "de uno en uno" (que es como se pide de verdad:
+             * un toque, un platillo) creaba una línea por toque, y la cuenta del cliente se
+             * llenaba de renglones idénticos. Con notas distintas SÍ son líneas distintas:
+             * "sin cebolla" y "con todo" son dos platillos que la cocina prepara aparte.
+             *
+             * Lo ya enviado a preparación nunca se toca: se busca solo en 'pending'.
+             */
+            $condiciones = ["session_id = :sid", "status = 'pending'", "product_id = :pid"];
+            $params = [':sid' => $session_id, ':pid' => $pid];
+            if ($participant_id === null) {
+                $condiciones[] = 'participant_id IS NULL';
+            } else {
+                $condiciones[] = 'participant_id = :p_id';
+                $params[':p_id'] = $participant_id;
+            }
+            if ($notes === null) {
+                $condiciones[] = 'notes IS NULL';
+            } else {
+                $condiciones[] = 'notes = :notas';
+                $params[':notas'] = $notes;
+            }
+
+            $buscar = $conn->prepare(
+                "SELECT order_item_id, quantity FROM dining_order_items
+                  WHERE " . implode(' AND ', $condiciones) . "
+                  ORDER BY order_item_id ASC LIMIT 1"
+            );
+            $buscar->execute($params);
+            $existente = $buscar->fetch(PDO::FETCH_ASSOC);
+
+            if ($existente) {
+                $nueva = (float)$existente['quantity'] + $qty;
+                if ($nueva > self::MAX_LINE_QUANTITY) {
+                    throw new InvalidArgumentException(
+                        'La cantidad máxima por línea es ' . self::MAX_LINE_QUANTITY
+                    );
+                }
+                $lineTotal = round($nueva * $unit, 2);
+                $conn->prepare(
+                    "UPDATE dining_order_items
+                        SET quantity = :qty, line_total = :line_total, product_name = :nombre
+                      WHERE order_item_id = :oid AND session_id = :sid"
+                )->execute([
+                    ':qty'        => $nueva,
+                    ':line_total' => $lineTotal,
+                    ':nombre'     => substr((string)$p['product_name'], 0, 150),
+                    ':oid'        => (int)$existente['order_item_id'],
+                    ':sid'        => $session_id,
+                ]);
+
+                $created[] = [
+                    'order_item_id' => (int)$existente['order_item_id'],
+                    'product_id'    => $pid,
+                    'product_name'  => $p['product_name'],
+                    'unit_price'    => $unit,
+                    'quantity'      => $nueva,
+                    'notes'         => $notes,
+                    'line_total'    => $lineTotal,
+                    'status'        => 'pending',
+                    'added_by'      => $added_by,
+                    'fusionada'     => true,
+                ];
+                continue;
+            }
 
             $insert->execute([
                 ':session_id'     => $session_id,
@@ -316,12 +385,12 @@ class DiningSession {
                 ':unit_price'     => $unit,
                 ':quantity'       => $qty,
                 ':notes'          => $notes,
-                ':line_total'     => $lineTotal,
+                ':line_total'     => $lineTotal = round($qty * $unit, 2),
                 ':added_by'       => $added_by,
             ]);
 
             $created[] = [
-                'order_item_id' => (int)$this->db->getConnection()->lastInsertId(),
+                'order_item_id' => (int)$conn->lastInsertId(),
                 'product_id'    => $pid,
                 'product_name'  => $p['product_name'],
                 'unit_price'    => $unit,

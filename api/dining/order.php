@@ -13,6 +13,8 @@
  *        -> manda a la comanda los ítems 'pending'; devuelve enviados + cuenta.
  *   POST {"join_token":"...","action":"set_notes","order_item_id":N,"notes":"..."}
  *        -> las notas de UN platillo mientras siga 'pending'.
+ *   POST {"join_token":"...","action":"set_quantity","order_item_id":N,"quantity":X}
+ *        -> la cantidad de UNA línea pendiente (0 la quita).
  *
  * SOLO PERSONAL autenticado (requireActor + scope write):
  *   POST {"session_id":N,"items":[...]}
@@ -106,6 +108,13 @@ function handlePost($db, $dining, $auth, $apiAuth) {
     // es una anulación con motivo, no una nota.
     if ($action === 'set_notes') {
         actionSetNotes($db, $dining, $apiAuth, $auth, $data);
+        return;
+    }
+
+    // La cantidad de UNA línea pendiente. Es lo que usa el "+" y el "−" del platillo que
+    // ya está en el pedido: sumar de uno en uno sin duplicar renglones ni pisar las notas.
+    if ($action === 'set_quantity') {
+        actionSetQuantity($db, $dining, $apiAuth, $auth, $data);
         return;
     }
 
@@ -385,6 +394,94 @@ function actionSend($db, $dining, $session, $by_type = 'customer', $by_id = null
  * línea pendiente de su tienda.
  */
 function actionSetNotes($db, $dining, $apiAuth, $auth, array $data) {
+    $linea = lineaEditable($db, $dining, $apiAuth, $auth, $data);
+
+    $notas = trim((string)($data['notes'] ?? ''));
+    if (function_exists('mb_substr')) {
+        $notas = mb_substr($notas, 0, 200);
+    } else {
+        $notas = substr($notas, 0, 200);
+    }
+
+    $db->getConnection()->prepare("UPDATE dining_order_items SET notes = :notas WHERE order_item_id = :iid")
+       ->execute([':notas' => ($notas !== '' ? $notas : null), ':iid' => (int)$linea['order_item_id']]);
+
+    DiningSession::broadcast((int)$linea['session_id'], 'item_notes');
+
+    Response::success($dining->listSession((int)$linea['session_id']), $notas !== '' ? 'Nota guardada' : 'Nota borrada');
+}
+
+/**
+ * Cambia la CANTIDAD de una línea que todavía no se mandó a preparación.
+ *
+ * Hace falta porque el pedido se arma "de uno en uno": el cliente toca "+" o "−" en el
+ * platillo que ya tiene. Cambiar la cantidad de UNA línea (en vez de volver a agregar el
+ * platillo entero) es lo único que respeta sus notas: bajar de dos a uno un "sin cebolla"
+ * no puede tocar el "con todo" de al lado.
+ *
+ * Cantidad 0 = quitar la línea (deja de existir, como con `remove`).
+ */
+function actionSetQuantity($db, $dining, $apiAuth, $auth, array $data) {
+    $linea = lineaEditable($db, $dining, $apiAuth, $auth, $data);
+
+    $cantidad = $data['quantity'] ?? null;
+    if (!is_numeric($cantidad)) {
+        Response::validationError(['quantity' => 'Falta la cantidad']);
+    }
+    $cantidad = (float)$cantidad;
+    if ($cantidad < 0) {
+        Response::validationError(['quantity' => 'La cantidad no puede ser negativa']);
+    }
+    if ($cantidad > DiningSession::MAX_LINE_QUANTITY) {
+        Response::validationError([
+            'quantity' => 'La cantidad máxima por línea es ' . DiningSession::MAX_LINE_QUANTITY,
+        ]);
+    }
+
+    $conn = $db->getConnection();
+    $session_id = (int)$linea['session_id'];
+    $item_id = (int)$linea['order_item_id'];
+
+    $conn->beginTransaction();
+    try {
+        if ($cantidad <= 0) {
+            $conn->prepare("DELETE FROM dining_order_items WHERE order_item_id = :iid")
+                 ->execute([':iid' => $item_id]);
+        } else {
+            $total = round($cantidad * (float)$linea['unit_price'], 2);
+            $conn->prepare(
+                "UPDATE dining_order_items SET quantity = :qty, line_total = :total
+                  WHERE order_item_id = :iid AND status = 'pending'"
+            )->execute([':qty' => $cantidad, ':total' => $total, ':iid' => $item_id]);
+        }
+        $dining->recalcTotals($session_id);
+        $conn->commit();
+    } catch (Throwable $e) {
+        if ($conn->inTransaction()) {
+            $conn->rollBack();
+        }
+        Response::error('No se pudo cambiar la cantidad: ' . $e->getMessage(), 422);
+    }
+
+    DiningSession::broadcast($session_id, $cantidad <= 0 ? 'item_removed' : 'item_quantity');
+
+    Response::success(
+        $dining->listSession($session_id),
+        $cantidad <= 0 ? 'Platillo quitado de la cuenta' : 'Cantidad actualizada'
+    );
+}
+
+/**
+ * Devuelve la línea si quien pregunta puede editarla, o corta con una respuesta.
+ *
+ * Reglas (las mismas para notas y cantidades, por eso viven en un solo lugar):
+ *   - Solo líneas 'pending'. Una vez en la comanda, el platillo es de la cocina: se anula
+ *     con motivo desde el panel del personal, no se edita por atrás.
+ *   - La cuenta tiene que seguir abierta.
+ *   - El comensal solo toca SUS líneas (join_token); el personal, cualquiera de su tienda.
+ *   - Las notas también respetan lo que permita la carta (menus.allow_notes).
+ */
+function lineaEditable($db, $dining, $apiAuth, $auth, array $data) {
     $item_id = (int)($data['order_item_id'] ?? 0);
     if ($item_id <= 0) {
         Response::validationError(['order_item_id' => 'Falta la línea']);
@@ -405,23 +502,20 @@ function actionSetNotes($db, $dining, $apiAuth, $auth, array $data) {
     }
 
     $join_token = trim($data['join_token'] ?? '');
-    $por_personal = ($join_token === '');
-
-    if (!$por_personal) {
+    if ($join_token !== '') {
         $sesion = $dining->findSessionByJoinToken($join_token);
         if (!$sesion || (int)$sesion['session_id'] !== (int)$linea['session_id']) {
             Response::unauthorized('Esa línea no es de tu cuenta');
         }
         $participante = isset($sesion['token_participant_id']) ? (int)$sesion['token_participant_id'] : null;
         if ($participante !== null && (int)$linea['participant_id'] !== $participante) {
-            Response::error('Solo puedes anotar tus propios platillos', 403);
+            Response::error('Solo puedes editar tus propios platillos', 403);
         }
-        // ¿La carta permite notas? Es un límite del negocio para el comensal.
         if (!empty($linea['menu_id'])) {
             $stmt = $conn->prepare("SELECT allow_notes FROM menus WHERE menu_id = :mid LIMIT 1");
             $stmt->execute([':mid' => (int)$linea['menu_id']]);
             if ((int)$stmt->fetchColumn() === 0) {
-                Response::error('Esta carta no admite notas', 403);
+                Response::error('Esta carta no admite cambios en el platillo', 403);
             }
         }
     } else {
@@ -439,19 +533,7 @@ function actionSetNotes($db, $dining, $apiAuth, $auth, array $data) {
         Response::error('La cuenta ya está cerrada', 409);
     }
 
-    $notas = trim((string)($data['notes'] ?? ''));
-    if (function_exists('mb_substr')) {
-        $notas = mb_substr($notas, 0, 200);
-    } else {
-        $notas = substr($notas, 0, 200);
-    }
-
-    $conn->prepare("UPDATE dining_order_items SET notes = :notas WHERE order_item_id = :iid")
-         ->execute([':notas' => ($notas !== '' ? $notas : null), ':iid' => $item_id]);
-
-    DiningSession::broadcast((int)$linea['session_id'], 'item_notes');
-
-    Response::success($dining->listSession((int)$linea['session_id']), $notas !== '' ? 'Nota guardada' : 'Nota borrada');
+    return $linea;
 }
 
 /** Cancela una línea. SOLO personal autenticado. */

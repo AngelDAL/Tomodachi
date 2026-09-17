@@ -47,8 +47,8 @@
         cuenta: null,       // última cuenta recibida de order.php
         socket: null,
         pollTimer: null,
-        productoSel: null,
-        prodCant: 1
+        punto: '',          // etiqueta del punto de servicio (Mesa 1, Barra…) si el QR la trae
+        notasAbiertas: null // línea cuya caja de notas está abierta
     };
 
     // ============================================================
@@ -82,6 +82,19 @@
     function codigoDeUrl() {
         var p = new URLSearchParams(window.location.search);
         return (p.get('code') || '').trim().toUpperCase().slice(0, 8);
+    }
+
+    /**
+     * El punto de servicio del QR impreso (`?punto=<qr_token>`).
+     *
+     * Con esto la cuenta nace sabiendo DÓNDE está el cliente: sin ello, la cuenta del
+     * comensal aparecía en el mapa del salón como "(sin punto)" y el mesero no sabía qué
+     * mesa estaba pidiendo. Si ya hay una cuenta abierta en ese punto, el comensal entra a
+     * ESA en vez de abrir una paralela.
+     */
+    function puntoDeUrl() {
+        var p = new URLSearchParams(window.location.search);
+        return (p.get('punto') || '').trim().slice(0, 64);
     }
 
     function qs(id) { return document.getElementById(id); }
@@ -454,8 +467,8 @@
 
         if (estado.socio) {
             qs('dinerBarTitulo').textContent = 'Cuenta ' + (estado.socio.code || '');
-            qs('dinerBarSub').textContent = estado.socio.display_name
-                ? ('Pedidos de ' + estado.socio.display_name)
+            qs('dinerBarSub').textContent = estado.punto
+                ? ('Estás en ' + estado.punto + ' · agrega platillos a la cuenta')
                 : 'Agrega platillos a la cuenta de la mesa';
             btn.textContent = 'Ver pedido';
             btn.dataset.accion = 'ver';
@@ -593,22 +606,6 @@
         });
     }
 
-    function ajustarProducto(pid, delta) {
-        var pend = cantidadPropia(pid, 'pending');
-        var objetivo = pend + delta;
-        if (objetivo < 0) objetivo = 0;
-        if (objetivo > 99) objetivo = 99;
-
-        var existente = misItems().filter(function (it) {
-            return String(it.product_id) === String(pid) && esPendiente(it.status);
-        })[0];
-        var notas = existente && existente.notes ? existente.notes : '';
-
-        agregarItem(pid, objetivo, notas).catch(function (e) {
-            aviso(e.message, 'error');
-        });
-    }
-
     function quitarItem(itemId) {
         // Quita una línea que todavía no se mandó a cocina.
         // Antes se mandaba cantidad 0 y el API lo rechazaba ("la cantidad debe ser mayor que
@@ -706,23 +703,50 @@
 
     function renderItem(it, propio) {
         var pend = esPendiente(it.status);
-        var puedeQuitar = propio && pend;
+        var puedeEditar = propio && pend;
         var estadoTxt = pend ? 'Pendiente' : 'Enviado a cocina';
         var estadoCls = pend ? 'mp-estado-pend' : 'mp-estado-env';
-        var notas = it.notes ? '<p class="mp-item-notas">' + esc(it.notes) + '</p>' : '';
+        var notas = it.notes ? '<p class="mp-item-notas"><i class="fas fa-pen"></i> ' + esc(it.notes) + '</p>' : '';
+        var cant = Number(it.quantity) || 0;
+        var abierta = estado.notasAbiertas === String(it.order_item_id);
+
+        // Controles POR LÍNEA. Lo mío y pendiente se puede ajustar pieza por pieza; lo que ya
+        // está en cocina no (ahí lo correcto es pedirle al personal).
+        var acciones = '';
+        if (puedeEditar) {
+            acciones =
+                '<div class="mp-linea-acciones">' +
+                    '<button type="button" class="mp-linea-btn" data-accion="lineamenos" data-item="' + esc(it.order_item_id) + '" data-cantidad="' + esc(cant) + '" aria-label="Una menos"><i class="fas fa-minus"></i></button>' +
+                    '<button type="button" class="mp-linea-btn" data-accion="lineamas" data-item="' + esc(it.order_item_id) + '" data-cantidad="' + esc(cant) + '" aria-label="Una más"><i class="fas fa-plus"></i></button>' +
+                    '<button type="button" class="mp-linea-btn' + (abierta ? ' activo' : '') + '" data-accion="notas" data-item="' + esc(it.order_item_id) + '">' +
+                        '<i class="fas fa-pen"></i> ' + (it.notes ? 'Cambiar nota' : 'Anotar') +
+                    '</button>' +
+                    '<button type="button" class="mp-item-quitar" data-accion="quitar" data-item="' + esc(it.order_item_id) + '" aria-label="Quitar"><i class="fas fa-trash-can"></i></button>' +
+                '</div>';
+        }
+
+        // La caja de notas vive DENTRO de la propia línea: se abre aquí mismo, sin otro modal.
+        var caja = '';
+        if (puedeEditar && abierta) {
+            caja =
+                '<div class="mp-linea-notas-caja">' +
+                    '<input type="text" id="notasLinea' + esc(it.order_item_id) + '" class="mp-notas-input" maxlength="200"' +
+                        ' placeholder="Sin cebolla, sin salsa, término medio…" value="' + esc(it.notes || '') + '">' +
+                    '<button type="button" class="mp-linea-btn primario" data-accion="guardarnotas" data-item="' + esc(it.order_item_id) + '">Guardar</button>' +
+                '</div>';
+        }
 
         return '<div class="mp-item">' +
-                   '<div class="mp-item-cant">' + esc(it.quantity) + 'x</div>' +
+                   '<div class="mp-item-cant">' + esc(cant) + 'x</div>' +
                    '<div class="mp-item-info">' +
                        '<p class="mp-item-nombre">' + esc(it.product_name) + '</p>' +
                        notas +
                        '<span class="mp-item-estado ' + estadoCls + '">' + esc(estadoTxt) + '</span>' +
+                       acciones +
+                       caja +
                    '</div>' +
                    '<div class="mp-item-derecha">' +
                        '<span class="mp-item-precio">' + dinero(it.line_total) + '</span>' +
-                       (puedeQuitar
-                           ? '<button type="button" class="mp-item-quitar" data-accion="quitar" data-item="' + esc(it.order_item_id) + '" aria-label="Quitar"><i class="fas fa-trash-can"></i></button>'
-                           : '') +
                    '</div>' +
                '</div>';
     }
@@ -787,60 +811,99 @@
     }
 
     // ============================================================
-    // Pedido: modal de producto (cantidad y notas)
+    // Pedido: agregar de uno en uno (sin modal de por medio)
     // ============================================================
+    //
+    // Así se pide de verdad en una mesa: un toque, un platillo; otro toque, otro más. Cada
+    // platillo lleva SUS notas ("sin cebolla" en uno no puede caerle al de al lado), así que
+    // las notas se editan POR LÍNEA y dentro de la vista del pedido, sin abrir otra ventana
+    // encima de la que ya está abierta.
 
-    function abrirModalProducto(pid) {
-        var p = estado.productos[pid];
-        if (!p) return;
+    /** Agrega UNA pieza del platillo. El servidor fusiona con la línea equivalente. */
+    function agregarUno(pid) {
+        if (!estado.socio) { abrirPedirModal(); return; }
+        var p = estado.productos[String(pid)];
+        if (p && p.sold_out) { aviso('Ese platillo se agotó', 'error'); return; }
 
-        estado.productoSel = pid;
-        estado.prodCant = 1;
+        agregarItem(pid, 1, '')
+            .then(function () {
+                aviso((p ? p.name : 'Platillo') + ' agregado', 'ok');
+            })
+            .catch(function (e) { aviso(e.message, 'error'); });
+    }
 
-        qs('prodTitulo').textContent = p.name || 'Agregar';
-        qs('prodPrecio').textContent = dinero(p.price) + ' c/u';
-        qs('prodCant').textContent = '1';
+    /** Las líneas MÍAS pendientes de un platillo (la más antigua primero). */
+    function lineasPropiasDe(pid) {
+        return misItems().filter(function (it) {
+            return String(it.product_id) === String(pid) && esPendiente(it.status);
+        });
+    }
 
-        var notasW = qs('prodNotasW');
-        var notas = qs('prodNotas');
-        if (estado.allowNotes) {
-            notasW.classList.remove('hidden');
-        } else {
-            notasW.classList.add('hidden');
+    /**
+     * Quita una pieza del platillo tocado.
+     *
+     * Se quita de la línea SIN notas primero (la "normal") y, si no hay, de la última con
+     * notas: bajar de dos a uno un platillo anotado no puede tocar el otro renglón.
+     */
+    function quitarUnoDeProducto(pid) {
+        if (!estado.socio) return;
+        var lineas = lineasPropiasDe(pid);
+        if (!lineas.length) return;
+
+        var sinNotas = lineas.filter(function (it) { return !it.notes; });
+        var objetivo = sinNotas.length ? sinNotas[0] : lineas[lineas.length - 1];
+        cambiarCantidadLinea(objetivo.order_item_id, (Number(objetivo.quantity) || 0) - 1);
+    }
+
+    /** La cantidad de UNA línea (0 la quita). Es lo que respeta las notas de cada renglón. */
+    function cambiarCantidadLinea(itemId, cantidad) {
+        if (!estado.socio) return Promise.resolve();
+        return apiPost(API_ORDER, {
+            action: 'set_quantity',
+            join_token: estado.socio.join_token,
+            order_item_id: Number(itemId),
+            quantity: Math.max(0, Number(cantidad) || 0)
+        }).then(function (data) {
+            if (data) estado.cuenta = data;
+            actualizarPedidoBar();
+            pintarControlesProducto();
+            renderPedidoModal();
+            return data;
+        }).catch(function (e) {
+            aviso(e.message, 'error');
+        });
+    }
+
+    /** Abre o cierra la caja de notas de una línea, DENTRO de la vista del pedido. */
+    function alternarNotasLinea(itemId) {
+        estado.notasAbiertas = String(estado.notasAbiertas) === String(itemId) ? null : String(itemId);
+        renderPedidoModal();
+        if (estado.notasAbiertas) {
+            var campo = qs('notasLinea' + itemId);
+            if (campo) setTimeout(function () { campo.focus(); }, 60);
         }
-        notas.value = '';
-
-        mostrarEl(qs('prodError'), false);
-        abrirModal('modalProducto');
     }
 
-    function cambiarCantidadProducto(delta) {
-        estado.prodCant += delta;
-        if (estado.prodCant < 1) estado.prodCant = 1;
-        if (estado.prodCant > 99) estado.prodCant = 99;
-        qs('prodCant').textContent = estado.prodCant;
-    }
+    /** Guarda las notas de esa línea (vacío = borrar la nota). */
+    function guardarNotasLinea(itemId) {
+        var campo = qs('notasLinea' + itemId);
+        if (!campo) return;
+        var texto = (campo.value || '').trim().slice(0, 200);
 
-    function confirmarProducto() {
-        var pid = estado.productoSel;
-        if (!pid) return;
-        var notas = estado.allowNotes ? (qs('prodNotas').value || '').trim().slice(0, 200) : '';
-
-        var btn = qs('prodConfirmar');
-        if (btn) btn.disabled = true;
-        mostrarEl(qs('prodError'), false);
-
-        agregarItem(pid, estado.prodCant, notas)
-            .then(function () {
-                cerrarModal('modalProducto');
-                aviso('Agregado a tu pedido', 'ok');
-            })
-            .catch(function (e) {
-                mostrarAvisoModal('prodError', e.message);
-            })
-            .then(function () {
-                if (btn) btn.disabled = false;
-            });
+        apiPost(API_ORDER, {
+            action: 'set_notes',
+            join_token: estado.socio.join_token,
+            order_item_id: Number(itemId),
+            notes: texto
+        }).then(function (data) {
+            if (data) estado.cuenta = data;
+            estado.notasAbiertas = null;
+            actualizarPedidoBar();
+            renderPedidoModal();
+            aviso(texto ? 'Nota guardada' : 'Nota borrada', 'ok');
+        }).catch(function (e) {
+            aviso(e.message, 'error');
+        });
     }
 
     // ============================================================
@@ -899,10 +962,18 @@
         mostrarEl(qs('modalPedirError'), false);
         if (btn) btn.disabled = true;
 
-        apiPost(API_SESSION, { action: 'open', menu_token: estado.token })
+        // El punto va viajando: si la carta se abrió desde el QR impreso de la mesa, la
+        // cuenta nace sabiendo DÓNDE está el cliente (y si el personal ya la abrió, entra a
+        // ESA cuenta en vez de abrir una paralela en la misma mesa).
+        apiPost(API_SESSION, {
+            action: 'open',
+            menu_token: estado.token,
+            table_token: puntoDeUrl()
+        })
             .then(function (abierta) {
                 // open devuelve la cuenta; join entrega el join_token con el que
                 // se opera. El que abre también debe unirse para poder pedir.
+                if (abierta && abierta.punto) estado.punto = String(abierta.punto);
                 return apiPost(API_SESSION, {
                     action: 'join',
                     code: abierta.code,
@@ -923,7 +994,12 @@
                 };
                 guardarSocio();
                 cerrarModal('modalPedir');
-                mostrarCodigo(estado.socio.code);
+                // Si la cuenta ya existía (la abrió el mesero), no se "abre": se entra.
+                if (r.abierta && r.abierta.existente) {
+                    aviso('Te uniste a la cuenta ' + estado.socio.code, 'ok');
+                } else {
+                    mostrarCodigo(estado.socio.code);
+                }
                 activarCuenta();
                 aviso('Listo, ya puedes pedir', 'ok');
             })
@@ -1072,16 +1148,19 @@
         switch (b.dataset.accion) {
             case 'pedir':        abrirPedirModal(); break;
             case 'ver':          abrirPedido(); break;
-            case 'agregar':      abrirModalProducto(b.dataset.producto); break;
-            case 'mas':          ajustarProducto(b.dataset.producto, 1); break;
-            case 'menos':        ajustarProducto(b.dataset.producto, -1); break;
+            // Agregar es UN toque: no abre nada encima de lo que ya está abierto.
+            case 'agregar':      agregarUno(b.dataset.producto); break;
+            case 'mas':          agregarUno(b.dataset.producto); break;
+            case 'menos':        quitarUnoDeProducto(b.dataset.producto); break;
             case 'quitar':       quitarItem(b.dataset.item); break;
+            // Controles POR LÍNEA (cada platillo con sus notas)
+            case 'lineamenos':   cambiarCantidadLinea(b.dataset.item, Number(b.dataset.cantidad) - 1); break;
+            case 'lineamas':     cambiarCantidadLinea(b.dataset.item, Number(b.dataset.cantidad) + 1); break;
+            case 'notas':        alternarNotasLinea(b.dataset.item); break;
+            case 'guardarnotas': guardarNotasLinea(b.dataset.item); break;
             case 'iniciar':      iniciarPedido(); break;
             case 'unirse':       unirsePedido(); break;
             case 'enviar':       enviarCocina(); break;
-            case 'prodmas':      cambiarCantidadProducto(1); break;
-            case 'prodmenos':    cambiarCantidadProducto(-1); break;
-            case 'prodconfirmar':confirmarProducto(); break;
         }
     }
 

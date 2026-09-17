@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="/public/lib/fontawesome/css/all.min.css?v=4">
     <link rel="stylesheet" href="/public/css/variables.css?v=3">
     <link rel="stylesheet" href="/public/css/design-system.css?v=7">
-    <link rel="stylesheet" href="/public/css/menu-public.css?v=3">
+    <link rel="stylesheet" href="/public/css/menu-public.css?v=4">
 
     <script>
         // El comensal no tiene sesión: el tema se decide por la preferencia de
@@ -153,40 +153,10 @@
         </div>
     </div>
 
-    <!-- 3) Agregar producto: cantidad y notas -->
-    <div id="modalProducto" class="mp-overlay hidden">
-        <div class="mp-modal" role="dialog" aria-modal="true" aria-labelledby="prodTitulo">
-            <div class="mp-modal-head">
-                <div>
-                    <h3 id="prodTitulo">Agregar</h3>
-                </div>
-                <button type="button" class="mp-cerrar" data-cerrar="modalProducto" aria-label="Cerrar">
-                    <i class="fas fa-xmark"></i>
-                </button>
-            </div>
-            <div class="mp-modal-body">
-                <p id="prodPrecio" class="mp-prod-precio"></p>
-                <div class="mp-cantidad">
-                    <button type="button" class="mp-step" id="prodMenos" data-accion="prodmenos" aria-label="Menos">
-                        <i class="fas fa-minus"></i>
-                    </button>
-                    <span id="prodCant" class="mp-cant-valor">1</span>
-                    <button type="button" class="mp-step" id="prodMas" data-accion="prodmas" aria-label="Más">
-                        <i class="fas fa-plus"></i>
-                    </button>
-                </div>
-                <div id="prodNotasW" class="mp-campo hidden">
-                    <label class="mp-label" for="prodNotas">Notas (opcional)</label>
-                    <textarea id="prodNotas" class="mp-input" rows="2" maxlength="200"
-                              placeholder="Sin cebolla, extra salsa..."></textarea>
-                </div>
-                <p id="prodError" class="mp-aviso-error hidden"></p>
-                <button type="button" id="prodConfirmar" class="mp-accion" data-accion="prodconfirmar">
-                    Agregar al pedido
-                </button>
-            </div>
-        </div>
-    </div>
+    <!-- 3) Aquí vivía el modal de "cantidad y notas" del producto.
+         Se retiró a propósito: pedir es de UN TOQUE (un clic, un platillo; otro clic, otro)
+         y las notas se escriben POR PLATILLO dentro de la vista del pedido, sin abrir otra
+         ventana encima de la que ya está abierta. -->
 
     <!-- 4) El pedido de la mesa -->
     <div id="modalPedido" class="mp-overlay hidden">
@@ -218,6 +188,6 @@
         </div>
     </div>
 
-    <script src="/public/js/menu-public.js?v=3"></script>
+    <script src="/public/js/menu-public.js?v=4"></script>
 </body>
 </html>

@@ -471,6 +471,12 @@ function cuentaPorPunto($conn, $store_id, $table_id) {
         LEFT JOIN check_service_points csp ON csp.session_id = s.session_id
         WHERE s.store_id = :store_id
           AND s.status IN ('open','awaiting_payment')
+          -- Una cuenta VENCIDA no está abierta: si esta búsqueda la devolvía, `open`
+          -- le decía al comensal que se uniera a la cuenta existente y `join` —que sí
+          -- respeta el vencimiento— le contestaba que no existía. Resultado: el
+          -- comensal no podía pedir desde la mesa hasta que el personal cerrara la
+          -- cuenta vieja. Aquí se aplica el mismo criterio que en el resto del archivo.
+          AND (s.expires_at IS NULL OR s.expires_at > NOW())
           AND (s.table_id = :tabla_directa OR csp.table_id = :tabla_juntada)
         ORDER BY s.opened_at ASC
         LIMIT 1

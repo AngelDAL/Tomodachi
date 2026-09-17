@@ -49,6 +49,9 @@ const kdEstado = {
     estacionProductos: null,   // estación cuyo catálogo se está repartiendo
     catalogo: null,
     vista: 'salon',
+    cronometro: null,          // intervalo que avanza los mm:ss en vivo
+    arrastre: null,            // estado del arrastre entre columnas
+    escala: 1,                 // factor de letra del tablero
 };
 
 // ============================================================
@@ -103,6 +106,116 @@ function kdTono() {
 }
 
 // ============================================================
+// Cronómetro en vivo: los mm:ss avanzan sin recargar
+// ============================================================
+function kdIniciarCronometro() {
+    if (kdEstado.cronometro) return;
+    kdEstado.cronometro = setInterval(function () {
+        document.querySelectorAll('[data-cronometro]').forEach(function (nodo) {
+            const card = nodo.closest('.kd-card');
+            if (!card) return;
+            const s = (Number(card.getAttribute('data-segundos')) || 0) + 1;
+            card.setAttribute('data-segundos', s);
+            const arrive = Math.floor(s / 60) >= KD_MINUTOS_TARDE && card.getAttribute('data-estado') !== 'ready';
+            nodo.classList.toggle('tarde', arrive);
+            const base = '<i class="fas fa-clock"></i> ' + kdMMSS(s) +
+                (arrive ? ' · se está tardando' : '');
+            if (nodo.innerHTML !== base) nodo.innerHTML = base;
+        });
+    }, 1000);
+}
+
+// ============================================================
+// Arrastrar y soltar entre columnas (Pointer Events: toca el dedo)
+// ============================================================
+function kdAccionDe(estado) {
+    // Qué acción hay que mandar para DEJAR la comanda en el estado destino:
+    // 'start' la pone en preparando, 'ready' en lista, 'served' en entregada.
+    return { preparing: 'start', ready: 'ready', served: 'served' }[estado] || null;
+}
+
+function kdEstadoDe(col) {
+    return col && col.getAttribute('data-estado');
+}
+
+function kdIniciarArrastre(e, card, col) {
+    const actual = kdEstadoDe(col);
+    if (!actual) return;
+    const rect = card.getBoundingClientRect();
+    kdEstado.arrastre = {
+        card: card, col: col, actual: actual,
+        x0: e.clientX, y0: e.clientY,
+        rect: rect, movido: false, cargado: false,
+    };
+    card.classList.add('arrastrando');
+    document.querySelectorAll('.kd-col.destino, .kd-col.destino-no').forEach(function (c) {
+        c.classList.remove('destino', 'destino-no');
+    });
+}
+
+function kdPosicionar(a) {
+    const card = a.card;
+    card.style.position = 'fixed';
+    card.style.width = a.rect.width + 'px';
+    card.style.left = a.rect.left + 'px';
+    card.style.top = a.rect.top + 'px';
+    card.style.zIndex = '100';
+    card.style.margin = '0';
+    a.cargado = true;
+}
+
+function kdDuranteArrastre(e) {
+    const a = kdEstado.arrastre;
+    if (!a) return;
+    e.preventDefault();
+    const dx = e.clientX - a.x0, dy = e.clientY - a.y0;
+    if (!a.movido && (Math.abs(dx) > 6 || Math.abs(dy) > 6)) {
+        a.movido = true;
+        a.card.classList.add('desplazandose');
+        try { if (a.card.setPointerCapture) a.card.setPointerCapture(e.pointerId); } catch (_e) {}
+    }
+    if (!a.movido) return;
+    if (!a.cargado) kdPosicionar(a);
+    a.card.style.left = (a.rect.left + dx) + 'px';
+    a.card.style.top = (a.rect.top + dy) + 'px';
+    const bajoDedo = document.elementFromPoint(e.clientX, e.clientY);
+    const col = bajoDedo ? bajoDedo.closest('.kd-col') : null;
+    document.querySelectorAll('.kd-col.destino, .kd-col.destino-no').forEach(function (c) {
+        c.classList.remove('destino', 'destino-no');
+    });
+    if (col && col !== a.col) {
+        col.classList.add(kdEsValido(a.actual, kdEstadoDe(col)) ? 'destino' : 'destino-no');
+    }
+}
+
+function kdTerminarArrastre(e) {
+    const a = kdEstado.arrastre;
+    if (!a) return;
+    kdEstado.arrastre = null;
+    document.querySelectorAll('.kd-col.destino, .kd-col.destino-no').forEach(function (c) {
+        c.classList.remove('destino', 'destino-no');
+    });
+    const card = a.card;
+    card.classList.remove('arrastrando', 'desplazandose');
+    card.style.position = ''; card.style.left = ''; card.style.top = '';
+    card.style.width = ''; card.style.margin = ''; card.style.zIndex = '';
+    if (!e || e.type !== 'pointerup' || !a.movido) return;
+    const bajoDedo = document.elementFromPoint(e.clientX, e.clientY);
+    const col = bajoDedo ? bajoDedo.closest('.kd-col') : null;
+    const destino = col && col !== a.col ? kdEstadoDe(col) : null;
+    if (!destino || !kdEsValido(a.actual, destino)) return;
+    const accion = kdAccionDe(destino);
+    if (accion) kdAvanzar(card.getAttribute('data-comanda'), accion);
+}
+
+/** Solo se permite pasar al estado SIGUIENTE (sent→preparing→ready). */
+function kdEsValido(actual, destino) {
+    const orden = { sent: 0, preparing: 1, ready: 2 };
+    if (!(actual in orden) || !(destino in orden)) return false;
+    return orden[destino] === orden[actual] + 1;
+}
+
+// ============================================================
 // Pestañas: salón y comandas
 // ============================================================
 function kdPonerVista(nombre, guardar) {
@@ -136,7 +249,8 @@ function kdPonerVista(nombre, guardar) {
 // Carga y pintado
 // ============================================================
 async function kdCargar(silencioso) {
-    if (kdEstado.cargando) return;
+    // No recargar en mitad de un arrastre: la tarjeta fija se movería / se duplicaría.
+    if (kdEstado.cargando || kdEstado.arrastre) return;
     kdEstado.cargando = true;
     try {
         const url = KD_API
@@ -217,23 +331,45 @@ function kdVacioDe(estado) {
     return 'Nada listo por entregar.';
 }
 
+function kdMMSS(s) {
+    s = Math.max(0, Math.floor(Number(s) || 0));
+    const m = Math.floor(s / 60);
+    const ss = String(s % 60).padStart(2, '0');
+    return m + ':' + ss;
+}
+
 function kdCardHTML(c) {
-    const minutos = Number(c.minutos || 0);
+    const segundos = Number(c.segundos || c.minutos * 60 || 0);
+    const minutos = Math.floor(segundos / 60);
     const tarde = minutos >= KD_MINUTOS_TARDE && c.status !== 'ready';
     const esNueva = kdEstado.nuevas[c.comanda_id] && (Date.now() - kdEstado.nuevas[c.comanda_id] < 9000);
 
     // Dónde va: punto de servicio, o el canal cuando no es de un punto (mostrador, reparto).
+    // El código de cuenta y quién la anotó NO se pintan: van al title para quien los busque.
     const donde = c.punto || kdEtiquetaCanal(c.channel);
-    const quien = [];
-    if (c.code) quien.push('Cuenta ' + c.code);
-    if (c.personas) quien.push(c.personas);
-    if (c.created_by_type === 'staff') quien.push('Anotado por el personal');
+    const extraDatos = [];
+    if (c.code) extraDatos.push('Cuenta ' + c.code);
+    if (c.personas) extraDatos.push(c.personas);
+    if (c.created_by_type === 'staff') extraDatos.push('Anotado por el personal');
 
-    const items = (c.items || []).map(function (it) {
+    // Se agrupa por producto: tres piezas del mismo platillo son UNA línea con 3×,
+    // y cada anotación de pieza va debajo en su propio renglón. Ninguna nota se pierde.
+    const grupos = {};
+    (c.items || []).forEach(function (it) {
+        if (!grupos[it.product_name]) grupos[it.product_name] = { nombre: it.product_name, cantidad: 0, notas: [] };
+        grupos[it.product_name].cantidad += Number(it.quantity) || 1;
+        if (it.notes) grupos[it.product_name].notas.push(it.notes);
+    });
+
+    const items = Object.keys(grupos).map(function (nombre) {
+        const g = grupos[nombre];
+        const notas = g.notas.map(function (n) {
+            return '<li class="kd-item-sub"><i class="fas fa-pen"></i> ' + tpEsc(n) + '</li>';
+        }).join('');
         return '<li class="kd-item">' +
-            '<span class="kd-item-cant">' + tpCantidad(it.quantity) + '&times;</span>' +
-            '<span class="kd-item-info">' + tpEsc(it.product_name) +
-                (it.notes ? '<br><span class="kd-nota"><i class="fas fa-pen"></i> ' + tpEsc(it.notes) + '</span>' : '') +
+            '<span class="kd-item-cant">' + tpCantidad(g.cantidad) + '&times;</span>' +
+            '<span class="kd-item-info">' + tpEsc(g.nombre) +
+                (notas ? '<ul class="kd-items">' + notas + '</ul>' : '') +
             '</span>' +
         '</li>';
     }).join('');
@@ -245,18 +381,26 @@ function kdCardHTML(c) {
         ready: { accion: 'served', texto: 'Entregar', icono: 'fa-circle-check' },
     }[c.status];
 
-    return '<article class="kd-card' + (esNueva ? ' nueva' : '') + '" data-comanda="' + c.comanda_id + '">' +
+    return '<article class="kd-card' + (esNueva ? ' nueva' : '') + '" data-comanda="' + c.comanda_id + '"' +
+        ' data-estado="' + c.status + '"' +
+        ' data-segundos="' + segundos + '"' +
+        ' title="' + tpEsc(extraDatos.join(' · ')) + '">' +
         '<div class="kd-card-cab">' +
-            '<span class="kd-folio">#' + c.folio + '</span>' +
-            '<span class="kd-min' + (tarde ? ' tarde' : '') + '">' +
-                '<i class="fas fa-clock"></i> ' + minutos + ' min' +
-                (tarde ? ' · se está tardando' : '') +
-            '</span>' +
+            '<div class="kd-accio">' +
+                '<span class="kd-folio">#' + c.folio + '</span>' +
+                '<span class="kd-donde">' + tpEsc(donde) + (c.station_name ? ' · ' + tpEsc(c.station_name) : '') + '</span>' +
+            '</div>' +
+            '<div class="kd-card-menu">' +
+                '<button type="button" class="kd-card-menu-btn" data-kd-cardmenu="' + c.comanda_id + '" aria-haspopup="true" aria-expanded="false" title="Opciones de la comanda"><i class="fas fa-ellipsis-v"></i></button>' +
+                '<div class="tp-menu-config kd-card-acciones hidden" data-kd-acciones="' + c.comanda_id + '">' +
+                    '<button type="button" data-kd-imprimir="' + c.comanda_id + '" title="Imprimir el ticket (el navegador pedirá confirmación)"><i class="fas fa-print"></i> Imprimir</button>' +
+                    '<button type="button" data-kd-anular="' + c.comanda_id + '" title="Anular la comanda"><i class="fas fa-ban"></i> Anular</button>' +
+                '</div>' +
+            '</div>' +
         '</div>' +
-        '<div>' +
-            '<div class="kd-donde">' + tpEsc(donde) +
-                (c.station_name ? ' · ' + tpEsc(c.station_name) : '') + '</div>' +
-            (quien.length ? '<div class="kd-quien">' + tpEsc(quien.join(' · ')) + '</div>' : '') +
+        '<div class="kd-min' + (tarde ? ' tarde' : '') + '" data-cronometro>' +
+            '<i class="fas fa-clock"></i> ' + kdMMSS(segundos) +
+            (tarde ? ' · se está tardando' : '') +
         '</div>' +
         '<ul class="kd-items">' + items + '</ul>' +
         '<div class="kd-pie">' +
@@ -264,8 +408,6 @@ function kdCardHTML(c) {
                 ? '<button type="button" class="kd-btn primario" data-kd-avanzar="' + avance.accion + '" data-kd-comanda="' + c.comanda_id + '">' +
                     '<i class="fas ' + avance.icono + '"></i> ' + avance.texto + '</button>'
                 : '') +
-            '<button type="button" class="kd-btn icono" data-kd-imprimir="' + c.comanda_id + '" title="Imprimir el ticket (el navegador pedirá confirmación)"><i class="fas fa-print"></i></button>' +
-            '<button type="button" class="kd-btn icono" data-kd-anular="' + c.comanda_id + '" title="Anular la comanda"><i class="fas fa-ban"></i></button>' +
         '</div>' +
     '</article>';
 }
@@ -772,21 +914,41 @@ function kdDetenerSondeo() {
 
 function kdMarcarVivo(estado) {
     const etiquetas = {
-        'conectado': 'en vivo',
-        'reconectando': 'reconectando…',
-        'sin-conexion': 'sin conexión',
-        'sin-autorizacion': 'sin autorización',
-        'sin-tiempo-real': 'sin tiempo real',
-        'detenido': 'detenido',
+        'conectado': 'Conexión en vivo. El tablero se mantiene al día por sí mismo: '
+            + 'no hay botón de actualizar y está al día.',
+        'reconectando': 'Volviendo a conectar…',
+        'sin-conexion': 'Sin conexión. El tablero no puede actualizarse por ahora.',
+        'sin-autorizacion': 'Sin autorización.',
+        'sin-tiempo-real': 'Sin tiempo real: se refresca cada poco.',
+        'detenido': 'Tiempo real detenido.',
     };
     const conocido = Object.prototype.hasOwnProperty.call(etiquetas, estado);
-    const texto = conocido ? etiquetas[estado] : 'sin tiempo real';
-    const nodo = kd$('kdVivo');
+    const texto = conocido ? etiquetas[estado] : 'Sin tiempo real: se refresca cada poco.';
+    const nodo = kd$('kdPunto');
     if (!nodo) return;
     nodo.classList.toggle('desconectado', !conocido || estado !== 'conectado');
     nodo.classList.toggle('conectando', estado === 'reconectando');
-    const span = nodo.querySelector('span');
-    if (span) span.textContent = texto;
+    nodo.setAttribute('title', texto);
+}
+
+// ============================================================
+// Tamaño de letra del tablero (A− / A+), recordado en localStorage
+// ============================================================
+const KD_ESCALA_CLAVE = 'kd-escala';
+function kdEscalafon(nueva) {
+    kdEstado.escala = Math.max(0.75, Math.min(1.6, nueva));
+    document.querySelector('.kd-columnas') && (document.querySelector('.kd-columnas').style.setProperty('--kd-escala', kdEstado.escala));
+    try { localStorage.setItem(KD_ESCALA_CLAVE, String(kdEstado.escala)); } catch (e) {}
+}
+
+// ============================================================
+// Modo pantalla completa: entra directo vía ?pantalla=1
+// ============================================================
+function kdEntrarDirectoPantalla() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('pantalla') === '1' && params.get('vista') === 'comandas') {
+        document.body.classList.add('kd-pantalla-on');
+    }
 }
 
 // ============================================================
@@ -794,6 +956,19 @@ function kdMarcarVivo(estado) {
 // ============================================================
 document.addEventListener('DOMContentLoaded', function () {
     kdEscucharTiempoReal();
+    try {
+        kdEstado.escala = Number(localStorage.getItem(KD_ESCALA_CLAVE)) || 1;
+        kdEstado.escala = Math.max(0.75, Math.min(1.6, kdEstado.escala));
+    } catch (e) {}
+    kdEscalafon(kdEstado.escala);
+    kdIniciarCronometro();
+
+    kdEntrarDirectoPantalla();
+
+    const letraMenos = kd$('kdLetraMenos');
+    const letraMas = kd$('kdLetraMas');
+    if (letraMenos) letraMenos.addEventListener('click', function () { kdEscalafon(kdEstado.escala - 0.08); });
+    if (letraMas) letraMas.addEventListener('click', function () { kdEscalafon(kdEstado.escala + 0.08); });
 
     // Pestañas
     const vistas = kd$('tpVistas');
@@ -807,7 +982,28 @@ document.addEventListener('DOMContentLoaded', function () {
     // Tablero
     const columnas = kd$('kdColumnas');
     if (columnas) {
+        // Arrastrar: Pointer Events, funciona con el dedo en tableta.
+        columnas.addEventListener('pointerdown', function (ev) {
+            const btn = ev.target.closest('button');
+            if (btn) return;                       // no arrastrar desde un botón
+            const card = ev.target.closest('.kd-card');
+            if (!card) return;
+            kdIniciarArrastre(ev, card, card.closest('.kd-col'));
+        });
+        columnas.addEventListener('pointermove', kdDuranteArrastre);
+        columnas.addEventListener('pointerup', kdTerminarArrastre);
+        columnas.addEventListener('pointercancel', kdTerminarArrastre);
+
         columnas.addEventListener('click', function (ev) {
+            const cardMenuBtn = ev.target.closest('[data-kd-cardmenu]');
+            if (cardMenuBtn) {
+                const id = cardMenuBtn.getAttribute('data-kd-cardmenu');
+                kd$('kdColumnas').querySelectorAll('.kd-card-acciones').forEach(function (m) { m.classList.add('hidden'); });
+                cardMenuBtn.setAttribute('aria-expanded', cardMenuBtn.getAttribute('aria-expanded') === 'true' ? 'false' : 'true');
+                const menu = kd$('kdColumnas').querySelector('[data-kd-acciones="' + id + '"]');
+                if (menu) menu.classList.toggle('hidden');
+                return;
+            }
             const avanzar = ev.target.closest('[data-kd-avanzar]');
             if (avanzar) {
                 avanzar.disabled = true;
@@ -823,6 +1019,13 @@ document.addEventListener('DOMContentLoaded', function () {
             if (anular) kdAbrirAnular(anular.getAttribute('data-kd-anular'));
         });
     }
+
+    // Clic fuera cierra cualquier menú de tarjeta.
+    document.addEventListener('pointerdown', function (ev) {
+        if (!ev.target.closest('.kd-card-menu') && columnas) {
+            columnas.querySelectorAll('.kd-card-acciones').forEach(function (m) { m.classList.add('hidden'); });
+        }
+    });
 
     const filtros = kd$('kdFiltros');
     if (filtros) {
@@ -842,30 +1045,71 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    const btnHistoricas = kd$('kdBtnHistoricas');
-    if (btnHistoricas) {
-        btnHistoricas.addEventListener('click', function () {
-            kdEstado.historicas = !kdEstado.historicas;
-            this.className = 'tp-btn' + (kdEstado.historicas ? ' primario' : '');
-            this.innerHTML = '<i class="fas fa-clock-rotate-left"></i> ' + (kdEstado.historicas ? 'Ocultar entregadas' : 'Ver entregadas');
-            kdCargar(true);
+    const btnMenu = kd$('kdMenuBtn');
+    const menu = kd$('kdMenu');
+    if (btnMenu && menu) {
+        const alternar = function (abrir) {
+            const mostrar = abrir !== undefined ? abrir : menu.classList.contains('hidden');
+            menu.classList.toggle('hidden', !mostrar);
+            btnMenu.setAttribute('aria-expanded', mostrar ? 'true' : 'false');
+        };
+        btnMenu.addEventListener('pointerdown', function (ev) { ev.stopPropagation(); });
+        btnMenu.addEventListener('click', function () { alternar(); });
+        document.addEventListener('pointerdown', function (ev) {
+            if (!ev.target.closest('.tp-engranaje')) alternar(false);
         });
     }
 
-    const btnEstaciones = kd$('kdBtnEstaciones');
-    if (btnEstaciones) btnEstaciones.addEventListener('click', kdAbrirEstaciones);
-
-    const btnSonido = kd$('kdBtnSonido');
-    if (btnSonido) {
-        btnSonido.addEventListener('click', function () {
+    const menuSonido = kd$('kdMenuSonido');
+    if (menuSonido) {
+        menuSonido.addEventListener('click', function () {
             kdEstado.sonido = !kdEstado.sonido;
-            this.setAttribute('aria-pressed', kdEstado.sonido ? 'true' : 'false');
-            this.className = 'tp-btn' + (kdEstado.sonido ? ' primario' : '');
             this.innerHTML = '<i class="fas ' + (kdEstado.sonido ? 'fa-volume-high' : 'fa-volume-xmark') + '"></i> ' +
-                '<span id="kdSonidoTexto">' + (kdEstado.sonido ? 'Con aviso sonoro' : 'Sin aviso sonoro') + '</span>';
-            // El clic es el gesto que el navegador necesita para dejar sonar: suena ahora
-            // para que se compruebe, no la primera vez que entre una comanda.
+                '<span>' + (kdEstado.sonido ? 'Con aviso sonoro' : 'Sin aviso sonoro') + '</span>';
             if (kdEstado.sonido) kdTono();
+            if (menu) menu.classList.add('hidden');
+        });
+    }
+
+    const menuHistoricas = kd$('kdMenuHistoricas');
+    if (menuHistoricas) {
+        menuHistoricas.addEventListener('click', function () {
+            kdEstado.historicas = !kdEstado.historicas;
+            this.querySelector('span').textContent = kdEstado.historicas ? 'Ocultar entregadas' : 'Ver entregadas';
+            kdCargar(true);
+            if (menu) menu.classList.add('hidden');
+        });
+    }
+
+    const menuEstaciones = kd$('kdMenuEstaciones');
+    if (menuEstaciones) menuEstaciones.addEventListener('click', function () {
+        if (menu) menu.classList.add('hidden');
+        kdAbrirEstaciones();
+    });
+
+    const menuPantalla = kd$('kdMenuPantalla');
+    const btnSalirPantalla = kd$('kdSalirPantalla');
+    if (menuPantalla && btnSalirPantalla) {
+        const entrar = function () {
+            const hijo = kd$('kdColumnas');
+            if (hijo && hijo.requestFullscreen) {
+                hijo.requestFullscreen().catch(function () {});
+            } else if (document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen().catch(function () {});
+            }
+            document.body.classList.add('kd-pantalla-on');
+        };
+        const salir = function () {
+            if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen();
+            document.body.classList.remove('kd-pantalla-on');
+        };
+        menuPantalla.addEventListener('click', function () {
+            if (menu) menu.classList.add('hidden');
+            if (!document.body.classList.contains('kd-pantalla-on')) entrar();
+        });
+        btnSalirPantalla.addEventListener('click', salir);
+        document.addEventListener('fullscreenchange', function () {
+            if (!document.fullscreenElement) document.body.classList.remove('kd-pantalla-on');
         });
     }
 

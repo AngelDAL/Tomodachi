@@ -523,6 +523,24 @@
         }
         .tp-vista-panel.hidden { display: none; }
 
+        /* Estado y menú del encabezado: un punto de conexión + el menú de tres puntos */
+        .kd-estado-caja { display: flex; align-items: center; gap: 10px; }
+        .kd-punto {
+            width: 14px; height: 14px; border-radius: 50%; flex: 0 0 auto;
+            background: var(--success-color, #2E7D32);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--success-color, #2E7D32) 25%, transparent);
+        }
+        .kd-punto.conectando { background: var(--warning-color, #B45309); box-shadow: 0 0 0 3px color-mix(in srgb, var(--warning-color, #B45309) 25%, transparent); }
+        .kd-punto.desconectado { background: var(--danger-color, #D32F2F); box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger-color, #D32F2F) 25%, transparent); }
+        .kd-escala { display: flex; align-items: center; gap: 6px; padding: 8px 12px 4px; }
+        .kd-escala-leyenda { font-size: .75rem; color: var(--text-muted, #555); flex: 1 1 auto; text-align: left; }
+        .kd-escala button {
+            width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--border-light, #ddd);
+            background: var(--bg-card, #fff); color: var(--text-color, #1a1a2e);
+            font-family: var(--font-heading); font-size: 1rem; font-weight: 700; cursor: pointer;
+        }
+        .kd-escala button:hover { border-color: var(--primary-color, #1F8A82); color: var(--primary-color, #1F8A82); }
+
         /* Filtros: estación y qué se ve. Botones, nunca selects. */
         .kd-filtros { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
         .kd-chip {
@@ -554,53 +572,75 @@
         .kd-col[data-estado="sent"] .kd-col-cab strong { color: var(--warning-color, #B45309); }
         .kd-col[data-estado="preparing"] .kd-col-cab strong { color: var(--primary-color); }
         .kd-col[data-estado="ready"] .kd-col-cab strong { color: var(--success-color); }
-        .kd-lista { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+        .kd-lista { padding: 12px; display: flex; flex-direction: column; gap: 12px; min-height: 120px; }
+        .kd-col.destino { border-color: var(--primary-color); background: color-mix(in srgb, var(--primary-color) 7%, var(--bg-lightest, var(--bg-card))); }
+        .kd-col.destino-no { border-color: var(--danger-color); }
 
-        /* La comanda: un ticket que se puede leer de lejos */
+        /* La comanda: un ticket que se puede leer de lejos (compacto, para cocina) */
         .kd-card {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: var(--ds-radius-md);
             box-shadow: var(--ds-shadow-sm);
-            padding: 12px;
-            display: flex; flex-direction: column; gap: 10px;
+            padding: 10px;
+            display: flex; flex-direction: column; gap: 8px;
+            font-size: calc(var(--kd-escala, 1) * 1rem);
+            cursor: grab; touch-action: none;
+        }
+        .kd-card.arrastrando { opacity:.75; pointer-events:none; }
+        .kd-card.desplazandose {
+            position: fixed; z-index: 100; margin: 0;
+            will-change: left, top;
+            box-shadow: var(--ds-shadow-lg, 0 12px 32px rgba(0,0,0,.25));
         }
         .kd-card-cab { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .kd-card-cab .kd-accio { display: flex; align-items: center; gap: 4px; }
         .kd-folio {
             font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-            font-size: 1.05rem; font-weight: 700; color: var(--text-color);
+            font-size: 1.02rem; font-weight: 700; color: var(--text-color);
         }
-        .kd-min { font-size: .78rem; color: var(--text-muted); white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; }
-        /* Lo que lleva mucho esperando se ve: es lo urgente. */
-        .kd-min.tarde { color: var(--danger-color); font-weight: 700; }
-        .kd-donde { font-size: .84rem; color: var(--text-color); font-weight: 600; }
-        .kd-quien { font-size: .76rem; color: var(--text-muted); margin-top: 2px; }
+        .kd-min {
+            font-size: .82rem; color: var(--text-muted); white-space: nowrap;
+            display: inline-flex; align-items: center; gap: 5px;
+            font-variant-numeric: tabular-nums;
+        }
+        /* Lo que lleva mucho esperando se ve (discreto): es lo urgente. */
+        .kd-min.tarde { color: color-mix(in srgb, var(--danger-color) 82%, var(--text-color)); font-weight: 700; }
+        .kd-card-menu { position: relative; }
+        .kd-card-menu-btn {
+            width: 36px; height: 36px; padding: 0; border: 1px solid transparent;
+            background: transparent; color: var(--text-muted);
+            border-radius: 10px; cursor: pointer; font-size: 1rem;
+            display: inline-flex; align-items: center; justify-content: center;
+        }
+        .kd-card-menu-btn:hover { background: color-mix(in srgb, var(--text-muted) 12%, transparent); }
+        .kd-card-acciones { position: absolute; right: 0; top: calc(100% + 4px); z-index: 40; }
+        .kd-donde { font-size: .86rem; color: var(--text-color); font-weight: 600; }
 
-        .kd-items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-        .kd-item { display: flex; gap: 8px; align-items: flex-start; font-size: .95rem; color: var(--text-color); }
+        .kd-items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+        .kd-item { display: flex; gap: 8px; align-items: flex-start; font-size: .92rem; color: var(--text-color); }
         .kd-item-cant { font-weight: 800; min-width: 30px; }
         .kd-item-info { flex: 1 1 auto; min-width: 0; }
+        .kd-item-sub { margin: 2px 0 0 38px; font-size: .8rem; color: var(--text-muted); display: flex; gap: 5px; align-items: flex-start; }
         /* Las notas NO van perdidas entre el nombre: son lo que se puede arruinar. */
         .kd-nota {
-            display: inline-block; margin-top: 3px;
+            display: inline-block; margin-top: 0;
             background: color-mix(in srgb, var(--warning-color, #B45309) 16%, transparent);
             color: var(--warning-color, #B45309);
             border-radius: var(--ds-radius-sm);
-            padding: 4px 8px; font-size: .82rem; font-weight: 600;
+            padding: 3px 8px; font-size: .78rem; font-weight: 600;
         }
-        .kd-pie { display: flex; gap: 8px; align-items: stretch; }
+        .kd-pie { display: flex; gap: 8px; align-items: stretch; justify-content: flex-end; }
         .kd-btn {
-            flex: 1 1 auto; min-height: 48px; padding: 10px 14px;
+            min-height: 42px; padding: 8px 16px;
             border: 1px solid var(--border-color); border-radius: var(--ds-radius-md);
             background: var(--bg-card); color: var(--text-color);
-            font-family: var(--font-heading); font-size: .95rem; font-weight: 600;
+            font-family: var(--font-heading); font-size: .92rem; font-weight: 600;
             cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
         }
         .kd-btn:hover { border-color: var(--primary-color); color: var(--primary-color); }
         .kd-btn.primario { background: var(--primary-color); border-color: var(--primary-color); color: var(--text-on-primary, #fff); }
         .kd-btn.primario:hover { color: var(--text-on-primary, #fff); opacity: .93; }
-        .kd-btn.ancho { flex: 1 1 100%; }
-        .kd-btn.icono { flex: 0 0 auto; min-width: 48px; padding: 10px; }
         .kd-btn:disabled { opacity: .5; cursor: not-allowed; }
 
         /* La comanda recién llegada avisa: parpadeo + borde encendido */
@@ -686,6 +726,26 @@
         }
         .tp-notas-input:focus { outline: 2px solid var(--primary-color); outline-offset: 1px; border-color: var(--primary-color); }
         .tp-linea-acciones .tp-btn { min-height: 34px; padding: 5px 12px; font-size: .78rem; }
+
+        /* Modo pantalla completa: solo comandas, sin menú ni pestañas */
+        @media (min-width: 1px) {
+            .kd-pantalla { --kd-pantalla-on: 1; }
+        }
+        body.kd-pantalla-on .sidebar,
+        body.kd-pantalla-on .tp-vistas,
+        body.kd-pantalla-on .tp-header { display: none !important; }
+        body.kd-pantalla-on #kdColumnas { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+        body.kd-pantalla-on .kd-salir-pantalla { display: inline-flex !important; }
+        .kd-salir-pantalla {
+            display: inline-flex; align-items: center; gap: 8px; margin-bottom: 14px;
+            padding: 10px 16px; border: 1px solid var(--border-color); border-radius: var(--ds-radius-pill);
+            background: var(--bg-card); color: var(--text-color); font-family: var(--font-heading);
+            font-size: .85rem; font-weight: 600; cursor: pointer;
+        }
+        .kd-salir-pantalla:hover { border-color: var(--primary-color); color: var(--primary-color); }
+        @media (max-width: 900px) {
+            body.kd-pantalla-on #kdColumnas { grid-template-columns: 1fr; }
+        }
     </style>
     <script src="js/theme-init.js?v=3"></script>
     <script src="js/format-utils.js"></script>
@@ -746,19 +806,31 @@
                     <div class="tp-header">
                         <div>
                             <h1 class="tp-titulo">Comandas</h1>
-                            <p class="tp-sub">Lo que está en preparación ahora. Se actualiza solo; no hay botón de actualizar.</p>
                         </div>
                         <div class="tp-botones">
-                            <span class="tp-vivo" id="kdVivo" title="Se actualiza solo, en tiempo real"><i class="fas fa-bolt"></i> <span>en vivo</span></span>
-                            <button type="button" class="tp-btn" id="kdBtnSonido" aria-pressed="false" title="Avisa con un tono cuando entra una comanda">
-                                <i class="fas fa-volume-xmark"></i> <span id="kdSonidoTexto">Sin aviso sonoro</span>
-                            </button>
-                            <button type="button" class="tp-btn" id="kdBtnHistoricas"><i class="fas fa-clock-rotate-left"></i> Ver entregadas</button>
-                            <button type="button" class="tp-btn" id="kdBtnEstaciones"><i class="fas fa-sliders"></i> Estaciones</button>
+                            <div class="kd-estado-caja">
+                                <span class="kd-punto" id="kdPunto" role="status" title="Se actualiza solo, en tiempo real. El tablero se mantiene al día por sí mismo: no hay botón de actualizar."></span>
+                                <div class="tp-engranaje">
+                                    <button type="button" class="tp-btn tp-icono" id="kdMenuBtn" aria-haspopup="true" aria-expanded="false" title="Opciones del tablero"><i class="fas fa-ellipsis"></i></button>
+                                    <div class="tp-menu-config hidden" id="kdMenu">
+                                        <button type="button" id="kdMenuSonido"><i class="fas fa-volume-xmark"></i> <span id="kdSonidoTexto">Sin aviso sonoro</span></button>
+                                        <button type="button" id="kdMenuHistoricas"><i class="fas fa-clock-rotate-left"></i> <span id="kdHistoricasTexto">Ver entregadas</span></button>
+                                        <button type="button" id="kdMenuPantalla"><i class="fas fa-expand"></i> Pantalla completa</button>
+                                        <button type="button" id="kdMenuEstaciones"><i class="fas fa-sliders"></i> Ajustar estaciones</button>
+                                        <div class="kd-escala">
+                                            <span class="kd-escala-leyenda">Letra</span>
+                                            <button type="button" id="kdLetraMenos" aria-label="Reducir letra">A&minus;</button>
+                                            <button type="button" id="kdLetraMas" aria-label="Aumentar letra">A+</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
                     <div class="kd-filtros" id="kdFiltros"></div>
+
+                    <button type="button" class="kd-salir-pantalla hidden" id="kdSalirPantalla" title="Salir de pantalla completa"><i class="fas fa-compress"></i> Salir de pantalla completa</button>
 
                     <div class="kd-columnas" id="kdColumnas">
                         <section class="kd-col" data-estado="sent">

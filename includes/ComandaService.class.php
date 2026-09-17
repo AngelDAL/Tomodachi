@@ -199,7 +199,8 @@ class ComandaService {
                        c.delivery_name, c.delivery_phone, c.delivery_address, c.delivery_fee,
                        st.name AS station_name,
                        s.code  AS session_code,
-                       TIMESTAMPDIFF(MINUTE, COALESCE(c.sent_at, c.created_at), NOW()) AS minutos,
+TIMESTAMPDIFF(MINUTE, COALESCE(c.sent_at, c.created_at), NOW()) AS minutos,
+                        TIMESTAMPDIFF(SECOND, COALESCE(c.sent_at, c.created_at), NOW()) AS segundos,
                        (SELECT GROUP_CONCAT(DISTINCT COALESCE(t.label, 'Sin punto') ORDER BY t.label SEPARATOR ' + ')
                           FROM dining_tables t
                          WHERE t.table_id = s.table_id
@@ -276,6 +277,7 @@ class ComandaService {
                     st.name AS station_name,
                     s.code  AS session_code,
                     TIMESTAMPDIFF(MINUTE, COALESCE(c.sent_at, c.created_at), NOW()) AS minutos,
+                    TIMESTAMPDIFF(SECOND, COALESCE(c.sent_at, c.created_at), NOW()) AS segundos,
                     (SELECT GROUP_CONCAT(DISTINCT COALESCE(t.label, 'Sin punto') ORDER BY t.label SEPARATOR ' + ')
                        FROM dining_tables t
                       WHERE t.table_id = s.table_id
@@ -354,6 +356,7 @@ class ComandaService {
                     st.name AS station_name,
                     s.code  AS session_code,
                     TIMESTAMPDIFF(MINUTE, COALESCE(c.sent_at, c.created_at), NOW()) AS minutos,
+                    TIMESTAMPDIFF(SECOND, COALESCE(c.sent_at, c.created_at), NOW()) AS segundos,
                     (SELECT GROUP_CONCAT(DISTINCT COALESCE(t.label, 'Sin punto') ORDER BY t.label SEPARATOR ' + ')
                        FROM dining_tables t
                       WHERE t.table_id = s.table_id
@@ -395,6 +398,7 @@ class ComandaService {
             'personas'     => $f['personas'],
             'personas_n'   => $f['personas'] ? count(explode(', ', $f['personas'])) : 0,
             'minutos'      => (int)$f['minutos'],
+            'segundos'     => isset($f['segundos']) ? (int)$f['segundos'] : (int)$f['minutos'] * 60,
             'business_date' => $f['business_date'],
             'notes'        => $f['notes'],
             'notas_lineas' => $notas,

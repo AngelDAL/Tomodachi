@@ -27,6 +27,8 @@
 </head>
 <body class="carta-body">
 
+    <input type="checkbox" id="cartaVista" class="carta-vista-toggle" hidden>
+
     <!-- Estado: cargando -->
     <div id="cartaCargando" class="carta-estado">
         <div class="carta-spinner"></div>
@@ -67,6 +69,14 @@
             <button type="button" id="dinerBarBoton" class="btn btn-solid" data-accion="pedir">Pedir</button>
         </section>
 
+        <!-- Pestañas del teléfono: la carta y el pedido, a pantalla completa. En
+             escritorio no se ven (ahí manda el reparto de dos columnas).
+             Solo aparecen cuando la carta permite pedir (llevan .hidden y el JS lo quita). -->
+        <label for="cartaVista" id="cartaVistaTabs" class="carta-vista-tabs hidden">
+            <span class="carta-vista-tab" data-vista-tab="carta" data-accion="verCarta"><i class="fas fa-book-open"></i> Carta</span>
+            <span class="carta-vista-tab" data-vista-tab="pedido" data-accion="verPedido"><i class="fas fa-receipt"></i> Pedido</span>
+        </label>
+
         <!-- Promociones vigentes -->
         <section id="promoSection" class="promo-tira hidden">
             <div id="promoLista" class="promo-lista"></div>
@@ -77,8 +87,39 @@
             <div id="seccionNavLista" class="seccion-nav-lista"></div>
         </nav>
 
-        <!-- Secciones y productos -->
-        <main id="secciones" class="carta-secciones"></main>
+        <div id="cartaLayout" class="carta-layout">
+            <!-- Secciones y productos -->
+            <main id="secciones" class="carta-secciones"></main>
+
+            <!-- El pedido: columna propia a la derecha (escritorio/tableta) y hoja
+                 inferior en el teléfono. Nunca esconde el total. -->
+            <aside id="pedidoPanel" class="pedido-panel hidden" aria-label="Tu pedido">
+                <header class="pedido-panel-cab">
+                    <div>
+                        <h2 id="pedidoPanelTitulo" class="pedido-panel-titulo">Tu pedido</h2>
+                        <p id="pedidoPanelCodigo" class="pedido-panel-codigo"></p>
+                    </div>
+                    <button type="button" id="pedidoPanelCerrar" class="mp-cerrar" data-accion="cerrarPanel" aria-label="Cerrar el pedido">
+                        <i class="fas fa-xmark"></i>
+                    </button>
+                </header>
+                <div id="pedidoPanelLista" class="pedido-panel-lista">
+                    <p class="mp-vacio">Cargando el pedido…</p>
+                </div>
+                <div class="pedido-panel-pie">
+                    <div class="pedido-panel-total">
+                        <span>Total de la cuenta</span>
+                        <strong id="pedidoPanelTotal">$0.00</strong>
+                    </div>
+                    <p id="pedidoPanelError" class="mp-aviso-error hidden"></p>
+                    <p id="pedidoPanelExito" class="mp-aviso-exito hidden"></p>
+                    <p id="pedidoPanelAyuda" class="mp-pedido-ayuda"></p>
+                    <button type="button" id="btnEnviarCocinaPanel" class="mp-accion mp-boton-grande" data-accion="enviar">
+                        <i class="fas fa-paper-plane"></i> Enviar a cocina
+                    </button>
+                </div>
+            </aside>
+        </div>
 
         <footer class="carta-pie">
             <p id="cartaPieAviso"></p>
@@ -158,7 +199,10 @@
          y las notas se escriben POR PLATILLO dentro de la vista del pedido, sin abrir otra
          ventana encima de la que ya está abierta. -->
 
-    <!-- 4) El pedido de la mesa -->
+    <!-- 4) El pedido de la mesa. SOLO se usa en pantallas angostas: en escritorio y
+         tableta el pedido vive en la columna derecha (ver #pedidoPanel). Se conserva
+         porque en el teléfono es ESTA la que se usa como hoja inferior; además es el
+         respaldo si algo falla con la columna. -->
     <div id="modalPedido" class="mp-overlay hidden">
         <div class="mp-modal mp-modal-grande" role="dialog" aria-modal="true" aria-labelledby="pedidoTitulo">
             <div class="mp-modal-head">

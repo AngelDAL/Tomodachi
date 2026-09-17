@@ -42,21 +42,19 @@ try {
     $conn = $db->getConnection();
 
     // ---------------------------------------------------------
-    // 1) La carta (solo activas)
+    // 1) La carta (solo activas).
+    //
+    // El token del enlace puede ser el de la CARTA (`menus.public_token`) o el
+    // del PUNTO DE SERVICIO (`dining_tables.qr_token`): el QR impreso de una mesa
+    // trae el suyo, y si el enlace se reenvía tal cual la carta debe abrir igual.
+    // Con un token de mesa se resuelve la primera carta activa de esa tienda.
     // ---------------------------------------------------------
-    $stmt = $conn->prepare("
-        SELECT menu_id, store_id, name, description, mode, welcome_message,
-               allow_notes, show_promotions
-        FROM menus
-        WHERE public_token = :token AND is_active = 1
-        LIMIT 1
-    ");
-    $stmt->execute([':token' => $token]);
-    $menu = $stmt->fetch(PDO::FETCH_ASSOC);
+    $resuelto = resolverCarta($conn, $token);
+    $menu = $resuelto['menu'];
 
     if (!$menu) {
         // Mismo mensaje si no existe o si está desactivada: no damos pistas.
-        Response::notFound('Esta carta no está disponible');
+        Response::notFound('Esta carta no está disponible. Pídele al personal el enlace o el código QR correcto.');
     }
 
     $menu_id  = (int)$menu['menu_id'];
@@ -120,7 +118,13 @@ try {
             'mode'            => $menu['mode'],
             'welcome_message' => $menu['welcome_message'],
             'allow_notes'     => (int)$menu['allow_notes'] === 1,
+            'show_promotions' => (int)$menu['show_promotions'] === 1,
         ],
+        // Marca de depuración: con qué se resolvió el token que llegó.
+        //   token     -> el enlace traía el token de la carta
+        //   table     -> el enlace traía el token de una mesa; se resolvió la carta
+        'resolved_by' => $resuelto['via'],
+        'menu_id'     => $menu_id,
         'sections'   => $secciones,
         'promotions' => $promociones,
     ]);
@@ -134,56 +138,128 @@ try {
 // ============================================================
 
 /**
+ * Resuelve la carta activa a partir del token del enlace.
+ *
+ * Acepta dos tokens, porque los dos acaban en la misma URL:
+ *   - `menus.public_token`      -> la carta elegida. Es el caso normal.
+ *   - `dining_tables.qr_token`  -> el QR impreso del punto de servicio. Si el
+ *     comensal (o el dueño, reenviándose el enlace) abre con ese token donde se
+ *     esperaba uno de carta, antes moría con "No se pudo abrir la carta". Ahora
+ *     se resuelve la primera carta activa de la tienda y el flujo continúa.
+ *
+ * @return array ['menu' => fila|false, 'via' => 'token'|'table'|null]
+ */
+function resolverCarta($conn, $token) {
+    $stmt = $conn->prepare("
+        SELECT menu_id, store_id, name, description, mode, welcome_message,
+               allow_notes, show_promotions
+        FROM menus
+        WHERE public_token = :token AND is_active = 1
+        LIMIT 1
+    ");
+    $stmt->execute([':token' => $token]);
+    $menu = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($menu) {
+        return ['menu' => $menu, 'via' => 'token'];
+    }
+
+    // ¿Es el token de un punto de servicio activo?
+    $stmt = $conn->prepare("
+        SELECT store_id FROM dining_tables
+        WHERE qr_token = :token AND is_active = 1
+        LIMIT 1
+    ");
+    $stmt->execute([':token' => $token]);
+    $table = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$table) {
+        return ['menu' => false, 'via' => null];
+    }
+
+    // La primera carta activa de esa tienda (mismo criterio que el QR de los puntos).
+    $stmt = $conn->prepare("
+        SELECT menu_id, store_id, name, description, mode, welcome_message,
+               allow_notes, show_promotions
+        FROM menus
+        WHERE store_id = :store_id AND is_active = 1
+        ORDER BY menu_id ASC
+        LIMIT 1
+    ");
+    $stmt->execute([':store_id' => (int)$table['store_id']]);
+    $menu = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    return ['menu' => $menu ?: false, 'via' => 'table'];
+}
+
+/**
  * Productos que el comensal debe ver, ya filtrados.
  *
- * Filtros aplicados (importantes):
- *   - is_ingredient = 0   -> los insumos nunca se ofrecen al comensal
- *   - status = 'active'   -> productos descontinuados fuera
- *   - hidden_in_pos = 0   -> lo que no es vendible tampoco se ofrece aquí
- *   - menu_items.is_hidden = 1 -> exclusión puntual dentro de la carta
+ * DOS FUENTES, una sola carta:
+ *
+ *   1. TODO el catálogo servible de la tienda (el criterio de siempre):
+ *      - is_ingredient = 0   -> los insumos nunca se ofrecen al comensal
+ *      - status = 'active'   -> productos descontinuados fuera
+ *      - hidden_in_pos = 0   -> lo que no es vendible tampoco se ofrece aquí
+ *
+ *   2. Lo que manda `menu_items` para curar la carta:
+ *      - section       -> sección donde aparece (si no, su categoría)
+ *      - display_order -> orden dentro de la sección
+ *      - is_featured   -> destacado
+ *      - is_hidden = 1 -> se OCULTA (producto puntual o categoría completa)
+ *
+ * Antes la lista salía SOLO de menu_items, así que una carta con 2 filas
+ * (Botanas y Bebidas) mostraba 5 productos y no los 31 servibles: el dueño veía
+ * su carta incompleta. Sin asignaciones, ahora se muestra todo lo servible.
  */
 function resolverProductos($conn, $menu_id, $store_id) {
     $sql = "
-        SELECT DISTINCT
+        SELECT
                p.product_id, p.product_name, p.description, p.price, p.image_path,
                p.category_id, p.tracking_type, p.current_stock,
                c.category_name,
-               mi.section, mi.is_featured,
+               mi.section, mi.display_order, mi.is_featured,
                CASE
                    WHEN p.tracking_type = 'none' THEN 1
                    WHEN p.current_stock > 0     THEN 1
                    ELSE 0
                END AS disponible
-        FROM menu_items mi
-        JOIN products p ON (
-            (mi.kind = 'product'  AND p.product_id  = mi.product_id) OR
-            (mi.kind = 'category' AND p.category_id = mi.category_id) OR
-            (mi.kind = 'tag'      AND EXISTS (
-                SELECT 1 FROM product_tag_assignments pta
-                WHERE pta.product_id = p.product_id AND pta.tag_id = mi.tag_id
-            ))
-        )
+        FROM products p
         LEFT JOIN categories c ON p.category_id = c.category_id
-        WHERE mi.menu_id = :menu_id
-          AND p.store_id = :store_id
+        -- La asignación de la carta (a lo más una por producto, la última guardada)
+        LEFT JOIN menu_items mi
+               ON mi.menu_id = :mi_asignado
+              AND mi.kind = 'product'
+              AND mi.product_id = p.product_id
+        WHERE p.store_id = :store_id
           AND p.status = 'active'
           AND p.is_ingredient = 0
           AND p.hidden_in_pos = 0
-          AND mi.is_hidden = 0
-          -- si un producto está excluido puntualmente en esta carta, no entra
-          -- aunque lo incluya su categoría o su etiqueta
           AND NOT EXISTS (
               SELECT 1 FROM menu_items x
-              WHERE x.menu_id = mi.menu_id
+              WHERE x.menu_id = :mi_producto_oculto
                 AND x.kind = 'product'
                 AND x.product_id = p.product_id
                 AND x.is_hidden = 1
           )
-        ORDER BY mi.display_order ASC, p.product_name ASC
+          AND NOT EXISTS (
+              SELECT 1 FROM menu_items x
+              JOIN categories xc ON xc.category_id = x.category_id
+              WHERE x.menu_id = :mi_categoria_oculta
+                AND x.kind = 'category'
+                AND x.is_hidden = 1
+                AND xc.category_id = p.category_id
+          )
+        ORDER BY COALESCE(mi.display_order, 100000) ASC, p.product_name ASC
     ";
 
+    // PDO con prepares nativos no permite reutilizar un marcador nombrado en la
+    // misma consulta (SQLSTATE[HY093]); por eso cada aparición lleva su nombre.
     $stmt = $conn->prepare($sql);
-    $stmt->execute([':menu_id' => $menu_id, ':store_id' => $store_id]);
+    $stmt->execute([
+        ':mi_asignado'          => $menu_id,
+        ':mi_producto_oculto'   => $menu_id,
+        ':mi_categoria_oculta'  => $menu_id,
+        ':store_id'             => $store_id,
+    ]);
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 

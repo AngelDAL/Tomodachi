@@ -180,8 +180,16 @@
     color: #fff;
 }
 
-/* ---------- Secciones y productos ---------- */
+/* ---------- Reparto de la pantalla ----------
+   Móvil: una columna. El pedido es la pestaña de pantalla completa (ver
+   .carta-vista-tabs); el pie flotante siempre deja ver el total.
+   Escritorio/tableta (>= 900px): menú a la izquierda, pedido en su columna
+   a la derecha y fija al hacer scroll. El total NUNCA se esconde. */
 
+.carta-layout {
+    max-width: 940px;
+    margin: 0 auto;
+}
 .carta-secciones {
     padding: 18px 18px 0;
     display: flex;
@@ -327,7 +335,6 @@
     .carta-encabezado, .promo-tira, .carta-secciones, .carta-pie { padding-left: 28px; padding-right: 28px; }
     .seccion-nav-lista { padding: 0 28px; }
     .carta-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .carta-secciones { max-width: 940px; margin: 0 auto; }
     .carta-encabezado { max-width: 940px; margin: 0 auto; }
 }
 
@@ -947,4 +954,141 @@ body.con-pedido { padding-bottom: 96px; }
         border-right: 1px solid var(--border-color);
         border-radius: var(--ds-radius-lg) var(--ds-radius-lg) 0 0;
     }
+}
+
+/* ============================================================
+   ESCRITORIO / TABLETA — menú a la izquierda, pedido a la derecha
+   ------------------------------------------------------------
+   El pedido es una columna real, no una pestaña: el total y lo que se está
+   pidiendo se ven SIEMPRE (regla 9 de AGENTS.md). En el teléfono todo esto
+   queda apagado y manda .carta-vista-tabs.
+   ============================================================ */
+
+.carta-vista-toggle { position: absolute; opacity: 0; pointer-events: none; }
+
+/* Pestañas del teléfono (carta / pedido). En escritorio no se muestran. */
+.carta-vista-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border-color);
+}
+.carta-vista-tab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 48px;
+    padding: 10px 12px;
+    font-family: var(--font-heading);
+    font-size: .9rem;
+    font-weight: 600;
+    color: var(--text-medium);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+.carta-vista-tab.activo {
+    color: var(--primary-color);
+    box-shadow: inset 0 -3px 0 var(--primary-color);
+}
+.carta-vista-tab + .carta-vista-tab { border-left: 1px solid var(--border-lighter); }
+
+/* Reparto de una columna (móvil): la carta es lo que se ve; el pedido, su pestaña. */
+body.vista-pedido .carta-layout { display: none; }
+body.vista-pedido.con-pedido .pedido-barra { display: none; }
+
+@media (min-width: 900px) {
+    .carta-vista-tabs { display: none !important; }
+    body.vista-pedido .carta-layout { display: block; }
+
+    .carta-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 380px;
+        align-items: start;
+        gap: 22px;
+        padding: 0 28px;
+    }
+    .carta-secciones { padding: 18px 0 0; }
+
+    /* La columna del pedido: fija mientras se hace scroll. */
+    .pedido-panel {
+        position: sticky;
+        top: 16px;
+        margin-top: 18px;
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: var(--ds-radius-lg);
+        box-shadow: var(--shadow-md);
+        max-height: calc(100vh - 32px);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+    /* El pie flotante estorba cuando el pedido ya tiene su columna. */
+    .pedido-barra { display: none !important; }
+    body.con-pedido { padding-bottom: 32px; }
+}
+
+/* ---------- La columna del pedido ---------- */
+
+.pedido-panel-cab {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-card);
+}
+.pedido-panel-cab > div { flex: 1; min-width: 0; }
+.pedido-panel-titulo {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--text-color);
+}
+.pedido-panel-codigo {
+    margin: 2px 0 0;
+    font-size: .8rem;
+    letter-spacing: .06em;
+    color: var(--text-medium);
+}
+.pedido-panel-lista {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px;
+    -webkit-overflow-scrolling: touch;
+}
+.pedido-panel-lista .mp-grupo { background: var(--bg-body); }
+.pedido-panel-pie {
+    border-top: 1px solid var(--border-color);
+    padding: 12px 16px 16px;
+    background: var(--bg-card);
+}
+.pedido-panel-total {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 8px;
+    font-size: .95rem;
+    color: var(--text-medium);
+}
+.pedido-panel-total strong {
+    font-size: 1.3rem;
+    color: var(--text-color);
+}
+
+/* En el teléfono el pedido es la pestaña de pantalla completa: tarjetas limpias,
+   sin la tarjeta contenedora de la columna. */
+@media (max-width: 899px) {
+    .pedido-panel {
+        background: var(--bg-body);
+        border: none;
+        box-shadow: none;
+    }
+    .pedido-panel-lista { padding: 16px 18px; }
+    .pedido-panel-pie { background: var(--bg-body); border-top: none; padding: 12px 18px 24px; }
+    .pedido-panel-cab { background: var(--bg-body); border-bottom: 1px solid var(--border-lighter); }
+    /* La columna nunca convive con la barra flotante: en el teléfono manda la columna. */
 }

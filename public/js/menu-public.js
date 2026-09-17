@@ -48,8 +48,15 @@
         socket: null,
         pollTimer: null,
         punto: '',          // etiqueta del punto de servicio (Mesa 1, Barra…) si el QR la trae
-        notasAbiertas: null // línea cuya caja de notas está abierta
+        notasAbiertas: null, // línea cuya caja de notas está abierta
+        vista: 'carta'      // 'carta' | 'pedido' (solo manda en el teléfono)
     };
+
+    /** ¿El pedido vive en su propia columna, junto a la carta? (escritorio/tableta).
+     *  Se decide por el MEDIO que usa la columna, que es también el breakpoint del CSS. */
+    function pedidoEnColumna() {
+        return window.matchMedia('(min-width: 900px)').matches;
+    }
 
     // ============================================================
     // Utilidades
@@ -449,7 +456,38 @@
         actualizarBarraComensal();
         pintarControlesProducto();
 
+        // Pestañas del teléfono: solo tienen sentido si se puede pedir.
+        mostrarEl(qs('cartaVistaTabs'), true);
+        aplicarVista();
+
         if (estado.socio) activarCuenta();
+    }
+
+    /** Enciende la pestaña activa y hace visible el lado que toca. */
+    function aplicarVista() {
+        var activa = pestañaDeVista(estado.vista === 'pedido' ? 'pedido' : 'carta');
+        var pedido = (estado.vista === 'pedido');
+        document.body.classList.toggle('vista-pedido', pedido);
+        var tabs = document.querySelectorAll('.carta-vista-tab');
+        tabs.forEach(function (t) {
+            t.classList.toggle('activo', t === activa);
+        });
+    }
+
+    function pestañaDeVista(vista) {
+        return document.querySelector('.carta-vista-tab[data-vista-tab="' + vista + '"]');
+    }
+
+    /** Avisa a la vista de que la cuenta cambió: repinta donde corresponda.
+     *  Si el pedido está en su columna, repinta esa columna; si no, el modal de respaldo. */
+    function alCambiarCuenta() {
+        actualizarPedidoBar();
+        pintarControlesProducto();
+        if (pedidoEnColumna()) {
+            renderPedidoPanel();
+        } else if (qs('modalPedido') && !qs('modalPedido').classList.contains('hidden')) {
+            renderPedidoModal();
+        }
     }
 
     /** Arranca la observación de la cuenta: refresco inicial, socket y sondeo. */
@@ -489,6 +527,13 @@
         if (!estado.socio || !estado.cuenta) {
             bar.classList.add('hidden');
             document.body.classList.remove('con-pedido');
+            mostrarEl(qs('pedidoPanel'), false);
+            document.body.classList.remove('con-panel');
+            // Sin cuenta no hay pestaña de pedido: el teléfono se queda en la carta.
+            if (estado.vista === 'pedido' && !pedidoEnColumna()) {
+                estado.vista = 'carta';
+                aplicarVista();
+            }
             return;
         }
 
@@ -504,6 +549,19 @@
         bar.classList.toggle('vacia', piezas === 0);
         bar.classList.remove('hidden');
         document.body.classList.add('con-pedido');
+
+        // La columna del pedido (escritorio/tableta) siempre visible; el modal solo
+        // en pantallas angostas, donde el pedido es una hoja inferior.
+        if (pedidoEnColumna()) {
+            mostrarEl(qs('pedidoPanel'), true);
+            document.body.classList.add('con-panel');
+            if (qs('modalPedido') && !qs('modalPedido').classList.contains('hidden')) {
+                cerrarModal('modalPedido');
+            }
+        } else {
+            mostrarEl(qs('pedidoPanel'), false);
+            document.body.classList.remove('con-panel');
+        }
     }
 
     // ============================================================
@@ -599,9 +657,7 @@
             items: [item]
         }).then(function (data) {
             if (data) estado.cuenta = data;
-            actualizarPedidoBar();
-            pintarControlesProducto();
-            if (qs('modalPedido') && !qs('modalPedido').classList.contains('hidden')) renderPedidoModal();
+            alCambiarCuenta();
             return data;
         });
     }
@@ -617,11 +673,9 @@
             order_item_id: Number(itemId)
         }).then(function (data) {
             if (data) estado.cuenta = data;
-            actualizarPedidoBar();
-            pintarControlesProducto();
-            if (qs('modalPedido') && !qs('modalPedido').classList.contains('hidden')) renderPedidoModal();
+            alCambiarCuenta();
         }).catch(function (e) {
-            mostrarAvisoModal('pedidoError', e.message);
+            mostrarAvisoPedido('error', e.message);
         });
     }
 
@@ -632,11 +686,7 @@
         return apiGet(API_ORDER + '?join_token=' + encodeURIComponent(estado.socio.join_token))
             .then(function (data) {
                 estado.cuenta = data;
-                actualizarPedidoBar();
-                pintarControlesProducto();
-                if (qs('modalPedido') && !qs('modalPedido').classList.contains('hidden')) {
-                    renderPedidoModal();
-                }
+                alCambiarCuenta();
                 return data;
             })
             .catch(function (e) {
@@ -654,10 +704,9 @@
 
     function enviarCocina() {
         if (!estado.socio) return;
-        var btn = qs('btnEnviarCocina');
-        if (btn) btn.disabled = true;
-        mostrarEl(qs('pedidoError'), false);
-        mostrarEl(qs('pedidoExito'), false);
+        setEnviarDeshabilitado(true);
+        mostrarAvisoPedido('error', null);
+        mostrarAvisoPedido('exito', null);
 
         apiPost(API_ORDER, { join_token: estado.socio.join_token, action: 'send' })
             .then(function () {
@@ -667,19 +716,43 @@
             })
             .then(function () {
                 aviso('Pedido enviado a cocina', 'ok');
-                var exito = qs('pedidoExito');
-                if (exito) {
-                    exito.textContent = 'Tu pedido ya está en cocina.';
-                    exito.classList.remove('hidden');
-                }
+                mostrarAvisoPedido('exito', 'Tu pedido ya está en cocina.');
+                renderPedidoPanel();
                 renderPedidoModal();
             })
             .catch(function (e) {
-                mostrarAvisoModal('pedidoError', e.message);
+                mostrarAvisoPedido('error', e.message);
             })
             .then(function () {
-                if (btn) btn.disabled = false;
+                setEnviarDeshabilitado(false);
             });
+    }
+
+    /** Habilita/deshabilita los dos botones de "Enviar a cocina" (columna y modal). */
+    function setEnviarDeshabilitado(deshabilitado) {
+        ['btnEnviarCocina', 'btnEnviarCocinaPanel'].forEach(function (id) {
+            var b = qs(id);
+            if (b) b.disabled = !!deshabilitado;
+        });
+    }
+
+    /** Muestra u oculta un aviso de error/éxito en AMBAS superficies del pedido.
+     *  texto null oculta. */
+    function mostrarAvisoPedido(tipo, texto) {
+        var ids = tipo === 'error'
+            ? ['pedidoError', 'pedidoPanelError']
+            : ['pedidoExito', 'pedidoPanelExito'];
+        ids.forEach(function (id) {
+            var el = qs(id);
+            if (!el) return;
+            if (texto === null || texto === undefined) {
+                el.textContent = '';
+                el.classList.add('hidden');
+            } else {
+                el.textContent = texto;
+                el.classList.remove('hidden');
+            }
+        });
     }
 
     // ============================================================
@@ -766,7 +839,48 @@
             return;
         }
 
-        // Agrupar por comensal respetando el orden de participants.
+        // Se muestran todos los comensales; quien no pidió aparece como vacío.
+        cont.innerHTML = listaDeCuenta(c);
+
+        qs('pedidoTotal').textContent = dinero((c.totals && c.totals.total) || 0);
+
+        // El botón de enviar se activa si hay algo pendiente en la cuenta.
+        var pendientes = pendientesDe(c);
+        var btn = qs('btnEnviarCocina');
+        if (btn) btn.disabled = pendientes === 0;
+        var ayuda = qs('pedidoPieAyuda');
+        if (ayuda) ayuda.textContent = textoSegunPendientes(pendientes);
+    }
+
+    /** El pedido en la columna de la derecha (escritorio/tableta). Mismo contenido que el
+     *  modal: una sola verdad para que no diverjan. */
+    function renderPedidoPanel() {
+        var cont = qs('pedidoPanelLista');
+        if (!cont) return;
+
+        qs('pedidoPanelCodigo').textContent = (estado.socio && estado.socio.code)
+            ? ('Código ' + estado.socio.code) : '';
+
+        var c = estado.cuenta;
+        if (!c) {
+            cont.innerHTML = '<p class="mp-vacio">Cargando el pedido…</p>';
+            qs('pedidoPanelTotal').textContent = dinero(0);
+            return;
+        }
+
+        cont.innerHTML = listaDeCuenta(c);
+        qs('pedidoPanelTotal').textContent = dinero((c.totals && c.totals.total) || 0);
+
+        var pendientes = pendientesDe(c);
+        var btn = qs('btnEnviarCocinaPanel');
+        if (btn) btn.disabled = pendientes === 0;
+        var ayuda = qs('pedidoPanelAyuda');
+        if (ayuda) ayuda.textContent = textoSegunPendientes(pendientes);
+    }
+
+    /** Agrupa por comensal y devuelve el HTML de la lista. Compartido por la columna
+     *  y el modal: se ven igual aunque vivan en sitios distintos. */
+    function listaDeCuenta(c) {
         var grupos = [], porId = {};
         (c.participants || []).forEach(function (p) {
             var g = { id: String(p.participant_id), nombre: p.display_name, items: [] };
@@ -783,31 +897,32 @@
             g.items.push(it);
         });
 
-        // Se muestran todos los comensales; quien no pidió aparece como vacío.
-        cont.innerHTML = grupos.length
+        return grupos.length
             ? grupos.map(renderGrupo).join('')
             : '<p class="mp-vacio">Todavía no hay nada en esta cuenta.</p>';
+    }
 
-        qs('pedidoTotal').textContent = dinero((c.totals && c.totals.total) || 0);
+    function pendientesDe(c) {
+        return (c.items || []).filter(function (it) { return esPendiente(it.status); }).length;
+    }
 
-        // El botón de enviar se activa si hay algo pendiente en la cuenta.
-        var pendientes = (c.items || []).filter(function (it) { return esPendiente(it.status); }).length;
-        var btn = qs('btnEnviarCocina');
-        if (btn) btn.disabled = pendientes === 0;
-        var ayuda = qs('pedidoPieAyuda');
-        if (ayuda) {
-            ayuda.textContent = pendientes === 0
-                ? 'No hay platillos pendientes de enviar.'
-                : (pendientes + (pendientes === 1 ? ' platillo listo para cocina.' : ' platillos listos para cocina.'));
-        }
+    function textoSegunPendientes(pendientes) {
+        if (pendientes === 0) return 'No hay platillos pendientes de enviar.';
+        return pendientes + (pendientes === 1
+            ? ' platillo listo para cocina.'
+            : ' platillos listos para cocina.');
     }
 
     function abrirPedido() {
-        abrirModal('modalPedido');
-        mostrarEl(qs('pedidoError'), false);
-        mostrarEl(qs('pedidoExito'), false);
-        renderPedidoModal();
-        refrescarCuenta({ silencioso: false });
+        // Escritorio/tableta: el pedido ya vive en su columna; se lleva la vista ahí.
+        if (pedidoEnColumna()) {
+            var panel = qs('pedidoPanel');
+            if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            refrescarCuenta({ silencioso: false });
+            return;
+        }
+        // Teléfono: el pedido es la pestaña de pantalla completa que ya existe.
+        verPedido();
     }
 
     // ============================================================
@@ -865,9 +980,7 @@
             quantity: Math.max(0, Number(cantidad) || 0)
         }).then(function (data) {
             if (data) estado.cuenta = data;
-            actualizarPedidoBar();
-            pintarControlesProducto();
-            renderPedidoModal();
+            alCambiarCuenta();
             return data;
         }).catch(function (e) {
             aviso(e.message, 'error');
@@ -877,7 +990,7 @@
     /** Abre o cierra la caja de notas de una línea, DENTRO de la vista del pedido. */
     function alternarNotasLinea(itemId) {
         estado.notasAbiertas = String(estado.notasAbiertas) === String(itemId) ? null : String(itemId);
-        renderPedidoModal();
+        alCambiarCuenta();
         if (estado.notasAbiertas) {
             var campo = qs('notasLinea' + itemId);
             if (campo) setTimeout(function () { campo.focus(); }, 60);
@@ -898,12 +1011,30 @@
         }).then(function (data) {
             if (data) estado.cuenta = data;
             estado.notasAbiertas = null;
-            actualizarPedidoBar();
-            renderPedidoModal();
+            alCambiarCuenta();
             aviso(texto ? 'Nota guardada' : 'Nota borrada', 'ok');
         }).catch(function (e) {
             aviso(e.message, 'error');
         });
+    }
+
+    // ============================================================
+    // Vista del teléfono (carta / pedido)
+    // ============================================================
+
+    function verCarta() {
+        estado.vista = 'carta';
+        aplicarVista();
+        // El enlace deja de pedir "abre en el pedido" cuando el cliente ya está viendo la carta.
+        if ((window.location.hash || '').toLowerCase() === '#pedido') {
+            try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (e) { /* sin history */ }
+        }
+    }
+
+    function verPedido() {
+        estado.vista = 'pedido';
+        aplicarVista();
+        refrescarCuenta({ silencioso: false });
     }
 
     // ============================================================
@@ -1001,6 +1132,9 @@
                     mostrarCodigo(estado.socio.code);
                 }
                 activarCuenta();
+                // En el teléfono, pedir lleva a la pestaña del pedido (el "carrito").
+                // En escritorio la columna ya está a la vista.
+                if (!pedidoEnColumna()) verPedido();
                 aviso('Listo, ya puedes pedir', 'ok');
             })
             .catch(function (e) {
@@ -1037,6 +1171,7 @@
                 guardarSocio();
                 cerrarModal('modalPedir');
                 activarCuenta();
+                if (!pedidoEnColumna()) verPedido();
                 aviso('Te uniste a la cuenta ' + estado.socio.code, 'ok');
             })
             .catch(function (e) {
@@ -1148,6 +1283,9 @@
         switch (b.dataset.accion) {
             case 'pedir':        abrirPedirModal(); break;
             case 'ver':          abrirPedido(); break;
+            case 'cerrarPanel':  verCarta(); break;
+            case 'verCarta':     verCarta(); break;
+            case 'verPedido':    verPedido(); break;
             // Agregar es UN toque: no abre nada encima de lo que ya está abierto.
             case 'agregar':      agregarUno(b.dataset.producto); break;
             case 'mas':          agregarUno(b.dataset.producto); break;
@@ -1223,5 +1361,20 @@
         document.addEventListener('DOMContentLoaded', iniciar);
     } else {
         iniciar();
+    }
+
+    // El reparto cambia con el ancho: se reubica el pedido (columna o pestaña) sin
+    // recargar. Es el único repintado completo, y solo pasa al girar o redimensionar.
+    window.addEventListener('resize', function () {
+        if (!estado.socio || !estado.cuenta) return;
+        actualizarPedidoBar();
+        if (pedidoEnColumna()) renderPedidoPanel();
+    });
+
+    // Enlace que se reenvía tal cual: el QR impreso de la mesa deja `#pedido` en la URL
+    // para que al reabrirla se entre directo al pedido (en el teléfono).
+    if ((window.location.hash || '').toLowerCase() === '#pedido' && !pedidoEnColumna()) {
+        estado.vista = 'pedido';
+        aplicarVista();
     }
 })();

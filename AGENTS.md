@@ -302,4 +302,30 @@ deben volver a aparecer.
    pestaña, un acordeón o un paso extra.
 10. **Sin selects ni campos sin estilo** en el POS, y los modales compactos con
     tarjetas en móvil.
+11. **El catálogo de elementos es la ley visual.** Antes de crear o rediseñar una
+    vista, abrir `public/design-system.html` (el catálogo vivo) y
+    `public/css/design-system.css` (la fuente única de estructura: tipografía
+    Sora/Inter, botones cápsula, radios `--ds-radius-*`, sombras `--ds-shadow-*`,
+    texturas SVG de fondo, escala de capas z-index). **Reutiliza las clases reales
+    ya documentadas ahí** (`.btn` + `.btn-solid/.btn-outline/.btn-soft/.btn-ghost`,
+    `.field`/`.flabel`, `.ds-input`, `.input-wrap`, `.badge`, `.card`) en lugar de
+    inventar estilos nuevos. Si algo no existe en el catálogo, se añade AL catálogo
+    y a su CSS, no se improvisa en la página.
+12. **Contadores de tiempo en minutos y segundos** (`mm:ss`), no solo minutos. En
+    cocina el minutero es una herramienta de trabajo, no un adorno: debe verse de
+    un vistazo, con la cifra en cifras tabulares para que no baile.
+13. **Lo que no le sirve a quien opera, fuera de la pantalla.** En la vista de
+    cocina no se muestran códigos de cuenta, ni quién la anotó, ni párrafos
+    explicativos: eso va a un `title`/tooltip o no va. La pantalla de trabajo se
+    diseña para leerse a un metro de distancia y con las manos ocupadas.
+14. **Agrupar sin perder el detalle por pieza.** Pedir tres piezas del mismo
+    platillo se ve como **una sola tarjeta con "3×"**, y cada pieza conserva su
+    anotación individual ("1 sin cebolla", "1 sin pepinillos", "1 completa"). Agrupar
+    es una decisión de la VISTA: no se pierde ni se mezcla la nota de cada pieza.
+15. **Repintar solo lo que cambió.** Al agregar, anotar o quitar una pieza no se
+    vuelve a dibujar la lista completa: se actualiza únicamente la tarjeta afectada
+    (y los totales). Con cuentas grandes, repintar todo se siente como esperar.
+16. **Menos botones, más intención.** Las acciones secundarias de una pantalla se
+    agrupan en un menú de tres puntos (`...`), no en una fila de botones. Un
+    indicador de estado no lleva párrafo al lado: es un punto de color con tooltip.
 

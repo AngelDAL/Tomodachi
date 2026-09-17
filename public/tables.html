@@ -660,6 +660,32 @@
             .kd-columnas { grid-template-columns: 1fr; }
             .kd-col { min-height: 0; }
         }
+
+        /* ── Las líneas del pedido, por platillo ──────────────────────────────
+           Cada renglón se ajusta y se anota por separado, DENTRO del panel: nunca se abre
+           otro modal encima de la cuenta que el mesero ya tiene abierta. */
+        .tp-linea-acciones { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; }
+        .tp-linea-btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+            min-height: 34px; padding: 5px 11px;
+            border: 1px solid var(--border-color); border-radius: var(--ds-radius-pill);
+            background: var(--bg-card); color: var(--text-color);
+            font-family: inherit; font-size: .78rem; font-weight: 600; cursor: pointer;
+        }
+        .tp-linea-btn:hover { border-color: var(--primary-color); color: var(--primary-color); }
+        .tp-linea-btn.activo {
+            border-color: var(--primary-color); color: var(--primary-color);
+            background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+        }
+        .tp-linea-notas-caja { display: flex; gap: 8px; align-items: stretch; margin-top: 8px; }
+        .tp-notas-input {
+            flex: 1 1 auto; min-width: 0; min-height: 38px; padding: 8px 11px;
+            border: 1px solid var(--border-color); border-radius: var(--ds-radius-md);
+            background: var(--bg-input, var(--bg-card)); color: var(--text-color);
+            font-family: inherit; font-size: .86rem;
+        }
+        .tp-notas-input:focus { outline: 2px solid var(--primary-color); outline-offset: 1px; border-color: var(--primary-color); }
+        .tp-linea-acciones .tp-btn { min-height: 34px; padding: 5px 12px; font-size: .78rem; }
     </style>
     <script src="js/theme-init.js?v=3"></script>
     <script src="js/format-utils.js"></script>
@@ -867,31 +893,9 @@
         </div>
     </div>
 
-    <!-- Hoja para agregar un platillo: cantidad y notas, sin salir de la cuenta -->
-    <div class="tp-overlay tp-overlay-encima hidden" id="tpModalAgregar">
-        <div class="tp-modal tp-modal-compacto">
-            <div class="tp-modal-head">
-                <h3 id="tpAgregarTitulo">Agregar</h3>
-                <button type="button" class="tp-modal-cerrar" data-cerrar="tpModalAgregar" aria-label="Cerrar"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="tp-modal-body">
-                <div class="tp-agregar-cantidad">
-                    <button type="button" class="tp-paso" id="tpAgregarMenos"><i class="fas fa-minus"></i></button>
-                    <input type="number" id="tpAgregarCantidad" value="1" min="1" step="1" inputmode="numeric">
-                    <button type="button" class="tp-paso" id="tpAgregarMas"><i class="fas fa-plus"></i></button>
-                </div>
-                <div class="tp-campo">
-                    <label for="tpAgregarNotas">Notas para preparación (opcional)</label>
-                    <input type="text" id="tpAgregarNotas" maxlength="150" placeholder="Sin cebolla, sin salsa, término medio…" autocomplete="off">
-                </div>
-                <div class="tp-aviso">Lo que anotes aquí lo ve la preparación tal cual. Si el cliente pidió algo que no está en la lista, escríbelo en las notas.</div>
-            </div>
-            <div class="tp-modal-pie">
-                <button type="button" class="tp-btn" data-cerrar="tpModalAgregar">Cancelar</button>
-                <button type="button" class="tp-btn primario" id="tpAgregarConfirmar"><i class="fas fa-plus"></i> Agregar a la cuenta</button>
-            </div>
-        </div>
-    </div>
+    <!-- Aquí vivía la hoja "Agregar: cantidad y notas", que se abría ENCIMA de la cuenta.
+         Se retiró: el platillo se agrega de un toque desde el menú y las notas se escriben
+         por línea, dentro del propio panel del pedido. -->
 
     <!-- Modal: juntar otro punto a la cuenta -->
     <div class="tp-overlay hidden" id="tpModalJuntar">
@@ -960,11 +964,29 @@
         </div>
     </div>
 
+    <!-- Confirmación propia: el diálogo del navegador rompe la identidad visual, ignora el
+         tema y no deja explicar qué va a pasar antes de hacerlo. -->
+    <div class="tp-overlay tp-overlay-encima hidden" id="tpModalConfirma">
+        <div class="tp-modal tp-modal-compacto">
+            <div class="tp-modal-head">
+                <h3 id="tpConfirmaTitulo">Confirmar</h3>
+                <button type="button" class="tp-modal-cerrar" data-cerrar="tpModalConfirma" aria-label="Cerrar"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="tp-modal-body">
+                <div class="tp-aviso" id="tpConfirmaTexto"></div>
+            </div>
+            <div class="tp-modal-pie">
+                <button type="button" class="tp-btn" data-cerrar="tpModalConfirma">Cancelar</button>
+                <button type="button" class="tp-btn primario" id="tpConfirmaBoton">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
     <script src="lib/qrcodejs/qrcode.min.js"></script>
     <script src="js/sidebar-loader.js?v=7"></script>
     <script src="js/app.js?v=12"></script>
     <script src="js/ws-realtime.js?v=1"></script>
-    <script src="js/tables.js?v=3"></script>
+    <script src="js/tables.js?v=4"></script>
     <script src="js/comandas.js?v=1"></script>
     <script src="lib/animejs/anime.min.js"></script>
     <script src="js/design-system.js?v=5"></script>

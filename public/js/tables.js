@@ -37,7 +37,7 @@ const tpEstado = {
     categorias: [],
     categoria: 'todas',
     busqueda: '',
-    productoParaAgregar: null,
+    notasAbiertas: null,       // línea del pedido cuya caja de notas está abierta
     tiempoReal: null,
     vivo: true,
 };
@@ -92,6 +92,33 @@ function tpAbrirModal(id) { const m = document.getElementById(id); if (m) m.clas
 function tpCerrarModal(id) { const m = document.getElementById(id); if (m) m.classList.add('hidden'); }
 function tpAlgunModalAbierto() {
     return !!document.querySelector('.tp-overlay:not(.hidden)');
+}
+
+// ============================================================
+// Confirmaciones propias (nunca el diálogo del navegador)
+// ============================================================
+/**
+ * Pide confirmación con un modal DEL SISTEMA.
+ *
+ * Regla del proyecto: nada de `alert()`, `confirm()` ni `prompt()`. El diálogo nativo rompe
+ * la identidad visual, ignora el tema y en una tableta aparece fuera de contexto. Además,
+ * una confirmación destructiva merece explicar QUÉ va a pasar, y el diálogo nativo no deja.
+ *
+ *   tpConfirmar({titulo, texto, boton, peligro, alConfirmar: function () { ... }})
+ */
+const tpConfirmacion = { accion: null };
+
+function tpConfirmar(opciones) {
+    const o = opciones || {};
+    tpConfirmacion.accion = typeof o.alConfirmar === 'function' ? o.alConfirmar : null;
+
+    document.getElementById('tpConfirmaTitulo').textContent = o.titulo || 'Confirmar';
+    document.getElementById('tpConfirmaTexto').innerHTML = o.texto || '';
+    const boton = document.getElementById('tpConfirmaBoton');
+    boton.innerHTML = (o.peligro ? '<i class="fas fa-triangle-exclamation"></i> ' : '<i class="fas fa-check"></i> ')
+        + (o.boton || 'Confirmar');
+    boton.className = 'tp-btn ' + (o.peligro ? 'peligro' : 'primario');
+    tpAbrirModal('tpModalConfirma');
 }
 
 // ============================================================
@@ -247,15 +274,24 @@ function tpEditarPunto(id) {
 
     const rotar = document.getElementById('tpRotarToken');
     if (rotar) {
-        rotar.addEventListener('click', async function () {
-            if (!confirm('¿Rotar el QR de ' + p.label + '? El QR que ya está impreso dejará de funcionar.')) return;
-            try {
-                const d = await tpPeticion(TP_API_TABLES, { method: 'PUT', body: JSON.stringify({ table_id: p.table_id, rotate_token: true }) });
-                tpAviso('QR rotado: imprime el nuevo.', 'success');
-                tpEstado.qrActual = d;
-                tpMostrarQr(p);
-                await tpCargar(true);
-            } catch (e) { tpAviso(tpMensajeDeError(e), 'error'); }
+        rotar.addEventListener('click', function () {
+            // El QR impreso deja de servir: eso se explica ANTES, con un modal del sistema.
+            tpConfirmar({
+                titulo: 'Rotar el QR de ' + p.label,
+                texto: 'El QR que ya está impreso y pegado en ' + tpEsc(p.label) + ' dejará de funcionar. ' +
+                       'Hazlo solo si el impreso se filtró o alguien de fuera lo copió.',
+                boton: 'Rotar el QR',
+                peligro: true,
+                alConfirmar: async function () {
+                    try {
+                        const d = await tpPeticion(TP_API_TABLES, { method: 'PUT', body: JSON.stringify({ table_id: p.table_id, rotate_token: true }) });
+                        tpAviso('QR rotado: imprime el nuevo.', 'success');
+                        tpEstado.qrActual = d;
+                        tpMostrarQr(p);
+                        await tpCargar(true);
+                    } catch (e) { tpAviso(tpMensajeDeError(e), 'error'); }
+                }
+            });
         });
     }
 }
@@ -282,12 +318,20 @@ async function tpGuardarPunto() {
 async function tpDesactivarPunto(id) {
     const p = tpPuntoPorId(id);
     if (!p) return;
-    if (!confirm('¿Desactivar ' + p.label + '? Su QR dejará de funcionar y saldrá del mapa.')) return;
-    try {
-        const d = await tpPeticion(TP_API_TABLES + '?table_id=' + id, { method: 'DELETE' });
-        tpAviso(d && d.borrado ? 'Punto eliminado' : 'Punto desactivado', 'success');
-        await tpCargar(true);
-    } catch (e) { tpAviso(tpMensajeDeError(e), 'error'); }
+    tpConfirmar({
+        titulo: 'Desactivar ' + p.label,
+        texto: 'Dejará de salir en el mapa, su QR impreso ya no abrirá la carta de esta mesa y no se ' +
+               'podrán abrir cuentas nuevas ahí. Lo que ya está en la cuenta no se toca.',
+        boton: 'Desactivar',
+        peligro: true,
+        alConfirmar: async function () {
+            try {
+                const d = await tpPeticion(TP_API_TABLES + '?table_id=' + id, { method: 'DELETE' });
+                tpAviso(d && d.borrado ? 'Punto eliminado' : 'Punto desactivado', 'success');
+                await tpCargar(true);
+            } catch (e) { tpAviso(tpMensajeDeError(e), 'error'); }
+        }
+    });
 }
 
 async function tpReactivarPunto(id) {
@@ -422,17 +466,73 @@ function tpPintarCatalogo() {
     }).join('');
 }
 
-/** Abre la hoja de cantidad y notas para el producto tocado. */
-function tpAbrirAgregar(productId) {
-    const p = tpEstado.catalogo.filter(function (x) { return String(x.product_id) === String(productId); })[0];
-    if (!p) return;
-    tpEstado.productoParaAgregar = p;
-    document.getElementById('tpAgregarTitulo').textContent = p.product_name + ' · ' + tpDinero(p.price);
-    document.getElementById('tpAgregarCantidad').value = 1;
-    document.getElementById('tpAgregarNotas').value = '';
-    tpAbrirModal('tpModalAgregar');
-    // El foco en la cantidad deja agregarlo varias veces sin tocar el ratón.
-    setTimeout(function () { document.getElementById('tpAgregarCantidad').focus(); }, 80);
+/**
+ * Agrega UNA pieza del platillo tocado: un clic, un platillo; otro clic, otro.
+ *
+ * Antes esto abría una hoja de "cantidad y notas" ENCIMA de la cuenta que ya estaba abierta
+ * (dos modales encimados, y el de arriba tapando justo lo que se estaba anotando). Ahora la
+ * cantidad se sube tocando el platillo otra vez —el servidor fusiona en la misma línea— y
+ * las notas se escriben POR LÍNEA dentro del panel del pedido.
+ */
+async function tpAgregarDirecto(productId) {
+    const d = tpEstado.cuentaActual;
+    if (!d) return;
+    await tpAgregarALaCuenta(productId, 1, '');
+}
+
+/** La cantidad de UNA línea pendiente (0 la quita). Respeta las notas de ese renglón. */
+async function tpCambiarCantidadLinea(itemId, cantidad) {
+    const d = tpEstado.cuentaActual;
+    if (!d) return;
+    try {
+        await tpPeticion(TP_API_ORDER, {
+            method: 'POST',
+            body: JSON.stringify({
+                session_id: d.session.session_id,
+                action: 'set_quantity',
+                order_item_id: Number(itemId),
+                quantity: Math.max(0, Number(cantidad) || 0)
+            })
+        });
+        await tpCargarCuenta(d.session.session_id);
+        await tpCargar(true);
+    } catch (e) {
+        tpAviso(tpMensajeDeError(e), 'error');
+    }
+}
+
+/** Abre o cierra la caja de notas de una línea, DENTRO del panel del pedido. */
+function tpAlternarNotasLinea(itemId) {
+    tpEstado.notasAbiertas = String(tpEstado.notasAbiertas) === String(itemId) ? null : String(itemId);
+    tpPintarPedido(tpEstado.cuentaActual || { session: {} });
+    if (tpEstado.notasAbiertas) {
+        const campo = document.getElementById('tpNotasLinea' + itemId);
+        if (campo) setTimeout(function () { campo.focus(); }, 60);
+    }
+}
+
+/** Guarda las notas de esa línea (vacío = borrar la nota). */
+async function tpGuardarNotasLinea(itemId) {
+    const d = tpEstado.cuentaActual;
+    const campo = document.getElementById('tpNotasLinea' + itemId);
+    if (!d || !campo) return;
+    const texto = (campo.value || '').trim().slice(0, 200);
+    try {
+        await tpPeticion(TP_API_ORDER, {
+            method: 'POST',
+            body: JSON.stringify({
+                session_id: d.session.session_id,
+                action: 'set_notes',
+                order_item_id: Number(itemId),
+                notes: texto
+            })
+        });
+        tpEstado.notasAbiertas = null;
+        await tpCargarCuenta(d.session.session_id);
+        tpAviso(texto ? 'Nota guardada' : 'Nota borrada', 'success');
+    } catch (e) {
+        tpAviso(tpMensajeDeError(e), 'error');
+    }
 }
 
 /** Lo que anota el mesero entra a la MISMA cuenta que ve el cliente. */
@@ -567,19 +667,41 @@ function tpPintarPedido(d) {
 
 function tpLineaPedido(it) {
     const cancelada = it.status === 'cancelled';
+    const pendiente = it.status === 'pending';
     // El borde de la izquierda dice el estado de un vistazo, sin leer.
     const clase = { pending: 'pendiente', sent: 'enviado', preparing: 'enviado', ready: 'listo', served: 'listo', cancelled: 'cancelada' }[it.status] || 'pendiente';
+    const cant = Number(it.quantity) || 0;
+    const abierta = tpEstado.notasAbiertas === String(it.order_item_id);
+
+    // Lo pendiente se ajusta POR LÍNEA: subir, bajar, anotar. Cada platillo con lo suyo.
+    const acciones = pendiente
+        ? '<div class="tp-linea-acciones">' +
+              '<button type="button" class="tp-linea-btn" data-linea-menos="' + it.order_item_id + '" data-cantidad="' + cant + '" aria-label="Una menos"><i class="fas fa-minus"></i></button>' +
+              '<button type="button" class="tp-linea-btn" data-linea-mas="' + it.order_item_id + '" data-cantidad="' + cant + '" aria-label="Una más"><i class="fas fa-plus"></i></button>' +
+              '<button type="button" class="tp-linea-btn' + (abierta ? ' activo' : '') + '" data-linea-notas="' + it.order_item_id + '"><i class="fas fa-pen"></i> ' + (it.notes ? 'Cambiar nota' : 'Anotar') + '</button>' +
+              '<button type="button" class="tp-linea-quitar" data-quitar-linea="' + it.order_item_id + '" title="Quitar de la cuenta"><i class="fas fa-xmark"></i></button>' +
+          '</div>'
+        : '';
+
+    // La caja de notas vive DENTRO de la línea (sin abrir otro modal encima del pedido).
+    const caja = (pendiente && abierta)
+        ? '<div class="tp-linea-notas-caja">' +
+              '<input type="text" id="tpNotasLinea' + it.order_item_id + '" class="tp-notas-input" maxlength="200"' +
+                  ' placeholder="Sin cebolla, sin salsa, término medio…" value="' + tpEsc(it.notes || '') + '">' +
+              '<button type="button" class="tp-btn primario" data-linea-guardar-notas="' + it.order_item_id + '">Guardar</button>' +
+          '</div>'
+        : '';
+
     return '<div class="tp-linea ' + clase + '">' +
-        '<div class="tp-linea-cant">' + tpCantidad(it.quantity) + '×</div>' +
+        '<div class="tp-linea-cant">' + tpCantidad(cant) + '×</div>' +
         '<div class="tp-linea-info">' +
             '<div class="tp-linea-nombre"' + (cancelada ? ' style="text-decoration:line-through;opacity:.55"' : '') + '>' + tpEsc(it.product_name) + '</div>' +
             (it.notes ? '<div class="tp-linea-notas"><i class="fas fa-pen"></i> ' + tpEsc(it.notes) + '</div>' : '') +
             '<div class="tp-linea-estado">' + tpEsc(tpEtiquetaEstado(it.status)) + '</div>' +
+            acciones +
+            caja +
         '</div>' +
         '<div class="tp-linea-importe">' + tpDinero(it.line_total) + '</div>' +
-        (it.status === 'pending'
-            ? '<button type="button" class="tp-linea-quitar" data-quitar-linea="' + it.order_item_id + '" title="Quitar de la cuenta"><i class="fas fa-xmark"></i></button>'
-            : '') +
         '</div>';
 }
 
@@ -600,10 +722,23 @@ async function tpAccionCuenta(accion) {
             await tpPeticion(TP_API_SESSION, { method: 'POST', body: JSON.stringify({ action: accion, session_id: sessionId }) });
             tpAviso(accion === 'pause' ? 'Pedidos en pausa' : 'Pedidos reanudados', 'success');
         } else if (accion === 'close') {
-            if (!confirm('¿Cerrar la cuenta? El cobro se hace aparte (por ahora no genera la venta).')) return;
-            await tpPeticion(TP_API_SESSION, { method: 'POST', body: JSON.stringify({ action: 'close', session_id: sessionId }) });
-            tpAviso('Cuenta cerrada', 'success');
-            tpCerrarModal('tpModalCuenta');
+            // Cerrar la cuenta sin cobrarla es una decisión con consecuencias: se explica.
+            tpConfirmar({
+                titulo: 'Cerrar la cuenta',
+                texto: 'La cuenta se cierra y sale del mapa del salón. El cobro se hace aparte: ' +
+                       'cerrar aquí NO genera la venta ni toca la caja.',
+                boton: 'Cerrar la cuenta',
+                peligro: true,
+                alConfirmar: async function () {
+                    try {
+                        await tpPeticion(TP_API_SESSION, { method: 'POST', body: JSON.stringify({ action: 'close', session_id: sessionId }) });
+                        tpAviso('Cuenta cerrada', 'success');
+                        tpCerrarModal('tpModalCuenta');
+                        await tpCargar(true);
+                    } catch (e) { tpAviso(tpMensajeDeError(e), 'error'); }
+                }
+            });
+            return;
         } else if (accion === 'cancelar') {
             const campo = document.getElementById('tpCancelarMotivo');
             campo.value = '';
@@ -701,10 +836,47 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
     });
 
-    // Acciones dentro de la cuenta: quitar una línea, el engranaje, el QR, enviar.
+    // Acciones DENTRO de la cuenta: cada línea del pedido se ajusta y se anota por separado.
     document.getElementById('tpCuentaPedido').addEventListener('click', function (ev) {
+        const menos = ev.target.closest('[data-linea-menos]');
+        if (menos) {
+            tpCambiarCantidadLinea(menos.getAttribute('data-linea-menos'), Number(menos.getAttribute('data-cantidad')) - 1);
+            return;
+        }
+        const mas = ev.target.closest('[data-linea-mas]');
+        if (mas) {
+            tpCambiarCantidadLinea(mas.getAttribute('data-linea-mas'), Number(mas.getAttribute('data-cantidad')) + 1);
+            return;
+        }
+        const notas = ev.target.closest('[data-linea-notas]');
+        if (notas) {
+            tpAlternarNotasLinea(notas.getAttribute('data-linea-notas'));
+            return;
+        }
+        const guardar = ev.target.closest('[data-linea-guardar-notas]');
+        if (guardar) {
+            tpGuardarNotasLinea(guardar.getAttribute('data-linea-guardar-notas'));
+            return;
+        }
         const q = ev.target.closest('[data-quitar-linea]');
         if (q) tpQuitarLinea(q.getAttribute('data-quitar-linea'));
+    });
+
+    // Enter en la caja de notas guarda (en una tableta el teclado estorba).
+    document.getElementById('tpCuentaPedido').addEventListener('keydown', function (ev) {
+        if (ev.key !== 'Enter') return;
+        const campo = ev.target.closest('[id^="tpNotasLinea"]');
+        if (!campo) return;
+        ev.preventDefault();
+        tpGuardarNotasLinea(campo.id.replace('tpNotasLinea', ''));
+    });
+
+    // La confirmación propia (nunca confirm() del navegador)
+    document.getElementById('tpConfirmaBoton').addEventListener('click', function () {
+        const accion = tpConfirmacion.accion;
+        tpConfirmacion.accion = null;
+        tpCerrarModal('tpModalConfirma');
+        if (accion) accion();
     });
 
     document.getElementById('tpCuentaEnviar').addEventListener('click', tpEnviarACocina);
@@ -745,27 +917,14 @@ document.addEventListener('DOMContentLoaded', async function () {
         tpPintarCategorias();
         tpPintarCatalogo();
     });
+    // El menú: UN toque agrega una pieza. Otro toque, otra. Sin pasos intermedios.
     document.getElementById('tpMenuProductos').addEventListener('click', function (ev) {
         const b = ev.target.closest('[data-producto]');
-        if (b) tpAbrirAgregar(b.getAttribute('data-producto'));
-    });
-
-    // Cantidad y notas del platillo que se va a anotar
-    document.getElementById('tpAgregarMenos').addEventListener('click', function () {
-        const i = document.getElementById('tpAgregarCantidad');
-        i.value = Math.max(1, Number(i.value || 1) - 1);
-    });
-    document.getElementById('tpAgregarMas').addEventListener('click', function () {
-        const i = document.getElementById('tpAgregarCantidad');
-        i.value = Number(i.value || 1) + 1;
-    });
-    document.getElementById('tpAgregarConfirmar').addEventListener('click', async function () {
-        const p = tpEstado.productoParaAgregar;
-        if (!p) return;
-        const cantidad = Math.max(1, Number(document.getElementById('tpAgregarCantidad').value || 1));
-        const notas = document.getElementById('tpAgregarNotas').value.trim();
-        tpCerrarModal('tpModalAgregar');
-        await tpAgregarALaCuenta(p.product_id, cantidad, notas);
+        if (!b || b.disabled) return;
+        b.disabled = true;
+        Promise.resolve(tpAgregarDirecto(b.getAttribute('data-producto'))).then(function () {
+            b.disabled = false;
+        });
     });
 
     // En móvil se alterna entre el pedido y el menú: una cosa a la vez, a pantalla completa.

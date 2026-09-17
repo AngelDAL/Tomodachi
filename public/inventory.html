@@ -376,6 +376,18 @@
                             </div>
                         </div>
 
+                        <!-- Dónde se prepara: vive en "Detalles" y no en "Presentaciones" porque
+                             aplica a CUALQUIER producto (un platillo de stock o una receta se
+                             preparan igual), y esa pestaña solo se muestra a los componentes. -->
+                        <div class="form-group" id="addStationGroup" data-value="0">
+                            <label><i class="fas fa-kitchen-set"></i> Dónde se prepara</label>
+                            <div class="consume-opts" id="addStationOpts">
+                                <!-- Las opciones las pinta JS (estacionesPintar): "Sin preparación" + una por estación activa -->
+                            </div>
+                            <small class="form-hint station-hint">Los platillos de una estación salen en su propia comanda.</small>
+                            <small class="form-hint station-empty" id="addStationEmpty" hidden>Todavía no hay estaciones. Se crean en Puntos de servicio, pestaña Comandas, botón Estaciones.</small>
+                        </div>
+
                         <!-- Modo de consumo y presentaciones viven en la pestaña "Presentaciones" (componente);
                             la composición en la pestaña "Componentes" (ensamblado/servicio). -->
                     </div>
@@ -765,6 +777,18 @@
                                     <small class="form-hint">Ejemplo: Si seleccionas "kg" y el precio es $50, significa $50 por kilogramo</small>
                                 </div>
                             </div>
+                        </div>
+
+                        <!-- Dónde se prepara: en "Detalles", no en el panel de presentaciones (que
+                             solo se ve para componentes). Un platillo de stock o una receta también
+                             se preparan en algún lado. -->
+                        <div class="form-group" id="editStationGroup" data-value="0">
+                            <label><i class="fas fa-kitchen-set"></i> Dónde se prepara</label>
+                            <div class="consume-opts" id="editStationOpts">
+                                <!-- Las opciones las pinta JS (estacionesPintar): "Sin preparación" + una por estación activa -->
+                            </div>
+                            <small class="form-hint station-hint">Los platillos de una estación salen en su propia comanda.</small>
+                            <small class="form-hint station-empty" id="editStationEmpty" hidden>Todavía no hay estaciones. Se crean en Puntos de servicio, pestaña Comandas, botón Estaciones.</small>
                         </div>
                     </div>
                     <!-- TAB 4: Tipo de inventario -->
@@ -1168,7 +1192,7 @@
     <script src="lib/html5-qrcode/html5-qrcode.min.js"></script>
     <script src="js/scanner.js"></script>
     <script src="js/tour.js?v=4"></script>
-    <script src="js/inventory.js?v=10"></script>
+    <script src="js/inventory.js?v=11"></script>
     <script src="js/stock-rule.js?v=1"></script>
     <script src="js/purchases.js?v=11"></script>
     <script>

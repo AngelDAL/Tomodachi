@@ -104,7 +104,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
    migración numerada en `database/migrations/` solo si es necesario para BDs
    existentes.
 5. Documenta endpoints nuevos en `docs/API.md`.
-6. Commitea con mensaje descriptivo; esta branch se mergea vía PR.
+6. Commitea con mensaje descriptivo **directo a `community-edition`** (ver abajo).
+
+## Reglas de operación del repositorio — NO NEGOCIABLE
+
+- **Trabaja SOLO en la branch `community-edition`.** `main` es producción de un
+  cliente externo que está en uso: **no la toques** (ni merge, ni push, ni
+  rebase, ni "alinear"). Confirmación humana explícita o nada.
+- **Commit directo a `community-edition`.** No crees ramas de trabajo
+  (`feature/*`, `fix/*`) ni abras PRs para trabajo normal. El repo debe quedarse
+  con dos ramas: `community-edition` y `main`.
+- **Nunca `--force`** sobre `community-edition`.
+- **No hagas `push` sin autorización humana.** El repositorio publica la imagen
+  Docker en cada push a `community-edition`.
+- **No reinicies, recrees ni borres contenedores**, no toques volúmenes ni bases
+  de datos, y no despliegues nada: de eso se encarga el orquestador. Tú cambias
+  código y lo verificas en un espacio de trabajo local.
+- Si el árbol de trabajo tiene cambios que no son tuyos, **no los commitees**.
+
+## Vocabulario (usar SIEMPRE estas palabras, en pantallas y API)
+
+| Concepto | Palabra | Nota |
+|---|---|---|
+| Dónde se atiende | **Punto de servicio** | Mesa 3, Barra 1, Habitación 12. Etiqueta libre |
+| La cuenta abierta | **Cuenta** | |
+| Quien consume | **Persona** | No "comensal" |
+| La ronda que se prepara | **Comanda** | |
+| Dónde se prepara | **Estación** | Cocina, Barra, Plancha |
+| Cómo sale la comanda | **Salida** | Pantalla / impresora / ninguna |
+| Ajustes del platillo | **Modificadores** | |
+
+## Tiempo y fechas — el desfase que ya rompió cosas
+
+El contenedor de la app va en **hora de México** y MariaDB en **UTC** (6 horas de
+desfase). Nunca calcules en PHP un valor temporal que después se compare contra
+la base: produce "cuentas vencidas" y "minutos en cero". Usa `NOW()`,
+`CURDATE()` o `TIMESTAMPDIFF` de SQL.
+
+Única excepción, y es deliberada: el **día de negocio** del folio de comanda se
+toma de PHP (`date('Y-m-d')`), porque con `CURDATE()` el folio se reiniciaría a
+las 18:00 locales, en plena cena.
+
+## Dinero — un solo camino
+
+Todo lo que mueve dinero pasa por `api/sales/create_sale.php` y
+`includes/CashRegister.class.php`. Ninguna función nueva escribe ventas, pagos ni
+movimientos de caja por su cuenta. Si necesitas una operación de dinero nueva,
+**extiende ese camino**, no abras otro.
+
+## Cómo probar sin tocar producción
+
+- `bash docker/unit_tests.sh` — reglas de JS (existencias, promociones).
+- `bash docker/test_*.sh <url>` — suites por módulo contra una instancia
+  DESECHABLE (`http://127.0.0.1:8091` o la que te indiquen).
+- **Nunca apuntes al dominio de producción**: las suites escriben datos.
+- Las pruebas se fabrican sus propios datos (`ZZ ... $RANDOM`) y no dependen de
+  un catálogo sembrado: una instalación limpia nace con cero productos.
+- En aserciones, compara por **id o por contenido**, nunca por conteos absolutos:
+  en una instancia con corridas previas los datos se acumulan.
+
 
 ## Seguridad — checklist al añadir un endpoint
 
@@ -208,3 +266,40 @@ function confirmAction(message, callback) {
 - Usa acentos correctamente (menú, no menu)
 - Ortografía profesional
 - Sin emojis en labels, placeholders, ni mensajes
+
+### Preferencias del dueño (aprendidas a golpe de corrección) — NO NEGOCIABLE
+
+Estas no son "buenas prácticas": son correcciones que ya se hicieron una vez y no
+deben volver a aparecer.
+
+1. **Botones, no `<select>`.** Para cualquier elección corta (método de pago, tipo
+   de inventario, modo de consumo, estación) se usa un grupo de botones tipo
+   toggle (`.pm-btn` / `.tp-btn` con `.active` + `data-value`) y su valor se lee y
+   se escribe con helpers. Un `<select>` se ve como un formulario de 2005 y en
+   tableta es incómodo.
+2. **Nada de `alert()`, `confirm()` ni `prompt()`.** Ni siquiera para confirmar
+   algo destructivo: se usa un modal propio del sistema, con título, explicación
+   de qué va a pasar y el botón en rojo. Si ya hay un modal abierto, la
+   confirmación se abre ENCIMA de ese (es una decisión, no navegación).
+3. **Un clic = una acción.** Agregar un elemento al pedido no puede abrir un
+   formulario: un toque agrega una pieza y otro toque agrega otra. **Nunca abras
+   un modal cuando ya hay un modal abierto**, salvo la confirmación del punto 2.
+4. **Lo que es por elemento se edita por elemento.** Las notas, la cantidad y las
+   anotaciones de un platillo viven en SU línea/ficha, no en un campo general de
+   la cuenta. El "sin cebolla" de uno no puede caerle al de al lado.
+5. **Pestañas dentro de la página, no páginas nuevas.** Si algo es una subsección
+   de un módulo existente (compras dentro de inventario, comandas dentro del
+   salón), va como pestaña en esa página y **no** como entrada nueva en el menú
+   lateral.
+6. **Área táctil de 40 px mínimo y nada que dependa de `hover`** como único
+   acceso: se usa en tabletas y con las manos ocupadas.
+7. **En móvil, tarjetas.** No tablas colapsadas, no grillas apretadas, no campos
+   sin estilar. Etiqueta + valor legibles.
+8. **Colores solo con variables del tema** (`--primary-color`, `--bg-card`,
+   `--border-color`, `--text-muted`, `--danger-color`...). Nada de hex sueltos:
+   el claro y el oscuro ya están derivados y un color fijo rompe uno de los dos.
+9. **El total y lo que se está pidiendo SIEMPRE visibles.** Nunca detrás de una
+   pestaña, un acordeón o un paso extra.
+10. **Sin selects ni campos sin estilo** en el POS, y los modales compactos con
+    tarjetas en móvil.
+

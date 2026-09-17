@@ -181,6 +181,22 @@ try {
                 $category_id = null;
             }
 
+            // Estación de preparación: opcional. Debe ser de la tienda del actor y no darse
+            // de alta un producto para una estación que el usuario no administra, porque el
+            // tablero de cocina abriría ahí comandas que nunca se verían.
+            $station_id = null;
+            if (array_key_exists('station_id', $data)) {
+                $sid = (int)$data['station_id'];
+                if ($sid > 0) {
+                    $st = $db->selectOne('SELECT station_id FROM stations WHERE station_id = ? AND store_id = ?', [$sid, $store_id]);
+                    if (!$st) {
+                        $errors['station_id'] = 'La estación no existe en esta tienda';
+                    } else {
+                        $station_id = $sid;
+                    }
+                }
+            }
+
             if ($barcode && $db->selectOne('SELECT product_id FROM products WHERE barcode = ? AND store_id = ?', [$barcode, $store_id])) { $errors['barcode'] = 'Duplicado en esta tienda'; }
             if ($qr_code && $db->selectOne('SELECT product_id FROM products WHERE qr_code = ? AND store_id = ?', [$qr_code, $store_id])) { $errors['qr_code'] = 'Duplicado en esta tienda'; }
 
@@ -188,8 +204,8 @@ try {
             if (!Validator::validatePrice($cost)) { $errors['cost'] = 'Costo inválido'; }
             if ($errors) { Response::validationError($errors); }
 
-            $id = $db->insert('INSERT INTO products (store_id, category_id, product_name, description, barcode, qr_code, price, cost, current_stock, min_stock, status, is_bulk, bulk_unit, tracking_type, consume_mode, pieces_per_box, is_ingredient, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW(),NOW())', [
-                $store_id, $category_id, $product_name, $description, $barcode, $qr_code, $price, $cost, $initial_stock, $min_stock, STATUS_ACTIVE, $is_bulk, $bulk_unit, $tracking_type, $consume_mode, $pieces_per_box, $is_ingredient
+            $id = $db->insert('INSERT INTO products (store_id, category_id, product_name, description, barcode, qr_code, price, cost, current_stock, min_stock, status, is_bulk, bulk_unit, tracking_type, consume_mode, pieces_per_box, is_ingredient, station_id, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW(),NOW())', [
+                $store_id, $category_id, $product_name, $description, $barcode, $qr_code, $price, $cost, $initial_stock, $min_stock, STATUS_ACTIVE, $is_bulk, $bulk_unit, $tracking_type, $consume_mode, $pieces_per_box, $is_ingredient, $station_id
             ]);
 
             if ($initial_stock > 0) {
@@ -198,7 +214,7 @@ try {
                     [$store_id, $id, $user_id, $initial_stock, $initial_stock]);
             }
 
-            $product = $db->selectOne('SELECT product_id, product_name, image_path, barcode, qr_code, price, cost, current_stock, min_stock, status, is_bulk, bulk_unit, tracking_type, consume_mode, pieces_per_box, is_ingredient, hidden_in_pos, discontinued_at FROM products WHERE product_id = ?', [$id]);
+            $product = $db->selectOne('SELECT product_id, product_name, image_path, barcode, qr_code, price, cost, current_stock, min_stock, status, is_bulk, bulk_unit, tracking_type, consume_mode, pieces_per_box, is_ingredient, station_id, hidden_in_pos, discontinued_at FROM products WHERE product_id = ?', [$id]);
             Response::success($product, 'Producto creado');
             break;
 
@@ -225,7 +241,7 @@ try {
                     'UPDATE products SET hidden_in_pos = 1, discontinued_at = NOW(), status = ?, updated_at = NOW() WHERE product_id = ? AND store_id = ?',
                     [STATUS_INACTIVE, $product_id, $store_id]
                 );
-                $product = $db->selectOne('SELECT product_id, product_name, image_path, barcode, qr_code, price, cost, current_stock, min_stock, status, is_bulk, bulk_unit, tracking_type, consume_mode, pieces_per_box, is_ingredient, hidden_in_pos, discontinued_at FROM products WHERE product_id = ?', [$product_id]);
+                $product = $db->selectOne('SELECT product_id, product_name, image_path, barcode, qr_code, price, cost, current_stock, min_stock, status, is_bulk, bulk_unit, tracking_type, consume_mode, pieces_per_box, is_ingredient, station_id, hidden_in_pos, discontinued_at FROM products WHERE product_id = ?', [$product_id]);
                 Response::success($product, 'Producto retirado');
                 break;
             }
@@ -237,7 +253,7 @@ try {
                     'UPDATE products SET discontinued_at = NULL, hidden_in_pos = ?, status = ?, updated_at = NOW() WHERE product_id = ? AND store_id = ?',
                     [$newHidden, STATUS_ACTIVE, $product_id, $store_id]
                 );
-                $product = $db->selectOne('SELECT product_id, product_name, image_path, barcode, qr_code, price, cost, current_stock, min_stock, status, is_bulk, bulk_unit, tracking_type, consume_mode, pieces_per_box, is_ingredient, hidden_in_pos, discontinued_at FROM products WHERE product_id = ?', [$product_id]);
+                $product = $db->selectOne('SELECT product_id, product_name, image_path, barcode, qr_code, price, cost, current_stock, min_stock, status, is_bulk, bulk_unit, tracking_type, consume_mode, pieces_per_box, is_ingredient, station_id, hidden_in_pos, discontinued_at FROM products WHERE product_id = ?', [$product_id]);
                 Response::success($product, 'Producto restaurado');
                 break;
             }
@@ -317,6 +333,18 @@ try {
                 }
             }
 
+            // Estación de preparación. `null` o 0 quita la asignación; cualquier otro valor
+            // debe existir y pertenecer a la tienda (misma protección que en el alta).
+            if (array_key_exists('station_id', $data)) {
+                $sid = ($data['station_id'] === null || $data['station_id'] === '') ? 0 : (int)$data['station_id'];
+                if ($sid < 0) { $sid = 0; }
+                if ($sid > 0 && !$db->selectOne('SELECT station_id FROM stations WHERE station_id = ? AND store_id = ?', [$sid, $store_id])) {
+                    Response::validationError(['station_id' => 'La estación no existe en esta tienda']);
+                }
+                $fields[] = 'station_id = ?';
+                $params[] = $sid > 0 ? $sid : null;
+            }
+
             if (!$fields) { Response::error('Nada para actualizar', 400); }
             $fields[] = 'updated_at = NOW()';
             $params[] = $product_id;
@@ -325,7 +353,7 @@ try {
             $params[] = $store_id;
 
             $db->update($sql, $params);
-            $product = $db->selectOne('SELECT product_id, product_name, image_path, barcode, qr_code, price, cost, current_stock, min_stock, status, is_bulk, bulk_unit, tracking_type, consume_mode, pieces_per_box, is_ingredient, hidden_in_pos, discontinued_at FROM products WHERE product_id = ?', [$product_id]);
+            $product = $db->selectOne('SELECT product_id, product_name, image_path, barcode, qr_code, price, cost, current_stock, min_stock, status, is_bulk, bulk_unit, tracking_type, consume_mode, pieces_per_box, is_ingredient, station_id, hidden_in_pos, discontinued_at FROM products WHERE product_id = ?', [$product_id]);
             Response::success($product, 'Producto actualizado');
             break;
 

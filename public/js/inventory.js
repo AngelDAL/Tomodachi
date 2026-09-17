@@ -730,13 +730,20 @@ function bindEvents() {
         if (compSearchResults && !e.target.closest('.comp-search')) compSearchResults.style.display = 'none';
     });
 
-    // Selector de modo de consumo (3 botones resaltables).
+    // Selector de modo de consumo (3 botones resaltables) y de estaciones ("Dónde se prepara").
+    // Ambos dibujan botones `.consume-opt`, así que comparten esta delegación: se enruta al
+    // helper correcto según el grupo para que SOLO el botón tocado quede activo.
     document.querySelectorAll('.consume-opts').forEach(grp => {
         grp.addEventListener('click', (e) => {
             const opt = e.target.closest('.consume-opt');
             if (!opt) return;
             const group = grp.closest('.form-group');
-            if (group && group.id) consumeModeSet(group.id, opt.dataset.value);
+            if (!group || !group.id) return;
+            if (group.id === 'addStationGroup' || group.id === 'editStationGroup') {
+                stationSet(group.id, opt.dataset.value);
+            } else {
+                consumeModeSet(group.id, opt.dataset.value);
+            }
         });
     });
 }
@@ -779,6 +786,13 @@ function performSearch() {
 function openAddProductModal() {
     resetAddComposition();
     consumeModeSet('addConsumeModeGroup', 'fifo');
+    // Estaciones: se cargan y pintan sin bloquear la apertura del modal. Cada alta parte de
+    // "Sin preparación"; a diferencia del consumo, no se puede "recordar" la opción anterior.
+    estacionesCargar().then(cache => {
+        if (!cache) return;
+        estacionesPintar(cache);
+        stationSet('addStationGroup', '0');
+    });
     // Asistente: mostrar el PASO 1 (selección de tipo) ocultando el formulario.
     const sel = document.getElementById('productTrackingType');
     if (sel) sel.value = 'stock';
@@ -841,6 +855,7 @@ async function submitAddProduct() {
         tracking_type: document.getElementById('productTrackingType')?.value || 'stock',
         is_ingredient: (document.getElementById('productTrackingType')?.value === 'component') ? 1 : 0,
         consume_mode: consumeModeGet('addConsumeModeGroup'),
+        station_id: parseInt(stationGet('addStationGroup'), 10) || 0,
         pieces_per_box: parseFloat(document.getElementById('productPiecesPerBox')?.value) || null,
         cost_per_box: parseFloat(document.getElementById('productCostPerBox')?.value) || null
         // store_id eliminado, el backend lo toma de la sesión
@@ -1461,6 +1476,68 @@ function consumeModeSet(groupId, value) {
         }[value];
         if (d) hint.textContent = d;
     }
+}
+
+/* ===== Selector "Dónde se prepara" (estaciones): mismo patrón de botones que el consumo ===== */
+let estacionesCache = null; // La lista se pide una sola vez; no es un dato que cambie en esta pantalla.
+
+async function estacionesCargar() {
+    if (estacionesCache) return estacionesCache;
+    try {
+        const res = await fetch('../api/dining/stations.php', { credentials: 'include' });
+        if (!res.ok) {
+            showNotification('No se pudieron cargar las estaciones', 'error');
+            return null;
+        }
+        const data = await res.json();
+        if (!data.success) {
+            showNotification('No se pudieron cargar las estaciones', 'error');
+            return null;
+        }
+        estacionesCache = data.data || { estaciones: [], sin_estacion: 0 };
+        return estacionesCache;
+    } catch (e) {
+        console.error('Error cargando estaciones:', e);
+        showNotification('Error de conexión al cargar las estaciones', 'error');
+        return null;
+    }
+}
+
+function estacionesPintar(cache) {
+    if (!cache) return; // Falló la carga (ya se avisó con showNotification): no se toca nada.
+    const activas = (cache.estaciones || []).filter(e => e.is_active);
+    ['addStationGroup', 'editStationGroup'].forEach(groupId => {
+        const group = document.getElementById(groupId);
+        if (!group) return;
+        const cont = group.querySelector('.consume-opts');
+        const nota = group.querySelector('.station-empty');
+        if (!cont) return;
+        if (!activas.length) {
+            // Sin estaciones: nada que escoger. El grupo se queda en "Sin preparación" (data-value 0).
+            cont.innerHTML = '';
+            if (nota) nota.hidden = false;
+            stationSet(groupId, '0');
+            return;
+        }
+        if (nota) nota.hidden = true;
+        // "Sin preparación" (0) primero y una opción por estación activa; 40 px de alto táctil.
+        let html = '<button type="button" class="consume-opt" data-value="0" title="Sin preparación">Sin preparación</button>';
+        html += activas.map(e => '<button type="button" class="consume-opt" data-value="' + e.station_id + '" title="' + escapeHtml(e.name) + '">' + escapeHtml(e.name) + '</button>').join('');
+        cont.innerHTML = html;
+    });
+}
+
+function stationGet(groupId) {
+    const group = document.getElementById(groupId);
+    return group ? (group.dataset.value || '0') : '0';
+}
+
+function stationSet(groupId, value) {
+    const group = document.getElementById(groupId);
+    if (!group) return;
+    const v = String(value === null || value === undefined ? 0 : value);
+    group.dataset.value = v;
+    group.querySelectorAll('.consume-opt').forEach(b => b.classList.toggle('active', b.dataset.value === v));
 }
 
 /* ===== Presentaciones (componente) en el ALTA ===== */
@@ -2190,6 +2267,14 @@ function openProductDetails(productId) {
     // Mostrar modal
     const modal = document.getElementById('productDetailsModal');
     if (modal) modal.classList.add('show');
+
+    // "Dónde se prepara": pintar las estaciones y marcar la que ya tiene el producto.
+    // No bloquea la apertura; cuando el botón existe se marca (null = Sin preparación).
+    estacionesCargar().then(cache => {
+        if (!cache) return;
+        estacionesPintar(cache);
+        stationSet('editStationGroup', product.station_id == null ? '0' : product.station_id);
+    });
 }
 
 function closeProductDetails() {
@@ -2300,6 +2385,7 @@ async function submitEditProduct() {
         tracking_type: document.getElementById('editProductTrackingType')?.value,
         is_ingredient: (document.getElementById('editProductTrackingType')?.value === 'component') ? 1 : 0,
         consume_mode: consumeModeGet('editConsumeModeGroup'),
+        station_id: stationGet('editStationGroup') === '0' ? null : parseInt(stationGet('editStationGroup'), 10),
         pieces_per_box: parseFloat(document.getElementById('editProductPiecesPerBox')?.value) || null,
         cost_per_box: parseFloat(document.getElementById('editProductCostPerBox')?.value) || null,
         hidden_in_pos: document.getElementById('editHiddenInPos')?.checked ? 1 : 0

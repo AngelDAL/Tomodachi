@@ -1,9 +1,10 @@
 <?php
 /**
  * Productos API
- * GET  /api/inventory/products.php?store_id=1&search=texto
- * POST /api/inventory/products.php
- * PUT  /api/inventory/products.php
+ * GET    /api/inventory/products.php?store_id=1&search=texto
+ * POST   /api/inventory/products.php
+ * PUT    /api/inventory/products.php
+ * DELETE /api/inventory/products.php  (solo sin historial; si lo tiene responde 409)
  */
 require_once '../../config/database.php';
 require_once '../../config/constants.php';
@@ -197,6 +198,79 @@ try {
             $product=$db->selectOne('SELECT product_id, product_name, image_path, barcode, qr_code, price, cost, current_stock, min_stock, status, is_bulk, bulk_unit FROM products WHERE product_id = ?',[$product_id]);
             Response::success($product,'Producto actualizado');
             break;
+
+        case 'DELETE':
+            // Elimina el producto de la tienda (duplicados, descontinuados, capturas
+            // erróneas). Solo se permite si el producto NO tiene historial: si tiene
+            // ventas, compras, movimientos, comandas o participa como ingrediente de
+            // una receta, borrarlo rompería reportes y recetas. En ese caso se pide
+            // archivar (hidden_in_pos + discontinued_at) para conservar el historial.
+            if ($actor['via'] === 'session') {
+                if (!$auth->hasRole([ROLE_ADMIN,ROLE_MANAGER])) { Response::error('Permisos insuficientes',403); }
+            } else {
+                $apiAuth->requireScope($actor, 'write');
+            }
+            $data=json_decode(file_get_contents('php://input'),true);
+            if(!$data){ Response::validationError(['body'=>'JSON inválido']); }
+
+            $store_id = (int)$currentUser['store_id'];
+            $product_id=isset($data['product_id'])?(int)$data['product_id']:0;
+            if($product_id<=0){ Response::validationError(['product_id'=>'Requerido']); }
+
+            $product=$db->selectOne('SELECT product_id, product_name, image_path FROM products WHERE product_id = ? AND store_id = ?',[$product_id,$store_id]);
+            if(!$product){ Response::notFound('Producto no existe o no pertenece a su tienda'); }
+
+            // Referencias con valor histórico: bloquean el borrado.
+            // No incluye inventory_movements: ese es el rastro de stock del propio
+            // producto y deja de tener sentido cuando el producto desaparece.
+            $bloqueos=[];
+            $historicos=[
+                ['sale_details','ventas'],
+                ['sale_refund_items','devoluciones'],
+                ['purchase_items','compras'],
+                ['dining_order_items','comandas'],
+            ];
+            foreach($historicos as $h){
+                $row=$db->selectOne('SELECT COUNT(*) AS n FROM '.$h[0].' WHERE product_id = ?',[$product_id]);
+                if($row && (int)$row['n']>0){ $bloqueos[]=$h[1].' ('.(int)$row['n'].')'; }
+            }
+
+            // Si otro producto lo usa como ingrediente, borrarlo dejaría la receta rota.
+            $comoIngrediente=$db->selectOne('SELECT COUNT(*) AS n FROM product_ingredients WHERE component_id = ?',[$product_id]);
+            if($comoIngrediente && (int)$comoIngrediente['n']>0){ $bloqueos[]='ingrediente de recetas ('.(int)$comoIngrediente['n'].')'; }
+
+            if($bloqueos){
+                Response::error('No se puede eliminar: el producto tiene '.implode(', ',$bloqueos).'. Si ya no lo vendes, consérvalo para no romper el historial de reportes.',409);
+            }
+
+            // Sin historial: se limpian las referencias que no aportan nada y se borra.
+            try {
+                $db->beginTransaction();
+                $db->delete('DELETE FROM inventory_movements WHERE product_id = ?',[$product_id]);
+                $db->delete('DELETE FROM product_ingredients WHERE product_id = ?',[$product_id]);
+                $db->delete('DELETE FROM product_lots WHERE product_id = ?',[$product_id]);
+                $db->delete('DELETE FROM product_tag_assignments WHERE product_id = ?',[$product_id]);
+                $db->delete('DELETE FROM promotion_targets WHERE product_id = ?',[$product_id]);
+                $db->delete('DELETE FROM menu_items WHERE product_id = ?',[$product_id]);
+                $db->delete('DELETE FROM products WHERE product_id = ? AND store_id = ?',[$product_id,$store_id]);
+                $db->commit();
+            } catch (Exception $e) {
+                $db->rollback();
+                Response::error('No se pudo eliminar el producto: '.$e->getMessage(),500);
+            }
+
+            // Imagen del producto: solo se borra si vive dentro de la carpeta de
+            // productos (nunca una ruta arbitraria) y el archivo existe.
+            $img=(string)($product['image_path'] ?? '');
+            if($img!=='' && strpos($img,'public/assets/images/products/')===0){
+                $base=realpath(__DIR__.'/../../public/assets/images/products');
+                $ruta=realpath(__DIR__.'/../../'.$img);
+                if($base && $ruta && strpos($ruta,$base)===0 && is_file($ruta)){ @unlink($ruta); }
+            }
+
+            Response::success(['product_id'=>$product_id,'product_name'=>$product['product_name']],'Producto eliminado');
+            break;
+
         default:
             Response::error('Método no permitido',405);
     }

@@ -416,6 +416,23 @@ function bindEvents() {
     if (closeDetailsBtn) closeDetailsBtn.addEventListener('click', closeProductDetails);
     if (cancelEditBtn) cancelEditBtn.addEventListener('click', closeProductDetails);
 
+    // Eliminar producto (duplicados / descontinuados)
+    const deleteProductBtn = document.getElementById('deleteProductBtn');
+    const deleteProductModal = document.getElementById('deleteProductModal');
+    const confirmDeleteProductBtn = document.getElementById('confirmDeleteProductBtn');
+    const cancelDeleteProductBtn = document.getElementById('cancelDeleteProductBtn');
+    const closeDeleteProductModalBtn = document.getElementById('closeDeleteProductModalBtn');
+
+    if (deleteProductBtn) deleteProductBtn.addEventListener('click', openDeleteProductModal);
+    if (confirmDeleteProductBtn) confirmDeleteProductBtn.addEventListener('click', confirmDeleteProduct);
+    if (cancelDeleteProductBtn) cancelDeleteProductBtn.addEventListener('click', closeDeleteProductModal);
+    if (closeDeleteProductModalBtn) closeDeleteProductModalBtn.addEventListener('click', closeDeleteProductModal);
+    if (deleteProductModal) {
+        deleteProductModal.addEventListener('click', (e) => {
+            if (e.target === deleteProductModal) closeDeleteProductModal();
+        });
+    }
+
     if (editForm) {
         editForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -945,6 +962,10 @@ function openProductDetails(productId) {
     // Calcular ganancia inicial
     updateProfitDisplay(parseFloat(product.price) || 0, parseFloat(product.cost) || 0);
 
+    // El botón de eliminar solo tiene sentido con un producto cargado
+    const deleteBtn = document.getElementById('deleteProductBtn');
+    if (deleteBtn) deleteBtn.style.display = 'inline-flex';
+
     // Mostrar modal
     const modal = document.getElementById('productDetailsModal');
     if (modal) modal.classList.add('show');
@@ -954,6 +975,10 @@ function closeProductDetails() {
     const modal = document.getElementById('productDetailsModal');
     if (modal) modal.classList.remove('show');
     currentEditingProduct = null;
+    // El botón de eliminar se oculta con el drawer para no quedar colgado
+    const deleteBtn = document.getElementById('deleteProductBtn');
+    if (deleteBtn) deleteBtn.style.display = 'none';
+    closeDeleteProductModal();
     // Limpiar formulario
     document.getElementById('editProductForm')?.reset();
     // Reset a primera pestaña
@@ -963,6 +988,76 @@ function closeProductDetails() {
     const firstPanel = document.getElementById(firstTab?.dataset?.tab);
     if (firstTab) firstTab.classList.add('active');
     if (firstPanel) firstPanel.classList.add('active');
+}
+
+/* ============================================================
+ *  Eliminar producto
+ *  Solo se permite si el producto no tiene historial. Cuando lo
+ *  tiene, el backend responde 409 con el motivo y se muestra aquí
+ *  mismo sin cerrar el modal.
+ * ============================================================ */
+function openDeleteProductModal() {
+    if (!currentEditingProduct) return;
+
+    const product = products.find(p => p.product_id == currentEditingProduct);
+    const nameEl = document.getElementById('deleteProductName');
+    const errEl = document.getElementById('deleteProductError');
+
+    if (nameEl) nameEl.textContent = product ? product.product_name : '';
+    if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+
+    const modal = document.getElementById('deleteProductModal');
+    if (modal) modal.classList.add('show');
+}
+
+function closeDeleteProductModal() {
+    const modal = document.getElementById('deleteProductModal');
+    if (modal) modal.classList.remove('show');
+}
+
+async function confirmDeleteProduct() {
+    if (!currentEditingProduct) return;
+
+    const btn = document.getElementById('confirmDeleteProductBtn');
+    const errEl = document.getElementById('deleteProductError');
+    const textoOriginal = btn ? btn.textContent : '';
+
+    if (btn) { btn.disabled = true; btn.textContent = 'Eliminando...'; }
+
+    const mostrarError = (mensaje) => {
+        if (errEl) {
+            errEl.textContent = mensaje;
+            errEl.style.display = 'block';
+        } else {
+            showNotification(mensaje, 'error');
+        }
+    };
+
+    try {
+        const response = await fetch('../api/inventory/products.php', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ product_id: currentEditingProduct })
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+            // 409: el producto tiene historial. Se explica el motivo sin cerrar.
+            mostrarError(data.message || 'No se pudo eliminar el producto');
+            return;
+        }
+
+        closeDeleteProductModal();
+        closeProductDetails();
+        showNotification(data.message || 'Producto eliminado', 'success');
+        await loadProducts();
+    } catch (error) {
+        console.error(error);
+        mostrarError('Error de conexión al eliminar el producto');
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = textoOriginal; }
+    }
 }
 
 function updateProfitDisplay(price, cost) {

@@ -486,6 +486,27 @@
         </div>
     </div>
     
+    <!-- Modal de confirmación para eliminar producto -->
+    <div id="deleteProductModal" class="modal">
+        <div class="modal-content" style="max-width: 460px;">
+            <div class="modal-header">
+                <h2><i class="fas fa-triangle-exclamation"></i> Eliminar Producto</h2>
+                <button type="button" class="modal-close" id="closeDeleteProductModalBtn" aria-label="Cerrar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p style="margin: 0 0 12px;">¿Seguro que quieres eliminar <strong id="deleteProductName"></strong>?</p>
+                <p class="form-hint" style="margin: 0;">Esta acción no se puede deshacer. Solo se permite si el producto no tiene ventas, compras, movimientos ni comandas registradas.</p>
+                <div id="deleteProductError" class="form-hint" style="display: none; margin-top: 12px; color: var(--danger-color, #d32f2f);"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" id="cancelDeleteProductBtn">Cancelar</button>
+                <button type="button" class="btn-danger" id="confirmDeleteProductBtn">Eliminar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal para gestionar categorías -->
     <div id="categoriesModal" class="modal">
         <div class="modal-content" style="max-width: 500px;">

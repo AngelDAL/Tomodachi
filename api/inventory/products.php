@@ -64,7 +64,7 @@ try {
                 $params[] = $pattern;
             }
             if ($conditions) { $sql .= ' WHERE '.implode(' AND ',$conditions); }
-            $sql .= ' ORDER BY p.product_name ASC LIMIT 200';
+            $sql .= ' ORDER BY p.product_name ASC';
             $products = $db->select($sql,$params);
             Response::success($products,'Listado productos');
             break;

@@ -55,8 +55,7 @@ try {
             JOIN products p ON im.product_id = p.product_id
             JOIN users u ON im.user_id = u.user_id
             WHERE ' . implode(' AND ', $conditions) . '
-            ORDER BY im.created_at DESC
-            LIMIT 200';
+            ORDER BY im.created_at DESC';
 
     $movements = $db->select($sql, $params);
     foreach ($movements as &$m) {

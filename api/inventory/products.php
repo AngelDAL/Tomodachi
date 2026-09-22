@@ -79,7 +79,7 @@ try {
             }
 
             if ($conditions) { $sql .= ' WHERE ' . implode(' AND ', $conditions); }
-            $sql .= ' ORDER BY p.product_name ASC LIMIT 200';
+            $sql .= ' ORDER BY p.product_name ASC';
             $products = $db->select($sql, $params);
 
             // Enrich with availability and lot data

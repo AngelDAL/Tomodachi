@@ -2040,21 +2040,23 @@
     }
 
     .gallery-main {
-        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-        gap: 8px;
+        /* Dos columnas anchas, no tres apretadas: la tarjeta ahora lleva el nombre completo
+           arriba, la foto y —abajo a la derecha— la cantidad y el precio. Con columnas de
+           80 px el nombre se comía la foto y todo quedaba amontonado. */
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 10px;
         padding: 8px;
     }
 
     .gallery-item {
-        height: 115px;
+        /* Antes: 115 px fijos, del tiempo en que la tarjeta era solo una foto con el nombre
+           encima. Ahora la tarjeta lleva nombre completo + foto + precio/cantidad, así que el
+           alto lo pone su contenido (la rejilla iguala las tarjetas de cada fila). */
+        height: auto;
     }
 
     .gallery-item .img-wrap {
-        height: 100%;
-    }
-
-    .gallery-item .item-details {
-        padding: 16px 5px 5px 5px;
+        height: auto;
     }
 
     .g-name {
@@ -3516,4 +3518,326 @@
 }
 @media (max-width: 768px) {
     .qty-input { width: 64px; min-width: 64px; height: 44px; font-size: 1.05rem; }
+}
+
+/* ============================================================
+ * TARJETA DE PRODUCTO — que se entienda de un vistazo
+ *
+ * Antes: la foto llenaba la tarjeta y encima flotaban el nombre (recortado con puntos
+ * suspensivos), el precio y el badge de existencias, todo amontonado, y además el icono de
+ * caja se dibujaba ENCIMA de las fotos que sí existían.
+ *
+ * Ahora, de arriba a abajo:
+ *   1. El nombre completo, en su propio renglón (hasta dos líneas).
+ *   2. La foto, que ocupa el resto.
+ *   3. Abajo a la derecha, la cantidad disponible (pequeña) y debajo el precio.
+ * La caja solo aparece si NO hay foto (o si la que había no cargó).
+ * ============================================================ */
+.gallery-item {
+    justify-content: flex-start;
+    /* El ancho lo manda la columna de la rejilla; el alto, lo que ocupan el nombre, la foto y
+       el pie. Antes la proporción cuadrada (1/1) hacía que el navegador dedujera el ANCHO del
+       contenido (115 px) y la foto se quedaba sin un píxel. */
+    width: 100%;
+    aspect-ratio: auto;
+}
+
+.gallery-item .g-name {
+    position: static;
+    order: 0;
+    flex: 0 0 auto;
+    width: 100%;
+    margin: 0;
+    padding: 7px 9px;
+    border-radius: 0;
+    background: var(--bg-card);
+    box-shadow: none;
+    text-shadow: none;
+    text-align: left;
+    font-size: 0.82rem;
+    line-height: 1.2;
+    /* Completo: hasta dos líneas y, si aún no cabe, se recorta por palabra. */
+    white-space: normal;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow-wrap: anywhere;
+}
+
+/* ------------------------------------------------------------
+ * Área de la foto: deja de ser un fondo absoluto y pasa a ser parte del flujo
+ * ------------------------------------------------------------ */
+.gallery-item .img-wrap {
+    position: relative;
+    top: auto;
+    left: auto;
+    width: 100%;
+    height: auto;
+    flex: 1 1 auto;
+    min-height: 62px;
+    z-index: 1;
+}
+
+/* ------------------------------------------------------------
+ * Alto de la foto en la tarjeta del POS
+ *
+ * Con la foto elástica, la rejilla estiraba las filas y la tarjeta acababa de 243 px: en el
+ * teléfono se veían apenas dos productos. Con un alto fijo la tarjeta ronda los 165 px y el
+ * catálogo se recorre de un vistazo.
+ * ------------------------------------------------------------ */
+.catalog-items,
+.gallery-main {
+    align-content: start;
+}
+
+@media (max-width: 900px) {
+    .gallery-item .img-wrap {
+        flex: 0 0 auto;
+        height: 76px;
+        min-height: 0;
+    }
+}
+
+
+.gallery-item .img-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* El icono de caja: únicamente cuando no hay imagen que mostrar. */
+.gallery-item .caja-vacia {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-light);
+    font-size: 1.6rem;
+}
+
+.gallery-item .caja-vacia[hidden] { display: none; }
+
+/* Pie de la tarjeta: cantidad disponible (chica) sobre el precio, ambos abajo a la derecha. */
+.gallery-item .card-pie {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0;
+    padding: 4px 9px 6px;
+    background: var(--bg-card);
+    min-width: 0;
+}
+
+.gallery-item .card-pie .stock-badge {
+    position: static;
+    inset: auto;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 0;
+    border-radius: 0;
+    cursor: help;
+    white-space: nowrap;
+}
+
+.gallery-item .card-pie .stock-badge.low { color: var(--warning-color); }
+
+.gallery-item .card-pie .stock-badge.negative { color: var(--danger-color); }
+
+.gallery-item .card-pie .g-price {
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--primary-color);
+    white-space: nowrap;
+}
+
+/* ============================================================
+ * POS EN EL TELÉFONO — pestañas, atajo del monto y aire antes del menú
+ * ============================================================ */
+@media (max-width: 900px) {
+    /* Pestañas Productos / Carrito: la activa manda y las demás se quedan con su icono,
+       igual que en el detalle de inventario. Ocupan menos alto y se entiende dónde se está. */
+    .mobile-view-controls {
+        padding: 5px;
+        gap: 5px;
+        align-items: center;
+    }
+
+    .view-switch-btn {
+        flex: 1 1 0;
+        flex-grow: 1;
+        padding: 8px 8px;
+        min-height: 40px;
+        font-size: 0.8rem;
+        border-bottom: none;
+        border-radius: var(--ds-radius-pill, 999px);
+        gap: 6px;
+        transition: flex-grow 0.25s ease, background 0.2s ease, color 0.2s ease;
+    }
+
+    .view-switch-btn.active {
+        flex-grow: 7;                      /* la activa se lleva casi todo el ancho */
+        font-size: 0.95rem;
+        background: var(--primary-lighter, var(--bg-lightest));
+        border-bottom: none;
+    }
+
+    /* La etiqueta de las NO activas se oculta solo a la vista: el lector de pantalla la
+       sigue leyendo y el icono (con su contador, en el carrito) dice lo que hace. */
+    .view-switch-btn:not(.active) .view-switch-label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        padding: 0;
+        border: 0;
+        clip-path: inset(50%);
+        overflow: hidden;
+        white-space: nowrap;
+        pointer-events: none;
+    }
+
+    .view-switch-btn:not(.active) i { font-size: 1.15rem; margin: 0; }
+
+    /* El contador del carrito tiene que verse SIEMPRE, aunque la pestaña esté pequeña. */
+    .view-switch-btn .badge-count { position: static; }
+
+    /* El botón de cobrar, lejos del menú de navegación: un toque de más no debe caer en
+       un catálogo del menú en vez de en cobrar. */
+    #finalizeSaleBtn {
+        margin-bottom: 14px;
+    }
+
+    .cart-summary-footer,
+    #cartFooter {
+        padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+    }
+}
+
+/* Ayuda del atajo del monto exacto: solo donde hay dedo (en escritorio sobra). */
+.monto-exacto-ayuda {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    margin: 6px 0 0;
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    line-height: 1.25;
+}
+
+@media (hover: none), (max-width: 900px) {
+    .monto-exacto-ayuda { display: flex; }
+}
+
+/* Confirmación breve cuando la pulsación larga pone el importe exacto. */
+.pay-input.monto-exacto-puesto,
+#checkoutReceived.monto-exacto-puesto {
+    animation: montoExactoPuesto 0.7s ease-out;
+}
+
+@keyframes montoExactoPuesto {
+    0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary-color) 55%, transparent); }
+    40% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary-color) 35%, transparent); }
+    100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+/* ------------------------------------------------------------
+ * Filtros del POS plegables: el botón solo existe en el teléfono
+ * ------------------------------------------------------------ */
+.pos-filtros-cabecera { display: none; }
+
+@media (max-width: 900px) {
+    .pos-filtros-cabecera {
+        display: flex;
+        padding: 8px 12px 0;
+    }
+
+    .pos-filtros-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 13px;
+        border-radius: var(--ds-radius-pill, 999px);
+        border: 1px solid var(--border-color);
+        background: var(--bg-card);
+        color: var(--text-medium);
+        font-family: var(--font-heading);
+        font-weight: 600;
+        font-size: 0.8rem;
+        cursor: pointer;
+        min-height: 38px;
+        max-width: 100%;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    .pos-filtros-toggle:hover,
+    .pos-filtros-toggle[aria-expanded="true"] {
+        border-color: var(--primary-color);
+        color: var(--primary-color);
+    }
+
+    .pos-filtros-flecha {
+        font-size: 0.72rem;
+        transition: transform var(--transition-fast);
+    }
+
+    .pos-filtros-toggle[aria-expanded="true"] .pos-filtros-flecha { transform: rotate(180deg); }
+
+    /* `.product-filters` es flex: sin esta regla el atributo `hidden` no lo ocultaría. */
+    .product-filters[hidden] { display: none; }
+}
+
+/* ------------------------------------------------------------
+ * Barra del POS en el teléfono: el buscador en su renglón
+ *
+ * Medido: el campo de búsqueda quedaba en 64 px de ancho, apretado contra el escáner, la caja,
+ * el cliente y la configuración (que además se salía del borde). Ahora el buscador ocupa su
+ * propio renglón completo y los botones bajan al siguiente, del mismo tamaño y repartidos.
+ * "Caja Principal" se queda con su icono: con la etiqueta se comía media fila.
+ * ------------------------------------------------------------ */
+@media (max-width: 900px) {
+    .search-wrapper {
+        flex-wrap: wrap;
+        row-gap: 8px;
+        justify-content: space-between;
+    }
+
+    .search-wrapper .search-main {
+        flex: 1 1 100%;
+        order: -1;          /* el buscador, primero y completo */
+    }
+
+    .search-wrapper .scanner-btn-circle,
+    .search-wrapper .pos-register-btn,
+    .search-wrapper .pos-customer-btn,
+    .search-wrapper .config-btn-circle {
+        min-width: 46px;
+        min-height: 46px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* La etiqueta de la caja se oculta (el lector de pantalla la sigue leyendo y el icono
+       dice lo mismo). En escritorio se queda como está. */
+    .search-wrapper .pos-register-btn > span {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        padding: 0;
+        border: 0;
+        clip-path: inset(50%);
+        overflow: hidden;
+        white-space: nowrap;
+        pointer-events: none;
+    }
 }

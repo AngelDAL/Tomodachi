@@ -1172,6 +1172,9 @@
   // ============================================================
   function injectKeyBadges() {
     if (!isPosPage()) return;
+    // En el teléfono no hay teclado: "Ctrl+Enter" en el botón de cobrar solo confunde.
+    // Mismo criterio que la ayuda de atajos, que tampoco se inyecta en móvil.
+    if (window.innerWidth < 1025) return;
     const addBadge = (btn, label) => {
       if (!btn) return;
       if (btn.querySelector('.key-badge')) return;

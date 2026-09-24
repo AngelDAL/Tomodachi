@@ -15,12 +15,13 @@
     <link rel="stylesheet" href="css/sidebar-modern.css?v=6">
     <link rel="stylesheet" href="css/mobile-nav.css?v=5">
     <link rel="stylesheet" href="css/dashboard.css?v=4">
-    <link rel="stylesheet" href="css/sales.css?v=25">
+    <link rel="stylesheet" href="css/sales.css?v=33">
     <link rel="stylesheet" href="css/scanner_overlay.css?v=7">
     <link rel="stylesheet" href="css/bulk_sales.css?v=4">
     <link rel="stylesheet" href="css/cart_responsive.css?v=8">
     <script src="js/theme-init.js?v=3"></script>
     <link rel="icon" type="image/svg+xml" href="assets/images/logos/tomodachi-favicon.svg">
+    <link rel="manifest" href="manifest.json">
     <script src="js/format-utils.js"></script>
 </head>
 
@@ -35,7 +36,7 @@
                 <h2>Tomodachi</h2>
             </div>
             <nav class="sidebar-nav">
-                <!-- Navigation Loaded by js/sidebar-loader.js?v=12 -->
+                <!-- Navigation Loaded by js/sidebar-loader.js?v=13 -->
             </nav>
         </aside>
 
@@ -56,10 +57,12 @@
                     <!-- Mobile View Switcher -->
                     <div class="mobile-view-controls">
                         <button class="view-switch-btn active" data-target="products-column">
-                            <i class="fas fa-th"></i> Productos
+                            <i class="fas fa-th"></i>
+                            <span class="view-switch-label">Productos</span>
                         </button>
                         <button class="view-switch-btn" data-target="cart-column">
-                            <i class="fas fa-shopping-cart"></i> Carrito
+                            <i class="fas fa-shopping-cart"></i>
+                            <span class="view-switch-label">Carrito</span>
                             <span id="mobileCartCount" class="badge-count hidden">0</span>
                         </button>
                     </div>
@@ -186,6 +189,16 @@
                         </div>
 
                         <!-- Filtros (Anteriormente Category Bar) -->
+                        <!-- En el teléfono se pliegan: con todo a la vista, categoría, orden y vista
+                             quedaban pegados al buscador y no se entendía qué hacía cada cosa. -->
+                        <div class="pos-filtros-cabecera">
+                            <button type="button" class="pos-filtros-toggle" id="posFiltersToggle"
+                                    aria-expanded="false" aria-controls="productFilters">
+                                <i class="fas fa-sliders"></i>
+                                <span id="posFiltersResumen">Filtros y orden</span>
+                                <i class="fas fa-chevron-down pos-filtros-flecha"></i>
+                            </button>
+                        </div>
                         <div class="product-filters" id="productFilters">
                             <div class="filter-group">
                                 <label for="categoryFilter" class="sr-only">Categoría</label>
@@ -239,11 +252,9 @@
                             <div class="cart-summary-footer" id="cartFooter">
                             <div class="footer-static-content">
                             <div class="summary-details">
-                                <div class="summary-row">
-                                    <span>Subtotal</span>
-                                    <span id="cartSubtotal">$0.00</span>
-                                </div>
-                                <!-- Espacio para Impuestos/Descuentos si se muestran -->
+                                <!-- Solo el Total. El subtotal repetía el mismo número (no hay
+                                     descuentos ni impuestos en uso) y gastaba un renglón que en
+                                     el teléfono se agradece. -->
                                 <div class="summary-row total-row">
                                     <span>Total</span>
                                     <strong id="panelTotal">$0.00</strong>
@@ -335,8 +346,14 @@
                                 <div class="payment-control-group" id="cashControlGroup">
                                     <div class="input-wrapper">
                                         <span class="currency-symbol">$</span>
-                                        <input type="number" id="checkoutReceived" min="0" step="0.01" placeholder="Monto recibido" class="pay-input">
+                                        <input type="number" id="checkoutReceived" min="0" step="0.01" placeholder="Monto recibido" class="pay-input" title="Mantén pulsado (o mantén el clic) para poner el importe exacto">
                                     </div>
+                                    <!-- Atajo del teléfono: mantener pulsado el campo lo llena con
+                                         el importe exacto. El cajero no teclea nada cuando el
+                                         cliente paga con el dinero justo. -->
+                                    <small class="monto-exacto-ayuda">
+                                        <i class="fas fa-hand-pointer"></i> Mantén pulsado el campo para el monto exacto
+                                    </small>
                                     <div class="change-display">
                                         <small>Cambio</small>
                                         <span id="checkoutChange">$0.00</span>
@@ -559,7 +576,7 @@
 
     <!-- Voice overlay removed -->
 
-    <script src="js/sidebar-loader.js?v=12"></script>
+    <script src="js/sidebar-loader.js?v=13"></script>
     <script src="js/app.js?v=12"></script>
     <script src="lib/html5-qrcode/html5-qrcode.min.js"></script>
     <script src="lib/qrcodejs/qrcode.min.js"></script>
@@ -572,7 +589,7 @@
     <script src="js/stock-rule.js?v=1"></script>
     <script src="https://js.stripe.com/v3/"></script>
     <script src="js/stripe-pos.js?v=1"></script>
-    <script src="js/sales.js?v=29"></script>
+    <script src="js/sales.js?v=37"></script>
     <script>
         // En la app nativa: mantener la pantalla encendida mientras se vende
         document.addEventListener('tomodachi-native-ready', () => {
@@ -644,6 +661,41 @@
         </div>
     </div>
     <script src="js/design-system.js?v=5"></script>
+    <script>
+        /* ------------------------------------------------------------
+         * Filtros del POS plegables (teléfono)
+         *
+         * Con categoría, orden y tipo de vista siempre a la vista, todo quedaba pegado al
+         * buscador y no se entendía qué hacía cada cosa. En el teléfono nacen plegados detrás
+         * de un botón que dice qué categoría está puesta; en escritorio se ven siempre.
+         * ------------------------------------------------------------ */
+        (function () {
+            const boton = document.getElementById('posFiltersToggle');
+            const panel = document.getElementById('productFilters');
+            if (!boton || !panel) return;
+            const esMovil = () => window.innerWidth <= 900;
+
+            function mostrar(mostrar) {
+                panel.hidden = !mostrar;
+                boton.setAttribute('aria-expanded', mostrar ? 'true' : 'false');
+            }
+
+            boton.addEventListener('click', () => mostrar(panel.hidden));
+            mostrar(!esMovil());
+
+            const categoria = document.getElementById('categoryFilter');
+            const resumen = document.getElementById('posFiltersResumen');
+            if (categoria && resumen) {
+                categoria.addEventListener('change', () => {
+                    const opcion = categoria.options[categoria.selectedIndex];
+                    const texto = opcion ? opcion.textContent.trim() : '';
+                    resumen.textContent = (categoria.value === 'all' || !texto) ? 'Filtros y orden' : texto;
+                    // Ya eligió: se contrae para dejar ver el catálogo.
+                    if (esMovil()) mostrar(false);
+                });
+            }
+        })();
+    </script>
 </body>
 
 </html>

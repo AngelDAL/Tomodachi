@@ -238,17 +238,48 @@ async function initSidebar() {
         }
     }
 
+    /**
+     * Vuelve a entrar en pantalla completa al abrir una página nueva.
+     *
+     * Esto es lo que se puede hacer desde una página web: el navegador SALE de pantalla
+     * completa al navegar (es su regla, no un descuido nuestro), así que hay que volver a
+     * pedirla. Se intenta sola al cargar y, si el navegador exige un toque, se reintenta en el
+     * primer toque que NO sea otra navegación: así el intento no se gasta en un enlace del menú
+     * (que volvería a salir de pantalla completa) sino en el primero que se hace sobre la
+     * pantalla de trabajo — buscar un producto, tocar una tarjeta, abrir el carrito.
+     */
     function retomarPantallaCompleta() {
         if (!pantallaCompletaPedida() || document.fullscreenElement) return;
+
         entrarEnPantallaCompleta().then((entro) => {
             if (entro) return;
-            const alPrimerGesto = () => {
-                ['pointerdown', 'touchstart', 'keydown'].forEach((ev) =>
-                    document.removeEventListener(ev, alPrimerGesto));
-                entrarEnPantallaCompleta();
+
+            let intentos = 0;
+            const esNavegacion = (objetivo) => !!(objetivo && objetivo.closest &&
+                objetivo.closest('a[href], .nav-item, .nav-link, .view-switch-btn'));
+
+            const alTocar = (ev) => {
+                if (document.fullscreenElement || intentos >= 12) {
+                    quitar();
+                    return;
+                }
+                // Los clics que cambian de página no sirven: el navegador saldría otra vez.
+                if (esNavegacion(ev.target)) return;
+                intentos++;
+                entrarEnPantallaCompleta().then((ok) => { if (ok) quitar(); });
             };
+
+            const quitar = () => {
+                ['pointerdown', 'touchstart', 'keydown'].forEach((ev) =>
+                    document.removeEventListener(ev, alTocar));
+            };
+
             ['pointerdown', 'touchstart', 'keydown'].forEach((ev) =>
-                document.addEventListener(ev, alPrimerGesto, { once: true, passive: true }));
+                document.addEventListener(ev, alTocar, { passive: true }));
+
+            // Y se prueba otra vez en cuanto la página queda tranquila: algunos navegadores
+            // conceden la pantalla completa después de que el usuario ya interactuó con el sitio.
+            setTimeout(() => { if (!document.fullscreenElement) entrarEnPantallaCompleta(); }, 1200);
         });
     }
 

@@ -1,0 +1,32 @@
+{
+  "name": "Tomodachi — Punto de venta",
+  "short_name": "Tomodachi",
+  "description": "Punto de venta, inventario, clientes, salón y reportes.",
+  "start_url": "/public/index.html",
+  "scope": "/public/",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#39c5bb",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "assets/images/logos/tomodachi-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/images/logos/tomodachi-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/images/logos/tomodachi-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

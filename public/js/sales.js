@@ -82,14 +82,20 @@ function buildProductCard(p) {
          data-bulk_unit="${p.bulk_unit || 'kg'}"
          data-category="${p.category_id || ''}"
          title="${esc(p.product_name)}">
+      <!-- El nombre va ARRIBA y completo (hasta dos líneas): es lo primero que se lee al
+           cobrar, y recortado con puntos suspensivos no servía para nada. -->
+      <h4 class="g-name" title="${esc(p.product_name)}">${esc(p.product_name)}</h4>
       <div class="img-wrap">
+        <!-- La caja solo puede verse cuando NO hay foto que mostrar. Antes se dibujaba
+             también encima de las fotos que sí existían. -->
+        <span class="caja-vacia"${imagePath ? ' hidden' : ''}><i class="fas fa-box"></i></span>
         ${imagePath
-          ? `<i class="fas fa-box" style="color:var(--text-light); font-size:1.5rem; position:absolute;"></i><img src="${imagePath}" loading="lazy" decoding="async" alt="${esc(p.product_name)}" onerror="this.remove()">`
-          : '<i class="fas fa-box" style="color:var(--text-light); font-size:1.5rem;"></i>'}
-        ${stockBadge}
+          ? `<img src="${imagePath}" loading="lazy" decoding="async" alt="${esc(p.product_name)}" onerror="this.hidden=true;this.parentElement.querySelector('.caja-vacia').hidden=false;">`
+          : ''}
       </div>
-      <div class="item-details">
-        <h4 class="g-name" title="${esc(p.product_name)}">${esc(p.product_name)}</h4>
+      <!-- Abajo a la derecha: la cantidad disponible (chica) y debajo el precio. -->
+      <div class="card-pie">
+        ${stockBadge}
         <div class="g-price">${priceHtml}</div>
       </div>
     </div>
@@ -666,6 +672,7 @@ function bindEvents() {
       e.target.select();
       setTimeout(() => e.target.select(), 0);
     });
+    prepararMontoExactoConPulsacionLarga(checkoutReceivedInput);
   }
   if (finalizeSaleBtn) finalizeSaleBtn.addEventListener('click', finalizeSale);
 
@@ -1039,6 +1046,44 @@ function abrirEntradaDeCantidad(span, item) {
     ['pointerdown', 'click'].forEach(ev => input.addEventListener(ev, (e) => e.stopPropagation()));
 }
 
+/**
+ * Mantener pulsado el campo "Monto recibido" lo llena con el importe exacto.
+ *
+ * Para qué: cuando el cliente paga con el dinero justo, el cajero tenía que teclear la cifra
+ * completa. Con una pulsación larga queda puesta y el cambio en cero — el gesto natural en el
+ * teléfono, y manteniendo el clic también funciona con ratón.
+ *
+ * Se cancela si el dedo se mueve, si el campo pierde el foco o si empieza a escribir: así no
+ * estorba nunca a quien prefiere teclear.
+ */
+function prepararMontoExactoConPulsacionLarga(campo) {
+    if (!campo) return;
+    const ESPERA = 450;   // ms que hay que mantener pulsado
+    let temporizador = null;
+
+    const ponerImporteExacto = () => {
+        const total = Number(window.__lastCartTotal || 0);
+        if (!(total > 0)) return;
+        campo.value = total.toFixed(2);
+        // El cambio se recalcula con el evento de siempre: una sola verdad.
+        campo.dispatchEvent(new Event('input', { bubbles: true }));
+        campo.classList.add('monto-exacto-puesto');
+        setTimeout(() => campo.classList.remove('monto-exacto-puesto'), 700);
+    };
+
+    const empezar = () => {
+        clearTimeout(temporizador);
+        temporizador = setTimeout(ponerImporteExacto, ESPERA);
+    };
+    const cancelar = () => { clearTimeout(temporizador); temporizador = null; };
+
+    campo.addEventListener('pointerdown', empezar);
+    ['pointerup', 'pointercancel', 'pointerleave', 'blur', 'input'].forEach(ev =>
+        campo.addEventListener(ev, cancelar));
+    // En el teléfono, el menú contextual del navegador aparecería justo encima del campo.
+    campo.addEventListener('contextmenu', (e) => e.preventDefault());
+}
+
 function handleStepBtnClick(btn) {
     const id = parseInt(btn.getAttribute('data-id'));
     const action = btn.getAttribute('data-action');
@@ -1097,7 +1142,8 @@ function renderCart() {
     }
     if(panelTotalEl) {
         panelTotalEl.textContent = formatCurrency(0);
-        document.getElementById('cartSubtotal').textContent = formatCurrency(0);
+        const subtotalVacioEl = document.getElementById('cartSubtotal');
+        if (subtotalVacioEl) subtotalVacioEl.textContent = formatCurrency(0);
     }
     return;
   }
@@ -2893,48 +2939,8 @@ function renderGallery(list, animate = false) {
 
   addIndicatorsToItems();
 
-  // Nombre largo: si desborda, activar marquee (se desplaza para leerse)
-  // y preparar el hover tooltip con el nombre completo (ya en title="...").
-  productGallery.querySelectorAll('.g-name').forEach(nameEl => {
-    const container = nameEl.parentElement; // .item-details
-    if (!container) return;
-    const avail = container.clientWidth - 20; // padding horizontal del pill area
-    // reset estado previo
-    nameEl.classList.remove('is-marquee');
-    const inner = nameEl.querySelector('.g-name-inner');
-    if (inner) inner.style.transform = '';
-    let overflows = false;
-    // el pill mide max-width 100% y el texto ahoraap; probamos por ancho de texto
-    const probe = document.createElement('span');
-    probe.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font-size:0.82rem;font-weight:600;';
-    probe.textContent = nameEl.textContent;
-    container.appendChild(probe);
-    overflows = probe.offsetWidth > nameEl.clientWidth;
-    container.removeChild(probe);
-    setTimeout(() => {
-      if (nameEl.scrollWidth > nameEl.clientWidth + 2) overflows = true;
-      if (overflows) {
-        nameEl.classList.add('is-marquee');
-        // guardar nombre completo para el tooltip y envolverlo para el recorrido
-        const fullName = nameEl.textContent.trim();
-        nameEl.setAttribute('data-full', fullName);
-        if (!nameEl.querySelector('.g-name-inner')) {
-          nameEl.innerHTML = `<span class="g-name-inner">${fullName}</span>`;
-        }
-        const inner2 = nameEl.querySelector('.g-name-inner');
-        if (inner2) {
-          const dist = inner2.scrollWidth - nameEl.clientWidth + 20;
-          // Recorrido y regreso son 100% CSS (transition): solo inyectamos la
-          // distancia y la duración del viaje (RÁPIDO). Al quitar el hover, CSS regresa.
-          nameEl.style.setProperty('--ds-mq-dist', `-${Math.max(dist, 20)}px`);
-          nameEl.style.setProperty('--ds-mq-dur', Math.max(1400, Math.round(dist * 9)));
-        }
-      } else {
-        // nombre corto: tooltip igualmente para el completo (por si trunca)
-        nameEl.setAttribute('data-full', nameEl.textContent.trim());
-      }
-    }, 40);
-  });
+  // (Aquí vivía un marquee que desplazaba el nombre cuando no cabía. Ya no hace falta: el
+  //  nombre se muestra completo en su propio renglón, hasta dos líneas, sin puntos suspensivos.)
 
   // Animación de aparición del grid (anime.js) — estilo catálogo chill.
   // Se dispara la primera vez que se renderiza (o con animate=true).

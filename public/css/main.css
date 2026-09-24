@@ -2718,6 +2718,10 @@ label .currency-icon {
         max-width: none !important;
         height: 100% !important;
         max-height: 100dvh !important;
+        /* El que se desplaza es el drawer COMPLETO, no solo su cuerpo: así las pestañas
+           suben con el contenido en vez de quedarse fijas arriba ocupando renglón. */
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
     }
     body .drawer-header {
         position: sticky;
@@ -2726,9 +2730,8 @@ label .currency-icon {
         flex-shrink: 0;
     }
     body .drawer-body {
-        flex: 1;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
+        flex: 0 0 auto;
+        overflow: visible;
     }
 }
 
@@ -2805,21 +2808,175 @@ body .panel-tab-btn {
 }
 
 @media (max-width: 768px) {
-    /* En el teléfono, icono arriba y texto abajo, y DOS pestañas por fila: así cada una tiene
-       ancho de sobra para su etiqueta (antes quedaban tres apretadas y una sola estirada). */
+    /* PESTAÑAS EN EL TELÉFONO: una sola fila, y la que está enfocada manda.
+       La enfocada se lleva la mayor parte del ancho (7 de 10 partes ≈ 70 %) y muestra su
+       nombre completo; las demás se quedan con su icono y una fracción pequeña. Al tocar
+       una, o al deslizar sobre la fila, el foco se mueve y la nueva se expande.
+       Las proporciones salen de flex-grow, así que se acomodan solas: con cuatro pestañas
+       queda 70/10/10/10, y con más reparten lo que haga falta sin salirse de la fila. */
+    body .drawer-tabs,
+    body .add-tabs,
+    body .panel-tabs {
+        flex-wrap: nowrap;
+        overflow: hidden;
+        gap: 4px;
+    }
     body .drawer-tab,
     body .add-tab,
     body .panel-tab-btn {
-        flex: 1 1 calc(50% - 6px);
-        flex-direction: column;
-        gap: 3px;
-        padding: 9px 6px;
-        font-size: 0.72rem;
+        flex: 1 1 0;
+        flex-grow: 1;
+        flex-direction: row;
+        gap: 0;
+        min-width: 36px;      /* el icono sigue siendo cómodo de acertar con el dedo */
+        padding: 8px 4px;
+        font-size: 0.68rem;
+        overflow: hidden;
+        white-space: nowrap;
+        transition: flex-grow 0.28s ease, background 0.2s ease, color 0.2s ease;
     }
     body .drawer-tab i,
     body .add-tab i,
-    body .panel-tab-btn i { font-size: 1.05rem; margin: 0; }
+    body .panel-tab-btn i { font-size: 0.95rem; margin: 0; }
+
+    /* El nombre de las NO enfocadas se oculta visualmente (el lector de pantalla lo sigue
+       leyendo, y el nombre completo queda en el `title`). */
+    body .drawer-tab > span,
+    body .add-tab > span,
+    body .panel-tab-btn > span {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        padding: 0;
+        border: 0;
+        clip-path: inset(50%);
+        overflow: hidden;
+        white-space: nowrap;
+        pointer-events: none;
+    }
+
+    body .drawer-tab.active,
+    body .add-tab.active,
+    body .panel-tab-btn.active {
+        flex-grow: 7;             /* la enfocada: el 70 % del ancho */
+        justify-content: center;
+        gap: 7px;
+        padding: 8px 10px;
+    }
+    body .drawer-tab.active > span,
+    body .add-tab.active > span,
+    body .panel-tab-btn.active > span {
+        position: static;
+        width: auto;
+        height: auto;
+        margin: 0;
+        clip-path: none;
+        overflow: hidden;
+        text-overflow: ellipsis;   /* un nombre larguísimo se recorta, nunca se encima */
+    }
 }
+
+/* ============================================================
+ * Pie del drawer: Guardar siempre a la vista, abajo y al centro
+ *
+ * Es LA acción de la pantalla; dejarla dentro del menú de tres puntitos obligaba a buscarla.
+ * Se queda pegada abajo mientras el contenido se desplaza, y en color principal.
+ * ============================================================ */
+.drawer-pie {
+    position: sticky;
+    bottom: 0;
+    z-index: 3;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    margin: 18px -4px -4px;
+    background: var(--bg-card, #fff);
+    border-top: 1px solid var(--border-color, #e5e7eb);
+    /* el degradado evita que el contenido "choque" con el pie al desplazarse */
+    box-shadow: 0 -8px 20px -12px rgba(0, 0, 0, .25);
+}
+
+.drawer-pie .btn-save {
+    min-width: 220px;
+    min-height: 46px;
+    padding: 12px 26px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    border-radius: var(--ds-radius-pill, 999px);
+    background: var(--primary-color);
+    color: #fff;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    box-shadow: var(--ds-shadow-md, 0 6px 16px rgba(0, 0, 0, .16));
+    transition: filter var(--transition-fast), transform var(--transition-fast);
+}
+
+.drawer-pie .btn-save:hover { filter: brightness(1.06); }
+
+.drawer-pie .btn-save:active { transform: translateY(1px); }
+
+@media (max-width: 768px) {
+    .drawer-pie {
+        padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+        margin: 14px 0 0;
+    }
+    .drawer-pie .btn-save { width: 100%; max-width: 420px; min-width: 0; }
+}
+
+/* ============================================================
+ * Zona de imagen del producto vacía
+ *
+ * Antes, un producto sin foto mostraba un recuadro en blanco y el botón de cambiar imagen
+ * escondido tras el `hover`: en un teléfono no había forma de saber que ahí se sube una
+ * imagen. Ahora, sin foto, se ve grande y claro qué hacer. Con foto, se ve como siempre.
+ * ============================================================ */
+.imagen-vacia {
+    display: none;
+}
+
+.sin-imagen .imagen-vacia {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    height: 100%;
+    padding: 24px 18px;
+    text-align: center;
+    color: var(--primary-color);
+    background: color-mix(in srgb, var(--primary-color) 5%, transparent);
+    border: 2px dashed color-mix(in srgb, var(--primary-color) 45%, transparent);
+    border-radius: 12px;
+    cursor: pointer;
+}
+
+.sin-imagen .imagen-vacia i {
+    font-size: 2.4rem;
+    opacity: .85;
+}
+
+.sin-imagen .imagen-vacia strong {
+    font-family: var(--font-heading);
+    font-size: 1rem;
+    color: var(--text-color);
+}
+
+.sin-imagen .imagen-vacia span {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    line-height: 1.35;
+}
+
+/* Sin foto no se enseña el "Cambiar Imagen": sería una segunda invitación a lo mismo. */
+.sin-imagen .image-overlay { display: none; }
 
 /* ============================================================
  * ACCIONES DEL DRAWER EN TRES PUNTITOS

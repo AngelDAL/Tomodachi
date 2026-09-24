@@ -127,8 +127,88 @@
 
     // Las listas que se pintan solas (dinero, movimientos, puntos) también se revisan.
     if (window.MutationObserver && document.body) {
-        var observador = new MutationObserver(medirPronto);
-        observador.observe(document.body, { childList: true, subtree: true });
-        window.__uiMovilObservador = observador;
+        var observadorMedida = new MutationObserver(medirPronto);
+        observadorMedida.observe(document.body, { childList: true, subtree: true });
+        window.__uiMovilObservador = observadorMedida;
     }
 })();
+
+/* ============================================================
+ * Deslizar entre pestañas (móvil)
+ *
+ * En el teléfono las pestañas de un drawer son una sola fila, con la enfocada expandida.
+ * Aquí se añade el gesto: deslizar a la izquierda avanza a la siguiente, a la derecha
+ * vuelve a la anterior. El gesto se apoya en las pestañas de verdad (se les dispara su
+ * clic), así que la página cambia de panel con SU propia lógica y no hay dos verdades.
+ *
+ * Dos cuidados para no arruinar el uso normal:
+ *  - Solo cuenta si el gesto es claramente horizontal (más de 45 px y al menos 1.5 veces el
+ *    movimiento vertical): si no, es un scroll de la página y no se toca nada.
+ *  - Un gesto que empieza sobre un campo, botón o etiqueta se ignora: ahí el dedo está
+ *    escribiendo o seleccionando texto, no navegando.
+ * ============================================================ */
+(function () {
+    'use strict';
+
+    var FILAS = '.drawer-tabs, .add-tabs, .panel-tabs';
+    var PESTANAS = '.drawer-tab, .add-tab, .panel-tab-btn';
+    var MINIMO = 45;   // px que hay que recorrer para que cuente como desliz
+
+    function pestanasVisibles(fila) {
+        return Array.prototype.slice.call(fila.querySelectorAll(PESTANAS))
+            .filter(function (t) { return t.getBoundingClientRect().width > 0; });
+    }
+
+    function pasarAPestana(fila, paso) {
+        var tabs = pestanasVisibles(fila);
+        if (tabs.length < 2) return;
+        var actual = -1;
+        tabs.forEach(function (t, i) { if (t.classList.contains('active')) actual = i; });
+        if (actual < 0) return;
+        var destino = tabs[actual + paso];
+        if (destino) destino.click();
+    }
+
+    function vigilar(fila) {
+        if (fila.dataset.deslizListo === '1') return;
+        fila.dataset.deslizListo = '1';
+
+        var x0 = 0, y0 = 0, siguiendo = false;
+
+        function empezar(e) {
+            if (e.touches.length !== 1) { siguiendo = false; return; }
+            var t = e.touches[0];
+            // El gesto no empieza sobre un control: ahí el dedo hace otra cosa.
+            if (e.target.closest && e.target.closest('input, textarea, select, button, label, a')) {
+                siguiendo = false;
+                return;
+            }
+            x0 = t.clientX; y0 = t.clientY; siguiendo = true;
+        }
+
+        function terminar(e) {
+            if (!siguiendo) return;
+            siguiendo = false;
+            var t = e.changedTouches && e.changedTouches[0];
+            if (!t) return;
+            var dx = t.clientX - x0, dy = t.clientY - y0;
+            if (Math.abs(dx) < MINIMO || Math.abs(dx) < Math.abs(dy) * 1.5) return;  // era un scroll
+            pasarAPestana(fila, dx < 0 ? 1 : -1);
+        }
+
+        fila.addEventListener('touchstart', empezar, { passive: true });
+        fila.addEventListener('touchend', terminar, { passive: true });
+        fila.addEventListener('touchcancel', function () { siguiendo = false; }, { passive: true });
+    }
+
+    function prepararDesliz() {
+        Array.prototype.forEach.call(document.querySelectorAll(FILAS), vigilar);
+    }
+
+    prepararDesliz();
+    if (window.MutationObserver && document.body) {
+        var observador = new MutationObserver(function () { prepararDesliz(); });
+        observador.observe(document.body, { childList: true, subtree: true });
+    }
+})();
+

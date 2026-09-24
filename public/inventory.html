@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="css/fonts.css?v=4">
     <!-- FontAwesome -->
     <link rel="stylesheet" href="lib/fontawesome/css/all.min.css?v=4">
-    <link rel="stylesheet" href="css/main.css?v=11">
+    <link rel="stylesheet" href="css/main.css?v=12">
     <link rel="stylesheet" href="css/design-system.css?v=7">
     <link rel="stylesheet" href="css/sidebar-modern.css?v=6">
     <link rel="stylesheet" href="css/mobile-nav.css?v=5">
@@ -625,8 +625,16 @@
                         <!-- Tarjeta de Imagen -->
                         <div class="details-card">
                             <div class="card-body" style="padding: 0;">
-                                <div class="product-image-container large-preview">
+                                <div class="product-image-container large-preview" id="detailImageContainer">
                                     <img id="detailImage" src="" alt="Producto" class="detail-img">
+                                    <!-- Sin imagen, esto se ve de inmediato y bien claro: se puede tocar
+                                         aquí para subir o tomar una foto. Con imagen se oculta y queda
+                                         la vista de siempre. -->
+                                    <div class="imagen-vacia" id="detailImageVacia">
+                                        <i class="fas fa-camera-retro"></i>
+                                        <strong>Toca aquí para subir una imagen</strong>
+                                        <span>Elige una foto de tu galería o tómala con la cámara</span>
+                                    </div>
                                     <div class="image-overlay">
                                         <label for="detailImageInput" class="btn-change-image"><i class="fas fa-camera"></i> Cambiar Imagen</label>
                                         <button type="button" class="btn-change-image premium-only" onclick="openAIModal('edit')" style="display: none; margin-top: 5px; background: rgba(255,255,255,0.9); color: var(--primary-color); border: none; padding: 8px 15px; border-radius: 20px; cursor: pointer; font-weight: 500;">
@@ -966,8 +974,14 @@
                             <i class="fas fa-undo"></i> Restaurar producto
                         </button>
                         <button type="button" class="btn-danger" id="deleteProductBtn" style="display: none;">Eliminar</button>
-                        <button type="button" class="btn-cancel" id="cancelEditBtn">Cancelar</button>
-                        <button type="submit" class="btn-save">Guardar Cambios</button>
+                    </div>
+
+                    <!-- Guardar SIEMPRE a la vista, abajo y al centro: es LA acción de esta pantalla.
+                         (Cancelar ya no hace falta: para eso está la X de la cabecera.) -->
+                    <div class="drawer-pie">
+                        <button type="submit" class="btn-save" id="saveProductBtn">
+                            <i class="fas fa-floppy-disk"></i> Guardar Cambios
+                        </button>
                     </div>
                 </form>
             </div>
@@ -1210,7 +1224,7 @@
     <script src="lib/html5-qrcode/html5-qrcode.min.js"></script>
     <script src="js/scanner.js"></script>
     <script src="js/tour.js?v=4"></script>
-    <script src="js/inventory.js?v=15"></script>
+    <script src="js/inventory.js?v=16"></script>
     <script src="js/stock-rule.js?v=1"></script>
     <script src="js/purchases.js?v=11"></script>
     <script>

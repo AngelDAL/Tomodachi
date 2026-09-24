@@ -305,6 +305,18 @@ function bindEvents() {
 
     // Subida automática de imagen en Detalle de Producto
     const detailImageInput = document.getElementById('detailImageInput');
+    const contenedorImagenDetalle = document.getElementById('detailImageContainer');
+
+    // Sin foto, se puede tocar CUALQUIER parte del recuadro para subirla. Antes solo servía
+    // el botón del overlay, que aparece al pasar el cursor: en un teléfono, invisible.
+    if (contenedorImagenDetalle && detailImageInput) {
+        contenedorImagenDetalle.addEventListener('click', function (e) {
+            if (!contenedorImagenDetalle.classList.contains('sin-imagen')) return;  // con foto manda el overlay de siempre
+            if (e.target.closest && e.target.closest('.image-overlay')) return;     // sin pisar su propio botón
+            detailImageInput.click();
+        });
+    }
+
     if (detailImageInput) {
         detailImageInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
@@ -317,6 +329,8 @@ function bindEvents() {
                 reader.onload = (e) => {
                     img.src = e.target.result;
                     img.style.display = 'block';
+                    // Ya hay foto: se apaga la invitación a subirla
+                    if (contenedorImagenDetalle) contenedorImagenDetalle.classList.remove('sin-imagen');
                 };
                 reader.readAsDataURL(file);
 
@@ -424,14 +438,13 @@ function bindEvents() {
 
     // Modal de detalles
     const closeDetailsBtn = document.getElementById('closeDetailsModalBtn');
-    const cancelEditBtn = document.getElementById('cancelEditBtn');
     const editForm = document.getElementById('editProductForm');
     // detailImageInput ya declarado arriba
     const editCostInput = document.getElementById('editProductCost');
     const editPriceInput = document.getElementById('editProductPrice');
 
+    // El botón "Cancelar" ya no existe: para cerrar está la X de la cabecera (hacía lo mismo).
     if (closeDetailsBtn) closeDetailsBtn.addEventListener('click', closeProductDetails);
-    if (cancelEditBtn) cancelEditBtn.addEventListener('click', closeProductDetails);
 
     // Acciones del drawer en tres puntitos (guardar, cancelar, eliminar, retirar...)
     const detailsMenuBtn = document.getElementById('detailsMenuBtn');
@@ -2321,12 +2334,16 @@ function openProductDetails(productId) {
     // Imagen
     const img = document.getElementById('detailImage');
     const imagePath = getRelativeImagePath(product.image_path);
+    const contenedorImagen = document.getElementById('detailImageContainer');
     if (imagePath) {
         img.src = imagePath;
         img.style.display = 'block';
+        if (contenedorImagen) contenedorImagen.classList.remove('sin-imagen');
     } else {
         img.src = ''; // O una imagen placeholder
         img.style.display = 'none';
+        // Sin foto: se muestra la invitación clara a subir o tomar una imagen
+        if (contenedorImagen) contenedorImagen.classList.add('sin-imagen');
     }
 
     // Calcular ganancia inicial

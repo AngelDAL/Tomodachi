@@ -177,7 +177,7 @@ body.modal-open { overflow: hidden; }
     width: 100%;
     height: 100%;
     background-color: rgba(15, 23, 42, 0.55);
-    z-index: 100000;
+    z-index: var(--capa-overlay, 100000);
     align-items: center;
     justify-content: center;
     padding: 1.25rem;
@@ -416,7 +416,7 @@ body.modal-open { overflow: hidden; }
     width: 100%;
     height: 100%;
     background: rgba(0,0,0,0.5);
-    z-index: 100000;
+    z-index: var(--capa-overlay, 100000);
     /* opacity manejado por .client-dialog (main.css) */
     visibility: hidden;
     transition: opacity 0.3s ease, visibility 0.3s ease;

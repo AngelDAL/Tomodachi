@@ -29,6 +29,14 @@ async function initSidebar() {
         document.head.appendChild(kbScript);
     }
 
+    // Cargar el arreglo de etiquetas largas en móvil (un botón con icono cuya etiqueta no
+    // cabe se queda solo con el icono) en todas las vistas
+    if (!document.querySelector('script[src^="js/ui-movil.js"]')) {
+        const compactoScript = document.createElement('script');
+        compactoScript.src = 'js/ui-movil.js?v=1';
+        document.head.appendChild(compactoScript);
+    }
+
     const sidebarNav = document.querySelector('.sidebar-nav');
     if (!sidebarNav) return;
 
@@ -143,6 +151,48 @@ async function initSidebar() {
     }
 
     sidebarNav.innerHTML = menuHTML + profileHTML + bottomGroupHTML;
+
+    /**
+     * En el teléfono la barra inferior reparte el ancho entre siete u ocho items, y las
+     * etiquetas largas no caben: "Puntos de servicio" salía como "Puntos…", que no se
+     * entiende y además se encimaba con la de al lado. Aquí se MIDE cada etiqueta con el
+     * ancho real que tiene y, si no cabe, el item se queda SOLO con su icono.
+     *
+     * El texto no se borra: queda oculto visualmente pero presente para los lectores de
+     * pantalla, y el nombre completo se guarda en el `title` (útil al pasar el cursor o en
+     * una tablet). Se recalcula al girar el teléfono o al cambiar el tamaño de la ventana.
+     */
+    function ajustarEtiquetasDeLaBarra() {
+        const textos = sidebarNav.querySelectorAll('.nav-item .nav-text');
+        if (!textos.length) return;
+
+        // Primero todo visible, para poder medir de verdad (una etiqueta ya escondida
+        // siempre "cabe" y nunca volvería a mostrarse al ensanchar la pantalla).
+        textos.forEach(t => {
+            t.classList.remove('nav-solo-icono');
+            const item = t.closest('.nav-item');
+            if (item) { item.classList.remove('nav-compacto'); item.removeAttribute('title'); }
+        });
+
+        // Dos pasadas: al esconder unas etiquetas, las demás ganan espacio y algunas que
+        // antes no cabían ya caben.
+        for (let pasada = 0; pasada < 2; pasada++) {
+            textos.forEach(t => {
+                if (t.classList.contains('nav-solo-icono')) return;
+                const item = t.closest('.nav-item');
+                if (!item) return;
+                const disponible = item.clientWidth - 6; // menos el relleno del item
+                if (disponible > 0 && t.scrollWidth > disponible) {
+                    t.classList.add('nav-solo-icono');
+                    item.classList.add('nav-compacto');
+                    item.setAttribute('title', t.textContent.trim());
+                }
+            });
+        }
+    }
+    ajustarEtiquetasDeLaBarra();
+    window.addEventListener('resize', ajustarEtiquetasDeLaBarra);
+    window.addEventListener('orientationchange', ajustarEtiquetasDeLaBarra);
 
     // Pantalla completa: disponible tanto en el menú móvil como encima del tema en escritorio.
     const updateFullscreenLabels = () => {

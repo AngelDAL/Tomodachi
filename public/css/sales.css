@@ -3040,7 +3040,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 2000;
+    z-index: var(--capa-overlay, 100000);
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s ease;
@@ -3479,4 +3479,41 @@
     color: var(--text-muted, #667085);
     font-size: 0.82rem;
     line-height: 1.45;
+}
+
+/* ============================================
+   Cantidad editable a mano (carrito del POS)
+   Al tocar la cantidad, el número se convierte en este campo. Antes solo servía para
+   productos a granel; ahora cualquier línea se puede teclear (doce refrescos se escriben,
+   no se tocan doce veces).
+   Sin flechitas del navegador: en un control de 44 px son un blanco imposible con el dedo.
+   ============================================ */
+.qty-input {
+    width: 58px;
+    min-width: 58px;
+    height: 40px;
+    padding: 0 4px;
+    text-align: center;
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-color, #1a1a2e);
+    background: var(--bg-input, var(--bg-card, #fff));
+    border: 2px solid var(--primary-color, #39c5bb);
+    border-radius: 10px;
+    box-sizing: border-box;
+    appearance: textfield;
+    -moz-appearance: textfield;
+}
+.qty-input::-webkit-outer-spin-button,
+.qty-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.qty-input:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--primary-light, rgba(57, 197, 187, .25));
+}
+@media (max-width: 768px) {
+    .qty-input { width: 64px; min-width: 64px; height: 44px; font-size: 1.05rem; }
 }

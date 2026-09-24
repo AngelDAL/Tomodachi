@@ -100,6 +100,24 @@
     --transition-fast: 0.15s ease;
     --transition-normal: 0.3s ease;
     --transition-slow: 0.5s ease;
+
+    /* ============================================================
+     * ESCALERA DE CAPAS (z-index) — usar SIEMPRE estas variables
+     *
+     * Antes cada hoja inventaba su número (1000, 2000, 20300, 99999,
+     * 200000...) y el resultado se veía en el teléfono: un modal con
+     * 20300 quedaba DEBAJO de la barra de navegación inferior, que
+     * estaba en 99999. El modal aparecía cortado por la barra.
+     *
+     * Regla: la barra de navegación es lo más alto del CONTENIDO, y
+     * todo modal o drawer va por ENCIMA de ella, sin excepción.
+     * ============================================================ */
+    --capa-contenido: 1;        /* tarjetas, listas, el flujo normal */
+    --capa-encima: 100;         /* menús y desplegables dentro de la página */
+    --capa-navbar: 99999;       /* barra de navegación (inferior en móvil) */
+    --capa-overlay: 100000;     /* TODO modal y drawer: por encima de la navbar */
+    --capa-overlay-2: 100100;   /* modal que se abre DESDE otro modal */
+    --capa-aviso: 200000;       /* avisos, toasts, diálogos que deben verse sobre todo */
 }
 
 /* ============================================================

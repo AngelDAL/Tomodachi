@@ -94,6 +94,20 @@
     line-height: 1.2;
 }
 
+/* En el teléfono el nombre del producto se cortaba a "Dia Bebida…" en una sola línea y
+   quedaba ilegible. Aquí puede usar DOS líneas: el nombre se entiende y la línea del
+   carrito crece solo lo necesario. En pantalla grande se queda en una línea, como estaba. */
+@media (max-width: 768px) {
+    .cart-item-title {
+        white-space: normal;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        word-break: break-word;
+    }
+}
+
 .item-price-area {
     font-weight: 700;
     color: var(--primary-color);
@@ -213,7 +227,7 @@
 
 /* 2. Elevación de Modales / Drawers (Teclados Numéricos, Bulk Input) */
 .modal-overlay, .modal, .quantity-modal, .numpad-drawer {
-    z-index: 99999 !important; /* Asegurar que se muestre sobre todo (incluso navbar inferior) */
+    z-index: var(--capa-overlay, 100000) !important; /* Asegurar que se muestre sobre todo (incluso navbar inferior) */
 }
 
 /* 3. Botón de Escáner Circular (Pegado al Input) */

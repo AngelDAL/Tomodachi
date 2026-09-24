@@ -7,10 +7,10 @@
     <title>Puntos de servicio - Tomodachi</title>
     <link rel="stylesheet" href="css/fonts.css?v=4">
     <link rel="stylesheet" href="lib/fontawesome/css/all.min.css?v=4">
-    <link rel="stylesheet" href="css/main.css?v=6">
+    <link rel="stylesheet" href="css/main.css?v=7">
     <link rel="stylesheet" href="css/design-system.css?v=7">
-    <link rel="stylesheet" href="css/sidebar-modern.css?v=5">
-    <link rel="stylesheet" href="css/mobile-nav.css?v=4">
+    <link rel="stylesheet" href="css/sidebar-modern.css?v=6">
+    <link rel="stylesheet" href="css/mobile-nav.css?v=5">
     <link rel="stylesheet" href="css/dashboard.css?v=4">
     <style>
         /* ============================================================
@@ -82,13 +82,15 @@
 
         /* Modales (mismo lenguaje que el resto del sistema) */
         .tp-overlay {
-            position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 21000;
+            position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: var(--capa-overlay, 100000);
             display: flex; align-items: center; justify-content: center; padding: 16px;
         }
         .tp-overlay.hidden { display: none; }
         /* Los que se abren DESDE la cuenta (QR, cancelar, agregar) deben quedar por encima:
-           el overlay de la cuenta es de pantalla completa. */
-        .tp-overlay-encima { z-index: 21500; }
+           el overlay de la cuenta es de pantalla completa. La capa siguiente de la escalera
+           (ver variables.css) — antes 21500, que quedaba DEBAJO de la barra de navegación
+           del teléfono (99999) y el modal salía cortado por ella. */
+        .tp-overlay-encima { z-index: var(--capa-overlay-2, 100100); }
         .tp-modal {
             background: var(--bg-card); border-radius: var(--ds-radius-lg); width: 100%; max-width: 520px;
             max-height: 90vh; overflow-y: auto; box-shadow: var(--ds-shadow-lg);
@@ -458,23 +460,46 @@
         @media (max-width: 900px) {
             .tp-modal-cuenta {
                 width: 100vw;
-                height: 100vh;
-                max-height: 100vh;
+                height: 100dvh;
+                max-height: 100dvh;
                 max-width: none;
                 border-radius: 0;
                 margin: 0;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
             }
-            .tp-cuenta-cabecera { padding: 10px 12px; }
+            /* La cabecera —con el código de la cuenta y el botón de cerrar— se queda PEGADA
+               arriba: en el teléfono, si se va con el scroll, el mesero se queda sin ver el
+               código que le dicta al cliente. */
+            .tp-cuenta-cabecera {
+                position: sticky; top: 0; z-index: 3;
+                background: var(--bg-card); padding: 10px 12px; flex-shrink: 0;
+            }
+            .tp-cuenta-tabs { flex-shrink: 0; }
             .tp-codigo-grande { font-size: 1.15rem; padding: 6px 10px; letter-spacing: .12em; }
             .tp-cuenta-identidad h3 { font-size: .95rem; }
             .tp-vivo span { display: none; }
             .tp-cuenta-tabs { display: flex; flex: 0 0 auto; border-bottom: 1px solid var(--border-lighter, #eee); }
-            .tp-cuenta-cuerpo { grid-template-columns: 1fr; }
+            .tp-cuenta-cuerpo { grid-template-columns: 1fr; flex: 1; min-height: 0; }
             /* Un panel a la vez: se alterna con el selector de arriba */
             .tp-cuenta-cuerpo[data-lado="pedido"] .tp-panel-menu { display: none; }
             .tp-cuenta-cuerpo[data-lado="menu"] .tp-panel-pedido { display: none; }
             .tp-panel-menu { border-right: 0; }
             .tp-menu-cats { padding: 8px 12px; }
+            .tp-modal-cerrar { font-size: 1.4rem; min-height: 44px; min-width: 44px; }
+
+            /* Los demás modales del piso (cobro, juntar, cancelar, QR, estaciones) también
+               usan la pantalla completa, con su cabecera pegada arriba y el pie a la vista. */
+            .tp-overlay { padding: 0; }
+            .tp-modal:not(.tp-modal-cuenta) {
+                max-width: none; width: 100%; height: 100dvh; max-height: 100dvh;
+                border-radius: 0; display: flex; flex-direction: column; overflow: hidden;
+            }
+            .tp-modal-body { flex: 1; min-height: 0; overflow-y: auto; }
+            .tp-cobro-cuerpo { flex: 1; min-height: 0; overflow-y: auto; }
+            .tp-cobro-pie { position: sticky; bottom: 0; background: var(--bg-card); flex-shrink: 0; }
+            .tp-modal-pie { flex-shrink: 0; }
         }
     </style>
     <style>
@@ -1360,7 +1385,7 @@
     </div>
 
     <script src="lib/qrcodejs/qrcode.min.js"></script>
-    <script src="js/sidebar-loader.js?v=7"></script>
+    <script src="js/sidebar-loader.js?v=8"></script>
     <script src="js/app.js?v=12"></script>
     <script src="js/ws-realtime.js?v=1"></script>
     <script src="js/tables.js?v=5"></script>

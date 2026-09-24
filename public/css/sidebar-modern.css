@@ -94,7 +94,7 @@ html.sidebar-loading .main-content {
         
         transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         overflow: hidden;
-        z-index: 20000;
+        z-index: var(--capa-navbar, 99999);
     }
 
     .sidebar-header {

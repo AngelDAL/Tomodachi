@@ -36,7 +36,7 @@
         box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
         border-radius: 16px 16px 0 0; /* Rounded top corners */
         padding: 0 5px;
-        z-index: 99999;
+        z-index: var(--capa-navbar, 99999);
         overflow-x: hidden; /* Prevent horizontal scroll unless necessary */
     }
 
@@ -119,6 +119,40 @@
         padding: 0 2px;
     }
 
+    /* ETIQUETA QUE NO CABE → SOLO EL ICONO.
+       "Puntos de servicio" no cabe en 1/7 de un teléfono: antes salía "Puntos…", que no
+       se entiende y se encimaba con la etiqueta de al lado. El JS mide cada etiqueta y
+       marca el item con .nav-compacto.
+       El texto NO se borra: se oculta visualmente (sigue disponible para el lector de
+       pantalla) y el nombre completo queda en el `title` del item, así que al pasar el
+       dedo o el cursor se lee entero. */
+    .nav-item.nav-compacto .nav-text,
+    .nav-item .nav-text.nav-solo-icono {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+        border: 0;
+        /* El texto está oculto, pero su cajita de 1px sigue existiendo: sin esto podría
+           tragarse un toque dirigido al elemento que tiene debajo. */
+        pointer-events: none;
+    }
+    /* Sin etiqueta, el icono puede ser más grande: se ve mejor y se acierta al tocarlo. */
+    .nav-item.nav-compacto .nav-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 1.25rem;
+        margin-bottom: 0;
+    }
+    .nav-item.nav-compacto {
+        min-width: 44px;
+        justify-content: center;
+    }
+
     /* Items to Hide on Mobile */
     .desktop-only-nav,
     .nav-separator,
@@ -168,7 +202,7 @@
         opacity: 0;
         visibility: hidden;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        z-index: 100000;
+        z-index: var(--capa-overlay, 100000);
         
         display: block !important; /* Force display context */
         background: var(--bg-card);

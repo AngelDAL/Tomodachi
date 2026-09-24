@@ -510,7 +510,7 @@ body.con-pedido { padding-bottom: 96px; }
 .mp-overlay {
     position: fixed;
     inset: 0;
-    z-index: 20300;
+    z-index: var(--capa-overlay, 100000);
     background: rgba(0, 0, 0, .55);
     display: flex;
     align-items: flex-end;
@@ -677,7 +677,7 @@ body.con-pedido { padding-bottom: 96px; }
     left: 50%;
     transform: translateX(-50%);
     bottom: 110px;
-    z-index: 20900;
+    z-index: var(--capa-aviso, 200000);
     padding: 12px 18px;
     border-radius: var(--ds-radius-md);
     box-shadow: var(--shadow-lg);

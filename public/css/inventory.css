@@ -579,7 +579,7 @@
     height: 100%;
     background: rgba(0, 0, 0, 0.5);
     /* Por encima del menú lateral (20000): antes 10000 y el menú lo tapaba */
-    z-index: 20300;
+    z-index: var(--capa-overlay, 100000);
     align-items: center;
     justify-content: center;
 }
@@ -935,7 +935,7 @@
     background: rgba(0, 0, 0, 0.5);
     /* Por encima del menú lateral (20000). Estaba en 10000 y el menú tapaba el
        modal y su fondo oscuro. */
-    z-index: 20300;
+    z-index: var(--capa-overlay, 100000);
     align-items: center;
     justify-content: center;
     padding: 20px;
@@ -1372,7 +1372,7 @@
     height: 100%;
     background: rgba(0, 0, 0, 0.5);
     /* Por encima del menú lateral (20000): antes 10001 y el menú lo tapaba */
-    z-index: 20100;
+    z-index: var(--capa-overlay, 100000);
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.3s ease, visibility 0.3s ease;

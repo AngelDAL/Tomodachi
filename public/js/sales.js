@@ -943,11 +943,13 @@ function setupCartEventsDelegation() {
         const qtyDisplay = target.closest('.qty-display');
         if (qtyDisplay) {
             e.stopPropagation();
-// ...
-
             const id = parseInt(qtyDisplay.getAttribute('data-id'));
             const it = CART.find(i => i.product_id === id);
-            if(it && it.is_bulk == 1) promptBulkQuantity(it);
+            if (!it) return;
+            // Un producto a granel pide su peso en un modal aparte (tiene decimales y
+            // balanza). El resto se teclea ahí mismo, en la línea del carrito.
+            if (it.is_bulk == 1) { promptBulkQuantity(it); return; }
+            abrirEntradaDeCantidad(qtyDisplay, it);
             return;
         }
 
@@ -964,6 +966,77 @@ function setupCartEventsDelegation() {
 
     // Marcar que ya está setup
     cartBody.dataset.eventsAttached = 'true';
+}
+
+/**
+ * Convierte la cantidad de una línea del carrito en un input para teclearla a mano.
+ *
+ * Para qué: el + / − sirve para uno o dos, pero "12 refrescos" se teclea, no se toca doce
+ * veces. Al tocar la cantidad, el número se vuelve un campo numérico en su lugar (con
+ * teclado numérico en el teléfono); se confirma con Enter o saliendo del campo, y Esc
+ * cancela.
+ *
+ * Las reglas son las MISMAS que las del + / −: no se pasa del stock, un 0 quita la línea
+ * (igual que bajar hasta cero) y un producto a granel admite decimales.
+ */
+function abrirEntradaDeCantidad(span, item) {
+    if (!span || span.dataset.editando === '1') return;
+    span.dataset.editando = '1';
+
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.className = 'qty-input';
+    input.value = item.quantity;
+    input.min = '0';
+    input.step = '1';
+    input.inputMode = 'decimal';
+    input.setAttribute('aria-label', 'Cantidad de ' + (item.product_name || 'producto'));
+    span.replaceWith(input);
+    input.focus();
+    if (input.select) input.select();
+
+    let cerrado = false;
+    const terminar = (cancelar) => {
+        if (cerrado) return;
+        cerrado = true;
+
+        if (cancelar) { renderCart(); return; }
+
+        let nueva = parseFloat(String(input.value).replace(',', '.'));
+        if (!isFinite(nueva)) nueva = item.quantity;   // sin dato: se queda como estaba
+        nueva = Math.round(nueva * 1000) / 1000;
+
+        const maxStock = (item.stock_quantity !== undefined && item.stock_quantity !== null && item.stock_quantity !== '')
+            ? parseFloat(item.stock_quantity) : null;
+        if (maxStock !== null && nueva > maxStock) {
+            showNotification(`Stock máximo alcanzado (${maxStock})`, 'warning');
+            nueva = maxStock;
+        }
+
+        if (nueva <= 0) {
+            CART = CART.filter(i => i.product_id !== item.product_id);
+            playSound('Sound3.mp3');
+        } else {
+            item.quantity = nueva;
+            recalcItemPrice(item);
+        }
+        renderCart();
+    };
+
+    input.addEventListener('keydown', (ev) => {
+        // Mientras se teclea la cantidad, el teclado es DE ESTE CAMPO. Sin esto, el Enter
+        // llegaba al atajo global del POS (keyboard-nav.js: "Enter = agregar producto
+        // seleccionado"), así que además de guardar la cantidad se agregaba una unidad de
+        // más — el cliente pedía 5 y salían 6.
+        ev.stopPropagation();
+        if (ev.key === 'Enter') { ev.preventDefault(); terminar(false); }
+        else if (ev.key === 'Escape') { ev.preventDefault(); terminar(true); }
+    });
+    input.addEventListener('keyup', (ev) => ev.stopPropagation());
+    input.addEventListener('keypress', (ev) => ev.stopPropagation());
+    input.addEventListener('blur', () => terminar(false));
+    // El toque dentro del campo no debe disparar los manejadores de la línea del carrito.
+    ['pointerdown', 'click'].forEach(ev => input.addEventListener(ev, (e) => e.stopPropagation()));
 }
 
 function handleStepBtnClick(btn) {

@@ -3534,27 +3534,57 @@
  * La caja solo aparece si NO hay foto (o si la que había no cargó).
  * ============================================================ */
 .gallery-item {
-    justify-content: flex-start;
-    /* El ancho lo manda la columna de la rejilla; el alto, lo que ocupan el nombre, la foto y
-       el pie. Antes la proporción cuadrada (1/1) hacía que el navegador dedujera el ANCHO del
-       contenido (115 px) y la foto se quedaba sin un píxel. */
+    /* Fondo a sangre: la foto ocupa TODA la tarjeta y los textos van encima. */
+    position: relative;
+    justify-content: space-between;   /* el nombre arriba, el precio abajo */
+    overflow: hidden;
     width: 100%;
-    aspect-ratio: auto;
+    /* Cuadrada: con la foto de fondo y los textos encima, la tarjeta queda pareja y en el
+       teléfono entran más productos que antes (150 px de alto en vez de 183). */
+    aspect-ratio: 1 / 1;
 }
 
+/* La foto llena la tarjeta: `cover` recorta lo que sobre en vez de dejar franjas. */
+.gallery-item .img-wrap {
+    position: absolute;
+    inset: 0;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    flex: 0 0 auto;
+    min-height: 0;
+    z-index: 0;
+    overflow: hidden;
+}
+
+.gallery-item .img-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+}
+
+/* Los textos llevan su propio fondo: encima de una foto clara o cargada no se leían, y
+   sobre el hueco de la foto tampoco (el fondo de la tarjeta es claro). Blanco sobre un
+   fondo oscuro da contraste en cualquier caso. */
 .gallery-item .g-name {
-    position: static;
+    position: relative;
+    z-index: 2;
     order: 0;
     flex: 0 0 auto;
     width: 100%;
     margin: 0;
     padding: 7px 9px;
     border-radius: 0;
-    background: var(--bg-card);
+    background: rgba(17, 22, 30, 0.72);
+    color: #ffffff;
     box-shadow: none;
     text-shadow: none;
     text-align: left;
     font-size: 0.82rem;
+    font-weight: 600;
     line-height: 1.2;
     /* Completo: hasta dos líneas y, si aún no cabe, se recorta por palabra. */
     white-space: normal;
@@ -3563,48 +3593,6 @@
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow-wrap: anywhere;
-}
-
-/* ------------------------------------------------------------
- * Área de la foto: deja de ser un fondo absoluto y pasa a ser parte del flujo
- * ------------------------------------------------------------ */
-.gallery-item .img-wrap {
-    position: relative;
-    top: auto;
-    left: auto;
-    width: 100%;
-    height: auto;
-    flex: 1 1 auto;
-    min-height: 62px;
-    z-index: 1;
-}
-
-/* ------------------------------------------------------------
- * Alto de la foto en la tarjeta del POS
- *
- * Con la foto elástica, la rejilla estiraba las filas y la tarjeta acababa de 243 px: en el
- * teléfono se veían apenas dos productos. Con un alto fijo la tarjeta ronda los 165 px y el
- * catálogo se recorre de un vistazo.
- * ------------------------------------------------------------ */
-.catalog-items,
-.gallery-main {
-    align-content: start;
-}
-
-@media (max-width: 900px) {
-    .gallery-item .img-wrap {
-        flex: 0 0 auto;
-        height: 76px;
-        min-height: 0;
-    }
-}
-
-
-.gallery-item .img-wrap img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
 }
 
 /* El icono de caja: únicamente cuando no hay imagen que mostrar. */
@@ -3620,23 +3608,34 @@
 
 .gallery-item .caja-vacia[hidden] { display: none; }
 
-/* Pie de la tarjeta: cantidad disponible (chica) sobre el precio, ambos abajo a la derecha. */
+/* Pie de la tarjeta: cantidad disponible (chica) sobre el precio, ambos abajo a la derecha,
+   y sobre el mismo fondo oscuro que el nombre para que se lean sobre la foto. */
 .gallery-item .card-pie {
+    position: relative;
+    z-index: 2;
     flex: 0 0 auto;
     display: flex;
     flex-direction: column;
     align-items: flex-end;
     gap: 0;
     padding: 4px 9px 6px;
-    background: var(--bg-card);
+    background: rgba(17, 22, 30, 0.72);
+    color: #ffffff;
     min-width: 0;
+}
+
+/* La rejilla no debe repartir el alto sobrante entre las filas: sin esto las tarjetas se
+   estiraban hasta los 243 px y solo entraban dos productos en pantalla. */
+.catalog-items,
+.gallery-main {
+    align-content: start;
 }
 
 .gallery-item .card-pie .stock-badge {
     position: static;
     inset: auto;
     background: transparent;
-    color: var(--text-muted);
+    color: rgba(255, 255, 255, 0.88);
     font-size: 0.68rem;
     font-weight: 600;
     padding: 0;
@@ -3645,15 +3644,19 @@
     white-space: nowrap;
 }
 
-.gallery-item .card-pie .stock-badge.low { color: var(--warning-color); }
+.gallery-item .card-pie .stock-badge.low { color: #ffd166; }
 
-.gallery-item .card-pie .stock-badge.negative { color: var(--danger-color); }
+.gallery-item .card-pie .stock-badge.negative { color: #ff9f9f; }
 
 .gallery-item .card-pie .g-price {
     font-size: 1rem;
     font-weight: 700;
     line-height: 1.1;
-    color: var(--primary-color);
+    color: #ffffff;
+    /* El precio traía su propia píldora blanca: con el texto en blanco quedaba invisible. */
+    background: transparent;
+    padding: 0;
+    box-shadow: none;
     white-space: nowrap;
 }
 
@@ -4050,3 +4053,203 @@
  * después y sus reglas del teléfono (mismo peso) ganan. Escribirlas en los dos sitios
  * fue justo lo que hizo creer que este bloque hacía algo mientras el alto seguía siendo
  * el viejo. Un solo dueño por cosa. */
+
+/* ============================================================================
+ * POS — vista de lista, barra que se encoge, carrito sin barra y cliente compacto
+ * ========================================================================== */
+
+/* ---------- Vista de LISTA: más productos en el mismo alto -----------------
+ * Reutiliza la misma tarjeta, pero en fila: foto a la izquierda, nombre al centro y el
+ * precio a la derecha. Cada renglón mide 64 px, así que en la pantalla entran el triple
+ * que en la vista de cuadrícula. */
+.catalog-items--lista {
+    grid-template-columns: 1fr !important;
+    gap: 8px;
+}
+
+.catalog-items--lista .gallery-item {
+    aspect-ratio: auto;
+    height: 64px;
+    /* La tarjeta de la cuadrícula trae un mínimo de 100 px: en la lista manda el renglón de
+       64 px (el nombre y el precio caben de sobra). */
+    min-height: 0;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 0 10px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+}
+
+/* La foto vuelve al flujo: un cuadrito a la izquierda (en la cuadrícula es el fondo). */
+.catalog-items--lista .gallery-item .img-wrap {
+    position: relative;
+    inset: auto;
+    top: auto;
+    left: auto;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 auto;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.catalog-items--lista .gallery-item .img-wrap img {
+    object-fit: cover;
+}
+
+.catalog-items--lista .gallery-item .g-name {
+    flex: 1 1 auto;
+    width: auto;
+    padding: 0;
+    background: transparent;
+    color: var(--text-color);
+    font-size: 0.9rem;
+}
+
+.catalog-items--lista .gallery-item .card-pie {
+    flex: 0 0 auto;
+    padding: 0;
+    background: transparent;
+    color: var(--text-muted);
+    align-items: flex-end;
+}
+
+.catalog-items--lista .gallery-item .card-pie .g-price {
+    color: var(--text-color);
+    background: transparent;
+    padding: 0;
+    font-size: 0.95rem;
+}
+
+.catalog-items--lista .gallery-item .card-pie .stock-badge { color: var(--text-muted); }
+.catalog-items--lista .gallery-item .card-pie .stock-badge.low { color: var(--warning-color); }
+.catalog-items--lista .gallery-item .card-pie .stock-badge.negative { color: var(--danger-color); }
+
+.catalog-items--lista .gallery-item .caja-vacia { font-size: 1.1rem; }
+
+@media (max-width: 900px) {
+
+    /* ---------- La barra se encoge al recorrer el catálogo ----------
+     * Al bajar por los productos, buscador, filtros y opciones se achican y el buscador
+     * vuelve a compartir renglón con los botones: se ganan ~60 px de catálogo a la vista.
+     * Al volver arriba, todo regresa a su tamaño. */
+    .product-search-container,
+    .pos-filtros-cabecera,
+    .mobile-view-controls {
+        transition: padding 0.2s ease, height 0.2s ease;
+    }
+
+    body.pos-barra-compacta .search-caja {
+        flex: 1 1 120px;
+        order: 0;
+    }
+
+    body.pos-barra-compacta .search-caja .search-main {
+        height: 36px;
+    }
+
+    body.pos-barra-compacta .search-wrapper {
+        row-gap: 6px;
+    }
+
+    body.pos-barra-compacta .search-wrapper .scanner-btn-circle,
+    body.pos-barra-compacta .search-wrapper .pos-register-btn,
+    body.pos-barra-compacta .search-wrapper .pos-register-chip,
+    body.pos-barra-compacta .search-wrapper .pos-customer-btn,
+    body.pos-barra-compacta .search-wrapper .config-btn-circle {
+        width: 38px !important;
+        height: 38px !important;
+        min-width: 38px;
+    }
+
+    /* Los envoltorios también: si no, el botón se encoge por dentro pero el hueco sigue
+       midiendo 46 px y la configuración se cae a un segundo renglón. */
+    body.pos-barra-compacta .search-wrapper .pos-register-wrap,
+    body.pos-barra-compacta .search-wrapper .pos-customer-wrap,
+    body.pos-barra-compacta .search-wrapper .config-menu-wrapper {
+        width: 38px !important;
+        height: 38px !important;
+        min-width: 0;
+    }
+
+    body.pos-barra-compacta .search-wrapper {
+        gap: 6px;
+        flex-wrap: nowrap;
+        align-items: center;
+    }
+
+    /* El botón de filtros se queda con su icono: el resumen en palabras es lo que más
+       ancho pide y ya se sabe que hay filtros. */
+    body.pos-barra-compacta .pos-filtros-toggle {
+        height: 32px;
+        padding: 0 12px;
+    }
+
+    body.pos-barra-compacta .pos-filtros-toggle span,
+    body.pos-barra-compacta .pos-filtros-toggle .pos-filtros-flecha {
+        display: none;
+    }
+
+    body.pos-barra-compacta .mobile-view-controls {
+        padding: 2px;
+    }
+
+    body.pos-barra-compacta .view-switch-btn {
+        min-height: 32px;
+        padding: 4px 8px;
+        font-size: 0.7rem;
+    }
+
+    body.pos-barra-compacta .view-switch-btn.active {
+        font-size: 0.82rem;
+    }
+
+    /* ---------- En el carrito no hay barra de navegación ----------
+     * El usuario está cobrando: sin barra no hay nada que tocar por error justo al lado
+     * del botón de cobrar, y ese botón se queda con el pie de la pantalla para él solo.
+     * Se sale del carrito con las pestañas de arriba. */
+    body.pos-vista-carrito .sidebar {
+        display: none !important;
+    }
+
+    body.pos-vista-carrito #finalizeSaleBtn {
+        margin-bottom: 10px;
+    }
+
+    /* ---------- Cliente vinculado: solo su inicial ----------
+     * Con el nombre y el saldo, el chip medía más de 200 px y empujaba el engrane de
+     * configuración fuera de la pantalla. Queda el círculo con la inicial (o su foto) y
+     * una × pequeña encima para desvincular. */
+    body .pos-linked-customer {
+        width: 46px;
+        height: 46px;
+        padding: 0;
+        justify-content: center;
+        position: relative;
+        overflow: visible;
+    }
+
+    body .pos-linked-customer .pos-linked-info {
+        display: none;
+    }
+
+    body .pos-linked-customer .pos-linked-avatar {
+        width: 46px;
+        height: 46px;
+        font-size: 0.95rem;
+    }
+
+    body .pos-linked-customer .pos-linked-unlink-btn {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        width: 22px;
+        height: 22px;
+        min-width: 22px;
+        font-size: 0.62rem;
+        z-index: 2;
+    }
+}

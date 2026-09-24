@@ -102,12 +102,15 @@ function buildProductCard(p) {
   `;
 }
 
-// Lista de productos → HTML según la vista activa (grid simple o agrupado por catálogo)
+// Lista de productos → HTML según la vista activa (cuadrícula, catálogo o lista compacta)
 function listToGalleryHTML(list) {
   if (!list || !list.length) return '';
   if (currentViewMode !== 'catalog') {
-    // Vista de cuadrícula: todas las cards juntas (como siempre se ha tenido)
-    return `<div class="catalog-items">${list.map(buildProductCard).join('')}</div>`;
+    // Cuadrícula: todas las cards juntas. La lista compacta usa las MISMAS tarjetas y solo
+    // cambia el acomodo (una columna, cada tarjeta en fila), así que no hay dos dibujos que
+    // mantener en paralelo.
+    const clases = currentViewMode === 'list' ? 'catalog-items catalog-items--lista' : 'catalog-items';
+    return `<div class="${clases}">${list.map(buildProductCard).join('')}</div>`;
   }
   // Vista por catálogo: cada catálogo es una FILA de ancho completo
   const catNameMap = {};
@@ -197,7 +200,7 @@ function initViewToggle() {
   const wrap = document.getElementById('viewToggle');
   if (!wrap) return;
   // persistir preferencia
-  try { const saved = localStorage.getItem('pos_view_mode'); if (saved === 'grid' || saved === 'catalog') currentViewMode = saved; } catch (e) {}
+  try { const saved = localStorage.getItem('pos_view_mode'); if (saved === 'grid' || saved === 'catalog' || saved === 'list') currentViewMode = saved; } catch (e) {}
   const applyActive = () => {
     wrap.querySelectorAll('.view-toggle-btn').forEach(b => {
       b.classList.toggle('active', b.getAttribute('data-view') === currentViewMode);
@@ -522,9 +525,22 @@ function bindEvents() {
                   if(cartColumn) cartColumn.classList.add('active');
                   if(productsColumn) productsColumn.classList.remove('active');
               }
+              marcarVistaMovil(target);
           });
       });
+      // Si la página se recarga estando en el carrito, la vista se respeta.
+      const vistaActiva = document.querySelector('.view-switch-btn.active');
+      if (vistaActiva) marcarVistaMovil(vistaActiva.dataset.target);
   }
+
+  // La barra se encoge al recorrer el catálogo (ver sales.css).
+  // Se escucha en captura porque quien se desplaza es la columna, no la ventana.
+  document.addEventListener('scroll', (e) => {
+      if (window.innerWidth > 900) return;
+      const t = e.target;
+      const avance = (!t || t === document) ? (window.scrollY || 0) : (t.scrollTop || 0);
+      document.body.classList.toggle('pos-barra-compacta', avance > 40);
+  }, { capture: true, passive: true });
 
   // Eventos de los Nuevos Filtros (Categoría y Orden)
   const categoryFilter = document.getElementById('categoryFilter');
@@ -761,6 +777,24 @@ function bindEvents() {
           }
       }, {passive: true});
   }
+}
+
+/**
+ * Deja constancia de en qué vista está el teléfono.
+ *
+ * Con el carrito a la vista se esconde la barra de navegación (ver sales.css): el usuario
+ * está cobrando y no debe tener nada más cerca del pulgar que el botón de cobrar. Se sale
+ * del carrito con las pestañas de arriba, o cobrando.
+ */
+function marcarVistaMovil(target) {
+  document.body.classList.toggle('pos-vista-carrito', target === 'cart-column');
+}
+
+/** Tras cobrar, el teléfono regresa a la vista de productos (y con ella vuelve la barra). */
+function volverAProductosSiEsMovil() {
+  if (window.innerWidth > 900) return;
+  const btn = document.querySelector('.view-switch-btn[data-target="products-column"]');
+  if (btn && !btn.classList.contains('active')) btn.click();
 }
 
 function switchCartTab(tabName) {
@@ -2680,6 +2714,10 @@ async function finalizeSale() {
       playSound('Sound7.mp3');
       showNotification('Venta registrada', 'success');
 
+      // En el teléfono, de vuelta a los productos: el carrito ya está vacío y así regresa
+      // también la barra de navegación (en el carrito se esconde para cobrar sin estorbos).
+      volverAProductosSiEsMovil();
+
       if (resData.register_opened) {
         showNotification('Se ha abierto una nueva caja automáticamente', 'info');
       }
@@ -3721,25 +3759,60 @@ function injectMoneyPanelStyles() {
             }
         }
 
-        /* Móvil */
-        @media (max-width: 768px) {
+        /* Teléfono: cajón a pantalla completa.
+         * Antes era una hoja que subía al pie y la barra de navegación (z-index 99999) le
+         * pasaba por encima: quedaba tapada justo donde están los botones. Ahora ocupa toda
+         * la pantalla POR ENCIMA de la barra, con el total fijo arriba y Limpiar/Cerrar fijos
+         * abajo; el cuerpo se desplaza solo si hace falta. */
+        @media (max-width: 900px) {
+            .money-panel-overlay {
+                z-index: calc(var(--capa-overlay, 100000) - 1);
+            }
+
             .money-panel-tooltip {
                 position: fixed;
-                bottom: 0;
-                left: 0;
-                right: 0;
+                inset: 0;
                 width: 100%;
-                border-radius: 20px 20px 0 0;
+                height: 100vh;
+                max-height: 100vh;
+                border-radius: 0;
                 border: none;
-                box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
-                padding: 20px;
-                z-index: 10001;
+                padding: 0;
+                z-index: var(--capa-overlay, 100000);
                 transform: translateY(100%);
                 transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-                display: block !important;
+                display: flex !important;
+                flex-direction: column;
+                overscroll-behavior: contain;
             }
+
             .money-panel-tooltip.active {
                 transform: translateY(0);
+            }
+
+            .money-panel-header {
+                position: sticky;
+                top: 0;
+                z-index: 2;
+                background: var(--bg-card);
+                margin: 0 !important;
+                padding: 18px 20px 12px !important;
+            }
+
+            .money-panel-body {
+                flex: 1 1 auto;
+                overflow-y: auto;
+                padding: 14px 20px 0;
+            }
+
+            .money-actions {
+                position: sticky;
+                bottom: 0;
+                z-index: 2;
+                margin-top: auto;
+                background: var(--bg-card);
+                padding: 12px 20px calc(12px + env(safe-area-inset-bottom, 0px));
+                border-top: 1px solid var(--border-color);
             }
 
             /* Ajustes grid móvil */
@@ -3992,6 +4065,7 @@ function createMoneyPanel() {
             <div id="money-panel-total" style="font-size: 2.2rem; font-weight: 800; color: var(--primary-color); line-height: 1.2; margin-top: 5px;">${sym}0.00</div>
         </div>
 
+        <div class="money-panel-body">
         <div class="money-section">
             <div class="money-section-title">Billetes</div>
             <div class="money-grid" style="grid-template-columns: repeat(${Math.min(bills.length, 4) > 4 ? 3 : Math.min(bills.length, 4) > 3 ? 3 : bills.length}, 1fr);">
@@ -4011,6 +4085,7 @@ function createMoneyPanel() {
                     </div>
                 `).join('')}
             </div>
+        </div>
         </div>
         <div class="money-actions">
             <button class="btn-money-action clear" onclick="resetMoneyCounts(true)">Limpiar</button>

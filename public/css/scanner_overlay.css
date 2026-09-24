@@ -36,14 +36,29 @@ body.scanner-active #scannerContainer {
     }
 }
 
+/* En el teléfono: panel flotante al pie, POR ENCIMA de la barra de navegación y sin
+ * taparla. La barra mide 60 px, así que el lector se ancla 72 px arriba y el video se ve
+ * completo. (Antes se anclaba en bottom: 0 y la barra le comía el borde inferior.)
+ * No mueve nada de la vista: se abre encima de lo que el usuario esté viendo. */
 @media (max-width: 900px) {
     body.scanner-active #scannerContainer {
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        height: 42vh;
-        border-radius: 18px 18px 0 0;
+        bottom: 72px;
+        left: 12px;
+        right: 12px;
+        width: auto;
+        height: 44vh;
+        max-height: 420px;
+        border-radius: 18px;
+        z-index: var(--capa-overlay, 100000);
+        touch-action: auto;
     }
+}
+
+/* El video del lector llena su marco: sin franjas negras ni recortes raros. */
+#scannerContainer video {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover;
 }
 
 /* Botón de cierre (superior derecha) */

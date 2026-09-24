@@ -3841,3 +3841,212 @@
         pointer-events: none;
     }
 }
+
+/* ============================================================================
+ * POS EN EL TELÉFONO — ronda de ajustes pedidos
+ *
+ *   1. La lupa se salía de su elemento.
+ *   2. La caja y el cliente se eligen en un modal, no en un menú colgante.
+ *   3. El escáner se quedaba cambiando de vista al carrito.
+ *   4. "Monto recibido" y "Cambio" diminutos y pegados.
+ * ========================================================================== */
+
+/* 1. La caja del buscador ------------------------------------------------
+ * La lupa estaba anclada al contenedor entero. En el teléfono ese contenedor se
+ * envuelve en dos renglones (el campo arriba, los botones abajo), así que la lupa
+ * caía justo en medio de los dos: se veía fuera de su elemento. Ahora la lupa vive
+ * dentro de la caja del campo, así que siempre queda dentro. */
+.search-caja {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.search-caja .search-main {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* El botón de cerrar solo existe en el modal del teléfono; en escritorio son menús
+ * que cuelgan del botón y se cierran solos al hacer clic fuera. */
+.pos-modal-cerrar {
+    display: none;
+}
+
+@media (max-width: 900px) {
+
+    .search-caja {
+        flex: 1 1 100%;
+        order: -1;
+    }
+
+    /* 2. Caja y cliente: modal a pantalla completa -------------------------
+     * Colgando del botón quedaban fuera de la pantalla (el botón está arriba a la
+     * derecha) y por debajo de la barra de navegación. Como modal se ven enteros,
+     * con su título y su botón de cerrar arriba, que no se va al desplazar. */
+    body .pos-register-dropdown,
+    body .pos-customer-dropdown {
+        position: fixed;
+        inset: 0;
+        top: 0;
+        right: 0;
+        z-index: var(--capa-overlay, 100000);
+        width: 100vw;
+        max-width: 100vw;
+        height: 100vh;
+        max-height: 100vh;
+        margin: 0;
+        border: 0;
+        border-radius: 0;
+        padding: 0 16px 20px;
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+        box-shadow: none;
+    }
+
+    body .pos-register-dropdown.hidden,
+    body .pos-customer-dropdown.hidden {
+        display: none;
+    }
+
+    body .pos-modal-cabecera {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin: 0 -16px 8px;
+        padding: 14px 16px;
+        background: var(--bg-card, #fff);
+        border-bottom: 1px solid var(--border-color, rgba(0, 0, 0, .12));
+    }
+
+    body .pos-modal-titulo {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text-color);
+    }
+
+    body .pos-modal-cerrar {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        border: 1px solid var(--border-color, rgba(0, 0, 0, .12));
+        background: var(--bg-light, #f2f4f7);
+        color: var(--text-color);
+        font-size: 1rem;
+        cursor: pointer;
+    }
+
+    /* El buscador de clientes se queda a la vista mientras la lista se desplaza. */
+    body .pos-customer-search {
+        position: sticky;
+        top: 72px;
+        z-index: 1;
+        background: var(--bg-card, #fff);
+    }
+
+    body .pos-customer-results {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        max-height: none;
+    }
+
+    body .pos-customer-create {
+        position: sticky;
+        bottom: 0;
+    }
+
+    /* 4. Monto recibido y cambio: cada uno en su renglón y en grande -------- */
+    #cashControlGroup {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    #cashControlGroup .input-wrapper {
+        width: 100%;
+    }
+
+    #cashControlGroup .input-wrapper .pay-input {
+        width: 100%;
+        height: 58px;
+        font-size: 1.65rem;
+        font-weight: 700;
+        text-align: right;
+        padding-right: 16px;
+    }
+
+    #cashControlGroup .input-wrapper .currency-symbol {
+        font-size: 1.4rem;
+        font-weight: 700;
+    }
+
+    #cashControlGroup .change-display {
+        width: 100%;
+        min-width: 0;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 16px;
+        border-radius: 14px;
+    }
+
+    #cashControlGroup .change-display small {
+        font-size: 0.85rem;
+        letter-spacing: .04em;
+    }
+
+    #cashControlGroup .change-display span {
+        font-size: 1.9rem;
+        font-weight: 800;
+        line-height: 1.1;
+    }
+
+    /* La barra del buscador: el campo arriba, los botones abajo. */
+    body .search-wrapper {
+        flex-wrap: wrap;
+        row-gap: 8px;
+        justify-content: space-between;
+    }
+
+    /* El chip de la caja llevaba su nombre ("Caja Principal") y con eso el engrane de
+     * configuración se caía a un tercer renglón. En el teléfono el chip queda con su
+     * icono, del mismo tamaño que sus vecinos: el nombre vive en el modal de la caja y
+     * en el título del botón. */
+    body .pos-register-chip {
+        width: 46px;
+        height: 46px;
+        padding: 0;
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    body .pos-register-chip span {
+        display: none;
+    }
+}
+
+/* 3. El escáner se queda en la vista donde estaba ------------------------
+ * Las reglas que traían el carrito encima y encogían la columna de productos ya no
+ * existen (vivían en cart_responsive.css), y el overlay vive fuera de las columnas, así
+ * que su position: fixed se ancla a la pantalla y no a una columna que se desliza: por
+ * eso medía mal.
+ *
+ * Su geometría NO se ajusta aquí sino en scanner_overlay.css: ese archivo se carga
+ * después y sus reglas del teléfono (mismo peso) ganan. Escribirlas en los dos sitios
+ * fue justo lo que hizo creer que este bloque hacía algo mientras el alto seguía siendo
+ * el viejo. Un solo dueño por cosa. */

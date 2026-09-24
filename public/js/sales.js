@@ -2272,7 +2272,12 @@ function togglePosRegisterDropdown(force) {
   if (!dd) return;
   const show = force !== undefined ? !!force : dd.classList.contains('hidden');
   dd.classList.toggle('hidden', !show);
-  if (show) renderPosRegisterOptions();
+  portalarModalEnMovil(dd, show);
+  if (show) {
+    // Nunca dos modales a la vez: el botón "atrás" cierra el que esté a la vista.
+    if (typeof togglePosCustomerDropdown === 'function') togglePosCustomerDropdown(false);
+    renderPosRegisterOptions();
+  }
 }
 
 function selectPosRegister(registerId, name) {
@@ -5008,18 +5013,66 @@ function customerInitials(name) {
   return String(name || '?').split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
 }
 
-// Abre/cierra el dropdown de búsqueda de cliente
+/**
+ * Saca el modal al <body> mientras está abierto (solo en el teléfono).
+ *
+ * En el teléfono estos dos menús se ven como modal a pantalla completa y se anclan con
+ * `position: fixed`. Pero la columna de productos lleva `transform` (para el deslizamiento
+ * entre vistas) y un transform en un antepasado lo convierte en la caja contenedora de
+ * `position: fixed`: el modal aparecía desplazado 26 px a la derecha y 86 px abajo, con su
+ * botón de cerrar fuera de la pantalla. Sacándolo al <body> se ancla a la pantalla de
+ * verdad. Al cerrarlo vuelve a su sitio, que es donde el escritorio lo necesita: ahí es un
+ * menú que cuelga del botón.
+ */
+function portalarModalEnMovil(el, abrir) {
+  if (!el) return;
+  if (abrir) {
+    if (window.innerWidth > 900 || el.__casa) return;
+    el.__casa = el.parentElement;
+    el.__hermano = el.nextElementSibling;
+    document.body.appendChild(el);
+  } else if (el.__casa) {
+    el.__casa.insertBefore(el, el.__hermano);
+    el.__casa = null;
+    el.__hermano = null;
+  }
+}
+
+// Si se pasa a pantalla grande con el modal abierto, vuelve a su sitio.
+window.addEventListener('resize', () => {
+  if (window.innerWidth <= 900) return;
+  ['posRegisterDropdown', 'posCustomerDropdown'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.__casa) portalarModalEnMovil(el, false);
+  });
+});
+
+// Abre/cierra el dropdown de búsqueda de cliente.
+// En el teléfono el mismo elemento se ve como un modal a pantalla completa (ver sales.css);
+// por eso aquí solo se abre y se cierra, y nunca hay dos abiertos a la vez.
 function togglePosCustomerDropdown(force) {
   const dd = document.getElementById('posCustomerDropdown');
   if (!dd) return;
   const show = force !== undefined ? !!force : dd.classList.contains('hidden');
   dd.classList.toggle('hidden', !show);
+  portalarModalEnMovil(dd, show);
   if (show) {
+    // Un modal sobre otro confunde y el botón "atrás" ya no sabe qué cerrar.
+    if (typeof togglePosRegisterDropdown === 'function') togglePosRegisterDropdown(false);
     document.getElementById('posCustomerSearch').value = '';
     document.getElementById('posCustomerResults').innerHTML = '<div class="pos-customer-empty">Escribe para buscar clientes...</div>';
     setTimeout(() => document.getElementById('posCustomerSearch').focus(), 50);
   }
 }
+
+// El cierre de los modales (teléfono). En escritorio son menús que cuelgan del botón y se
+// cierran solos al hacer clic fuera, así que el botón ni se ve.
+document.addEventListener('DOMContentLoaded', () => {
+  const cerrarCliente = document.getElementById('posCustomerClose');
+  if (cerrarCliente) cerrarCliente.addEventListener('click', () => togglePosCustomerDropdown(false));
+  const cerrarCaja = document.getElementById('posRegisterClose');
+  if (cerrarCaja) cerrarCaja.addEventListener('click', () => togglePosRegisterDropdown(false));
+});
 
 // Busca clientes (debounce) y muestra resultados
 async function searchPosCustomers(query) {

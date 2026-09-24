@@ -232,7 +232,9 @@
 
     var CANDIDATOS = [
         '.modal', '.modal-overlay', '.drawer-overlay', '.tp-overlay', '.mp-overlay',
-        '.quantity-modal', '.numpad-drawer', '.scanner-overlay', '.client-dialog'
+        '.quantity-modal', '.numpad-drawer', '.scanner-overlay', '.client-dialog',
+        // En el teléfono, la caja y el cliente se eligen en un modal (ver sales.css).
+        '.pos-register-dropdown', '.pos-customer-dropdown'
     ].join(', ');
 
     var ESTADOS = ['show', 'active', 'open', 'visible'];

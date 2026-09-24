@@ -680,25 +680,14 @@
         z-index: 20;
     }
 
-    /* SCANNER MODE OVERRIDES */
-    body.scanner-active .products-column {
-        display: flex !important;
-        transform: none !important; /* Remove transforms so fixed scanner works */
-        width: 0 !important;
-        height: 0 !important;
-        overflow: visible !important;
-        padding: 0 !important;
-        margin: 0 !important;
-    }
-
-    body.scanner-active .cart-column {
-        transform: translateX(0) !important;
-        z-index: 30;
-    }
-    
-    body.scanner-active .mobile-view-controls {
-        display: none !important;
-    }
+    /* El escáner ya no tiene reglas aquí.
+     *
+     * Antes, al activarlo, esta sección traía la columna del carrito encima, encogía la de
+     * productos a 0x0 y le quitaba el transform para que el overlay (position: fixed) se
+     * anclara a la pantalla. Era un parche: el overlay vivía DENTRO de la columna de
+     * productos, y el transform de esa columna lo capturaba. Ya no vive ahí —es hermano de
+     * las columnas— así que se ancla solo y no hay que mover ni encoger nada: el escáner
+     * se abre encima de la vista en la que esté el usuario. */
 
     /* VIEW SWITCHER BUTTONS */
     .view-switch-btn {

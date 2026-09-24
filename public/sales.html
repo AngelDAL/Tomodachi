@@ -15,10 +15,10 @@
     <link rel="stylesheet" href="css/sidebar-modern.css?v=6">
     <link rel="stylesheet" href="css/mobile-nav.css?v=5">
     <link rel="stylesheet" href="css/dashboard.css?v=4">
-    <link rel="stylesheet" href="css/sales.css?v=33">
-    <link rel="stylesheet" href="css/scanner_overlay.css?v=7">
+    <link rel="stylesheet" href="css/sales.css?v=37">
+    <link rel="stylesheet" href="css/scanner_overlay.css?v=10">
     <link rel="stylesheet" href="css/bulk_sales.css?v=4">
-    <link rel="stylesheet" href="css/cart_responsive.css?v=8">
+    <link rel="stylesheet" href="css/cart_responsive.css?v=12">
     <script src="js/theme-init.js?v=3"></script>
     <link rel="icon" type="image/svg+xml" href="assets/app-icons/tomodachi-favicon.svg">
     <link rel="manifest" href="manifest.json">
@@ -77,10 +77,14 @@
                         <!-- Search Bar Moved Here -->
                         <div class="product-search-container">
                             <div class="search-wrapper">
-                                <i class="fas fa-search search-icon"></i>
-                                <input type="text" id="searchInput" placeholder="Buscar producto..." autocomplete="off"
-                                    aria-label="Buscar producto" class="search-main rounded-search">
-                                
+                                <!-- La lupa va dentro de la caja del campo: anclada al
+                                     contenedor entero, en el teléfono caía entre los dos
+                                     renglones (el buscador y los botones) y se salía. -->
+                                <div class="search-caja">
+                                    <i class="fas fa-search search-icon"></i>
+                                    <input type="text" id="searchInput" placeholder="Buscar producto..." autocomplete="off"
+                                        aria-label="Buscar producto" class="search-main rounded-search">
+                                </div>
                                 <button id="toggleScannerBtn" type="button" class="scanner-btn-circle" title="Activar escáner">
                                     <i class="fas fa-barcode"></i>
                                 </button>
@@ -94,8 +98,11 @@
                                         <span>Caja</span>
                                     </button>
                                     <div id="posRegisterDropdown" class="pos-register-dropdown hidden">
-                                        <div class="pos-register-title">
-                                            <i class="fas fa-cash-register"></i> ¿A qué caja se aplica?
+                                        <div class="pos-register-title pos-modal-cabecera">
+                                            <span class="pos-modal-titulo"><i class="fas fa-cash-register"></i> ¿A qué caja se aplica?</span>
+                                            <button type="button" class="pos-modal-cerrar" id="posRegisterClose" data-cerrar aria-label="Cerrar">
+                                                <i class="fas fa-times"></i>
+                                            </button>
                                         </div>
                                         <div id="posRegisterOptions" class="pos-register-options"></div>
                                     </div>
@@ -111,6 +118,12 @@
                                         <i class="fas fa-user"></i>
                                     </button>
                                     <div id="posCustomerDropdown" class="pos-customer-dropdown hidden">
+                                        <div class="pos-modal-cabecera">
+                                            <span class="pos-modal-titulo"><i class="fas fa-user"></i> Elegir cliente</span>
+                                            <button type="button" class="pos-modal-cerrar" id="posCustomerClose" data-cerrar aria-label="Cerrar">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
                                         <div class="pos-customer-search">
                                             <i class="fas fa-search"></i>
                                             <input type="text" id="posCustomerSearch" placeholder="Buscar cliente por nombre o teléfono..." autocomplete="off">
@@ -176,17 +189,11 @@
                             </div>
                         </div>
 
-                        <!-- Scanner Area: overlay inferior flotante, ocultable
-                             (si se oculta se mantiene activo en segundo plano) -->
-                        <div id="scannerContainer" class="scanner-container hidden">
-                            <button id="closeScannerContainerBtn" class="scanner-close-btn" title="Cerrar Escáner">
-                                <i class="fas fa-times"></i>
-                            </button>
-                            <button id="collapseScannerBtn" class="scanner-collapse-btn" title="Ocultar y seguir escaneando">
-                                <i class="fas fa-eye-slash"></i>
-                            </button>
-                            <div id="qr-reader" style="width:100%;"></div>
-                        </div>
+                        <!-- El escáner vive al final del documento, NO dentro de la columna de
+                             productos: esa columna se mueve con transform (para el cambio de
+                             vista del teléfono) y un transform en un antepasado rompe
+                             position: fixed, que es como se ancla este overlay. Vivía aquí
+                             dentro y por eso abrir el escáner movía la vista y medía mal. -->
 
                         <!-- Filtros (Anteriormente Category Bar) -->
                         <!-- En el teléfono se pliegan: con todo a la vista, categoría, orden y vista
@@ -348,12 +355,6 @@
                                         <span class="currency-symbol">$</span>
                                         <input type="number" id="checkoutReceived" min="0" step="0.01" placeholder="Monto recibido" class="pay-input" title="Mantén pulsado (o mantén el clic) para poner el importe exacto">
                                     </div>
-                                    <!-- Atajo del teléfono: mantener pulsado el campo lo llena con
-                                         el importe exacto. El cajero no teclea nada cuando el
-                                         cliente paga con el dinero justo. -->
-                                    <small class="monto-exacto-ayuda">
-                                        <i class="fas fa-hand-pointer"></i> Mantén pulsado el campo para el monto exacto
-                                    </small>
                                     <div class="change-display">
                                         <small>Cambio</small>
                                         <span id="checkoutChange">$0.00</span>
@@ -372,6 +373,20 @@
                 </div>
             </div>
         </main>
+
+        <!-- Escáner de códigos: overlay flotante y ocultable.
+             Va aquí, hermano de las columnas y no dentro de ninguna, para que su
+             position: fixed se ancle a la pantalla y no a una columna que se desliza.
+             Colapsado sigue leyendo códigos en segundo plano. -->
+        <div id="scannerContainer" class="scanner-container hidden">
+            <button id="closeScannerContainerBtn" class="scanner-close-btn" title="Cerrar Escáner">
+                <i class="fas fa-times"></i>
+            </button>
+            <button id="collapseScannerBtn" class="scanner-collapse-btn" title="Ocultar y seguir escaneando">
+                <i class="fas fa-eye-slash"></i>
+            </button>
+            <div id="qr-reader" style="width:100%;"></div>
+        </div>
     </div>
 
     <!-- Modal para Opciones de Producto (Descuentos y Promociones) -->
@@ -589,7 +604,7 @@
     <script src="js/stock-rule.js?v=1"></script>
     <script src="https://js.stripe.com/v3/"></script>
     <script src="js/stripe-pos.js?v=1"></script>
-    <script src="js/sales.js?v=37"></script>
+    <script src="js/sales.js?v=41"></script>
     <script>
         // En la app nativa: mantener la pantalla encendida mientras se vende
         document.addEventListener('tomodachi-native-ready', () => {

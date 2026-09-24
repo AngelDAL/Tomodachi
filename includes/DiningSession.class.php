@@ -98,9 +98,13 @@ class DiningSession {
             }
         }
 
-        // Caducidad: la define la carta (max_open_minutes). Se calcula en PHP
-        // para no depender de INTERVAL con placeholder.
-        $maxMinutes = 180;
+        // Caducidad: la define la carta (`max_open_minutes`) y es OPCIONAL.
+        //
+        // Decisión del dueño (24-sep-2026): por defecto NO HAY LÍMITE. El sistema también
+        // sirve para APARTADOS y solicitudes largas, así que una cuenta puede quedarse
+        // abierta el tiempo que haga falta; 0 = sin límite y la cuenta nace con
+        // `expires_at` NULL. Un negocio que quiera tope lo pone por carta.
+        $maxMinutes = 0;
         $stmt = $this->db->getConnection()->prepare(
             "SELECT max_open_minutes FROM menus WHERE menu_id = :menu_id AND store_id = :store_id LIMIT 1"
         );
@@ -117,11 +121,16 @@ class DiningSession {
 
         $code = $this->generateUniqueCode($store_id);
 
+        // Dos marcadores distintos para el mismo valor: PDO no reutiliza un marcador
+        // nombrado en la misma consulta (SQLSTATE[HY093] si se repite).
         $stmt = $this->db->getConnection()->prepare(
             "INSERT INTO dining_sessions
                 (store_id, table_id, menu_id, opened_by, code, status, ordering_enabled, split_mode, opened_at, expires_at)
              VALUES
-                (:store_id, :table_id, :menu_id, :opened_by, :code, 'open', 1, 'none', NOW(), DATE_ADD(NOW(), INTERVAL :minutos MINUTE))"
+                (:store_id, :table_id, :menu_id, :opened_by, :code, 'open', 1, 'none', NOW(),
+                 CASE WHEN :minutos_tope > 0
+                      THEN DATE_ADD(NOW(), INTERVAL :minutos_interval MINUTE)
+                      ELSE NULL END)"
         );
         $stmt->execute([
             ':store_id'   => $store_id,
@@ -129,7 +138,8 @@ class DiningSession {
             ':menu_id'    => $menu_id > 0 ? $menu_id : null,
             ':opened_by'  => $user_id,
             ':code'       => $code,
-            ':minutos'    => $maxMinutes,
+            ':minutos_tope'     => $maxMinutes,
+            ':minutos_interval' => $maxMinutes,
         ]);
 
         $session_id = (int)$this->db->getConnection()->lastInsertId();

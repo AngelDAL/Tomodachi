@@ -82,9 +82,32 @@ try {
                 $db->update('UPDATE customers SET balance = GREATEST(balance - ?, 0) WHERE customer_id = ?', [$debtAmount, $sale['customer_id']]);
             }
         }
-        // Movimiento caja negativo si fue en efectivo
-        if (in_array($sale['payment_method'],[PAYMENT_CASH,PAYMENT_MIXED])) {
-            $db->insert('INSERT INTO cash_movements (register_id, user_id, movement_type, amount, description, created_at) VALUES (?,?,?,?,?,NOW())',[ $sale['register_id'], $currentUser['user_id'], 'withdrawal', $sale['total'], 'Cancelación Venta #'.$sale_id ]);
+        // Movimiento de caja: se devuelve EXACTAMENTE el efectivo que había entrado por esta
+        // venta.
+        //
+        // Antes se retiraba el TOTAL de la venta cuando el pago era efectivo o mixto, y la
+        // propina no se revertía nunca. Dos consecuencias, las dos de dinero:
+        //   - cancelar una venta MIXTA vaciaba de caja dinero que entró por transferencia y
+        //     nunca estuvo en el cajón;
+        //   - una venta con propina dejaba la propina dentro como efectivo fantasma, cuando el
+        //     cliente ya se fue con su cambio.
+        // Ahora la verdad está en `sale_payments`: se devuelve la suma de los pagos en EFECTIVO,
+        // propina incluida (su movimiento también fue de efectivo).
+        $pagos = $db->select('SELECT method, amount, is_tip FROM sale_payments WHERE sale_id = ?', [$sale_id]);
+        if ($pagos) {
+            $efectivo = 0.0;
+            foreach ($pagos as $p) {
+                if ($p['method'] === PAYMENT_CASH) { $efectivo += (float)$p['amount']; }
+            }
+            if ($efectivo > 0) {
+                $db->insert('INSERT INTO cash_movements (register_id, user_id, movement_type, amount, description, created_at) VALUES (?,?,?,?,?,NOW())',
+                    [ $sale['register_id'], $currentUser['user_id'], 'withdrawal', $efectivo, 'Cancelación Venta #'.$sale_id ]);
+            }
+        } elseif (in_array($sale['payment_method'],[PAYMENT_CASH,PAYMENT_MIXED])) {
+            // Ventas anteriores a los pagos desglosados (sin renglones en sale_payments): se
+            // conserva el criterio viejo, porque de esas no se sabe cuánto fue efectivo.
+            $db->insert('INSERT INTO cash_movements (register_id, user_id, movement_type, amount, description, created_at) VALUES (?,?,?,?,?,NOW())',
+                [ $sale['register_id'], $currentUser['user_id'], 'withdrawal', $sale['total'], 'Cancelación Venta #'.$sale_id ]);
         }
         $db->commit();
     } catch (Exception $e) {

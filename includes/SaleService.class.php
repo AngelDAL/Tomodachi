@@ -228,7 +228,11 @@ class SaleService {
 
         // ---- Cambio (solo cuando el efectivo cubre de más)
         $cambio = 0.0;
-        if ($efectivo > 0) {
+        if (isset($params['change_override']) && $params['change_override'] !== null) {
+            // El llamador ya sabe cuánto entregó el cliente (cobro de cuenta en efectivo):
+            // él calcula el cambio y aquí solo se respeta.
+            $cambio = round(max(0.0, (float)$params['change_override']), 2);
+        } elseif ($efectivo > 0) {
             $por_cubrir = round($total + $tip - $no_efectivo, 2);
             $efectivo_total = $efectivo;
             foreach ($payments as $p) {

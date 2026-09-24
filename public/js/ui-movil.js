@@ -152,11 +152,35 @@
 
     var FILAS = '.drawer-tabs, .add-tabs, .panel-tabs';
     var PESTANAS = '.drawer-tab, .add-tab, .panel-tab-btn';
+    // Además de la fila de pestañas, se escucha el CONTENIDO: en el teléfono el gesto natural
+    // es deslizar sobre lo que se está viendo, y la fila se queda arriba, fuera de alcance
+    // cuando el drawer se ha desplazado (por eso "no funcionaba" el desliz).
+    var ZONAS = '.drawer-body, .tab-panel, .modal-body, .panel-body, .drawer-content';
+    // Contenedores donde buscar la fila de pestañas que corresponde a la zona.
+    var PANELES = '.drawer-content, .modal-content, .modal, .add-modal';
     var MINIMO = 45;   // px que hay que recorrer para que cuente como desliz
 
     function pestanasVisibles(fila) {
+        // Solo las que se ven ahora: hay pestañas que aparecen según el producto (componentes,
+        // presentaciones). Deslizar va a la siguiente de las disponibles, no a una oculta.
         return Array.prototype.slice.call(fila.querySelectorAll(PESTANAS))
             .filter(function (t) { return t.getBoundingClientRect().width > 0; });
+    }
+
+    /** La fila de pestañas que le toca a la zona donde empezó el gesto. */
+    function filaDeLaZona(zona) {
+        if (!zona) return null;
+        if (zona.matches && zona.matches(FILAS)) return zona;
+
+        var panel = zona.closest ? zona.closest(PANELES) : null;
+        if (panel) {
+            var fila = panel.querySelector(FILAS);
+            if (fila) return fila;
+        }
+        // Sin panel claro (contenido suelto): solo si hay UNA fila en la página, para no
+        // cambiar pestañas de otro sitio por accidente.
+        var todas = document.querySelectorAll(FILAS);
+        return todas.length === 1 ? todas[0] : null;
     }
 
     function pasarAPestana(fila, paso) {
@@ -169,9 +193,9 @@
         if (destino) destino.click();
     }
 
-    function vigilar(fila) {
-        if (fila.dataset.deslizListo === '1') return;
-        fila.dataset.deslizListo = '1';
+    function vigilar(zona) {
+        if (zona.dataset.deslizListo === '1') return;
+        zona.dataset.deslizListo = '1';
 
         var x0 = 0, y0 = 0, siguiendo = false;
 
@@ -193,16 +217,17 @@
             if (!t) return;
             var dx = t.clientX - x0, dy = t.clientY - y0;
             if (Math.abs(dx) < MINIMO || Math.abs(dx) < Math.abs(dy) * 1.5) return;  // era un scroll
-            pasarAPestana(fila, dx < 0 ? 1 : -1);
+            var fila = filaDeLaZona(zona);
+            if (fila) pasarAPestana(fila, dx < 0 ? 1 : -1);
         }
 
-        fila.addEventListener('touchstart', empezar, { passive: true });
-        fila.addEventListener('touchend', terminar, { passive: true });
-        fila.addEventListener('touchcancel', function () { siguiendo = false; }, { passive: true });
+        zona.addEventListener('touchstart', empezar, { passive: true });
+        zona.addEventListener('touchend', terminar, { passive: true });
+        zona.addEventListener('touchcancel', function () { siguiendo = false; }, { passive: true });
     }
 
     function prepararDesliz() {
-        Array.prototype.forEach.call(document.querySelectorAll(FILAS), vigilar);
+        Array.prototype.forEach.call(document.querySelectorAll(FILAS + ', ' + ZONAS), vigilar);
     }
 
     prepararDesliz();
@@ -290,6 +315,11 @@
         pendiente = setTimeout(function () {
             pendiente = null;
             var el = abiertoAhora();
+
+            // La página de atrás no se desplaza mientras hay una capa a la vista (ver main.css).
+            // Sin esto, al llegar al final del drawer el gesto seguía en el fondo y al enfocar
+            // un campo la página saltaba: por eso el desplazamiento parecía venir "de atrás".
+            if (document.body) document.body.classList.toggle('con-capa-abierta', !!el);
 
             if (el && !estado.abierto) {
                 // Se abrió: se apunta una entrada para que el "atrás" tenga algo que consumir.

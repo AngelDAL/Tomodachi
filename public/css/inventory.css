@@ -2606,6 +2606,19 @@
     background: var(--primary-light);
 }
 
+/* El botón de asignar un código nuevo (el dado). Va junto al de escanear, pero en el color
+   de la casa para distinguirlo: uno LEE un código, el otro CREA uno. */
+.btn-scan-asignar {
+    border-radius: 999px;
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-scan-asignar:hover {
+    background: var(--primary-color);
+    color: #fff;
+}
+
 .btn-scan:active {
     transform: scale(0.95);
 }
@@ -2622,67 +2635,143 @@
     50% { box-shadow: 0 0 0 6px rgba(227,5,122,0); }
 }
 
-/* Mini scanner inline */
+/* ==================================================================
+ * ESCÁNER DE CÓDIGOS — modal a pantalla completa con el fondo difuminado
+ *
+ * Antes era un panelito dentro del formulario (arriba del todo, con borde primario): la
+ * cámara salía chica, con la mitad de la pantalla ocupada por el formulario de atrás, y no
+ * le decía al usuario dónde poner el código. Ahora, al abrirlo, se ve la cámara y nada más,
+ * con un recuadro guía, la instrucción y los controles.
+ *
+ * Vive fuera de los modales en el HTML (hermano suyo, no hijo): un `transform` en un
+ * antepasado capturaría su `position: fixed`.
+ * ================================================================== */
 .mini-scanner {
-    border: 2px solid var(--primary-color);
-    border-radius: 12px;
-    overflow: hidden;
-    background: #000;
-    animation: scannerSlideDown 0.3s ease-out;
+    position: fixed;
+    inset: 0;
+    z-index: var(--capa-overlay, 100000);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(10, 14, 20, 0.7);
+    backdrop-filter: blur(12px) saturate(120%);
+    -webkit-backdrop-filter: blur(12px) saturate(120%);
+    animation: miniScannerEntra 0.22s ease-out;
 }
 
-@keyframes scannerSlideDown {
-    from { opacity: 0; transform: translateY(-10px); max-height: 0; }
-    to { opacity: 1; transform: translateY(0); max-height: 400px; }
+@keyframes miniScannerEntra {
+    from { opacity: 0; }
+    to   { opacity: 1; }
 }
 
 .mini-scanner.hidden {
     display: none;
 }
 
+.mini-scanner-caja {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: min(440px, 100%);
+    max-height: 100%;
+    padding: 14px;
+    border-radius: 20px;
+    background: rgba(18, 24, 32, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 26px 60px rgba(0, 0, 0, 0.5);
+}
+
 .mini-scanner-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 12px;
-    background: var(--primary-color);
-    color: white;
-    font-size: 0.85rem;
-    font-weight: 500;
+    gap: 12px;
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 600;
 }
 
 .mini-scanner-close {
-    background: rgba(255,255,255,0.2);
+    background: rgba(255, 255, 255, 0.16);
     border: none;
     color: white;
-    width: 28px;
-    height: 28px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     transition: background 0.2s;
+    flex-shrink: 0;
 }
 
 .mini-scanner-close:hover {
-    background: rgba(255,255,255,0.35);
+    background: rgba(255, 255, 255, 0.32);
+}
+
+/* La vista de la cámara, con el recuadro guía encima. */
+.mini-scanner-vista {
+    position: relative;
+    border-radius: 16px;
+    overflow: hidden;
+    background: #000;
+    aspect-ratio: 3 / 4;
+    max-height: 58vh;
+    margin: 0 auto;
+    width: 100%;
 }
 
 .mini-qr-reader {
+    position: absolute;
+    inset: 0;
     width: 100%;
-    min-height: 220px;
-    background: var(--dark-color);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    height: 100%;
+    background: #000;
 }
 
 .mini-qr-reader video {
     width: 100% !important;
     height: 100% !important;
     object-fit: cover !important;
+}
+
+/* Fuera del recuadro todo queda a media luz: la vista se centra sola en el código. */
+.mini-scanner-guia {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 86%;
+    /* Ancho y bajito: es la forma de un código de barras (y la del recuadro de lectura). */
+    height: 32%;
+    border: 3px solid rgba(255, 255, 255, 0.9);
+    border-radius: 16px;
+    box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.38);
+    pointer-events: none;
+}
+
+/* El QR es cuadrado; el código de barras, ancho y bajito. */
+.mini-scanner.es-qr .mini-scanner-guia {
+    width: 68%;
+    height: auto;
+    aspect-ratio: 1 / 1;
+}
+
+.mini-scanner-ayuda {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    color: rgba(255, 255, 255, 0.86);
+    font-size: 0.82rem;
+    line-height: 1.35;
+}
+
+.mini-scanner-ayuda i {
+    color: var(--primary-color, #39c5bb);
 }
 
 /* Hide html5-qrcode UI cruft */
@@ -2701,25 +2790,39 @@
 .mini-scanner-footer {
     display: flex;
     justify-content: center;
-    padding: 8px;
-    background: var(--bg-light);
+    gap: 10px;
+    flex-wrap: wrap;
 }
 
-.mini-scanner-footer .btn-cancel {
-    font-size: 0.8rem;
-    padding: 6px 16px;
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    background: var(--bg-card);
+.mini-scanner-footer .btn-cancel,
+.mini-scanner-footer .btn-secondary {
+    font-size: 0.82rem;
+    padding: 9px 18px;
+    border-radius: 999px;
     cursor: pointer;
-    color: var(--text-light);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.mini-scanner-footer .btn-secondary {
+    background: var(--primary-color, #39c5bb);
+    border-color: transparent;
+    color: #08211f;
+    font-weight: 600;
 }
 
 .mini-scanner-footer .btn-cancel:hover {
-    background: var(--bg-light);
-    filter: brightness(0.96);
+    background: rgba(255, 255, 255, 0.2);
 }
 
+.mini-scanner-footer .btn-secondary:hover {
+    filter: brightness(1.06);
+}
 /* Responsive */
 @media (max-width: 600px) {
     .add-form-triplet {

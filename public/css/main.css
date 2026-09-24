@@ -410,10 +410,23 @@ body {
 
 .drawer-body {
     flex: 1;
+    /* `min-height: 0` es imprescindible: con el valor por defecto (`auto`) un hijo flex no
+       baja de su contenido, así que este cuerpo crecía más allá del drawer y NO se
+       desplazaba — el gesto se iba al fondo y al enfocar un campo la página saltaba. */
+    min-height: 0;
     overflow-y: auto;
+    /* Al llegar al final del contenido, el desplazamiento no debe seguir en la página de
+       atrás: el drawer se mueve solo él. */
+    overscroll-behavior: contain;
     padding: 24px;
     scrollbar-width: thin;
     scrollbar-color: var(--border-color, #ddd) transparent;
+}
+
+/* Mientras hay un modal o un drawer a la vista, la página de atrás no se desplaza.
+   Lo pone js/ui-movil.js cuando detecta una capa abierta. */
+body.con-capa-abierta {
+    overflow: hidden;
 }
 
 .drawer-body::-webkit-scrollbar {
@@ -2736,6 +2749,9 @@ label .currency-icon {
            suben con el contenido en vez de quedarse fijas arriba ocupando renglón. */
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
+        /* Sin esto, al terminar de desplazarse el gesto seguía en la página de atrás y el
+           usuario veía moverse el fondo: por eso parecía que el scroll "venía de atrás". */
+        overscroll-behavior: contain;
     }
     body .drawer-header {
         position: sticky;

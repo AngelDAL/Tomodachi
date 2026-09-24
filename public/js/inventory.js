@@ -200,17 +200,34 @@ function bindEvents() {
         });
     });
 
-    // Mini scanner for barcode/QR in add product modal
+    // Mini scanner (modal a pantalla completa) — alta de producto y detalle del producto
+    //
+    // El objetivo ya no es un botón suelto: se guarda { tipo, input, boton } porque ahora se
+    // abre desde cuatro sitios (código de barras y QR, en el alta y en el detalle) y el tipo
+    // decide el formato que se lee, el recuadro guía y el texto de ayuda.
     let miniScannerInstance = null;
     let miniScanTarget = null;
-    const scanBarcodeBtn = document.getElementById('scanBarcodeBtn');
-    const scanQRBtn = document.getElementById('scanQRBtn');
+
     const miniScannerContainer = document.getElementById('miniScannerContainer');
     const miniScannerClose = document.getElementById('miniScannerClose');
     const miniScannerCancel = document.getElementById('miniScannerCancel');
     const miniScannerLabel = document.getElementById('miniScannerLabel');
-    const barcodeInput = document.getElementById('productBarcodeInput');
-    const qrInput = document.getElementById('productQRInput');
+    const miniScannerAyudaTexto = document.getElementById('miniScannerAyudaTexto');
+    const miniScannerAsignar = document.getElementById('miniScannerAsignar');
+
+    const ESCANEO = [
+        { boton: 'scanBarcodeBtn',      input: 'productBarcodeInput', tipo: 'barcode' },
+        { boton: 'scanQRBtn',           input: 'productQRInput',     tipo: 'qr' },
+        { boton: 'detailScanBarcodeBtn', input: 'editProductBarcode', tipo: 'barcode' },
+        { boton: 'detailScanQRBtn',     input: 'editProductQR',      tipo: 'qr' },
+        // El botón de asignar va TAMBIÉN junto al campo, no solo dentro del escáner: si la
+        // cámara no está disponible, el escáner se cierra y sin esto el usuario se quedaría
+        // sin poder asignar un código.
+        { boton: 'detailAssignBarcodeBtn', input: 'editProductBarcode', tipo: 'barcode', asignar: true },
+        { boton: 'detailAssignQRBtn',     input: 'editProductQR',      tipo: 'qr',      asignar: true },
+        { boton: 'assignBarcodeBtn',      input: 'productBarcodeInput', tipo: 'barcode', asignar: true },
+        { boton: 'assignQRBtn',           input: 'productQRInput',     tipo: 'qr',      asignar: true }
+    ];
 
     function stopMiniScanner() {
         if (miniScannerInstance) {
@@ -222,15 +239,78 @@ function bindEvents() {
             } catch (e) { miniScannerInstance = null; }
         }
         miniScannerContainer.classList.add('hidden');
-        if (scanBarcodeBtn) scanBarcodeBtn.classList.remove('scanning');
-        if (scanQRBtn) scanQRBtn.classList.remove('scanning');
+        miniScannerContainer.classList.remove('es-qr');
+        if (miniScanTarget && miniScanTarget.boton) miniScanTarget.boton.classList.remove('scanning');
         miniScanTarget = null;
     }
 
-    function startMiniScanner(target) {
+    /** Un EAN-13 de verdad: 12 dígitos al azar + el dígito de control del estándar. */
+    function codigoEAN13() {
+        let base = '';
+        for (let i = 0; i < 12; i++) base += Math.floor(Math.random() * 10);
+        // Las posiciones impares cuentan x1 y las pares x3; el control cierra la cuenta en 0.
+        let suma = 0;
+        for (let i = 0; i < 12; i++) suma += Number(base[i]) * (i % 2 === 0 ? 1 : 3);
+        return base + ((10 - (suma % 10)) % 10);
+    }
+
+    /** Código propio de Tomodachi (sin caracteres que se confunden al leerlos). */
+    function codigoQR() {
+        const alfabeto = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let texto = '';
+        for (let i = 0; i < 10; i++) texto += alfabeto[Math.floor(Math.random() * alfabeto.length)];
+        return 'TMD-' + texto;
+    }
+
+    /**
+     * Un código que NO existe ya en la tienda.
+     *
+     * Se compara contra los productos cargados y contra lo que haya escrito en los cuatro
+     * campos (por si todavía no se guardó). Si sale repetido se vuelve a tirar: el usuario
+     * pide "uno nuevo", no "uno al azar".
+     */
+    function codigoAleatorioUnico(tipo) {
+        const usados = new Set();
+        (products || []).forEach(p => {
+            if (p.barcode) usados.add(String(p.barcode).trim());
+            if (p.qr_code) usados.add(String(p.qr_code).trim());
+        });
+        ['productBarcodeInput', 'productQRInput', 'editProductBarcode', 'editProductQR'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el && el.value && el.value.trim()) usados.add(el.value.trim());
+        });
+
+        for (let intento = 0; intento < 60; intento++) {
+            const codigo = tipo === 'qr' ? codigoQR() : codigoEAN13();
+            if (!usados.has(codigo)) return codigo;
+        }
+        return tipo === 'qr' ? codigoQR() : codigoEAN13();
+    }
+
+    /** Le pone al campo un código nuevo y único (el de barras o el QR, según el tipo). */
+    function asignarCodigoAlCampo(tipo, input) {
+        if (!input) return;
+        const codigo = codigoAleatorioUnico(tipo);
+        input.value = codigo;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.style.backgroundColor = 'var(--primary-light)';
+        setTimeout(() => { input.style.backgroundColor = ''; }, 1500);
+        showNotification((tipo === 'qr' ? 'Código QR asignado: ' : 'Código de barras asignado: ') + codigo, 'success');
+    }
+
+    /** El botón "Asignar uno" del propio escáner: usa el objetivo que esté abierto. */
+    function asignarCodigoDesdeElEscaner() {
+        if (!miniScanTarget) return;
+        asignarCodigoAlCampo(miniScanTarget.tipo, miniScanTarget.input);
+        stopMiniScanner();
+    }
+
+    function startMiniScanner(objetivo) {
+        const tipo = objetivo.tipo;
+        const input = objetivo.input;
+
         // En la app nativa: cámara del sistema (fuera del HTML)
         if (window.TomodachiNative && window.TomodachiNative.isNative) {
-            const input = target === scanBarcodeBtn ? barcodeInput : qrInput;
             window.TomodachiNative.scanBarcode()
                 .then(code => {
                     if (code && input) {
@@ -245,34 +325,49 @@ function bindEvents() {
                 });
             return;
         }
+
         if (miniScannerInstance) stopMiniScanner();
-        miniScanTarget = target;
+        miniScanTarget = objetivo;
         miniScannerContainer.classList.remove('hidden');
-        target.classList.add('scanning');
-        miniScannerLabel.textContent = target === scanBarcodeBtn ? 'Escanea código de barras' : 'Escanea código QR';
+        miniScannerContainer.classList.toggle('es-qr', tipo === 'qr');
+        if (objetivo.boton) objetivo.boton.classList.add('scanning');
+
+        // Se le dice al usuario qué hacer: dónde ponerlo y qué pasa si el producto no tiene.
+        miniScannerLabel.textContent = tipo === 'qr' ? 'Escanea el código QR' : 'Escanea el código de barras';
+        if (miniScannerAyudaTexto) {
+            miniScannerAyudaTexto.textContent = tipo === 'qr'
+                ? 'Enfoca el código QR dentro del recuadro. Si este producto todavía no tiene uno, toca «Asignar uno» y te damos uno nuevo.'
+                : 'Enfoca el código de barras dentro del recuadro. Si este producto todavía no tiene uno, toca «Asignar uno» y te damos uno nuevo.';
+        }
 
         setTimeout(() => {
             try {
-                const formats = target === scanBarcodeBtn
+                const formats = tipo === 'barcode'
                     ? [Html5QrcodeSupportedFormats.CODE_128, Html5QrcodeSupportedFormats.EAN_13,
                        Html5QrcodeSupportedFormats.EAN_8, Html5QrcodeSupportedFormats.CODE_39,
                        Html5QrcodeSupportedFormats.CODE_93, Html5QrcodeSupportedFormats.UPC_A,
                        Html5QrcodeSupportedFormats.UPC_E, Html5QrcodeSupportedFormats.CODABAR,
                        Html5QrcodeSupportedFormats.ITF]
                     : [Html5QrcodeSupportedFormats.QR_CODE];
+                // El recuadro de lectura sigue la forma de la guía: ancho para el código de
+                // barras, cuadrado para el QR.
+                const qrbox = tipo === 'qr'
+                    ? { width: 220, height: 220 }
+                    : { width: 280, height: 140 };
 
                 miniScannerInstance = new Html5Qrcode('miniQrReader', { formatsToSupport: formats, verbose: false });
                 miniScannerInstance.start(
                     { facingMode: 'environment' },
-                    { fps: 10, qrbox: { width: 200, height: 200 } },
+                    { fps: 10, qrbox },
                     (decodedText) => {
-                        const input = target === scanBarcodeBtn ? barcodeInput : qrInput;
                         if (input) {
                             input.value = decodedText;
+                            input.dispatchEvent(new Event('input', { bubbles: true }));
                             input.style.backgroundColor = 'var(--primary-light)';
                             setTimeout(() => input.style.backgroundColor = '', 1500);
                         }
                         stopMiniScanner();
+                        showNotification('Código leído: ' + decodedText, 'success');
                     },
                     () => {}
                 ).catch((err) => {
@@ -288,14 +383,23 @@ function bindEvents() {
         }, 300);
     }
 
-    if (scanBarcodeBtn && miniScannerContainer) {
-        scanBarcodeBtn.addEventListener('click', () => startMiniScanner(scanBarcodeBtn));
-    }
-    if (scanQRBtn && miniScannerContainer) {
-        scanQRBtn.addEventListener('click', () => startMiniScanner(scanQRBtn));
-    }
+    // Se enganchan los botones (alta y detalle): los de escanear abren la cámara, los de
+    // asignar ponen un código nuevo. Los que no existan se ignoran.
+    ESCANEO.forEach(cfg => {
+        const boton = document.getElementById(cfg.boton);
+        const input = document.getElementById(cfg.input);
+        if (!boton || !input) return;
+        if (cfg.asignar) {
+            boton.addEventListener('click', () => asignarCodigoAlCampo(cfg.tipo, input));
+            return;
+        }
+        if (!miniScannerContainer) return;
+        boton.addEventListener('click', () => startMiniScanner({ tipo: cfg.tipo, input, boton }));
+    });
+
     if (miniScannerClose) miniScannerClose.addEventListener('click', stopMiniScanner);
     if (miniScannerCancel) miniScannerCancel.addEventListener('click', stopMiniScanner);
+    if (miniScannerAsignar) miniScannerAsignar.addEventListener('click', asignarCodigoDesdeElEscaner);
 
     // Stop scanner if modal closes
     const closeModalBtnExisting = document.getElementById('closeModalBtn');

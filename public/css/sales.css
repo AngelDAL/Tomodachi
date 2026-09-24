@@ -3632,7 +3632,12 @@
     flex-direction: column;
     align-items: flex-end;
     gap: 4px;
-    margin: 0 8px 8px;
+    /* `margin-top: auto` es lo que lo baja al piso de la tarjeta. Antes se confiaba en el
+       `space-between` de la tarjeta, pero los indicadores de fijado/favorito se añaden
+       DESPUÉS y se quedaban con el último lugar: el precio flotaba 41 px arriba, en medio de
+       la foto. Con el margen automático queda pegado a la esquina inferior derecha.
+       El margen es corto (4 px) porque la tarjeta ya aporta su propio relleno. */
+    margin: auto 4px 4px;
     padding: 0;
     background: transparent;
     min-width: 0;
@@ -4173,6 +4178,8 @@
 
 .catalog-items--lista .gallery-item .card-pie {
     flex: 0 0 auto;
+    /* En la fila el margen automático lo pegaría al piso del renglón: aquí va centrado. */
+    margin: 0;
     padding: 0;
     background: transparent;
     color: var(--text-muted);
@@ -4200,10 +4207,37 @@
      * estaban. NUNCA cambian de tamaño ni de sitio: se muestran o se ocultan, que era lo que
      * se veía raro antes (la búsqueda se reacomodaba sola al desplazar).
      * Las pestañas Productos/Carrito se quedan: son las que dicen dónde está el usuario. */
+    /* Se apartan CON animación, no de golpe (desaparecer de repente saca de onda): suben un
+     * poco, se desvanecen y el catálogo va ganando su espacio mientras tanto.
+     * Cada uno lleva su tope de alto CERCA de lo que mide de verdad (el buscador mide 139,
+     * las pestañas de filtros unas 40): con un tope muy holgado, la animación se pasa el
+     * primer tercio sin mover nada y se siente tardada. */
+    .product-search-container,
+    .pos-filtros-cabecera,
+    #productFilters {
+        overflow: hidden;
+        transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                    opacity 0.22s ease,
+                    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                    margin 0.3s ease,
+                    padding 0.3s ease;
+    }
+
+    .product-search-container { max-height: 160px; }
+    .pos-filtros-cabecera    { max-height: 60px; }
+    #productFilters          { max-height: 340px; }
+
     body.pos-barra-oculta .product-search-container,
     body.pos-barra-oculta .pos-filtros-cabecera,
     body.pos-barra-oculta #productFilters {
-        display: none !important;
+        max-height: 0;
+        opacity: 0;
+        transform: translateY(-16px);
+        margin-top: 0;
+        margin-bottom: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        pointer-events: none;
     }
 
     /* ---------- En el carrito no hay barra de navegación ----------

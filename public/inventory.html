@@ -9,12 +9,12 @@
     <link rel="stylesheet" href="css/fonts.css?v=4">
     <!-- FontAwesome -->
     <link rel="stylesheet" href="lib/fontawesome/css/all.min.css?v=4">
-    <link rel="stylesheet" href="css/main.css?v=16">
+    <link rel="stylesheet" href="css/main.css?v=21">
     <link rel="stylesheet" href="css/design-system.css?v=7">
     <link rel="stylesheet" href="css/sidebar-modern.css?v=6">
     <link rel="stylesheet" href="css/mobile-nav.css?v=5">
     <link rel="stylesheet" href="css/dashboard.css?v=4">
-    <link rel="stylesheet" href="css/inventory.css?v=20">
+    <link rel="stylesheet" href="css/inventory.css?v=25">
     <script src="js/theme-init.js?v=3"></script>
     <link rel="icon" type="image/svg+xml" href="assets/app-icons/tomodachi-favicon.svg">
     <link rel="manifest" href="manifest.json">
@@ -429,19 +429,8 @@
                             </div>
                         </div>
 
-                        <!-- Mini scanner inline -->
-                        <div id="miniScannerContainer" class="mini-scanner hidden">
-                            <div class="mini-scanner-header">
-                                <span id="miniScannerLabel">Escanea el código</span>
-                                <button type="button" class="mini-scanner-close" id="miniScannerClose" title="Cerrar">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                            <div id="miniQrReader" class="mini-qr-reader"></div>
-                            <div class="mini-scanner-footer">
-                                <button type="button" class="btn-cancel btn-sm" id="miniScannerCancel">Cancelar</button>
-                            </div>
-                        </div>
+                        <!-- El escáner se movió al final del documento (modal a pantalla
+                             completa): aquí queda solo su lugar, ver #miniScannerContainer. -->
                     </div>
                 </div>
                 
@@ -726,11 +715,27 @@
                                 <div class="form-row">
                                     <div class="form-group" id="editBarcodeGroup">
                                         <label for="editProductBarcode">Código de Barras</label>
-                                        <input type="text" id="editProductBarcode" name="barcode">
+                                        <div class="input-scan-group">
+                                            <input type="text" id="editProductBarcode" name="barcode" placeholder="Escanea o ingresa">
+                                            <button type="button" class="btn-scan" id="detailScanBarcodeBtn" title="Escanear código de barras">
+                                                <i class="fas fa-barcode"></i>
+                                            </button>
+                                            <button type="button" class="btn-scan btn-scan-asignar" id="detailAssignBarcodeBtn" title="Asignar un código nuevo">
+                                                <i class="fas fa-dice"></i>
+                                            </button>
+                                        </div>
                                     </div>
                                     <div class="form-group">
                                         <label for="editProductQR">Código QR</label>
-                                        <input type="text" id="editProductQR" name="qr_code">
+                                        <div class="input-scan-group">
+                                            <input type="text" id="editProductQR" name="qr_code" placeholder="Escanea o ingresa">
+                                            <button type="button" class="btn-scan" id="detailScanQRBtn" title="Escanear código QR">
+                                                <i class="fas fa-qrcode"></i>
+                                            </button>
+                                            <button type="button" class="btn-scan btn-scan-asignar" id="detailAssignQRBtn" title="Asignar un código QR nuevo">
+                                                <i class="fas fa-dice"></i>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1220,12 +1225,41 @@
         </div>
     </div>
     
+    <!-- Escáner de códigos: modal a pantalla completa con el fondo difuminado.
+         Vive fuera de los modales (hermano suyo, no hijo) para que su `position: fixed` se
+         ancle a la pantalla: dentro de un modal con transform se anclaría a ese modal. -->
+    <div id="miniScannerContainer" class="mini-scanner hidden" role="dialog" aria-modal="true" aria-labelledby="miniScannerLabel">
+        <div class="mini-scanner-caja">
+            <div class="mini-scanner-header">
+                <span id="miniScannerLabel">Escanea el código</span>
+                <button type="button" class="mini-scanner-close" id="miniScannerClose" aria-label="Cerrar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="mini-scanner-vista">
+                <div id="miniQrReader" class="mini-qr-reader"></div>
+                <!-- Guía: el código tiene que quedar dentro de este recuadro -->
+                <div class="mini-scanner-guia" aria-hidden="true"></div>
+            </div>
+            <p class="mini-scanner-ayuda" id="miniScannerAyuda">
+                <i class="fas fa-circle-info"></i>
+                <span id="miniScannerAyudaTexto">Enfoca el código dentro del recuadro</span>
+            </p>
+            <div class="mini-scanner-footer">
+                <button type="button" class="btn-secondary btn-sm" id="miniScannerAsignar">
+                    <i class="fas fa-dice"></i> Asignar uno
+                </button>
+                <button type="button" class="btn-cancel btn-sm" id="miniScannerCancel">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
     <script src="js/sidebar-loader.js?v=13"></script>
     <script src="js/app.js?v=12"></script>
     <script src="lib/html5-qrcode/html5-qrcode.min.js"></script>
     <script src="js/scanner.js"></script>
     <script src="js/tour.js?v=4"></script>
-    <script src="js/inventory.js?v=16"></script>
+    <script src="js/inventory.js?v=21"></script>
     <script src="js/stock-rule.js?v=1"></script>
     <script src="js/purchases.js?v=11"></script>
     <script>

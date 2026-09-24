@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="css/sidebar-modern.css?v=6">
     <link rel="stylesheet" href="css/mobile-nav.css?v=5">
     <link rel="stylesheet" href="css/dashboard.css?v=4">
-    <link rel="stylesheet" href="css/sales.css?v=40">
+    <link rel="stylesheet" href="css/sales.css?v=42">
     <link rel="stylesheet" href="css/scanner_overlay.css?v=10">
     <link rel="stylesheet" href="css/bulk_sales.css?v=4">
     <link rel="stylesheet" href="css/cart_responsive.css?v=12">
@@ -84,10 +84,12 @@
                                     <i class="fas fa-search search-icon"></i>
                                     <input type="text" id="searchInput" placeholder="Buscar producto..." autocomplete="off"
                                         aria-label="Buscar producto" class="search-main rounded-search">
+                                    <!-- El lector va DENTRO de la barra, pegado al campo, como en el
+                                         buscador de inventario: así la barra se lee como una sola pieza. -->
+                                    <button id="toggleScannerBtn" type="button" class="scanner-btn-circle" title="Activar escáner">
+                                        <i class="fas fa-barcode"></i>
+                                    </button>
                                 </div>
-                                <button id="toggleScannerBtn" type="button" class="scanner-btn-circle" title="Activar escáner">
-                                    <i class="fas fa-barcode"></i>
-                                </button>
 
                                 <!-- Caja de la sesión: todo movimiento de dinero dice de
                                      qué caja sale. Se elige una vez y se recuerda; mismo
@@ -605,7 +607,7 @@
     <script src="js/stock-rule.js?v=1"></script>
     <script src="https://js.stripe.com/v3/"></script>
     <script src="js/stripe-pos.js?v=1"></script>
-    <script src="js/sales.js?v=44"></script>
+    <script src="js/sales.js?v=46"></script>
     <script>
         // En la app nativa: mantener la pantalla encendida mientras se vende
         document.addEventListener('tomodachi-native-ready', () => {

@@ -304,7 +304,7 @@ class SaleService {
                 } elseif (in_array($p['tracking_type'], [TRACKING_RECIPE, TRACKING_COMPONENT, TRACKING_NONE], true)) {
                     // Receta: consume los ingredientes hoja. Componente vendido directo: consume de sus
                     // presentaciones. Servicio: consume sus componentes si tiene composición (no-op si es puro).
-                    $this->bom->consumeForSale($this->db, $store_id, $user_id, $sale_id, $p['product_id'], $p['quantity'], $lotOverrides);
+                    $this->bom->consumeForSale($this->db, $store_id, $user_id, $sale_id, $p['product_id'], $p['quantity'], $lotOverrides, $allowNegativeStock);
                 }
                 $lineSubtotal = $p['quantity'] * $p['price'];
                 $lineDiscount = round($p['quantity'] * $p['discount'], 2);

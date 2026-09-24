@@ -2784,8 +2784,10 @@
     color: var(--danger-color);
     font-weight: 700;
 }
+/* Existencia negativa: flecha hacia ABAJO. Iba hacia arriba, al revés de lo que cuenta
+   (se vendió más de lo que había, así que el stock bajó). Mismo criterio que el POS. */
 .product-card-stock.negative::before {
-    content: '▲ ';
+    content: '▼ ';
     font-size: .8em;
 }
 

@@ -287,7 +287,7 @@ class BomHelper {
      * @param array $lotOverrides  [product_id => lot_id] selección explícita de presentación
      *                             (utilizado en modo 'manual' de ese componente).
      */
-    public function consumeForSale($db, $store_id, $user_id, $sale_id, $product_id, $qty, $lotOverrides = []) {
+    public function consumeForSale($db, $store_id, $user_id, $sale_id, $product_id, $qty, $lotOverrides = [], $allowNegative = false) {
         $leaves = [];
         $stack = [];
         $this->explodeInto($store_id, $product_id, (float)$qty, $leaves, $stack);
@@ -295,7 +295,7 @@ class BomHelper {
             $m = $this->meta($store_id, $lid);
             if ($m['tracking_type'] === 'none') continue;
             if ($m['tracking_type'] === TRACKING_COMPONENT) {
-                $this->consumeLots($db, $store_id, $user_id, $lid, $need, 'Compone venta #'.$sale_id, $m['consume_mode'], $lotOverrides[$lid] ?? null);
+                $this->consumeLots($db, $store_id, $user_id, $lid, $need, 'Compone venta #'.$sale_id, $m['consume_mode'], $lotOverrides[$lid] ?? null, $allowNegative);
                 continue;
             }
             $prev = $m['current_stock'];
@@ -318,8 +318,15 @@ class BomHelper {
      *   fifo   → presentación más antigua (lot_id ASC).
      *   lifo   → presentación más reciente (lot_id DESC).
      *   manual → SOLO la presentación indicada en $lotId; si no se indica, cae a fifo.
+     *
+     * $allowNegative viene del ajuste de la tienda ("aceptar existencias negativas"). Sin él,
+     * cuando las presentaciones se acababan el consumo se quedaba a medias: el componente
+     * terminaba en 0 y las unidades que faltaban desaparecían sin dejar rastro (se vendía más
+     * de lo que había y el inventario no lo reflejaba). Con el ajuste puesto, lo que no
+     * alcanzan las presentaciones se descuenta de la última que se tocó —dejándola en
+     * negativo—, que es lo que representa la realidad: se debe esa mercancía.
      */
-    private function consumeLots($db, $store_id, $user_id, $pid, $need, $note, $consumeMode = CONSUME_FIFO, $lotId = null) {
+    private function consumeLots($db, $store_id, $user_id, $pid, $need, $note, $consumeMode = CONSUME_FIFO, $lotId = null, $allowNegative = false) {
         $consumeMode = $this->normalizeConsume($consumeMode);
         if ($consumeMode === CONSUME_MANUAL && $lotId !== null) {
             $lots = $this->db->select(
@@ -334,6 +341,7 @@ class BomHelper {
             );
         }
         $remaining = (float)$need;
+        $ultimoLote = null;
         foreach ($lots as $L) {
             if ($remaining <= 0) break;
             $qty = (float)$L['quantity'];
@@ -345,7 +353,35 @@ class BomHelper {
                 [$store_id, $pid, $user_id, MOVEMENT_EXIT, $use, $qty, $newQty, $note]
             );
             $remaining -= $use;
+            $ultimoLote = ['lot_id' => (int)$L['lot_id'], 'quantity' => $newQty];
         }
+
+        if ($remaining <= 0.0001 || !$allowNegative) {
+            return;
+        }
+
+        // Se vendió más de lo que había y la tienda lo permite: la diferencia queda debiendo.
+        if ($ultimoLote) {
+            // Se descuenta de la última presentación tocada, que queda en negativo.
+            $nuevo = $ultimoLote['quantity'] - $remaining;
+            $this->db->update('UPDATE product_lots SET quantity=? WHERE lot_id=?', [$nuevo, $ultimoLote['lot_id']]);
+            $this->db->insert(
+                'INSERT INTO inventory_movements (store_id, product_id, user_id, movement_type, quantity, previous_stock, new_stock, notes, created_at) VALUES (?,?,?,?,?,?,?,?,NOW())',
+                [$store_id, $pid, $user_id, MOVEMENT_EXIT, $remaining, $ultimoLote['quantity'], $nuevo, $note . ' (sin existencias)']
+            );
+            return;
+        }
+
+        // El componente no tiene ninguna presentación (nunca se compró): se abre una en
+        // negativo para que la deuda quede registrada en algún lado.
+        $db->insert(
+            'INSERT INTO product_lots (product_id, store_id, label, quantity, unit_cost) VALUES (?,?,?,?,?)',
+            [$pid, $store_id, 'Sin existencias', -$remaining, 0]
+        );
+        $this->db->insert(
+            'INSERT INTO inventory_movements (store_id, product_id, user_id, movement_type, quantity, previous_stock, new_stock, notes, created_at) VALUES (?,?,?,?,?,?,?,?,NOW())',
+            [$store_id, $pid, $user_id, MOVEMENT_EXIT, $remaining, 0, -$remaining, $note . ' (sin presentaciones)']
+        );
     }
 
     /**

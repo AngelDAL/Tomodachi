@@ -888,10 +888,11 @@
     background: rgba(220, 53, 69, 0.85);
 }
 
-/* Existencia negativa (se vendió más de lo que había): además del rojo, triángulo.
-   Mismo criterio que las tarjetas de Próximas Compras (.product-card-stock.negative). */
+/* Existencia negativa (se vendió más de lo que había): además del rojo, flecha hacia ABAJO.
+   Mismo criterio que las tarjetas de Próximas Compras (.product-card-stock.negative).
+   Iba hacia ARRIBA, que es lo contrario de lo que cuenta (el stock bajó). */
 .stock-badge.negative::before {
-    content: '▲ ';
+    content: '▼ ';
     font-size: 0.6rem;
 }
 
@@ -946,10 +947,21 @@
         transition: transform 0.35s cubic-bezier(.4,0,.2,1); /* regreso suave y ágil */
     }
     .g-name.is-marquee { overflow: hidden; text-overflow: clip; width: 100%; cursor: help; }
+    /* En el teléfono no hay cursor: el texto se desplaza SOLO para que el nombre completo
+       se pueda leer. Recorrido y regreso, con pausas para poder leerlo en cada extremo. */
+    .g-name.is-marquee .g-name-inner {
+        animation: ds-mq-recorrido var(--ds-mq-dur, 7000ms) ease-in-out infinite;
+    }
     .g-name.is-marquee:hover .g-name-inner {
         transform: translateX(var(--ds-mq-dist, -40px));
         /* recorrido tan rápido como el regreso: mismo ritmo */
         transition: transform 0.5s cubic-bezier(.4,0,.2,1);
+        animation: none;
+    }
+    @keyframes ds-mq-recorrido {
+        0%, 15%   { transform: translateX(0); }
+        45%, 60%  { transform: translateX(var(--ds-mq-dist, -40px)); }
+        90%, 100% { transform: translateX(0); }
     }
 
 /* Tooltip con el nombre completo (hover en desktop, tap-hold en táctil) */
@@ -3566,33 +3578,34 @@
     display: block;
 }
 
-/* Los textos llevan su propio fondo: encima de una foto clara o cargada no se leían, y
-   sobre el hueco de la foto tampoco (el fondo de la tarjeta es claro). Blanco sobre un
-   fondo oscuro da contraste en cualquier caso. */
+/* Los textos llevan su propio fondo claro y redondeado. Van ENCIMA de la foto, así que
+   tienen que leerse sobre cualquier imagen: para eso el fondo (claro y sólido) con texto
+   oscuro, y una sombra suave que los despega de la foto. Son píldoras que se ajustan a su
+   texto: no ocupan el ancho de la tarjeta ni le tapan la foto. */
 .gallery-item .g-name {
     position: relative;
     z-index: 2;
     order: 0;
+    align-self: flex-start;      /* la píldora mide lo que mide su texto */
     flex: 0 0 auto;
-    width: 100%;
-    margin: 0;
-    padding: 7px 9px;
-    border-radius: 0;
-    background: rgba(17, 22, 30, 0.72);
-    color: #ffffff;
-    box-shadow: none;
+    width: auto;
+    max-width: calc(100% - 16px);
+    margin: 8px 8px 0;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--bg-card) 90%, transparent);
+    color: var(--text-color);
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.28);
     text-shadow: none;
     text-align: left;
-    font-size: 0.82rem;
+    font-size: 0.76rem;
     font-weight: 600;
-    line-height: 1.2;
-    /* Completo: hasta dos líneas y, si aún no cabe, se recorta por palabra. */
-    white-space: normal;
+    line-height: 1.35;
+    /* Una sola línea. Si el nombre no cabe, el texto se desplaza (ver .is-marquee) en vez
+       de recortarse con puntos suspensivos: el cajero lo lee completo sin abrir nada. */
+    white-space: nowrap;
     overflow: hidden;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow-wrap: anywhere;
+    text-overflow: clip;
 }
 
 /* El icono de caja: únicamente cuando no hay imagen que mostrar. */
@@ -3608,19 +3621,20 @@
 
 .gallery-item .caja-vacia[hidden] { display: none; }
 
-/* Pie de la tarjeta: cantidad disponible (chica) sobre el precio, ambos abajo a la derecha,
-   y sobre el mismo fondo oscuro que el nombre para que se lean sobre la foto. */
+/* Pie de la tarjeta: dos píldoras chiquitas abajo a la derecha — la cantidad disponible
+   arriba y el precio debajo. Se ajustan a su texto, así que la foto queda a la vista. */
 .gallery-item .card-pie {
     position: relative;
     z-index: 2;
+    align-self: flex-end;
     flex: 0 0 auto;
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 0;
-    padding: 4px 9px 6px;
-    background: rgba(17, 22, 30, 0.72);
-    color: #ffffff;
+    gap: 4px;
+    margin: 0 8px 8px;
+    padding: 0;
+    background: transparent;
     min-width: 0;
 }
 
@@ -3634,30 +3648,55 @@
 .gallery-item .card-pie .stock-badge {
     position: static;
     inset: auto;
-    background: transparent;
-    color: rgba(255, 255, 255, 0.88);
-    font-size: 0.68rem;
-    font-weight: 600;
-    padding: 0;
-    border-radius: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--bg-card) 90%, transparent);
+    color: var(--text-muted);
+    font-size: 0.64rem;
+    font-weight: 700;
+    line-height: 1.3;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.22);
     cursor: help;
     white-space: nowrap;
 }
 
-.gallery-item .card-pie .stock-badge.low { color: #ffd166; }
+/* Existencia baja o negativa: la píldora se pinta para que salte a la vista. */
+.gallery-item .card-pie .stock-badge.low,
+.gallery-item .card-pie .stock-badge.negative {
+    background: rgba(214, 61, 79, 0.92);
+    color: #ffffff;
+}
 
-.gallery-item .card-pie .stock-badge.negative { color: #ff9f9f; }
+/* Existencia negativa: flecha hacia ABAJO (se vendió más de lo que había, así que bajó).
+   Antes apuntaba hacia arriba, al revés de lo que cuenta. */
+.gallery-item .card-pie .stock-badge.negative::before {
+    content: '▼';
+    font-size: 0.5rem;
+    line-height: 1;
+}
 
 .gallery-item .card-pie .g-price {
-    font-size: 1rem;
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--bg-card) 92%, transparent);
+    color: var(--text-color);
+    font-size: 0.95rem;
     font-weight: 700;
-    line-height: 1.1;
-    color: #ffffff;
-    /* El precio traía su propia píldora blanca: con el texto en blanco quedaba invisible. */
-    background: transparent;
-    padding: 0;
-    box-shadow: none;
+    line-height: 1.2;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.28);
     white-space: nowrap;
+}
+
+/* Cuando el nombre no cabe, la píldora se queda con su ancho máximo (no se estira a toda la
+   tarjeta) y el texto de dentro recorre: la foto sigue a la vista. */
+.gallery-item .g-name.is-marquee {
+    width: auto;
+    max-width: calc(100% - 16px);
 }
 
 /* ============================================================
@@ -3859,10 +3898,14 @@
  * envuelve en dos renglones (el campo arriba, los botones abajo), así que la lupa
  * caía justo en medio de los dos: se veía fuera de su elemento. Ahora la lupa vive
  * dentro de la caja del campo, así que siempre queda dentro. */
+/* La caja del buscador: contiene la lupa, el campo y el lector, todo en una pieza.
+ * Sigue el buscador de inventario (lupa dentro del campo, lector pegado a su derecha) pero
+ * más compacta: la barra del POS tiene que dejar sitio a los productos. */
 .search-caja {
     position: relative;
     display: flex;
     align-items: center;
+    gap: 6px;
     flex: 1 1 auto;
     min-width: 0;
 }
@@ -3870,6 +3913,25 @@
 .search-caja .search-main {
     flex: 1 1 auto;
     min-width: 0;
+}
+
+.search-caja .search-main.rounded-search {
+    height: 40px;
+    padding: 8px 14px 8px 38px;
+    font-size: 0.92rem;
+    border-radius: 999px;
+}
+
+.search-caja .scanner-btn-circle {
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+}
+
+.search-caja .search-icon {
+    left: 14px;
+    font-size: 1rem;
 }
 
 /* El botón de cerrar solo existe en el modal del teléfono; en escritorio son menús
@@ -4132,79 +4194,16 @@
 
 @media (max-width: 900px) {
 
-    /* ---------- La barra se encoge al recorrer el catálogo ----------
-     * Al bajar por los productos, buscador, filtros y opciones se achican y el buscador
-     * vuelve a compartir renglón con los botones: se ganan ~60 px de catálogo a la vista.
-     * Al volver arriba, todo regresa a su tamaño. */
-    .product-search-container,
-    .pos-filtros-cabecera,
-    .mobile-view-controls {
-        transition: padding 0.2s ease, height 0.2s ease;
-    }
-
-    body.pos-barra-compacta .search-caja {
-        flex: 1 1 120px;
-        order: 0;
-    }
-
-    body.pos-barra-compacta .search-caja .search-main {
-        height: 36px;
-    }
-
-    body.pos-barra-compacta .search-wrapper {
-        row-gap: 6px;
-    }
-
-    body.pos-barra-compacta .search-wrapper .scanner-btn-circle,
-    body.pos-barra-compacta .search-wrapper .pos-register-btn,
-    body.pos-barra-compacta .search-wrapper .pos-register-chip,
-    body.pos-barra-compacta .search-wrapper .pos-customer-btn,
-    body.pos-barra-compacta .search-wrapper .config-btn-circle {
-        width: 38px !important;
-        height: 38px !important;
-        min-width: 38px;
-    }
-
-    /* Los envoltorios también: si no, el botón se encoge por dentro pero el hueco sigue
-       midiendo 46 px y la configuración se cae a un segundo renglón. */
-    body.pos-barra-compacta .search-wrapper .pos-register-wrap,
-    body.pos-barra-compacta .search-wrapper .pos-customer-wrap,
-    body.pos-barra-compacta .search-wrapper .config-menu-wrapper {
-        width: 38px !important;
-        height: 38px !important;
-        min-width: 0;
-    }
-
-    body.pos-barra-compacta .search-wrapper {
-        gap: 6px;
-        flex-wrap: nowrap;
-        align-items: center;
-    }
-
-    /* El botón de filtros se queda con su icono: el resumen en palabras es lo que más
-       ancho pide y ya se sabe que hay filtros. */
-    body.pos-barra-compacta .pos-filtros-toggle {
-        height: 32px;
-        padding: 0 12px;
-    }
-
-    body.pos-barra-compacta .pos-filtros-toggle span,
-    body.pos-barra-compacta .pos-filtros-toggle .pos-filtros-flecha {
-        display: none;
-    }
-
-    body.pos-barra-compacta .mobile-view-controls {
-        padding: 2px;
-    }
-
-    body.pos-barra-compacta .view-switch-btn {
-        min-height: 32px;
-        padding: 4px 8px;
-        font-size: 0.7rem;
-    }
-
-    body.pos-barra-compacta .view-switch-btn.active {
-        font-size: 0.82rem;
+    /* ---------- La barra de opciones se oculta al avanzar ----------
+     * Al recorrer los productos hacia adelante, el buscador, los filtros y los botones se
+     * apartan para dar la vista completa al catálogo; al retroceder vuelven tal como
+     * estaban. NUNCA cambian de tamaño ni de sitio: se muestran o se ocultan, que era lo que
+     * se veía raro antes (la búsqueda se reacomodaba sola al desplazar).
+     * Las pestañas Productos/Carrito se quedan: son las que dicen dónde está el usuario. */
+    body.pos-barra-oculta .product-search-container,
+    body.pos-barra-oculta .pos-filtros-cabecera,
+    body.pos-barra-oculta #productFilters {
+        display: none !important;
     }
 
     /* ---------- En el carrito no hay barra de navegación ----------

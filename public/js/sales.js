@@ -533,14 +533,30 @@ function bindEvents() {
       if (vistaActiva) marcarVistaMovil(vistaActiva.dataset.target);
   }
 
-  // La barra se encoge al recorrer el catálogo (ver sales.css).
-  // Se escucha en captura porque quien se desplaza es la columna, no la ventana.
+  // La barra de opciones (buscador, filtros y botones) se aparta al avanzar por el catálogo y
+  // vuelve al retroceder. Se escucha en captura porque quien se desplaza es la columna, no la
+  // ventana. Con menos de 8 px de movimiento no se decide nada: evita el parpadeo.
+  const posScrollAnterior = { valor: 0 };
   document.addEventListener('scroll', (e) => {
       if (window.innerWidth > 900) return;
       const t = e.target;
-      const avance = (!t || t === document) ? (window.scrollY || 0) : (t.scrollTop || 0);
-      document.body.classList.toggle('pos-barra-compacta', avance > 40);
+      const esVentana = !t || t === document || t === document.documentElement;
+      const avance = esVentana ? (window.scrollY || 0) : (t.scrollTop || 0);
+      if (avance < 20) {
+          document.body.classList.remove('pos-barra-oculta');
+          posScrollAnterior.valor = avance;
+          return;
+      }
+      const salto = avance - posScrollAnterior.valor;
+      if (Math.abs(salto) < 8) return;
+      document.body.classList.toggle('pos-barra-oculta', salto > 0);
+      posScrollAnterior.valor = avance;
   }, { capture: true, passive: true });
+
+  // El ajuste de existencias negativas de la tienda: la caja lo necesita para no frenar al
+  // cajero cuando la tienda ya decidió que se puede vender sin existencias (ver
+  // `puedePasarDelStock`). Se lee una vez, al entrar.
+  cargarAjusteDeExistencias();
 
   // Eventos de los Nuevos Filtros (Categoría y Orden)
   const categoryFilter = document.getElementById('categoryFilter');
@@ -871,6 +887,37 @@ function addProductToCart(prod) {
   // usa ese estado en memoria y no dispara requests por cada clic.
 }
 
+/**
+ * ¿Se puede vender más de lo que hay?
+ *
+ * La tienda tiene un ajuste —"aceptar existencias negativas", en Configuración— y el POS no
+ * lo miraba: frenaba al cajero con "Stock insuficiente" aunque la tienda lo tuviera permitido.
+ * Eso se notaba sobre todo con los PRODUCTOS COMPUESTOS y los servicios con composición: su
+ * disponibilidad sale de sus componentes (el más escaso manda), así que si un ingrediente ya
+ * estaba justo, el compuesto quedaba bloqueado y no había forma de venderlo —ni de dejar sus
+ * componentes en negativo— aunque el ajuste estuviera puesto.
+ *
+ * El backend ya respeta el ajuste (Pricing.class.php): esto solo evita que la caja se adelante
+ * a contradecirlo. Mientras no se sabe (la consulta va en camino) se mantiene el freno: es lo
+ * conservador.
+ */
+let POS_PERMITE_EXISTENCIAS_NEGATIVAS = false;
+
+function puedePasarDelStock() {
+  return POS_PERMITE_EXISTENCIAS_NEGATIVAS === true;
+}
+
+/** Lee el ajuste de la tienda una sola vez, al entrar a la caja. */
+function cargarAjusteDeExistencias() {
+  fetch('../api/stores/settings.php', { credentials: 'include' })
+    .then(r => r.json())
+    .then(d => {
+      const s = (d && d.data && d.data.settings) || (d && d.settings) || {};
+      POS_PERMITE_EXISTENCIAS_NEGATIVAS = !!s.allow_negative_stock;
+    })
+    .catch(() => { /* sin respuesta se mantiene el freno, que es lo conservador */ });
+}
+
 function _addToCartInternal(prod) {
   const existing = CART.find(i => i.product_id === prod.product_id);
 
@@ -879,7 +926,7 @@ function _addToCartInternal(prod) {
   // Si prod.stock_quantity es undefined o null, asumimos infinito o no controlado
   const maxStock = (prod.stock_quantity !== undefined && prod.stock_quantity !== null && prod.stock_quantity !== '') ? parseFloat(prod.stock_quantity) : null;
 
-  if (maxStock !== null && (currentQty + 1) > maxStock) {
+  if (!puedePasarDelStock() && maxStock !== null && (currentQty + 1) > maxStock) {
     showNotification(`Stock insuficiente. Disponible: ${maxStock}`, 'error');
     playSound('Error.mp3');
     return;
@@ -1049,7 +1096,7 @@ function abrirEntradaDeCantidad(span, item) {
 
         const maxStock = (item.stock_quantity !== undefined && item.stock_quantity !== null && item.stock_quantity !== '')
             ? parseFloat(item.stock_quantity) : null;
-        if (maxStock !== null && nueva > maxStock) {
+        if (!puedePasarDelStock() && maxStock !== null && nueva > maxStock) {
             showNotification(`Stock máximo alcanzado (${maxStock})`, 'warning');
             nueva = maxStock;
         }
@@ -1138,7 +1185,7 @@ function handleStepBtnClick(btn) {
     } else {
         // Stock Check
         const maxStock = (it.stock_quantity !== undefined && it.stock_quantity !== null && it.stock_quantity !== '') ? parseFloat(it.stock_quantity) : null;
-        if (action === 'plus' && maxStock !== null && newQty > maxStock) {
+        if (!puedePasarDelStock() && action === 'plus' && maxStock !== null && newQty > maxStock) {
             showNotification(`Stock máximo alcanzado (${maxStock})`, 'warning');
             return; 
         }
@@ -2982,8 +3029,10 @@ function renderGallery(list, animate = false) {
 
   addIndicatorsToItems();
 
-  // (Aquí vivía un marquee que desplazaba el nombre cuando no cabía. Ya no hace falta: el
-  //  nombre se muestra completo en su propio renglón, hasta dos líneas, sin puntos suspensivos.)
+  // El nombre va en una píldora de una sola línea. Si no cabe, el texto se desplaza solo
+  // (recorrido y regreso) para que se pueda leer completo: el cajero no tiene que abrir nada.
+  // El recorrido es CSS (`--ds-mq-dist`); aquí solo se mide y se marca.
+  ajustarNombresDesplazables(productGallery);
 
   // Animación de aparición del grid (anime.js) — estilo catálogo chill.
   // Se dispara la primera vez que se renderiza (o con animate=true).
@@ -3240,6 +3289,47 @@ function applyPrefsToFiltered(filtered) {
 
 // ============================================================
 // Add indicators to gallery items
+// ============================================================
+/**
+ * Marca los nombres que no caben en su píldora para que el texto se desplace.
+ *
+ * El movimiento es CSS (`.g-name.is-marquee .g-name-inner` con la animación). Aquí se mide
+ * y se le pasa la distancia del recorrido (`--ds-mq-dist`) y la duración, que depende de lo
+ * largo que sea el nombre: uno corto no da tiempo a leerlo si va a la misma velocidad que uno
+ * larguísimo.
+ *
+ * Se mide en el siguiente cuadro porque el nombre acaba de entrar al DOM: medir de inmediato
+ * da cero (el elemento aún no tiene ancho) y nada se marcaría nunca.
+ */
+function ajustarNombresDesplazables(contenedor) {
+  if (!contenedor) return;
+  contenedor.querySelectorAll('.g-name').forEach((nombre) => {
+    const completo = nombre.textContent.trim();
+    nombre.setAttribute('data-full', completo);
+
+    const texto = nombre.querySelector('.g-name-inner');
+    if (texto) texto.style.transform = '';
+    nombre.classList.remove('is-marquee');
+
+    setTimeout(() => {
+      if (nombre.scrollWidth <= nombre.clientWidth + 1) return;
+
+      if (!nombre.querySelector('.g-name-inner')) {
+        nombre.innerHTML = `<span class="g-name-inner">${escapeHtml(completo)}</span>`;
+      }
+      nombre.classList.add('is-marquee');
+
+      const dentro = nombre.querySelector('.g-name-inner');
+      const recorrido = Math.max(dentro.scrollWidth - nombre.clientWidth + 8, 24);
+      nombre.style.setProperty('--ds-mq-dist', `-${recorrido}px`);
+      // ~90 px por segundo, con un mínimo para que se alcance a leer el final.
+      nombre.style.setProperty('--ds-mq-dur', `${Math.max(4000, Math.round(recorrido * 11))}ms`);
+    }, 60);
+  });
+}
+
+// ============================================================
+// Preferencias (fijados y favoritos)
 // ============================================================
 function addIndicatorsToItems() {
   const prefs = getPrefs();

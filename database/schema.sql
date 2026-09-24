@@ -239,6 +239,7 @@ CREATE TABLE sales (
     tax DECIMAL(10,2) DEFAULT 0.00,
     discount DECIMAL(10,2) DEFAULT 0.00,
     total DECIMAL(10,2) NOT NULL,
+    tip_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT 'Propina, opcional. Va aparte del consumo para no inflar los reportes de venta',
     amount_paid DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT 'Monto efectivamente pagado al momento de la venta (resto = fiado)',
     payment_method ENUM('cash', 'card', 'transfer', 'mixed', 'credit', 'codi', 'stripe') NOT NULL,
     codi_payment_id INT NULL COMMENT 'ID del pago CoDi asociado (módulo CoDi)',
@@ -852,7 +853,7 @@ CREATE TABLE menus (
     public_token VARCHAR(64) NOT NULL COMMENT 'Token público que viaja en el QR',
     require_staff_unlock TINYINT(1) NOT NULL DEFAULT 0,
     allow_notes TINYINT(1) NOT NULL DEFAULT 1,
-    max_open_minutes INT NOT NULL DEFAULT 180,
+    max_open_minutes INT NOT NULL DEFAULT 0 COMMENT 'Tope de minutos de una cuenta abierta. 0 = SIN LÍMITE (lo normal: el sistema también sirve para apartados y solicitudes largas)',
     welcome_message VARCHAR(255) NULL,
     cover_image VARCHAR(255) NULL,
     show_promotions TINYINT(1) NOT NULL DEFAULT 1,
@@ -963,6 +964,7 @@ CREATE TABLE dining_sessions (
     subtotal DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     discount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     total DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    tip_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT 'Propina acordada, opcional',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_session_store (store_id, status),
@@ -1135,8 +1137,47 @@ CREATE TABLE dining_split_shares (
     paid TINYINT(1) NOT NULL DEFAULT 0,
     paid_at DATETIME NULL,
     payment_method VARCHAR(20) NULL,
+    mode ENUM('by_person','equal','by_items','by_amount','manual') NOT NULL DEFAULT 'manual' COMMENT 'Cómo se calculó esta parte',
+    sale_payment_id INT NULL COMMENT 'Pago que saldó esta parte',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_share_session (session_id),
     FOREIGN KEY (session_id) REFERENCES dining_sessions(session_id) ON DELETE CASCADE,
     FOREIGN KEY (participant_id) REFERENCES dining_participants(participant_id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: share_items — el reparto manual, ítem por ítem
+-- Cuando alguien decide a mano qué paga cada quien, el reparto se guarda aquí y no se
+-- recalcula al vuelo: la suma de las partes tiene que cuadrar con el total de la cuenta.
+CREATE TABLE IF NOT EXISTS share_items (
+    share_id INT NOT NULL,
+    order_item_id INT NOT NULL,
+    quantity DECIMAL(12,3) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (share_id, order_item_id),
+    FOREIGN KEY (share_id) REFERENCES dining_split_shares(share_id) ON DELETE CASCADE,
+    FOREIGN KEY (order_item_id) REFERENCES dining_order_items(order_item_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: sale_payments — los pagos de una venta
+-- UNA venta por cuenta con N pagos. Cada renglón dice método, monto, la caja que lo
+-- recibió, la referencia (clave de rastreo de transferencia) y si es propina.
+CREATE TABLE IF NOT EXISTS sale_payments (
+    payment_id INT AUTO_INCREMENT PRIMARY KEY,
+    sale_id INT NOT NULL,
+    store_id INT NOT NULL,
+    method ENUM('cash','card','transfer','mixed','credit','codi','stripe') NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    is_tip TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1 = es propina, no consumo',
+    register_id INT NULL COMMENT 'Caja que recibió el dinero',
+    share_id INT NULL COMMENT 'Parte del desglose que saldó este pago',
+    reference VARCHAR(80) NULL COMMENT 'Clave de rastreo / folio de transferencia',
+    verified_at DATETIME NULL COMMENT 'Cuando se verificó el comprobante (CEP)',
+    created_by INT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_pay_sale (sale_id),
+    INDEX idx_pay_store (store_id, created_at),
+    INDEX idx_pay_share (share_id),
+    FOREIGN KEY (sale_id) REFERENCES sales(sale_id) ON DELETE CASCADE,
+    FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE,
+    FOREIGN KEY (share_id) REFERENCES dining_split_shares(share_id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

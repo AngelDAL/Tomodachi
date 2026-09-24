@@ -212,3 +212,105 @@
     }
 })();
 
+/* ============================================================
+ * El botón "atrás" del teléfono cierra el modal, no la página
+ *
+ * Sin esto, en el teléfono el gesto de volver (o el botón del sistema) sacaba al usuario de
+ * la pantalla en la que estaba, con el modal abierto a medias: perdía el hilo y tenía que
+ * entrar otra vez. Ahora, si hay un modal o un drawer a la vista, el "atrás" lo cierra; recién
+ * el siguiente "atrás" cambia de página.
+ *
+ * Cómo funciona: al abrirse un modal se apunta una entrada en el historial; cuando el "atrás"
+ * la consume, se cierra el modal en vez de navegar. Y si el usuario lo cierra con la X, se
+ * retira esa entrada para que el historial quede limpio (nada de "atrás" fantasma).
+ *
+ * Los modales NO son anidados en este proyecto (a propósito), así que basta con seguir uno:
+ * el de más arriba.
+ * ============================================================ */
+(function () {
+    'use strict';
+
+    var CANDIDATOS = [
+        '.modal', '.modal-overlay', '.drawer-overlay', '.tp-overlay', '.mp-overlay',
+        '.quantity-modal', '.numpad-drawer', '.scanner-overlay', '.client-dialog'
+    ].join(', ');
+
+    var ESTADOS = ['show', 'active', 'open', 'visible'];
+    var estado = { abierto: false, porAtras: false };
+
+    function seVe(el) {
+        var s = window.getComputedStyle(el);
+        if (s.display === 'none' || s.visibility === 'hidden' || parseFloat(s.opacity) === 0) return false;
+        var r = el.getBoundingClientRect();
+        return r.width > 40 && r.height > 40;
+    }
+
+    /**
+     * El modal o drawer que está a la vista, si hay alguno.
+     *
+     * Se decide por lo que se VE, no por el nombre de la clase: en este proyecto conviven tres
+     * maneras de abrir (`.show`, `.active` y los `<dialog>` nativos con el atributo `open`), y
+     * la que se me quedó fuera fue justamente la de los diálogos de cliente.
+     */
+    function abiertoAhora() {
+        var abiertos = [];
+        Array.prototype.forEach.call(document.querySelectorAll(CANDIDATOS), function (el) {
+            if (el.classList.contains('hidden')) return;
+            if (el.hasAttribute('hidden')) return;
+            if (!seVe(el)) return;
+            abiertos.push(el);
+        });
+        return abiertos.length ? abiertos[abiertos.length - 1] : null;
+    }
+
+    /** Cierra el modal: con SU botón de cerrar, para que corra su propia limpieza. */
+    function cerrar(el) {
+        var boton = el.querySelector('.modal-close, .drawer-close, .tp-modal-cerrar, .mp-cerrar, [data-cerrar]');
+        if (boton) { boton.click(); return; }
+        if (typeof el.close === 'function') { el.close(); return; }   // <dialog> nativo
+        ESTADOS.forEach(function (c) { el.classList.remove(c); });
+        el.classList.add('hidden');
+    }
+
+    // El "atrás" del teléfono: si hay algo abierto, se cierra y NO se navega.
+    window.addEventListener('popstate', function () {
+        if (!estado.abierto) return;
+        estado.porAtras = true;
+        var el = abiertoAhora();
+        if (el) cerrar(el);
+        estado.abierto = false;
+        setTimeout(function () { estado.porAtras = false; }, 300);
+    });
+
+    var pendiente = null;
+    function revisar() {
+        if (pendiente) clearTimeout(pendiente);
+        pendiente = setTimeout(function () {
+            pendiente = null;
+            var el = abiertoAhora();
+
+            if (el && !estado.abierto) {
+                // Se abrió: se apunta una entrada para que el "atrás" tenga algo que consumir.
+                estado.abierto = true;
+                try { history.pushState({ tomodachiModal: true }, ''); } catch (e) {}
+            } else if (!el && estado.abierto && !estado.porAtras) {
+                // Se cerró desde la interfaz: se retira la entrada para no dejar un "atrás" de más.
+                estado.abierto = false;
+                if (history.state && history.state.tomodachiModal) history.back();
+            }
+        }, 120);
+    }
+
+    if (window.MutationObserver && document.body) {
+        var observadorModales = new MutationObserver(revisar);
+        observadorModales.observe(document.body, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['class', 'style', 'hidden']
+        });
+    }
+    window.addEventListener('load', revisar);
+    revisar();
+})();
+

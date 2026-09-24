@@ -204,19 +204,88 @@ async function initSidebar() {
         if (mobileBtn) { mobileBtn.lastChild.textContent = ` ${text}`; const i = mobileBtn.querySelector('i'); if (i) i.className = `fas ${icon}`; }
         if (desktopBtn) { const label = document.getElementById('fullscreenBottomLabel'); if (label) label.textContent = text; const i = desktopBtn.querySelector('i'); if (i) i.className = `fas ${icon}`; }
     };
+    /* ------------------------------------------------------------
+     * LA PANTALLA COMPLETA SE RECUERDA ENTRE PÁGINAS
+     *
+     * Antes había que activarla otra vez en cada pantalla: al navegar, el navegador la pierde.
+     * Ahora se guarda la intención y, al abrir la siguiente página, se vuelve a entrar sola. Si
+     * el navegador exige un toque para concederla (no todos la dan sin gesto), se aplica en
+     * cuanto el usuario toca la pantalla: él no debe buscar el botón ni volver a pensarlo.
+     * ------------------------------------------------------------ */
+    const CLAVE_PANTALLA_COMPLETA = 'tomodachi_pantalla_completa';
+    let entrandoSola = false;   // distingue "entró por nosotros" de "el usuario la apagó"
+
+    function pantallaCompletaPedida() {
+        try { return localStorage.getItem(CLAVE_PANTALLA_COMPLETA) === '1'; } catch (error) { return false; }
+    }
+
+    function recordarPantallaCompleta(activa) {
+        try { localStorage.setItem(CLAVE_PANTALLA_COMPLETA, activa ? '1' : '0'); } catch (error) {}
+    }
+
+    async function entrarEnPantallaCompleta() {
+        entrandoSola = true;
+        try {
+            if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+                await document.documentElement.requestFullscreen();
+            }
+            return true;
+        } catch (error) {
+            return false;   // el navegador pidió un gesto: se reintenta al primer toque
+        } finally {
+            entrandoSola = false;
+            updateFullscreenLabels();
+        }
+    }
+
+    function retomarPantallaCompleta() {
+        if (!pantallaCompletaPedida() || document.fullscreenElement) return;
+        entrarEnPantallaCompleta().then((entro) => {
+            if (entro) return;
+            const alPrimerGesto = () => {
+                ['pointerdown', 'touchstart', 'keydown'].forEach((ev) =>
+                    document.removeEventListener(ev, alPrimerGesto));
+                entrarEnPantallaCompleta();
+            };
+            ['pointerdown', 'touchstart', 'keydown'].forEach((ev) =>
+                document.addEventListener(ev, alPrimerGesto, { once: true, passive: true }));
+        });
+    }
+
+    /** Cierra el menú del perfil (el de abajo a la derecha en el teléfono). */
+    function cerrarMenuDePerfil() {
+        const menu = document.getElementById('profileTooltipMenu');
+        const boton = document.getElementById('profileMenuBtn');
+        if (menu) menu.classList.remove('show');
+        if (boton) boton.classList.remove('active');
+    }
+
     const toggleFullscreen = async (event) => {
         event.preventDefault();
         try {
-            if (document.fullscreenElement) await document.exitFullscreen();
-            else if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
-            else throw new Error('Fullscreen API no disponible');
+            if (document.fullscreenElement) {
+                await document.exitFullscreen();
+                recordarPantallaCompleta(false);
+            } else if (document.documentElement.requestFullscreen) {
+                await document.documentElement.requestFullscreen();
+                recordarPantallaCompleta(true);
+            } else {
+                throw new Error('Fullscreen API no disponible');
+            }
         } catch (error) { console.warn('No se pudo cambiar a pantalla completa:', error); }
         updateFullscreenLabels();
+        cerrarMenuDePerfil();
     };
     document.getElementById('fullscreenToggleBtn')?.addEventListener('click', toggleFullscreen);
     document.getElementById('fullscreenBottomBtn')?.addEventListener('click', toggleFullscreen);
-    document.addEventListener('fullscreenchange', updateFullscreenLabels);
+
+    document.addEventListener('fullscreenchange', () => {
+        updateFullscreenLabels();
+        // Si se salió sin que lo pidiéramos nosotros, fue el usuario: se olvida la preferencia.
+        if (!document.fullscreenElement && !entrandoSola && pantallaCompletaPedida()) recordarPantallaCompleta(false);
+    });
     updateFullscreenLabels();
+    retomarPantallaCompleta();
 
     // --- Enhanced Sidebar Logic (Floating & Dynamic Store Name) ---
 
@@ -267,6 +336,32 @@ async function initSidebar() {
     const profileTooltipMenu = document.getElementById('profileTooltipMenu');
 
     if (profileMenuBtn && profileTooltipMenu) {
+        /**
+         * Al abrirlo, cada opción recibe su turno de entrada.
+         *
+         * El menú tiene seis o más opciones y la hoja de estilos solo escalonaba las tres
+         * primeras: de la cuarta en adelante aparecían todas de golpe (justo lo que se veía en
+         * el teléfono). Aquí el turno se cuenta SOLO sobre lo que se ve — algunas opciones se
+         * ocultan según el usuario — para que la cascada salga sin huecos.
+         */
+        const ordenarEntradaDelMenu = () => {
+            let turno = 0;
+            profileTooltipMenu.querySelectorAll('.tooltip-item').forEach((item) => {
+                if (item.offsetParent === null) return;   // oculto: no gasta turno
+                item.style.setProperty('--orden', ++turno);
+            });
+        };
+
+        /**
+         * Elegir una opción CIERRA el menú.
+         *
+         * Antes se quedaba abierto tapando media pantalla: después de poner pantalla completa o
+         * cambiar el tema había que cerrarlo a mano para poder seguir trabajando.
+         */
+        profileTooltipMenu.addEventListener('click', (e) => {
+            if (e.target.closest && e.target.closest('.tooltip-item')) cerrarMenuDePerfil();
+        });
+
         profileMenuBtn.addEventListener('click', (e) => {
             // Check if we are in mobile/tablet mode (< 1025px)
             if (window.innerWidth < 1025) {
@@ -277,9 +372,9 @@ async function initSidebar() {
                 // Toggle
                 const isShown = profileTooltipMenu.classList.contains('show');
                 if (isShown) {
-                    profileTooltipMenu.classList.remove('show');
-                    profileMenuBtn.classList.remove('active');
+                    cerrarMenuDePerfil();
                 } else {
+                    ordenarEntradaDelMenu();
                     profileTooltipMenu.classList.add('show');
                     profileMenuBtn.classList.add('active');
                 }
@@ -288,8 +383,7 @@ async function initSidebar() {
                 const closeHandler = (ev) => {
                     // If click is NOT inside menu AND NOT on the button
                     if (!profileTooltipMenu.contains(ev.target) && !profileMenuBtn.contains(ev.target)) {
-                        profileTooltipMenu.classList.remove('show');
-                        profileMenuBtn.classList.remove('active');
+                        cerrarMenuDePerfil();
                         document.removeEventListener('click', closeHandler);
                     }
                 };

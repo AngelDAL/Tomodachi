@@ -1365,14 +1365,28 @@ table tr:hover {
     color: var(--danger-color);
 }
 
-/* Animación de aparición escalonada */
+/* Animación de aparición escalonada.
+   Cada opción entra un poco después que la anterior: el turno lo pone el JS contando solo lo
+   que se ve (`--orden`), y los :nth-child de abajo son el respaldo por si no alcanzó a correr.
+   Antes solo había retrasos para las TRES primeras opciones del menú, así que de la cuarta en
+   adelante aparecían todas de golpe — que es lo que se veía en el teléfono. */
 .user-tooltip-menu.show .tooltip-item {
     animation: slideUpFade 0.3s forwards;
+    animation-delay: calc(var(--orden, var(--turno, 1)) * 0.045s);
 }
 
-.user-tooltip-menu.show .tooltip-item:nth-child(1) { animation-delay: 0.05s; }
-.user-tooltip-menu.show .tooltip-item:nth-child(2) { animation-delay: 0.1s; }
-.user-tooltip-menu.show .tooltip-item:nth-child(3) { animation-delay: 0.15s; }
+.user-tooltip-menu.show .tooltip-item:nth-child(1) { --turno: 1; }
+.user-tooltip-menu.show .tooltip-item:nth-child(2) { --turno: 2; }
+.user-tooltip-menu.show .tooltip-item:nth-child(3) { --turno: 3; }
+.user-tooltip-menu.show .tooltip-item:nth-child(4) { --turno: 4; }
+.user-tooltip-menu.show .tooltip-item:nth-child(5) { --turno: 5; }
+.user-tooltip-menu.show .tooltip-item:nth-child(6) { --turno: 6; }
+.user-tooltip-menu.show .tooltip-item:nth-child(7) { --turno: 7; }
+.user-tooltip-menu.show .tooltip-item:nth-child(8) { --turno: 8; }
+.user-tooltip-menu.show .tooltip-item:nth-child(9) { --turno: 9; }
+.user-tooltip-menu.show .tooltip-item:nth-child(10) { --turno: 10; }
+.user-tooltip-menu.show .tooltip-item:nth-child(11) { --turno: 11; }
+.user-tooltip-menu.show .tooltip-item:nth-child(12) { --turno: 12; }
 
 @keyframes slideUpFade {
     to {
@@ -3095,3 +3109,133 @@ body .panel-tab-btn {
    `.form-actions-centered { display: flex }` y se carga DESPUÉS de este archivo, así que a
    igual especificidad ganaría él y el pie seguiría a la vista. */
 body .form-actions-centered.acciones-al-menu { display: none; }
+
+/* ============================================================
+ * CLIENTES: filtros plegables, resumen compacto y tarjetas ligeras
+ *
+ * Lo que estaba mal: la cabecera de la lista gastaba cuatro renglones en el teléfono (buscar,
+ * vista, nuevo cliente, cuatro filtros con etiquetas largas y dos chips de resumen) y cada
+ * tarjeta cargaba dos botones de acción. La lista de clientes quedaba casi fuera de la
+ * pantalla. Aquí se pliega lo que se usa de vez en cuando y se aligera la tarjeta.
+ * ============================================================ */
+
+/* El botón que abre y cierra los filtros, con el filtro puesto a la vista. */
+.customer-filtros-barra {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+.customer-filtros-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: var(--ds-radius-pill, 999px);
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    color: var(--text-medium);
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    min-height: 40px;
+    transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.customer-filtros-toggle:hover,
+.customer-filtros-toggle[aria-expanded="true"] {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.customer-filtros-flecha {
+    font-size: 0.75rem;
+    transition: transform var(--transition-fast);
+}
+
+.customer-filtros-toggle[aria-expanded="true"] .customer-filtros-flecha { transform: rotate(180deg); }
+
+/* El panel es flex, así que el atributo `hidden` del navegador no basta: hay que ganarle. */
+.customer-filters[hidden] { display: none; }
+
+/* Resumen (cuántos clientes y cuánto hay apartado), en la misma línea que los filtros
+   y sin robar renglones: en el teléfono cada renglón es una tarjeta que se deja de ver. */
+.customer-summary {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 0;
+    min-width: 0;
+}
+
+.summary-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: var(--ds-radius-pill, 999px);
+    border: 1px solid var(--border-color);
+    background: var(--bg-lightest);
+    font-size: 0.82rem;
+    color: var(--text-medium);
+    box-shadow: none;
+    white-space: nowrap;
+}
+
+.summary-chip strong { color: var(--text-color); }
+
+@media (max-width: 768px) {
+    .summary-chip { padding: 5px 10px; font-size: 0.76rem; gap: 5px; }
+}
+
+/* El menú de acciones del cliente se ancla a la cabecera de su modal. */
+.client-dialog .modal-header { position: relative; }
+
+@media (max-width: 768px) {
+    /* La tarjeta, más ligera: menos relleno, letra un poco menor y el contacto en una línea. */
+    body .customer-card { padding: 12px; gap: 8px; }
+    body .customer-card-name strong { font-size: 0.98rem; }
+    body .customer-card-contact { font-size: 0.78rem; gap: 8px; }
+    body .customer-card-stats { gap: 8px; }
+    body .customer-stat { padding: 6px 8px; }
+    body .customer-stat-label { font-size: 0.7rem; }
+    body .customer-stat-value { font-size: 0.92rem; }
+    body .customer-card-pay { padding: 9px 12px; font-size: 0.85rem; min-height: 42px; }
+    body .customers-grid { gap: 10px; }
+
+    /* Los filtros, en dos columnas de botones grandes y cómodos cuando están abiertos. */
+    body .customer-filters { gap: 6px; }
+    body .customer-filter-btn { flex: 1 1 calc(50% - 6px); justify-content: center; min-height: 42px; }
+
+    /* Los modales de la ficha del cliente toman la pantalla, con la cabecera pegada arriba
+       (el nombre y los tres puntitos siempre a la vista, como en el drawer de inventario). */
+    body .client-dialog {
+        width: 100%;
+        max-width: 100%;
+        height: 100dvh;
+        max-height: 100dvh;
+        margin: 0;
+    }
+    body .client-dialog .modal-content {
+        height: 100%;
+        max-height: 100dvh;
+        border-radius: 0 !important;
+        padding: 0 !important;
+        display: flex;
+        flex-direction: column;
+    }
+    body .client-dialog .modal-header {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        margin: 0 !important;
+        padding: 14px 16px;
+        background: var(--bg-card, #fff);
+        border-bottom: 1px solid var(--border-color);
+    }
+    body .client-dialog .modal-header h2 { font-size: 1.02rem; }
+    body .client-dialog .modal-body { flex: 1; min-height: 0; overflow-y: auto; padding: 14px; max-height: none !important; }
+}

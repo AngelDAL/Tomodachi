@@ -7,7 +7,7 @@
     <title>Clientes - Tomodachi</title>
     <link rel="stylesheet" href="css/fonts.css?v=4">
     <link rel="stylesheet" href="lib/fontawesome/css/all.min.css?v=4">
-    <link rel="stylesheet" href="css/main.css?v=12">
+    <link rel="stylesheet" href="css/main.css?v=16">
     <link rel="stylesheet" href="css/design-system.css?v=7">
     <link rel="stylesheet" href="css/sidebar-modern.css?v=6">
     <link rel="stylesheet" href="css/mobile-nav.css?v=5">
@@ -97,7 +97,7 @@
                 <h2>Tomodachi</h2>
             </div>
             <nav class="sidebar-nav">
-                <!-- Navigation Loaded by js/sidebar-loader.js?v=8 -->
+                <!-- Navigation Loaded by js/sidebar-loader.js?v=12 -->
             </nav>
         </aside>
 
@@ -130,7 +130,28 @@
                             </button>
                         </div>
                     </div>
-                    <div class="customer-filters" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+                    <!-- Filtros plegables: cuatro botones con etiquetas largas empujaban la lista
+                         fuera de la pantalla del teléfono. Ahora viven detrás de un solo botón
+                         que dice cuál está puesto; en escritorio nacen abiertos. -->
+                    <div class="customer-filtros-barra">
+                        <button type="button" class="customer-filtros-toggle" id="customerFiltersToggle"
+                                aria-expanded="false" aria-controls="customerFiltersPanel">
+                            <i class="fas fa-filter"></i>
+                            <span id="customerFiltersResumen">Filtros</span>
+                            <i class="fas fa-chevron-down customer-filtros-flecha"></i>
+                        </button>
+                        <!-- El resumen va en la MISMA línea que el botón de filtros: en el teléfono,
+                             cada renglón que se ahorra es una tarjeta más a la vista. -->
+                        <div class="customer-summary">
+                            <div class="summary-chip">
+                                <i class="fas fa-users" style="color: var(--primary-color);"></i> <strong id="totalCustomers">0</strong> clientes
+                            </div>
+                            <div class="summary-chip">
+                                <i class="fas fa-hand-holding-dollar" style="color: var(--warning-color);"></i> Apartado: <strong id="totalBalance">$0.00</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="customer-filters" id="customerFiltersPanel" hidden>
                         <button class="customer-filter-btn active" data-status="" data-balance="" onclick="setCustomerFilter(this)">
                             <i class="fas fa-users"></i> Todos
                         </button>
@@ -144,14 +165,7 @@
                             <i class="fas fa-user-slash"></i> Inactivos
                         </button>
                     </div>
-                    <div class="customer-summary" style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 12px;">
-                        <div class="summary-chip" style="background: var(--primary-lighter); border: 1px solid var(--primary-light); border-radius: var(--ds-radius-pill); padding: 8px 16px; font-size:0.9rem; box-shadow: var(--ds-shadow-sm);">
-                            <i class="fas fa-users" style="color: var(--primary-color);"></i> <strong id="totalCustomers">0</strong> clientes
-                        </div>
-                        <div class="summary-chip" style="background: var(--primary-lighter); border: 1px solid var(--primary-light); border-radius: var(--ds-radius-pill); padding: 8px 16px; font-size:0.9rem; box-shadow: var(--ds-shadow-sm);">
-                            <i class="fas fa-hand-holding-dollar" style="color: var(--warning-color);"></i> Apartado total: <strong id="totalBalance">$0.00</strong>
-                        </div>
-                    </div>
+
                 </section>
 
                 <!-- Vista cuadrícula (default) -->
@@ -252,7 +266,16 @@
         <div class="modal-content" style="max-width: 900px; border: none; border-radius: 14px; padding: 2.2rem; background: var(--bg-card, #fff);">
             <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.4rem;">
                 <h2 id="customerDetailTitle" style="margin:0; font-size:1.3rem; color: var(--text-color, #1a1a2e);"><i class="fas fa-id-card" style="color: var(--primary-color); margin-right: 8px;"></i>Detalle del Cliente</h2>
-                <button id="customerDetailClose" class="modal-close" aria-label="Cerrar" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color: var(--primary-color);">×</button>
+                <!-- Las acciones del cliente viven en tres puntitos, igual que en inventario:
+                     antes estaban encima de cada tarjeta y eran dos botones que estorbaban. -->
+                <div class="drawer-header-acciones">
+                    <button type="button" class="drawer-menu-btn" id="customerDetailMenuBtn"
+                            aria-label="Más acciones" aria-haspopup="true" aria-expanded="false">
+                        <i class="fas fa-ellipsis-vertical"></i>
+                    </button>
+                    <button id="customerDetailClose" class="modal-close" aria-label="Cerrar" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color: var(--primary-color);">×</button>
+                </div>
+                <div class="drawer-acciones-lista" id="customerDetailMenu" role="menu" hidden></div>
             </div>
             <div class="modal-body" style="max-height: 74vh; overflow-y: auto;">
                 <div id="customerDetailBody"></div>
@@ -260,7 +283,7 @@
         </div>
     </dialog>
 
-    <script src="js/sidebar-loader.js?v=8"></script>
+    <script src="js/sidebar-loader.js?v=12"></script>
     <script src="js/app.js?v=12"></script>
     <script>
         // Verificar sesión (modal de re-login si caducó y pidió sesión permanente)
@@ -311,6 +334,32 @@
             await loadCustomers();
             loadAbonoRegisters();
             bindCustomerEvents();
+            prepararFiltrosPlegables();
+        }
+
+        /**
+         * Los filtros nacen plegados en el teléfono (donde estorban) y abiertos en escritorio
+         * (donde hay espacio y se agradece verlos).
+         */
+        function prepararFiltrosPlegables() {
+            const boton = document.getElementById('customerFiltersToggle');
+            if (boton) boton.addEventListener('click', alternarFiltros);
+            const botonMenu = document.getElementById('customerDetailMenuBtn');
+            if (botonMenu) botonMenu.addEventListener('click', alternarAccionesDelCliente);
+            mostrarFiltros(window.innerWidth > 768);
+            actualizarResumenDeFiltros();
+
+            // Un toque fuera del menú de acciones (o Esc) lo cierra.
+            document.addEventListener('click', (e) => {
+                const menu = document.getElementById('customerDetailMenu');
+                if (!menu || menu.hidden) return;
+                if (menu.contains(e.target)) return;
+                if (e.target.closest && e.target.closest('#customerDetailMenuBtn')) return;
+                cerrarAccionesDelCliente();
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') { cerrarAccionesDelCliente(); }
+            });
         }
 
         async function loadCustomers(search, status, balance) {
@@ -351,7 +400,89 @@
             const balance = btn.getAttribute('data-balance');
             currentStatusFilter = status;
             currentBalanceFilter = balance;
+            actualizarResumenDeFiltros();
+            // En el teléfono se contrae solo: ya eligió, no tiene por qué quedarse abierto tapando
+            // la lista. En escritorio se queda abierto, que ahí no estorba.
+            if (window.innerWidth <= 768) mostrarFiltros(false);
             loadCustomers(document.getElementById('customerSearchInput').value.trim(), status, balance);
+        }
+
+        /* ------------------------------------------------------------
+         * Filtros plegables
+         *
+         * Cuatro botones con etiquetas largas ("Apartados (con saldo)") empujaban la lista de
+         * clientes fuera de la pantalla del teléfono. Ahora viven detrás de un botón que dice
+         * cuál está puesto; en escritorio nacen abiertos, donde sí hay espacio.
+         * ------------------------------------------------------------ */
+        function mostrarFiltros(mostrar) {
+            const panel = document.getElementById('customerFiltersPanel');
+            const boton = document.getElementById('customerFiltersToggle');
+            if (!panel || !boton) return;
+            panel.hidden = !mostrar;
+            boton.setAttribute('aria-expanded', mostrar ? 'true' : 'false');
+        }
+
+        function alternarFiltros() {
+            const panel = document.getElementById('customerFiltersPanel');
+            if (!panel) return;
+            mostrarFiltros(panel.hidden);
+        }
+
+        /** El botón de filtros dice cuál está aplicado, para no tener que abrirlo a averiguarlo. */
+        function actualizarResumenDeFiltros() {
+            const resumen = document.getElementById('customerFiltersResumen');
+            const activo = document.querySelector('.customer-filter-btn.active');
+            if (!resumen) return;
+            const nombre = activo ? activo.textContent.trim() : 'Filtros';
+            const esTodos = !activo || (!activo.getAttribute('data-status') && !activo.getAttribute('data-balance'));
+            resumen.textContent = esTodos ? 'Filtros' : nombre;
+        }
+
+        /* ------------------------------------------------------------
+         * Acciones del cliente en tres puntitos (dentro de su detalle)
+         *
+         * Antes eran dos botones encima de CADA tarjeta; ahora la tarjeta se lee tranquila y las
+         * acciones están donde uno ya está mirando al cliente. Igual que en el drawer de
+         * inventario: se disparan los botones/funciones de siempre, sin duplicar lógica.
+         * ------------------------------------------------------------ */
+        let clienteDelDetalle = null;
+
+        function armarAccionesDelCliente(id) {
+            const menu = document.getElementById('customerDetailMenu');
+            if (!menu) return;
+            clienteDelDetalle = id;
+            menu.innerHTML = '';
+
+            const acciones = [
+                { texto: 'Editar cliente', icono: 'fa-pen-to-square', hacer: () => { cerrarAccionesDelCliente(); openCustomerModal(id); } },
+                { texto: 'Eliminar cliente', icono: 'fa-trash-can', peligro: true, hacer: () => { cerrarAccionesDelCliente(); deleteCustomer(id); } }
+            ];
+
+            acciones.forEach(a => {
+                const item = document.createElement('button');
+                item.type = 'button';
+                item.className = 'drawer-acciones-item' + (a.peligro ? ' peligro' : '');
+                item.setAttribute('role', 'menuitem');
+                item.innerHTML = `<i class="fas ${a.icono}"></i> ${a.texto}`;
+                item.addEventListener('click', a.hacer);
+                menu.appendChild(item);
+            });
+        }
+
+        function alternarAccionesDelCliente() {
+            const menu = document.getElementById('customerDetailMenu');
+            const boton = document.getElementById('customerDetailMenuBtn');
+            if (!menu || !boton) return;
+            if (!menu.hidden) { cerrarAccionesDelCliente(); return; }
+            menu.hidden = false;
+            boton.setAttribute('aria-expanded', 'true');
+        }
+
+        function cerrarAccionesDelCliente() {
+            const menu = document.getElementById('customerDetailMenu');
+            const boton = document.getElementById('customerDetailMenuBtn');
+            if (menu) menu.hidden = true;
+            if (boton) boton.setAttribute('aria-expanded', 'false');
         }
 
         function customerInitials(name) {
@@ -403,10 +534,6 @@
                         <div class="customer-card-name">
                             <strong>${esc(c.full_name)}</strong>
                             ${customerStatusBadge(c)}
-                        </div>
-                        <div class="customer-card-actions">
-                            <button class="btn btn-sm" onclick="event.stopPropagation(); openCustomerModal(${c.customer_id})" title="Editar" style="padding:5px 9px; border-radius:6px; border:none; background:var(--bg-light); cursor:pointer; color: var(--text-medium);"><i class="fas fa-edit"></i></button>
-                            <button class="btn btn-sm" onclick="event.stopPropagation(); deleteCustomer(${c.customer_id})" title="Eliminar" style="padding:5px 9px; border-radius:6px; border:none; background:var(--danger-color); color:#fff; cursor:pointer;"><i class="fas fa-trash"></i></button>
                         </div>
                     </div>
                     <div class="customer-card-contact">
@@ -563,6 +690,9 @@
                 if (!data.success) throw new Error(data.message);
                 const { customer, sales, payments } = data.data;
                 document.getElementById('customerDetailTitle').textContent = customer.full_name;
+                // Las acciones de ESTE cliente, en los tres puntitos de la cabecera.
+                armarAccionesDelCliente(id);
+                cerrarAccionesDelCliente();
                 const body = document.getElementById('customerDetailBody');
 
                 const hasBalance = Number(customer.balance) > 0;

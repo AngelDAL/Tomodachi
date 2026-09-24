@@ -682,6 +682,23 @@ function actionClose($db, $dining, $apiAuth, $auth, array $data) {
 
     $closed_by = isset($actor['user_id']) ? (int)$actor['user_id'] : null;
 
+    // Una cuenta CON CONSUMO no se cierra en silencio.
+    //
+    // Antes de que existiera el cobro, cerrar era la única forma de terminar una cuenta, así
+    // que esta acción cerraba cualquier cosa. Hoy sería un hoyo por donde se va el dinero:
+    // lo servido quedaría sin venta, sin pago y sin movimiento de caja, y el corte del día
+    // no cuadraría con lo que salió de la cocina.
+    // Regla: o se cobra (api/dining/charge.php), o se cancela con un motivo que quede
+    // registrado. Cerrar solo se permite si de verdad no hay consumo.
+    $totales = $dining->recalcTotals($session_id);
+    if ((float)$totales['total'] > 0) {
+        Response::error(
+            'La cuenta tiene consumo por ' . number_format((float)$totales['total'], 2) .
+            '. Cóbrela desde el botón Cobrar; si nadie consumió, cancélela con un motivo.',
+            409
+        );
+    }
+
     $stmt = $db->getConnection()->prepare(
         "UPDATE dining_sessions
          SET status = 'closed', closed_at = NOW(), closed_by = :closed_by

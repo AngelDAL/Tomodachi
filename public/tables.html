@@ -835,6 +835,108 @@
         @media (max-width: 900px) {
             body.kd-pantalla-on #kdColumnas { grid-template-columns: 1fr; }
         }
+
+        /* ============================================================
+           COBRO DE LA CUENTA
+           Mismo lenguaje que el resto: tarjetas, chips conmutables (nada de <select>) y
+           áreas táctiles cómodas. Todo el ancho en móvil.
+           ============================================================ */
+        .tp-pie-acciones { display: flex; gap: 8px; }
+        .tp-pie-acciones .tp-btn { flex: 1; justify-content: center; }
+
+        .tp-modal-cobro { max-width: 560px; }
+        .tp-cobro-codigo { font-family: var(--font-heading); letter-spacing: 2px; color: var(--primary-color); }
+        .tp-cobro-sub { margin: 2px 0 0; font-size: .82rem; color: var(--text-muted); }
+        .tp-cobro-cuerpo { display: flex; flex-direction: column; gap: 14px; }
+
+        .tp-cobro-consumo { display: flex; gap: 8px; }
+        .tp-cobro-consumo > div {
+            flex: 1; background: var(--bg-body); border: 1px solid var(--border-lighter);
+            border-radius: var(--ds-radius-md); padding: 8px 10px;
+            display: flex; flex-direction: column; gap: 2px; min-width: 0;
+        }
+        .tp-cobro-consumo strong { font-family: var(--font-heading); font-size: 1.05rem; color: var(--text-color); }
+        .tp-cobro-etiqueta { font-size: .7rem; text-transform: uppercase; letter-spacing: .5px; color: var(--text-muted); }
+        .tp-cobro-a-pagar { border-color: var(--primary-color) !important; background: var(--primary-lighter) !important; }
+
+        .tp-cobro-bloque { display: flex; flex-direction: column; gap: 8px; }
+        .tp-cobro-titulo { font-family: var(--font-heading); font-weight: 600; font-size: .9rem; color: var(--text-color); }
+        .tp-cobro-nota { font-weight: 400; font-size: .74rem; color: var(--text-muted); }
+
+        .tp-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+        .tp-chip {
+            border: 1px solid var(--border-light); background: var(--bg-card); color: var(--text-medium);
+            border-radius: var(--ds-radius-pill); padding: 9px 15px; font-size: .82rem;
+            font-family: var(--font-main); cursor: pointer; min-height: 40px;
+        }
+        .tp-chip:hover { border-color: var(--primary-color); color: var(--primary-color); }
+        .tp-chip.activo { background: var(--primary-color); border-color: var(--primary-color); color: var(--text-on-primary); }
+
+        .tp-cobro-campo { display: flex; flex-direction: column; gap: 6px; }
+        .tp-cobro-campo label { font-size: .8rem; color: var(--text-medium); }
+        .tp-cobro-campo input {
+            padding: 10px 12px; border: 1px solid var(--border-color); border-radius: var(--ds-radius-md);
+            background: var(--bg-input); color: var(--text-color); font-family: var(--font-main); font-size: .9rem;
+            min-height: 40px; width: 100%;
+        }
+        .tp-cobro-cambio { font-size: .84rem; color: var(--text-medium); }
+        .tp-cobro-cambio.falta { color: var(--danger-color); font-weight: 600; }
+
+        .tp-cobro-partes, .tp-cobro-pagos { display: flex; flex-direction: column; gap: 6px; }
+        .tp-parte {
+            display: flex; align-items: center; gap: 8px;
+            border: 1px solid var(--border-lighter); border-radius: var(--ds-radius-md);
+            padding: 8px 10px; background: var(--bg-card);
+        }
+        .tp-parte.pagada { border-color: var(--success-color); background: var(--bg-lightest); }
+        .tp-parte-nombre { flex: 1; font-size: .86rem; color: var(--text-color); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .tp-parte-monto { font-weight: 600; font-size: .86rem; color: var(--text-color); }
+        .tp-parte-acciones { display: flex; gap: 4px; }
+        .tp-parte-acciones .tp-btn { padding: 6px 10px; font-size: .76rem; min-height: 34px; }
+        .tp-parte-editor { display: flex; gap: 6px; align-items: center; }
+        .tp-parte-editor input { flex: 1; padding: 8px 10px; border: 1px solid var(--border-color); border-radius: var(--ds-radius-sm); background: var(--bg-input); color: var(--text-color); }
+
+        .tp-cobro-pagos .tp-pago {
+            display: flex; align-items: center; gap: 8px; font-size: .84rem;
+            border: 1px solid var(--border-lighter); border-radius: var(--ds-radius-sm); padding: 7px 10px;
+        }
+        .tp-cobro-pagos .tp-pago i { color: var(--success-color); }
+        .tp-cobro-pagos .tp-pago .monto { margin-left: auto; font-weight: 600; }
+        .tp-cobro-pagos .tp-pago button {
+            background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px 6px;
+        }
+        .tp-cobro-pagos .tp-pago button:hover { color: var(--danger-color); }
+
+        .tp-cobro-clientes { display: flex; flex-direction: column; gap: 4px; max-height: 180px; overflow-y: auto; }
+        .tp-cobro-clientes button {
+            text-align: left; border: 1px solid var(--border-lighter); background: var(--bg-card);
+            color: var(--text-color); border-radius: var(--ds-radius-sm); padding: 9px 10px; cursor: pointer;
+            font-size: .84rem; font-family: var(--font-main); min-height: 40px;
+        }
+        .tp-cobro-clientes button:hover { border-color: var(--primary-color); }
+        .tp-cobro-elegido {
+            border: 1px solid var(--primary-color); border-radius: var(--ds-radius-md);
+            padding: 8px 10px; font-size: .85rem; color: var(--text-color); background: var(--primary-lighter);
+        }
+
+        .tp-cobro-aviso {
+            font-size: .84rem; padding: 9px 11px; border-radius: var(--ds-radius-md);
+            background: var(--bg-lightest); border: 1px solid var(--danger-color); color: var(--danger-color);
+        }
+        .tp-cobro-falta {
+            font-size: .85rem; padding: 9px 11px; border-radius: var(--ds-radius-md);
+            background: var(--bg-lightest); border: 1px solid var(--warning-color); color: var(--text-color);
+        }
+        .tp-cobro-pie { display: flex; align-items: center; gap: 10px; }
+        .tp-cobro-pie .tp-cobro-estado { flex: 1; font-size: .8rem; color: var(--text-muted); }
+
+        @media (max-width: 600px) {
+            .tp-cobro-consumo { flex-wrap: wrap; }
+            .tp-cobro-consumo > div { flex: 1 1 40%; }
+            .tp-cobro-pie { flex-wrap: wrap; }
+            .tp-cobro-pie .tp-btn { flex: 1; justify-content: center; }
+            .tp-chip { flex: 1 1 auto; text-align: center; }
+        }
     </style>
     <script src="js/theme-init.js?v=3"></script>
     <script src="js/format-utils.js"></script>
@@ -1047,7 +1149,10 @@
                     <div class="tp-panel-scroll" id="tpCuentaPedido"></div>
                     <div class="tp-panel-pie">
                         <div class="tp-pie-linea" id="tpCuentaPendientes"></div>
-                        <button type="button" class="tp-btn primario" id="tpCuentaEnviar"><i class="fas fa-paper-plane"></i> Enviar a preparación</button>
+                        <div class="tp-pie-acciones">
+                            <button type="button" class="tp-btn" id="tpCuentaEnviar"><i class="fas fa-paper-plane"></i> Enviar a preparación</button>
+                            <button type="button" class="tp-btn primario" id="tpCuentaCobrar"><i class="fas fa-cash-register"></i> Cobrar</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1127,6 +1232,117 @@
 
     <!-- Confirmación propia: el diálogo del navegador rompe la identidad visual, ignora el
          tema y no deja explicar qué va a pasar antes de hacerlo. -->
+    <!-- ============================================================
+         COBRO DE LA CUENTA
+         El cierre del servicio: consumo + propina opcional, división y forma de pago.
+         Un solo botón al final ("Cobrar"): el servidor es el que decide si cuadra.
+         ============================================================ -->
+    <div class="tp-overlay tp-overlay-encima hidden" id="tpModalCobro">
+        <div class="tp-modal tp-modal-cobro">
+            <div class="tp-modal-head">
+                <div>
+                    <h3>Cobrar cuenta <span class="tp-cobro-codigo" id="tpCobroCodigo">----</span></h3>
+                    <p class="tp-cobro-sub" id="tpCobroSub"></p>
+                </div>
+                <button type="button" class="tp-modal-cerrar" data-cerrar="tpModalCobro" aria-label="Cerrar"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div class="tp-modal-body tp-cobro-cuerpo">
+                <div class="tp-cobro-consumo">
+                    <div>
+                        <span class="tp-cobro-etiqueta">Consumo</span>
+                        <strong id="tpCobroConsumo">$0.00</strong>
+                    </div>
+                    <div>
+                        <span class="tp-cobro-etiqueta">Propina</span>
+                        <strong id="tpCobroPropinaVista">$0.00</strong>
+                    </div>
+                    <div class="tp-cobro-a-pagar">
+                        <span class="tp-cobro-etiqueta">A cobrar</span>
+                        <strong id="tpCobroAPagar">$0.00</strong>
+                    </div>
+                </div>
+                <div class="tp-cobro-falta hidden" id="tpCobroFalta"></div>
+
+                <!-- Propina (opcional, siempre) -->
+                <section class="tp-cobro-bloque">
+                    <div class="tp-cobro-titulo">Propina <span class="tp-cobro-nota">opcional · va aparte del consumo</span></div>
+                    <div class="tp-chips" id="tpCobroPropinaChips">
+                        <button type="button" class="tp-chip activo" data-propina="0">Sin propina</button>
+                        <button type="button" class="tp-chip" data-propina="10">10%</button>
+                        <button type="button" class="tp-chip" data-propina="15">15%</button>
+                        <button type="button" class="tp-chip" data-propina="otra">Otra…</button>
+                    </div>
+                    <div class="tp-cobro-campo hidden" id="tpCobroPropinaCampo">
+                        <input type="number" id="tpCobroPropina" min="0" step="1" inputmode="decimal" placeholder="Monto de la propina">
+                    </div>
+                </section>
+
+                <!-- División -->
+                <section class="tp-cobro-bloque">
+                    <div class="tp-cobro-titulo">Dividir la cuenta <span class="tp-cobro-nota">opcional</span></div>
+                    <div class="tp-chips" id="tpCobroModoChips">
+                        <button type="button" class="tp-chip" data-modo="by_person">Por persona</button>
+                        <button type="button" class="tp-chip" data-modo="equal">Partes iguales</button>
+                        <button type="button" class="tp-chip" data-modo="by_amount">Por monto</button>
+                        <button type="button" class="tp-chip" data-modo="manual">A mano</button>
+                    </div>
+                    <div class="tp-cobro-campo hidden" id="tpCobroPartesCampo">
+                        <div id="tpCobroPartesEditor"></div>
+                        <button type="button" class="tp-btn" id="tpCobroAplicar">Aplicar división</button>
+                    </div>
+                    <div class="tp-cobro-partes" id="tpCobroPartes"></div>
+                </section>
+
+                <!-- Forma de pago -->
+                <section class="tp-cobro-bloque">
+                    <div class="tp-cobro-titulo">Forma de pago</div>
+                    <div class="tp-chips" id="tpCobroMetodoChips">
+                        <button type="button" class="tp-chip activo" data-metodo="cash">Efectivo</button>
+                        <button type="button" class="tp-chip" data-metodo="card">Tarjeta</button>
+                        <button type="button" class="tp-chip" data-metodo="transfer">Transferencia</button>
+                        <button type="button" class="tp-chip" data-metodo="mixed">Mixto</button>
+                        <button type="button" class="tp-chip" data-metodo="credit">Fiado</button>
+                    </div>
+
+                    <div class="tp-cobro-campo" id="tpCobroCampoEfectivo">
+                        <label for="tpCobroRecibido">Recibí</label>
+                        <input type="number" id="tpCobroRecibido" min="0" step="1" inputmode="decimal" placeholder="Con cuánto paga">
+                        <div class="tp-cobro-cambio" id="tpCobroCambio">Cambio $0.00</div>
+                    </div>
+
+                    <div class="tp-cobro-campo hidden" id="tpCobroCampoReferencia">
+                        <label for="tpCobroReferencia">Clave de rastreo <span class="tp-cobro-nota">opcional</span></label>
+                        <input type="text" id="tpCobroReferencia" maxlength="80" placeholder="Folio o clave del comprobante">
+                    </div>
+
+                    <div class="tp-cobro-campo hidden" id="tpCobroCampoMixto">
+                        <label for="tpCobroMixtoEfectivo">Efectivo</label>
+                        <input type="number" id="tpCobroMixtoEfectivo" min="0" step="1" inputmode="decimal" placeholder="0">
+                        <div class="tp-cobro-nota" id="tpCobroMixtoResto">El resto se cobra por transferencia.</div>
+                        <input type="text" id="tpCobroMixtoReferencia" maxlength="80" placeholder="Clave de rastreo de la transferencia (opcional)">
+                    </div>
+
+                    <div class="tp-cobro-campo hidden" id="tpCobroCampoFiado">
+                        <label for="tpCobroBuscarCliente">Cliente al que se le fía</label>
+                        <input type="text" id="tpCobroBuscarCliente" autocomplete="off" placeholder="Buscar por nombre o teléfono">
+                        <div class="tp-cobro-clientes" id="tpCobroClientes"></div>
+                        <div class="tp-cobro-elegido hidden" id="tpCobroClienteElegido"></div>
+                    </div>
+
+                    <div class="tp-cobro-pagos" id="tpCobroPagos"></div>
+                </section>
+
+                <div class="tp-cobro-aviso hidden" id="tpCobroAviso"></div>
+            </div>
+
+            <div class="tp-modal-pie tp-cobro-pie">
+                <span class="tp-cobro-estado" id="tpCobroEstado"></span>
+                <button type="button" class="tp-btn primario" id="tpCobroConfirmar"><i class="fas fa-cash-register"></i> Cobrar</button>
+            </div>
+        </div>
+    </div>
+
     <div class="tp-overlay tp-overlay-encima hidden" id="tpModalConfirma">
         <div class="tp-modal tp-modal-compacto">
             <div class="tp-modal-head">
@@ -1147,7 +1363,8 @@
     <script src="js/sidebar-loader.js?v=7"></script>
     <script src="js/app.js?v=12"></script>
     <script src="js/ws-realtime.js?v=1"></script>
-    <script src="js/tables.js?v=4"></script>
+    <script src="js/tables.js?v=5"></script>
+    <script src="js/cobro.js?v=1"></script>
     <script src="js/comandas.js?v=1"></script>
     <script src="lib/animejs/anime.min.js"></script>
     <script src="js/design-system.js?v=5"></script>

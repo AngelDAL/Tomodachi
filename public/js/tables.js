@@ -866,6 +866,28 @@ function tpPintarCuenta() {
     document.getElementById('tpCuentaTotal').textContent = total;
     document.getElementById('tpTabTotal').textContent = total;
 
+    // El módulo de cobro (js/cobro.js) necesita saber QUÉ cuenta está abierta y cuánto
+    // lleva. Se publica aquí, en un solo lugar, en vez de que el cobro lo adivine leyendo
+    // la pantalla o pidiendo la cuenta otra vez.
+    const totalNum = Number(s.totals.total) || 0;
+    window.tpCuentaActual = {
+        session_id: Number(s.session_id),
+        code: s.code || '',
+        total: totalNum,
+        puntos: puntos.map(function (p) { return p.label; }).join(' + '),
+        personas: (s.participants || []).length,
+        sin_enviar: (s.items || []).filter(function (it) { return it.status === 'pending'; }).length,
+    };
+    const btnCobrar = document.getElementById('tpCuentaCobrar');
+    if (btnCobrar) {
+        btnCobrar.innerHTML = '<i class="fas fa-cash-register"></i> Cobrar ' + total;
+        // Una cuenta sin consumo no se cobra: se cancela con motivo.
+        btnCobrar.disabled = totalNum <= 0;
+        btnCobrar.title = totalNum <= 0
+            ? 'La cuenta no tiene consumo: cancélela con un motivo'
+            : 'Cobrar esta cuenta';
+    }
+
     tpPintarPedido(d);
 }
 

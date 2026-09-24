@@ -372,6 +372,7 @@ body {
     align-items: center;
     background: var(--bg-card, #fff);
     z-index: 10;
+    position: relative;   /* ancla el menú de tres puntitos de las acciones */
     flex-shrink: 0;
 }
 
@@ -2771,3 +2772,169 @@ label .currency-icon {
     .btn-solo-icono > i,
     .btn-solo-icono > svg { margin: 0 !important; font-size: 1.05rem; }
 }
+
+/* ============================================================
+ * PESTAÑAS (tabs) QUE NO SE ENCIMAN
+ *
+ * El defecto: `.drawer-tab` tenía `flex: 1` con `white-space: nowrap`. En el teléfono, las
+ * pestañas se encogían para caber, pero la etiqueta NO podía saltar de línea y se salía de
+ * su casilla, encimándose con la pestaña vecina: no se leía ninguna.
+ *
+ * Ahora la etiqueta puede saltar de línea, cada pestaña tiene un ancho mínimo decente y, si
+ * no caben todas, BAJAN a la línea siguiente en vez de encimarse.
+ *
+ * El `body` delante es a propósito: `.drawer-tab` también se define en inventory.css, que se
+ * carga después de este archivo y ganaría a igual especificidad.
+ * ============================================================ */
+body .drawer-tabs,
+body .add-tabs,
+body .panel-tabs {
+    flex-wrap: wrap;
+    overflow-x: visible;
+}
+
+body .drawer-tab,
+body .add-tab,
+body .panel-tab-btn {
+    flex: 1 1 auto;
+    min-width: 84px;
+    white-space: normal;        /* la etiqueta puede repartirse en dos o tres líneas */
+    overflow-wrap: anywhere;    /* una palabra larga no se sale de su casilla */
+    text-align: center;
+    line-height: 1.2;
+}
+
+@media (max-width: 768px) {
+    /* En el teléfono, icono arriba y texto abajo, y DOS pestañas por fila: así cada una tiene
+       ancho de sobra para su etiqueta (antes quedaban tres apretadas y una sola estirada). */
+    body .drawer-tab,
+    body .add-tab,
+    body .panel-tab-btn {
+        flex: 1 1 calc(50% - 6px);
+        flex-direction: column;
+        gap: 3px;
+        padding: 9px 6px;
+        font-size: 0.72rem;
+    }
+    body .drawer-tab i,
+    body .add-tab i,
+    body .panel-tab-btn i { font-size: 1.05rem; margin: 0; }
+}
+
+/* ============================================================
+ * ACCIONES DEL DRAWER EN TRES PUNTITOS
+ *
+ * El pie del drawer de producto tenía seis botones (guardar, cancelar, eliminar, retirar,
+ * registrar pérdida, restaurar): en el teléfono tapaban la vista y en escritorio ocupaban
+ * media pantalla. Ahora viven en un menú junto al título, y el menú SOLO ofrece lo que se
+ * puede hacer con ese producto en ese momento (lo arma js/inventory.js al abrirlo).
+ * ============================================================ */
+.drawer-header-acciones {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.drawer-menu-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.15rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;   /* cómodo de acertar con el dedo */
+    min-height: 44px;
+    border-radius: 8px;
+    transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.drawer-menu-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--text-color);
+}
+
+.drawer-menu-btn[aria-expanded="true"] {
+    background: rgba(0, 0, 0, 0.07);
+    color: var(--primary-color);
+}
+
+.drawer-acciones-lista {
+    position: absolute;
+    top: calc(100% - 4px);
+    right: 12px;
+    min-width: 210px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: var(--ds-shadow-lg, 0 10px 30px rgba(0, 0, 0, .18));
+    padding: 6px;
+    z-index: var(--capa-encima, 100);   /* dentro del drawer, sobre su contenido */
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.drawer-acciones-lista[hidden] { display: none; }
+
+.drawer-acciones-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 11px 12px;
+    background: none;
+    border: none;
+    border-radius: 8px;
+    color: var(--text-color);
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+    min-height: 44px;
+}
+
+.drawer-acciones-item i {
+    width: 18px;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.drawer-acciones-item:hover { background: var(--bg-lightest); }
+
+.drawer-acciones-item.peligro,
+.drawer-acciones-item.peligro i { color: var(--danger-color, #dc2626); }
+
+.drawer-acciones-item.peligro:hover { background: rgba(220, 38, 38, .08); }
+
+/* El titular del drawer: el nombre del producto, sin cortar a media palabra. */
+.drawer-titulo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    min-width: 0;
+    font-family: var(--font-heading);
+    font-size: 1.05rem;
+    color: var(--text-color);
+}
+
+.drawer-titulo i { color: var(--primary-color); flex-shrink: 0; }
+
+.drawer-titulo span {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;      /* nombres largos: dos líneas y punto */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+}
+
+/* Las acciones ya no se ven en el pie: se disparan desde el menú. Los botones siguen en el
+   documento porque son los que hacen el trabajo (y el JS los muestra u oculta según el caso).
+   El selector lleva `body` y las dos clases a propósito: inventory.css define
+   `.form-actions-centered { display: flex }` y se carga DESPUÉS de este archivo, así que a
+   igual especificidad ganaría él y el pie seguiría a la vista. */
+body .form-actions-centered.acciones-al-menu { display: none; }

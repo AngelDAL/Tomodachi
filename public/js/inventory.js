@@ -433,6 +433,10 @@ function bindEvents() {
     if (closeDetailsBtn) closeDetailsBtn.addEventListener('click', closeProductDetails);
     if (cancelEditBtn) cancelEditBtn.addEventListener('click', closeProductDetails);
 
+    // Acciones del drawer en tres puntitos (guardar, cancelar, eliminar, retirar...)
+    const detailsMenuBtn = document.getElementById('detailsMenuBtn');
+    if (detailsMenuBtn) detailsMenuBtn.addEventListener('click', alternarAccionesDelDrawer);
+
     if (editForm) {
         editForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -2181,11 +2185,97 @@ function resetAddComposition() {
     // La visibilidad del panel de composición la controla su pestaña, no aquí.
 }
 
+/**
+ * Menú de acciones del drawer de producto (los tres puntitos de la cabecera).
+ *
+ * Antes esas seis acciones (Guardar, Cancelar, Eliminar, Retirar, Registrar pérdida,
+ * Restaurar) estaban en el pie del drawer: en el teléfono tapaban la vista y en escritorio
+ * ocupaban media pantalla.
+ *
+ * El menú NO tiene su propia lista de acciones: se ARMA leyendo los botones que en ese
+ * momento se pueden usar de verdad — los que el propio inventario muestra u oculta según el
+ * producto (a uno retirado se le ofrece "Restaurar", a uno activo "Retirar"). Así el menú
+ * nunca se desfasa de la realidad, y al tocar un elemento se dispara el botón de siempre,
+ * que ya tiene su lógica, en vez de duplicarla aquí.
+ */
+function armarAccionesDelDrawer() {
+    const menu = document.getElementById('detailsAccionesMenu');
+    const fila = document.querySelector('#editProductForm .acciones-al-menu');
+    if (!menu || !fila) return;
+
+    menu.innerHTML = '';
+
+    Array.from(fila.children).forEach(function (original) {
+        if (!original || original.tagName !== 'BUTTON') return;
+        // ¿Se puede usar con este producto? Lo decide quien lo muestra u oculta.
+        if (original.style.display === 'none' || original.hidden) return;
+
+        const texto = (original.innerText || '').trim();
+        if (!texto) return;
+
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'drawer-acciones-item';
+        const peligro = original.classList.contains('btn-danger') || original.classList.contains('btn-danger-outline');
+        if (peligro) item.classList.add('peligro');
+        item.setAttribute('role', 'menuitem');
+
+        const icono = original.querySelector('i');
+        if (icono) item.appendChild(icono.cloneNode(true));
+        item.appendChild(document.createTextNode(' ' + texto));
+
+        item.addEventListener('click', function () {
+            cerrarAccionesDelDrawer();
+            original.click();   // el botón de siempre hace el trabajo
+        });
+
+        menu.appendChild(item);
+    });
+}
+
+function alternarAccionesDelDrawer() {
+    const menu = document.getElementById('detailsAccionesMenu');
+    const boton = document.getElementById('detailsMenuBtn');
+    if (!menu || !boton) return;
+
+    if (!menu.hidden) { cerrarAccionesDelDrawer(); return; }
+
+    armarAccionesDelDrawer();   // se arma al abrir: así refleja lo que se puede hacer AHORA
+    menu.hidden = false;
+    boton.setAttribute('aria-expanded', 'true');
+}
+
+function cerrarAccionesDelDrawer() {
+    const menu = document.getElementById('detailsAccionesMenu');
+    const boton = document.getElementById('detailsMenuBtn');
+    if (menu) menu.hidden = true;
+    if (boton) boton.setAttribute('aria-expanded', 'false');
+}
+
+// Un toque fuera del menú, o la tecla Esc, lo cierran sin dejar sombras abiertas.
+document.addEventListener('click', function (e) {
+    const menu = document.getElementById('detailsAccionesMenu');
+    if (!menu || menu.hidden) return;
+    if (menu.contains(e.target)) return;
+    if (e.target.closest && e.target.closest('#detailsMenuBtn')) return;
+    cerrarAccionesDelDrawer();
+});
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') cerrarAccionesDelDrawer();
+});
+
 function openProductDetails(productId) {
     const product = products.find(p => p.product_id == productId);
     if (!product) return;
 
     currentEditingProduct = productId;
+
+    // El titular del drawer es el NOMBRE DEL PRODUCTO: antes decía "Detalles del Producto" y
+    // no decía de cuál se trataba. También se cierra el menú de acciones para que no quede
+    // abierto el de la vez anterior.
+    const titulo = document.getElementById('detailsProductName');
+    if (titulo) titulo.textContent = product.product_name || 'Producto';
+    cerrarAccionesDelDrawer();
 
     // Llenar formulario
     document.getElementById('editProductId').value = product.product_id;

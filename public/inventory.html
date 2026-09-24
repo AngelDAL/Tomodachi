@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="css/fonts.css?v=4">
     <!-- FontAwesome -->
     <link rel="stylesheet" href="lib/fontawesome/css/all.min.css?v=4">
-    <link rel="stylesheet" href="css/main.css?v=7">
+    <link rel="stylesheet" href="css/main.css?v=11">
     <link rel="stylesheet" href="css/design-system.css?v=7">
     <link rel="stylesheet" href="css/sidebar-modern.css?v=6">
     <link rel="stylesheet" href="css/mobile-nav.css?v=5">
@@ -567,10 +567,25 @@
     <div id="productDetailsModal" class="drawer-overlay">
         <div class="drawer-content">
             <div class="drawer-header">
-                <h2><i class="fas fa-edit"></i> Detalles del Producto</h2>
-                <button type="button" class="drawer-close" id="closeDetailsModalBtn" aria-label="Cerrar">
-                    <i class="fas fa-times"></i>
-                </button>
+                <!-- El titular es el NOMBRE DEL PRODUCTO (lo pone openProductDetails):
+                     antes decía "Detalles del Producto" y no decía de cuál. -->
+                <h2 class="drawer-titulo" title="Detalles del producto">
+                    <i class="fas fa-box"></i>
+                    <span id="detailsProductName">Detalles del Producto</span>
+                </h2>
+                <div class="drawer-header-acciones">
+                    <!-- Las acciones (guardar, cancelar, eliminar, retirar...) viven aquí, en tres
+                         puntitos: en el teléfono tapaban la vista y en escritorio ocupaban media
+                         pantalla. El menú se arma solo con las acciones disponibles del producto. -->
+                    <button type="button" class="drawer-menu-btn" id="detailsMenuBtn"
+                            aria-label="Más acciones" aria-haspopup="true" aria-expanded="false">
+                        <i class="fas fa-ellipsis-vertical"></i>
+                    </button>
+                    <button type="button" class="drawer-close" id="closeDetailsModalBtn" aria-label="Cerrar">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="drawer-acciones-lista" id="detailsAccionesMenu" role="menu" hidden></div>
             </div>
 
             <!-- Tabs -->
@@ -937,7 +952,10 @@
                         </div>
                     </div>
 
-                    <div class="form-actions-centered">
+                    <!-- Estas acciones ya no se muestran aquí: se arman en el menú de tres puntitos
+                         de la cabecera (ver detailsMenuBtn). Los botones se quedan porque son los
+                         que realmente hacen el trabajo; el menú solo los dispara. -->
+                    <div class="form-actions-centered acciones-al-menu">
                         <button type="button" class="btn-warning" id="archiveProductBtn" onclick="archiveProduct()" style="display:none;">
                             <i class="fas fa-archive"></i> Retirar producto
                         </button>
@@ -1192,7 +1210,7 @@
     <script src="lib/html5-qrcode/html5-qrcode.min.js"></script>
     <script src="js/scanner.js"></script>
     <script src="js/tour.js?v=4"></script>
-    <script src="js/inventory.js?v=11"></script>
+    <script src="js/inventory.js?v=15"></script>
     <script src="js/stock-rule.js?v=1"></script>
     <script src="js/purchases.js?v=11"></script>
     <script>

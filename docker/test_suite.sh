@@ -67,8 +67,21 @@ code=$(curl -s -o /dev/null -w "%{http_code}" -b "$CJ" -X POST "$BASE/api/cash_r
 check "IDOR open_register store ajena (403)" 403 "$code"
 
 # 5. Operaciones legítimas
-code=$(curl -s -o /dev/null -w "%{http_code}" -b "$CJ" -X POST "$BASE/api/sales/create_sale.php" -H 'Content-Type: application/json' -d '{"store_id":1,"payment_method":"cash","items":[{"product_id":1,"quantity":1,"price":15.50}]}')
-check "Crear venta en tienda propia (200)" 200 "$code"
+# La venta de prueba usa un producto REAL de la tienda del admin: con un id fijo (1) la
+# venta puede fallar porque ese id pertenece a otra tienda, y el fallo sería de la
+# batería, no del sistema. Al terminar se cancela, para no ir gastando existencias en
+# cada corrida (una batería que se degrada sola deja de servir).
+PROD_SUITE=$(curl -s -b "$CJ" "$BASE/api/inventory/products.php" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['data'][0]['product_id'] if d.get('data') else '')" 2>/dev/null)
+if [ -n "$PROD_SUITE" ]; then
+  venta_json=$(curl -s -b "$CJ" -X POST "$BASE/api/sales/create_sale.php" -H 'Content-Type: application/json' \
+    -d "{\"store_id\":1,\"payment_method\":\"cash\",\"items\":[{\"product_id\":$PROD_SUITE,\"quantity\":1}]}")
+  code=$(echo "$venta_json" | python3 -c "import json,sys; print(200 if json.load(sys.stdin).get('success') else 400)" 2>/dev/null)
+  check "Crear venta en tienda propia (200)" 200 "$code"
+  venta_id=$(echo "$venta_json" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['data']['sale_id'] if d.get('data') else '')" 2>/dev/null)
+  [ -n "$venta_id" ] && curl -s -o /dev/null -b "$CJ" -X POST "$BASE/api/sales/cancel_sale.php" -H 'Content-Type: application/json' -d "{\"sale_id\":$venta_id}"
+else
+  echo "SKIP | Crear venta en tienda propia (la tienda del admin no tiene productos)"
+fi
 
 code=$(curl -s -o /dev/null -w "%{http_code}" -b "$CJ" "$BASE/api/sales/get_sales.php")
 check "Listar ventas tienda propia (200)" 200 "$code"

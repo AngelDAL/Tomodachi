@@ -253,6 +253,7 @@ CREATE TABLE sales (
     FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE SET NULL,
     FOREIGN KEY (register_id) REFERENCES cash_registers(register_id) ON DELETE RESTRICT,
     INDEX idx_store_date (store_id, sale_date),
+    INDEX idx_sales_store_date_status (store_id, sale_date, status),
     INDEX idx_status (status),
     INDEX idx_customer (customer_id),
     INDEX idx_register (register_id),

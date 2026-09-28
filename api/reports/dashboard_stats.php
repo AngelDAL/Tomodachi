@@ -190,16 +190,20 @@ try {
         exit;
     }
     
-    // 1. Daily Sales
+    // 1 & 2. Daily Sales + Transactions en UNA consulta (misma cláusula
+    // WHERE). Antes eran dos queries separadas: SUM(total) y COUNT(*).
+    // Fusionarlas ahorra un viaje a la BD por cada carga del dashboard.
     $stmt = $conn->prepare("
-        SELECT COALESCE(SUM(total), 0) as total_sales
+        SELECT COALESCE(SUM(total), 0) as total_sales, COUNT(*) as transactions
         FROM sales
         WHERE store_id = ? 
         AND DATE(sale_date) = CURDATE() 
         AND status = 'completed'
     ");
     $stmt->execute([$store_id]);
-    $dailySales = $stmt->fetch(PDO::FETCH_ASSOC)['total_sales'];
+    $dailyRow = $stmt->fetch(PDO::FETCH_ASSOC);
+    $dailySales = $dailyRow['total_sales'];
+    $transactions = $dailyRow['transactions'];
 
     // 1.1 Daily Cost (for Profit) — usa costo HISTÓRICO de la venta (C5),
     // con fallback al costo actual para ventas anteriores a la migración.
@@ -216,18 +220,7 @@ try {
     $totalCost = $stmt->fetch(PDO::FETCH_ASSOC)['total_cost'];
     
     $dailyProfit = $dailySales - $totalCost;
-    
-    // 2. Transactions
-    $stmt = $conn->prepare("
-        SELECT COUNT(*) as count 
-        FROM sales 
-        WHERE store_id = ? 
-        AND DATE(sale_date) = CURDATE() 
-        AND status = 'completed'
-    ");
-    $stmt->execute([$store_id]);
-    $transactions = $stmt->fetch()['count'];
-    
+
     // 3. Low Stock List
     $stmt = $conn->prepare("
         SELECT p.product_name, p.current_stock, p.min_stock

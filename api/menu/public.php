@@ -83,6 +83,35 @@ try {
     $marca = marcaDeTienda($conn, $store_id);
 
     // ---------------------------------------------------------
+    // 4b) Agotados de verdad: la disponibilidad NO se puede decidir en SQL.
+    //
+    //     Un platillo con RECETA (`tracking_type='recipe'`) tiene `current_stock = 0`
+    //     a propósito: lo que hay se deriva de sus ingredientes (BomHelper::availability,
+    //     el mismo criterio que usa el punto de venta). Decidirlo con `current_stock > 0`
+    //     marcaba como AGOTADO todo platillo preparado, aunque hubiera de todo: el
+    //     comensal no podía pedir ni un taco. Se le pregunta a BomHelper SOLO por los que
+    //     el SQL dio por agotados —son pocos y así la carta pública no paga N consultas— y
+    //     para un producto de stock simple la respuesta es la misma que ya traía el SQL.
+    // ---------------------------------------------------------
+    $agotados_sql = array_filter($productos, function ($p) { return !$p['disponible']; });
+    if ($agotados_sql) {
+        require_once '../../includes/BomHelper.class.php';
+        $bom = new BomHelper($db);
+        foreach ($productos as &$p) {
+            if ($p['disponible']) continue;
+            if (($p['tracking_type'] ?? '') === 'none') { $p['disponible'] = 1; continue; }
+            try {
+                $av = $bom->availability($store_id, (int)$p['product_id']);
+                if ((float)$av['available'] > 0) $p['disponible'] = 1;
+            } catch (Exception $e) {
+                // Receta rota (ciclo, sin ingredientes): se queda como agotado y no se
+                // rompe la carta por eso.
+            }
+        }
+        unset($p);
+    }
+
+    // ---------------------------------------------------------
     // 5) Armar secciones
     // ---------------------------------------------------------
     $secciones = [];
@@ -165,7 +194,7 @@ function resolverCarta($conn, $token) {
 
     // ¿Es el token de un punto de servicio activo?
     $stmt = $conn->prepare("
-        SELECT store_id FROM dining_tables
+        SELECT store_id, menu_id FROM dining_tables
         WHERE qr_token = :token AND is_active = 1
         LIMIT 1
     ");
@@ -175,7 +204,25 @@ function resolverCarta($conn, $token) {
         return ['menu' => false, 'via' => null];
     }
 
-    // La primera carta activa de esa tienda (mismo criterio que el QR de los puntos).
+    // La carta que ese punto eligió; si no eligió ninguna, la primera activa de la tienda
+    // (el comportamiento de siempre: las instalaciones que ya existen no cambian solas).
+    $menu_id_punto = (int)($table['menu_id'] ?? 0);
+    if ($menu_id_punto > 0) {
+        $stmt = $conn->prepare("
+            SELECT menu_id, store_id, name, description, mode, welcome_message,
+                   allow_notes, show_promotions
+            FROM menus
+            WHERE menu_id = :menu_id AND store_id = :store_id AND is_active = 1
+            LIMIT 1
+        ");
+        $stmt->execute([':menu_id' => $menu_id_punto, ':store_id' => (int)$table['store_id']]);
+        $menu = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($menu) {
+            return ['menu' => $menu, 'via' => 'table_menu'];
+        }
+        // La carta elegida se desactivó o se borró: mejor la de la tienda que un error.
+    }
+
     $stmt = $conn->prepare("
         SELECT menu_id, store_id, name, description, mode, welcome_message,
                allow_notes, show_promotions

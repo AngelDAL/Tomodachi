@@ -226,8 +226,9 @@ function kdEsValido(actual, destino) {
 // ============================================================
 // Pestañas: salón y comandas
 // ============================================================
+/** Pestañas del módulo del piso: salón, comandas y carta. */
 function kdPonerVista(nombre, guardar) {
-    kdEstado.vista = nombre === 'comandas' ? 'comandas' : 'salon';
+    kdEstado.vista = (nombre === 'comandas' || nombre === 'carta') ? nombre : 'salon';
 
     document.querySelectorAll('.tp-vista').forEach(function (b) {
         b.classList.toggle('activo', b.getAttribute('data-vista') === kdEstado.vista);
@@ -239,6 +240,10 @@ function kdPonerVista(nombre, guardar) {
     if (kdEstado.vista === 'comandas') {
         kdCargar(true);
     }
+    // La carta vive en tables.js (la otra cara del QR de los puntos): se pide al entrar.
+    if (kdEstado.vista === 'carta' && typeof ctaCargar === 'function') {
+        ctaCargar();
+    }
 
     // El estado vive en la URL para que la tableta de la cocina se abra directo:
     // tables.html?vista=comandas&estacion=2
@@ -247,7 +252,7 @@ function kdPonerVista(nombre, guardar) {
         if (kdEstado.vista === 'salon') {
             url.searchParams.delete('vista');
         } else {
-            url.searchParams.set('vista', 'comandas');
+            url.searchParams.set('vista', kdEstado.vista);
         }
         history.replaceState(null, '', url.toString());
     }
@@ -1281,7 +1286,8 @@ document.addEventListener('DOMContentLoaded', function () {
     // Vista inicial: la tableta de la cocina entra directo con ?vista=comandas
     const params = new URLSearchParams(window.location.search);
     if (params.get('estacion')) kdEstado.filtro = Number(params.get('estacion')) || 0;
-    kdPonerVista(params.get('vista') === 'comandas' ? 'comandas' : 'salon', false);
+    kdPonerVista(params.get('vista') === 'comandas' ? 'comandas'
+        : (params.get('vista') === 'carta' ? 'carta' : 'salon'), false);
 
     // Al volver a la pestaña, el tablero se pone al día (una tableta de cocina pasa horas
     // abierta y puede haber perdido avisos).

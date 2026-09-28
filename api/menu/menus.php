@@ -130,11 +130,23 @@ try {
                 Response::notFound('Menú no encontrado');
             }
 
+            // Los puntos que abrían ESTA carta se quedan sin carta propia (vuelven a la de la
+            // tienda). No se bloquea el borrado: una carta es una vista, no un dato del piso.
+            $desligados = 0;
+            $soltar = $conn->prepare("UPDATE dining_tables SET menu_id = NULL
+                                      WHERE menu_id = :id AND store_id = :store_id");
+            $soltar->execute([':id' => $menu_id, ':store_id' => $store_id]);
+            $desligados = $soltar->rowCount();
+
             // Los menu_items caen por ON DELETE CASCADE
             $stmt = $conn->prepare("DELETE FROM menus WHERE menu_id = :id AND store_id = :store_id");
             $stmt->execute([':id' => $menu_id, ':store_id' => $store_id]);
 
-            Response::success(['menu_id' => $menu_id], 'Menú eliminado');
+            $mensaje = 'Menú eliminado';
+            if ($desligados > 0) {
+                $mensaje .= '. ' . $desligados . ' punto(s) de servicio vuelven a la carta de la tienda';
+            }
+            Response::success(['menu_id' => $menu_id, 'puntos_liberados' => $desligados], $mensaje);
             break;
 
         default:

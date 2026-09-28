@@ -591,6 +591,7 @@ function tpNuevoPunto() {
     document.getElementById('tpPuntoNombre').value = '';
     document.getElementById('tpPuntoZona').value = '';
     document.getElementById('tpPuntoAviso').textContent = 'El QR de este punto se genera al guardarlo.';
+    tpPintarChipsCarta(0);   // por defecto, la carta de la tienda
     tpAbrirModal('tpModalPunto');
     setTimeout(function () { document.getElementById('tpPuntoNombre').focus(); }, 80);
 }
@@ -604,6 +605,7 @@ function tpEditarPunto(id) {
     document.getElementById('tpPuntoZona').value = p.zone || '';
     document.getElementById('tpPuntoAviso').innerHTML = 'Se puede rotar el token del QR si el impreso se filtró, pero dejará de funcionar el que ya pegaste.' +
         ' <button type="button" class="tp-btn" id="tpRotarToken" style="margin-top:8px"><i class="fas fa-rotate"></i> Rotar el QR</button>';
+    tpPintarChipsCarta(p.menu_id || 0);
     tpAbrirModal('tpModalPunto');
 
     const rotar = document.getElementById('tpRotarToken');
@@ -636,10 +638,12 @@ async function tpGuardarPunto() {
     if (!label) { tpAviso('Escribe cómo se llama este punto', 'error'); return; }
     try {
         let d;
+        const carta = Number(tpEstado.cartaElegida) || 0;
         if (tpEstado.puntoEditando) {
-            d = await tpPeticion(TP_API_TABLES, { method: 'PUT', body: JSON.stringify({ table_id: tpEstado.puntoEditando.table_id, label: label, zone: zone }) });
+            d = await tpPeticion(TP_API_TABLES, { method: 'PUT', body: JSON.stringify({ table_id: tpEstado.puntoEditando.table_id, label: label, zone: zone, menu_id: carta }) });
+            await tpCargar(true);   // el nombre y la carta del punto se ven en el mapa
         } else {
-            d = await tpPeticion(TP_API_TABLES, { method: 'POST', body: JSON.stringify({ label: label, zone: zone }) });
+            d = await tpPeticion(TP_API_TABLES, { method: 'POST', body: JSON.stringify({ label: label, zone: zone, menu_id: carta }) });
         }
         // El mensaje lo pone el servidor: si el punto existía desactivado, avisa que lo
         // reactivó en vez de crear otro (y que su QR impreso sigue sirviendo).
@@ -1629,6 +1633,59 @@ document.addEventListener('DOMContentLoaded', async function () {
         if (punto === 'reactivar') tpReactivarPunto(tpEstado.detalle);
     });
 
+    // ── La CARTA ───────────────────────────────────────────────────────────────
+    // Lista de cartas: tres acciones visibles y el resto en los botones de icono.
+    document.getElementById('ctaCartas').addEventListener('click', function (ev) {
+        const b = ev.target.closest('[data-carta-accion]');
+        if (!b) return;
+        const id = Number(b.getAttribute('data-carta'));
+        const accion = b.getAttribute('data-carta-accion');
+        const c = ctaPorId(id);
+        if (!c) return;
+        if (accion === 'abrir') return window.open(c.url_publica, '_blank');
+        if (accion === 'qr') return tpMostrarQr({ label: 'Carta: ' + c.name, url: c.url_publica, esCarta: true });
+        if (accion === 'productos') return ctaAbrirProductos(id);
+        if (accion === 'editar') return ctaEditar(id);
+        if (accion === 'activar' || accion === 'desactivar') return ctaAlternarActiva(id);
+        if (accion === 'eliminar') return ctaEliminar(id);
+        if (accion === 'enlace') {
+            if (navigator.clipboard) navigator.clipboard.writeText(c.url_publica).then(function () { tpAviso('Enlace copiado', 'success'); });
+            else tpAviso(c.url_publica, 'info');
+        }
+    });
+
+    document.getElementById('ctaBtnNueva').addEventListener('click', ctaNueva);
+    document.getElementById('ctaGuardar').addEventListener('click', ctaGuardar);
+    document.getElementById('ctaNombre').addEventListener('keydown', function (e) { if (e.key === 'Enter') ctaGuardar(); });
+    document.getElementById('ctaModos').addEventListener('click', function (ev) {
+        const b = ev.target.closest('[data-modo]');
+        if (!b) return;
+        ctaEstado.modo = b.getAttribute('data-modo');
+        ctaPintarModal();
+    });
+    document.getElementById('ctaOpciones').addEventListener('click', function (ev) {
+        const b = ev.target.closest('[data-opcion]');
+        if (!b) return;
+        const op = b.getAttribute('data-opcion');
+        ctaEstado.opciones[op] = ctaEstado.opciones[op] ? 0 : 1;
+        ctaPintarModal();
+    });
+    document.getElementById('ctaVolver').addEventListener('click', ctaCerrarProductos);
+    document.getElementById('ctaBuscar').addEventListener('input', function () {
+        ctaEstado.busqueda = this.value.trim();
+        ctaPintarProductos();
+    });
+    document.getElementById('ctaProductos').addEventListener('click', function (ev) {
+        const b = ev.target.closest('[data-producto-carta]');
+        if (b) ctaAlternarProducto(b.getAttribute('data-producto-carta'));
+    });
+
+    // La carta del punto (chips del modal del punto)
+    document.getElementById('tpPuntoCarta').addEventListener('click', function (ev) {
+        const b = ev.target.closest('[data-carta]');
+        if (b) tpPintarChipsCarta(b.getAttribute('data-carta'));
+    });
+
     // Esc regresa al mapa: en escritorio es lo que la mano espera. Si hay un modal abierto
     // (el cobro, juntar, cancelar, el QR) se cierra ESE, no la vista de abajo.
     document.addEventListener('keydown', function (ev) {
@@ -1788,6 +1845,377 @@ document.addEventListener('DOMContentLoaded', async function () {
         if (!document.hidden) { tpCargar(true); tpReconectarTiempoReal(); }
     });
 });
+
+// ============================================================
+// La CARTA: lo que ve el cliente al escanear el QR de un punto
+// ============================================================
+/**
+ * La carta vive AQUÍ, dentro del módulo del piso, porque es la otra cara de lo mismo: el QR
+ * de un punto abre esta carta y el modo de la carta decide si el comensal puede pedir.
+ *
+ * Mismo patrón de dos niveles que el salón: la lista se LEE (nombre, modo, estado, enlace y
+ * qué puntos la usan) y se entra a una para elegir qué se ve. Tres acciones a la vista y el
+ * resto (editar, activar, eliminar, copiar) en el menú de tres puntos.
+ */
+const TP_API_MENUS = '../api/menu/menus.php';
+
+const CTA_MODOS = [
+    { id: 'menu_only',     icono: 'book-open',   texto: 'Solo consulta' },
+    { id: 'open_tab',      icono: 'receipt',     texto: 'Cuenta abierta' },
+    { id: 'order_and_pay', icono: 'credit-card', texto: 'Pago inmediato' },
+];
+const CTA_ETIQUETA_MODO = { menu_only: 'Solo consulta', open_tab: 'Pide y paga al final', order_and_pay: 'Paga por adelantado' };
+const CTA_AYUDA_MODO = {
+    menu_only: 'El cliente SOLO mira: sin controles de pedido. El personal anota y cobra en el punto de venta.',
+    open_tab: 'El cliente pide desde su teléfono y se cobra al final. El personal abre el punto (mesa, habitación, estación) y la cuenta vive ahí.',
+    order_and_pay: 'El cliente paga por adelantado desde su teléfono. Sirve de kiosko: sin personal de por medio.',
+};
+
+const ctaEstado = {
+    cartas: [],
+    productos: [],     // el catálogo servible (mismo filtro que la carta pública)
+    carta: null,       // la carta abierta en "qué se ve"
+    items: [],         // sus menu_items: lo que ordena, destaca y OCULTA
+    busqueda: '',
+    modo: 'open_tab',
+    opciones: { activa: 1, notas: 1, promos: 1 },
+    editando: null,    // carta que se está editando (null = nueva)
+    cargando: false,
+};
+
+function ctaPorId(id) {
+    return ctaEstado.cartas.find(function (c) { return Number(c.menu_id) === Number(id); }) || null;
+}
+
+/** Las cartas de la tienda. Se piden una vez por pantalla (forzar = volver a pedirlas). */
+async function ctaTraerCartas(forzar) {
+    if (ctaEstado.cartas.length && !forzar) return ctaEstado.cartas;
+    const lista = await tpPeticion(TP_API_MENUS);
+    ctaEstado.cartas = Array.isArray(lista) ? lista : [];
+    return ctaEstado.cartas;
+}
+
+/** ¿Algún modo de la carta permite pedir? (espejo de `admitePedido` de la carta pública) */
+function ctaAdmitePedido(mode) {
+    return mode === 'order_and_pay' || mode === 'open_tab';
+}
+
+async function ctaCargar() {
+    const cont = document.getElementById('ctaCartas');
+    if (cont && !ctaEstado.cartas.length) {
+        cont.innerHTML = '<div class="tp-vacio"><i class="fas fa-spinner fa-spin"></i><p>Cargando las cartas…</p></div>';
+    }
+    try {
+        await ctaTraerCartas(true);
+        // El catálogo servible: se reusa el que ya pide el menú del mesero (mismo filtro).
+        if (!tpEstado.catalogo.length) await tpCargarCatalogo();
+        ctaEstado.productos = tpEstado.catalogo.slice();
+    } catch (e) {
+        if (cont) cont.innerHTML = '<div class="tp-vacio"><i class="fas fa-triangle-exclamation"></i><h3>No se pudieron cargar las cartas</h3><p>' + tpEsc(tpMensajeDeError(e)) + '</p></div>';
+        return;
+    }
+    ctaPintar();
+}
+
+function ctaPintar() {
+    const cont = document.getElementById('ctaCartas');
+    if (!cont) return;
+    if (!ctaEstado.cartas.length) {
+        cont.innerHTML = '<div class="tp-vacio"><i class="fas fa-book-open"></i>' +
+            '<h3>Todavía no hay ninguna carta</h3>' +
+            '<p>La carta es lo que el cliente ve al escanear el QR de un punto. Elige si puede pedir desde su teléfono o solo mirar.</p>' +
+            '<p style="margin-top:14px"><button type="button" class="tp-btn primario" id="ctaVacioNueva"><i class="fas fa-plus"></i> Crear la primera</button></p></div>';
+        const b = document.getElementById('ctaVacioNueva');
+        if (b) b.addEventListener('click', ctaNueva);
+        return;
+    }
+    cont.innerHTML = '<div class="tp-grid">' + ctaEstado.cartas.map(ctaTarjeta).join('') + '</div>';
+}
+
+/** La ficha de una carta en la lista: se lee y se entra. Tres acciones y un menú, no más. */
+function ctaTarjeta(c) {
+    const activa = Number(c.is_active) === 1;
+    const modo = CTA_ETIQUETA_MODO[c.mode] || c.mode;
+    const puntos = (tpEstado.puntos || []).filter(function (p) {
+        return Number((p.carta || {}).menu_id || 0) === Number(c.menu_id);
+    }).map(function (p) { return p.label; });
+    // La "carta de la tienda" es la primera activa: es la que abren los puntos que no eligen.
+    const esDeTienda = activa && ctaEstado.cartas.filter(function (x) { return Number(x.is_active) === 1; })[0]
+        && Number(ctaEstado.cartas.filter(function (x) { return Number(x.is_active) === 1; })[0].menu_id) === Number(c.menu_id);
+
+    const insignias = [];
+    insignias.push('<span class="tp-estado' + (activa ? '' : ' apagado') + '">' + (activa ? 'Activa' : 'Desactivada') + '</span>');
+    insignias.push('<span class="tp-estado' + (ctaAdmitePedido(c.mode) ? '' : ' apagado') + '">' + tpEsc(modo) + '</span>');
+    if (esDeTienda) insignias.push('<span class="tp-estado apagado">La de la tienda</span>');
+
+    return '<div class="tp-card' + (activa ? '' : ' apagado') + '">' +
+        '<div class="tp-card-top">' +
+            '<div><h3 class="tp-nombre">' + tpEsc(c.name) + '</h3>' +
+            (c.description ? '<p class="tp-zona">' + tpEsc(c.description) + '</p>' : '') + '</div>' +
+            '<div class="tp-card-insignias">' + insignias.join('') + '</div>' +
+        '</div>' +
+        '<div class="tp-datos">' +
+            '<span><i class="fas fa-utensils"></i> ' + ctaEstado.productos.length + ' productos</span>' +
+            '<span><i class="fas fa-chair"></i> ' +
+                (puntos.length ? tpEsc(puntos.join(', ')) : 'ningún punto la eligió') + '</span>' +
+        '</div>' +
+        '<div class="tp-acciones">' +
+            '<button type="button" class="tp-btn primario" data-carta-accion="abrir" data-carta="' + c.menu_id + '"><i class="fas fa-up-right-from-square"></i> Abrir la carta</button>' +
+            '<button type="button" class="tp-btn" data-carta-accion="qr" data-carta="' + c.menu_id + '"><i class="fas fa-qrcode"></i> Ver el QR</button>' +
+            '<button type="button" class="tp-btn" data-carta-accion="productos" data-carta="' + c.menu_id + '"><i class="fas fa-list-check"></i> Qué se ve</button>' +
+            '<button type="button" class="tp-btn tp-icono" data-carta-accion="editar" data-carta="' + c.menu_id + '" title="Editar la carta"><i class="fas fa-pen"></i></button>' +
+            '<button type="button" class="tp-btn tp-icono" data-carta-accion="enlace" data-carta="' + c.menu_id + '" title="Copiar el enlace público"><i class="fas fa-link"></i></button>' +
+            '<button type="button" class="tp-btn tp-icono' + (activa ? ' peligro' : '') + '" data-carta-accion="' + (activa ? 'desactivar' : 'activar') + '" data-carta="' + c.menu_id + '" title="' + (activa ? 'Desactivar' : 'Activar') + '"><i class="fas fa-' + (activa ? 'eye-slash' : 'eye') + '"></i></button>' +
+            '<button type="button" class="tp-btn tp-icono peligro" data-carta-accion="eliminar" data-carta="' + c.menu_id + '" title="Eliminar la carta"><i class="fas fa-trash"></i></button>' +
+        '</div>' +
+        '</div>';
+}
+
+// ── Modal: crear / editar ────────────────────────────────────────────────────
+function ctaPintarModal() {
+    const chipsModo = document.getElementById('ctaModos');
+    chipsModo.innerHTML = CTA_MODOS.map(function (m) {
+        return '<button type="button" class="tp-chip' + (ctaEstado.modo === m.id ? ' activo' : '') + '" data-modo="' + m.id + '">' +
+            '<i class="fas fa-' + m.icono + '"></i> ' + tpEsc(m.texto) + '</button>';
+    }).join('');
+    document.getElementById('ctaModoAyuda').textContent = CTA_AYUDA_MODO[ctaEstado.modo] || '';
+
+    const chipsOpc = document.getElementById('ctaOpciones');
+    chipsOpc.innerHTML =
+        '<button type="button" class="tp-chip' + (ctaEstado.opciones.activa ? ' activo' : '') + '" data-opcion="activa"><i class="fas fa-circle-check"></i> Activa</button>' +
+        '<button type="button" class="tp-chip' + (ctaEstado.opciones.notas ? ' activo' : '') + '" data-opcion="notas"><i class="fas fa-pen"></i> Aceptar notas</button>' +
+        '<button type="button" class="tp-chip' + (ctaEstado.opciones.promos ? ' activo' : '') + '" data-opcion="promos"><i class="fas fa-tags"></i> Mostrar promociones</button>';
+}
+
+function ctaNueva() {
+    ctaEstado.editando = null;
+    ctaEstado.modo = 'open_tab';
+    ctaEstado.opciones = { activa: 1, notas: 1, promos: 1 };
+    document.getElementById('ctaModalTitulo').textContent = 'Nueva carta';
+    document.getElementById('ctaNombre').value = '';
+    document.getElementById('ctaDescripcion').value = '';
+    ctaPintarModal();
+    tpAbrirModal('tpModalCarta');
+    setTimeout(function () { document.getElementById('ctaNombre').focus(); }, 80);
+}
+
+function ctaEditar(id) {
+    const c = ctaPorId(id);
+    if (!c) return;
+    ctaEstado.editando = c;
+    ctaEstado.modo = c.mode || 'menu_only';
+    ctaEstado.opciones = {
+        activa: Number(c.is_active) === 1 ? 1 : 0,
+        notas: Number(c.allow_notes) === 1 ? 1 : 0,
+        promos: Number(c.show_promotions) === 1 ? 1 : 0,
+    };
+    document.getElementById('ctaModalTitulo').textContent = 'Editar ' + c.name;
+    document.getElementById('ctaNombre').value = c.name || '';
+    document.getElementById('ctaDescripcion').value = c.description || '';
+    ctaPintarModal();
+    tpAbrirModal('tpModalCarta');
+}
+
+async function ctaGuardar() {
+    const boton = document.getElementById('ctaGuardar');
+    const nombre = document.getElementById('ctaNombre').value.trim();
+    if (!nombre) { tpAviso('Ponle nombre a la carta', 'error'); return; }
+    const cuerpo = {
+        name: nombre,
+        description: document.getElementById('ctaDescripcion').value.trim(),
+        mode: ctaEstado.modo,
+        is_active: ctaEstado.opciones.activa ? 1 : 0,
+        allow_notes: ctaEstado.opciones.notas ? 1 : 0,
+        show_promotions: ctaEstado.opciones.promos ? 1 : 0,
+    };
+    boton.disabled = true;
+    try {
+        if (ctaEstado.editando) {
+            cuerpo.menu_id = Number(ctaEstado.editando.menu_id);
+            await tpPeticion(TP_API_MENUS, { method: 'PUT', body: JSON.stringify(cuerpo) });
+        } else {
+            await tpPeticion(TP_API_MENUS, { method: 'POST', body: JSON.stringify(cuerpo) });
+        }
+        tpAviso('Carta guardada', 'success');
+        tpCerrarModal('tpModalCarta');
+        await ctaTraerCartas(true);
+        await ctaRefrescarPuntos();     // los puntos que la usan pueden haber cambiado de carta
+        ctaPintar();
+    } catch (e) {
+        tpAviso(tpMensajeDeError(e), 'error');
+    } finally { boton.disabled = false; }
+}
+
+/** El mapa del salón guarda la carta de cada punto: se relee para no mentir en "la usan". */
+async function ctaRefrescarPuntos() {
+    try {
+        const d = await tpPeticion(TP_API_TABLES + (tpEstado.verApagados ? '?todas=1' : ''));
+        tpEstado.puntos = d.tables || [];
+        tpEstado.totales = d.totales || null;
+        tpEstado.menu = d.menu || null;
+        tpEstado.sinCarta = !!d.sin_carta;
+    } catch (e) { /* el mapa se refresca solo por WebSocket */ }
+}
+
+async function ctaAlternarActiva(id) {
+    const c = ctaPorId(id);
+    if (!c) return;
+    try {
+        await tpPeticion(TP_API_MENUS, { method: 'PUT', body: JSON.stringify({ menu_id: Number(id), is_active: Number(c.is_active) === 1 ? 0 : 1 }) });
+        tpAviso(Number(c.is_active) === 1 ? 'Carta desactivada' : 'Carta activada', 'success');
+        await ctaTraerCartas(true);
+        ctaPintar();
+    } catch (e) { tpAviso(tpMensajeDeError(e), 'error'); }
+}
+
+function ctaEliminar(id) {
+    const c = ctaPorId(id);
+    if (!c) return;
+    tpConfirmar({
+        titulo: 'Eliminar ' + c.name,
+        texto: 'Su enlace y su QR dejan de funcionar. Los puntos que la tenían asignada vuelven a la carta de la tienda. No se borra ningún producto.',
+        boton: 'Eliminar la carta',
+        peligro: true,
+        alConfirmar: async function () {
+            try {
+                const d = await tpPeticion(TP_API_MENUS + '?menu_id=' + Number(id), { method: 'DELETE' });
+                tpAviso((d && d.mensaje) || 'Carta eliminada', 'success');
+                await ctaTraerCartas(true);
+                await ctaRefrescarPuntos();
+                ctaPintar();
+            } catch (e) { tpAviso(tpMensajeDeError(e), 'error'); }
+        }
+    });
+}
+
+// ── Nivel 2: qué se ve en la carta ───────────────────────────────────────────
+async function ctaAbrirProductos(id) {
+    const c = ctaPorId(id);
+    if (!c) return;
+    const cont = document.getElementById('ctaProductos');
+    cont.innerHTML = '<div class="tp-vacio-mini"><i class="fas fa-spinner fa-spin"></i> Cargando…</div>';
+    document.getElementById('ctaLista').classList.add('hidden');
+    document.getElementById('ctaDetalle').classList.remove('hidden');
+    document.getElementById('ctaDetalleNombre').textContent = c.name;
+    document.getElementById('ctaDetalleSub').textContent = 'Lo que se ve en esta carta · ' + (CTA_ETIQUETA_MODO[c.mode] || c.mode);
+    ctaEstado.busqueda = '';
+    document.getElementById('ctaBuscar').value = '';
+    try {
+        const detalle = await tpPeticion(TP_API_MENUS + '?menu_id=' + Number(id));
+        ctaEstado.carta = detalle;
+        ctaEstado.items = Array.isArray(detalle.items) ? detalle.items.slice() : [];
+    } catch (e) {
+        cont.innerHTML = '<div class="tp-vacio-mini">' + tpEsc(tpMensajeDeError(e)) + '</div>';
+        return;
+    }
+    ctaPintarProductos();
+}
+
+function ctaCerrarProductos() {
+    ctaEstado.carta = null;
+    document.getElementById('ctaDetalle').classList.add('hidden');
+    document.getElementById('ctaLista').classList.remove('hidden');
+    ctaPintar();
+}
+
+/** ¿Este producto está oculto en la carta abierta? */
+function ctaEstaOculto(productId) {
+    return ctaEstado.items.some(function (it) {
+        return it.kind === 'product' && Number(it.product_id) === Number(productId) && Number(it.is_hidden) === 1;
+    });
+}
+
+function ctaPintarProductos() {
+    const cont = document.getElementById('ctaProductos');
+    const q = ctaEstado.busqueda.toLowerCase();
+    const lista = ctaEstado.productos.filter(function (p) {
+        if (q && String(p.product_name).toLowerCase().indexOf(q) === -1) return false;
+        return true;
+    });
+    if (!lista.length) {
+        cont.innerHTML = '<div class="tp-vacio-mini">Nada que coincida.</div>';
+        return;
+    }
+    const ocultos = lista.filter(function (p) { return ctaEstaOculto(p.product_id); }).length;
+    cont.innerHTML = '<p class="tp-aviso" style="grid-column:1/-1">Se ven ' + (lista.length - ocultos) + ' de ' + lista.length +
+        ' productos. Lo que ocultes aquí deja de salir en la carta del cliente, pero sigue vendiéndose en el punto de venta.</p>' +
+        lista.map(function (p) {
+            const oculto = ctaEstaOculto(p.product_id);
+            return '<div class="cta-producto' + (oculto ? ' oculto' : '') + '">' +
+                '<div class="cta-producto-info">' +
+                    '<div class="cta-producto-nombre">' + tpEsc(p.product_name) + '</div>' +
+                    '<div class="cta-producto-meta">' + tpEsc(p.category_name || 'Sin categoría') + ' · ' + tpDinero(p.price) +
+                        (Number(p.current_stock) <= 0 && p.tracking_type && p.tracking_type !== 'none' ? ' · agotado' : '') + '</div>' +
+                '</div>' +
+                '<button type="button" class="cta-interruptor' + (oculto ? '' : ' activo') + '" data-producto-carta="' + p.product_id + '">' +
+                    (oculto ? 'No se ve' : 'Se ve') + '</button>' +
+                '</div>';
+        }).join('');
+}
+
+/**
+ * Oculta/muestra UN producto en la carta abierta.
+ *
+ * Se manda la lista COMPLETA de ajustes (la API reemplaza los menu_items del menú), pero se
+ * conservan los renglones que no son de producto (categorías, etiquetas): si no, un ajuste
+ * hecho antes se perdería al tocar un interruptor.
+ */
+async function ctaAlternarProducto(productId) {
+    if (!ctaEstado.carta) return;
+    const id = Number(productId);
+    const oculto = ctaEstaOculto(id);
+    const conservar = ctaEstado.items.filter(function (it) {
+        return !(it.kind === 'product' && Number(it.product_id) === id);
+    });
+    const nuevo = conservar.slice();
+    if (!oculto) nuevo.push({ kind: 'product', product_id: id, is_hidden: 1 });
+    try {
+        const d = await tpPeticion(TP_API_MENUS, {
+            method: 'PUT',
+            body: JSON.stringify({ menu_id: Number(ctaEstado.carta.menu_id), items: nuevo }),
+        });
+        ctaEstado.carta = d;
+        ctaEstado.items = Array.isArray(d.items) ? d.items.slice() : nuevo;
+        ctaPintarProductos();
+        tpAviso(oculto ? 'Vuelve a salir en la carta' : 'Oculto en la carta del cliente', 'success');
+    } catch (e) {
+        tpAviso(tpMensajeDeError(e), 'error');
+    }
+}
+
+// ── La carta de cada punto (chips del modal del punto) ───────────────────────
+/**
+ * Chips de "¿qué carta abre el QR de este punto?": la de la tienda (0) o una concreta.
+ * Solo se ofrecen las ACTIVAS: elegir una carta apagada dejaría el QR sin carta útil.
+ */
+async function tpPintarChipsCarta(seleccionado) {
+    const cont = document.getElementById('tpPuntoCarta');
+    if (!cont) return;
+    tpEstado.cartaElegida = Number(seleccionado) || 0;
+    let cartas = [];
+    try { cartas = await ctaTraerCartas(); } catch (e) { cartas = []; }
+    const activas = cartas.filter(function (c) { return Number(c.is_active) === 1; });
+    let html = '<button type="button" class="tp-chip' + (tpEstado.cartaElegida === 0 ? ' activo' : '') + '" data-carta="0">' +
+        '<i class="fas fa-store"></i> La de la tienda</button>';
+    activas.forEach(function (c) {
+        html += '<button type="button" class="tp-chip' + (Number(tpEstado.cartaElegida) === Number(c.menu_id) ? ' activo' : '') +
+            '" data-carta="' + c.menu_id + '"><i class="fas fa-book-open"></i> ' + tpEsc(c.name) + '</button>';
+    });
+    cont.innerHTML = html;
+
+    const ayuda = document.getElementById('tpPuntoCartaAyuda');
+    if (ayuda) {
+        const carta = activas.find(function (c) { return Number(c.menu_id) === Number(tpEstado.cartaElegida); }) || activas[0] || null;
+        if (!carta) {
+            ayuda.innerHTML = '<i class="fas fa-triangle-exclamation"></i> No hay ninguna carta activa: el QR de este punto no llevará a ninguna parte hasta que actives una en la pestaña Carta.';
+        } else if (!ctaAdmitePedido(carta.mode)) {
+            ayuda.innerHTML = '<i class="fas fa-triangle-exclamation"></i> «' + tpEsc(carta.name) + '» es de <strong>solo consulta</strong>: el cliente no podrá pedir desde su teléfono. Cámbialo en la pestaña Carta.';
+        } else {
+            ayuda.innerHTML = '«' + tpEsc(carta.name) + '»: ' + tpEsc(CTA_ETIQUETA_MODO[carta.mode] || carta.mode) +
+                (carta.mode === 'open_tab' ? '. Primero abre la cuenta del punto (o el cliente pide y el personal la abre).' : '.');
+        }
+    }
+}
 
 // ============================================================
 // Tiempo real (WebSocket, canal de la tienda)

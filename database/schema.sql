@@ -931,11 +931,14 @@ CREATE TABLE dining_tables (
     store_id INT NOT NULL,
     label VARCHAR(50) NOT NULL,
     zone VARCHAR(50) NULL,
+    -- Carta que abre el QR de ESTE punto. NULL = la carta de la tienda (la primera activa).
+    menu_id INT NULL DEFAULT NULL,
     qr_token VARCHAR(64) NOT NULL,
     is_active TINYINT(1) NOT NULL DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uk_table_qr_token (qr_token),
     INDEX idx_table_store (store_id, is_active),
+    INDEX idx_dining_tables_menu (menu_id),
     FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

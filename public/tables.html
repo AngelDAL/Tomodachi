@@ -546,6 +546,36 @@
         }
         .tp-modal-compacto { max-width: 460px; width: 94vw; }
 
+        /* ============================================================
+           La CARTA: la lista de cartas de la tienda y el "qué se ve".
+           ============================================================ */
+        .cta-productos { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
+        .cta-producto {
+            display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: var(--ds-radius-md);
+        }
+        .cta-producto.oculto { opacity: .55; }
+        .cta-producto-info { flex: 1 1 auto; min-width: 0; }
+        .cta-producto-nombre { font-size: .92rem; color: var(--text-color); }
+        .cta-producto-meta { font-size: .76rem; color: var(--text-muted); }
+        /* El interruptor de "se ve / no se ve": un botón, nunca un checkbox del navegador. */
+        .cta-interruptor {
+            flex: 0 0 auto; min-width: 74px; min-height: 38px; padding: 6px 12px;
+            border: 1px solid var(--border-color); border-radius: var(--ds-radius-pill);
+            background: var(--bg-body); color: var(--text-medium); cursor: pointer;
+            font-family: var(--font-heading); font-size: .8rem;
+        }
+        .cta-interruptor.activo { background: var(--primary-color); border-color: var(--primary-color); color: #fff; }
+        .tp-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+        .tp-chips .tp-chip {
+            cursor: pointer; font-family: var(--font-heading);
+            background: var(--bg-body); border: 1px solid var(--border-color);
+            color: var(--text-medium); padding: 9px 14px; min-height: 42px;
+            border-radius: var(--ds-radius-pill); display: inline-flex; align-items: center; gap: 8px;
+        }
+        .tp-chips .tp-chip.activo { background: var(--primary-color); border-color: var(--primary-color); color: #fff; }
+
         /* ── Móvil: el modal toma TODA la pantalla y se ve un panel a la vez ── */
         @media (max-width: 900px) {
             .tp-modal-cuenta {
@@ -1083,6 +1113,11 @@
                         <i class="fas fa-fire-burner"></i> Comandas
                         <span class="tp-vista-num hidden" id="tpVistaComandasN">0</span>
                     </button>
+                    <!-- La CARTA es del mismo módulo del piso: es lo que el cliente ve al
+                         escanear el QR de un punto. Tenerla aquí evita una página aparte. -->
+                    <button type="button" class="tp-vista" data-vista="carta">
+                        <i class="fas fa-book-open"></i> Carta
+                    </button>
                 </div>
 
                 <section class="tp-vista-panel" data-vista-panel="salon">
@@ -1255,8 +1290,76 @@
 
                     <div class="kd-historico hidden" id="kdHistorico"></div>
                 </section>
+                <!-- ============ Vista: CARTA (lo que ve el cliente) ============
+                     Mismo patrón de dos niveles que el salón: la lista de cartas se LEE y se
+                     entra a una para elegir qué se ve. Sin botones de más. -->
+                <section class="tp-vista-panel hidden" data-vista-panel="carta">
+                    <div id="ctaLista">
+                        <div class="tp-header">
+                            <div>
+                                <h1 class="tp-titulo">Carta</h1>
+                                <p class="tp-sub">Es lo que el cliente ve al escanear el QR. El modo decide si solo mira (Consulta), si pide y paga al final (Cuenta abierta) o si paga por adelantado (Pago inmediato).</p>
+                            </div>
+                            <div class="tp-botones">
+                                <button type="button" class="tp-btn primario" id="ctaBtnNueva"><i class="fas fa-plus"></i> Nueva carta</button>
+                            </div>
+                        </div>
+                        <div id="ctaCartas">
+                            <div class="tp-vacio"><i class="fas fa-spinner fa-spin"></i><p>Cargando las cartas…</p></div>
+                        </div>
+                    </div>
+
+                    <!-- Nivel 2: qué se ve en la carta (reemplaza la lista, no la tapa) -->
+                    <div class="tp-detalle hidden" id="ctaDetalle">
+                        <div class="tp-detalle-cab">
+                            <button type="button" class="tp-volver" id="ctaVolver"><i class="fas fa-arrow-left"></i> Carta</button>
+                            <div class="tp-detalle-titulo">
+                                <h2 id="ctaDetalleNombre">Qué se ve</h2>
+                                <p class="tp-zona" id="ctaDetalleSub"></p>
+                            </div>
+                        </div>
+                        <div class="tp-menu-buscador" style="margin:0 0 12px">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="ctaBuscar" placeholder="Buscar un producto…" autocomplete="off">
+                        </div>
+                        <div id="ctaProductos" class="cta-productos"></div>
+                    </div>
+                </section>
             </div>
         </main>
+    </div>
+
+    <!-- Modal: crear / editar una carta. El modo y las opciones son BOTONES (nunca un select). -->
+    <div class="tp-overlay hidden" id="tpModalCarta">
+        <div class="tp-modal">
+            <div class="tp-modal-head">
+                <h3 id="ctaModalTitulo">Nueva carta</h3>
+                <button type="button" class="tp-modal-cerrar" data-cerrar="tpModalCarta" aria-label="Cerrar"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="tp-modal-body">
+                <div class="tp-campo">
+                    <label for="ctaNombre">¿Cómo se llama?</label>
+                    <input type="text" id="ctaNombre" maxlength="80" placeholder="Carta del salón, Menú de habitación…" autocomplete="off">
+                </div>
+                <div class="tp-campo">
+                    <label for="ctaDescripcion">Descripción (opcional)</label>
+                    <input type="text" id="ctaDescripcion" maxlength="160" placeholder="Lo que el cliente lee arriba de la carta" autocomplete="off">
+                </div>
+                <div class="tp-campo">
+                    <label>¿Qué puede hacer el cliente?</label>
+                    <div class="tp-chips" id="ctaModos"></div>
+                    <p class="tp-aviso" id="ctaModoAyuda"></p>
+                </div>
+                <div class="tp-campo">
+                    <label>Opciones</label>
+                    <div class="tp-chips" id="ctaOpciones"></div>
+                </div>
+            </div>
+            <div class="tp-modal-pie">
+                <button type="button" class="tp-btn" data-cerrar="tpModalCarta">Cancelar</button>
+                <button type="button" class="tp-btn primario" id="ctaGuardar"><i class="fas fa-check"></i> Guardar</button>
+            </div>
+        </div>
     </div>
 
     <!-- Modal: crear / editar punto -->
@@ -1274,6 +1377,11 @@
                 <div class="tp-campo">
                     <label for="tpPuntoZona">Zona (opcional)</label>
                     <input type="text" id="tpPuntoZona" maxlength="50" placeholder="Salón, Terraza, Planta alta…" autocomplete="off">
+                </div>
+                <div class="tp-campo">
+                    <label>¿Qué carta abre su QR?</label>
+                    <div class="tp-chips" id="tpPuntoCarta"></div>
+                    <p class="tp-aviso" id="tpPuntoCartaAyuda">La carta decide si el cliente que escanea puede pedir desde su teléfono o solo mirar.</p>
                 </div>
                 <div class="tp-aviso" id="tpPuntoAviso">El QR de este punto se genera al guardarlo.</div>
             </div>
@@ -1515,9 +1623,9 @@
     <script src="js/sidebar-loader.js?v=13"></script>
     <script src="js/app.js?v=12"></script>
     <script src="js/ws-realtime.js?v=1"></script>
-    <script src="js/tables.js?v=7"></script>
+    <script src="js/tables.js?v=8"></script>
     <script src="js/cobro.js?v=2"></script>
-    <script src="js/comandas.js?v=1"></script>
+    <script src="js/comandas.js?v=2"></script>
     <script src="lib/animejs/anime.min.js"></script>
     <script src="js/design-system.js?v=5"></script>
 </body>

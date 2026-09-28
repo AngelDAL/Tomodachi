@@ -62,7 +62,13 @@ function urlCartaPunto($menuToken, $tableToken) {
     return UrlHelper::carta($menuToken, $tableToken);
 }
 
-/** Carta con la que se imprime el QR: la elegida, o la primera activa de la tienda. */
+/**
+ * Carta con la que se imprime el QR: la elegida, o la primera activa de la tienda.
+ *
+ * `$menu_id = 0` (o NULL en la base) significa "la carta de la tienda": la primera activa.
+ * Se usa para el QR del punto y también para validar que la carta que le asignan al punto
+ * sea de ESTA tienda y esté activa.
+ */
 function cartaParaQr($conn, $store_id, $menu_id) {
     if ($menu_id > 0) {
         $stmt = $conn->prepare("SELECT menu_id, name, public_token, mode FROM menus
@@ -118,7 +124,7 @@ try {
         $menu_id = isset($_GET['menu_id']) ? (int)$_GET['menu_id'] : 0;
         $solo_activos = !isset($_GET['todas']) || $_GET['todas'] !== '1';
 
-        $sql = "SELECT table_id, label, zone, qr_token, is_active, created_at
+        $sql = "SELECT table_id, label, zone, menu_id, qr_token, is_active, created_at
                 FROM dining_tables WHERE store_id = :store_id";
         if ($solo_activos) $sql .= " AND is_active = 1";
         $sql .= " ORDER BY zone IS NULL, zone ASC, label ASC";
@@ -131,7 +137,10 @@ try {
         foreach ($puntos as &$p) {
             $cuenta = cuentaAbierta($conn, $store_id, (int)$p['table_id']);
             $p['cuenta_abierta'] = $cuenta;
-            $p['url'] = $carta ? urlCartaPunto($carta['public_token'], $p['qr_token']) : null;
+            // Cada punto abre SU carta: la que se le asignó; si no tiene, la de la tienda.
+            $cartaPunto = ((int)$p['menu_id'] > 0) ? cartaParaQr($conn, $store_id, (int)$p['menu_id']) : $carta;
+            $p['carta'] = $cartaPunto;
+            $p['url'] = $cartaPunto ? urlCartaPunto($cartaPunto['public_token'], $p['qr_token']) : null;
             if ($cuenta) $ocupados++;
         }
         unset($p);
@@ -159,6 +168,12 @@ try {
         if ($label === '') $errores['label'] = 'Escribe cómo se llama este punto (Mesa 1, Barra, Habitación 12)';
         elseif (mb_strlen($label) > 50) $errores['label'] = 'Máximo 50 caracteres';
         if ($zone !== null && mb_strlen($zone) > 50) $errores['zone'] = 'Máximo 50 caracteres';
+        // Carta del punto (opcional): si viene, tiene que ser de ESTA tienda y estar activa.
+        // Sin ella (0 o nada) el punto abre la carta de la tienda.
+        $menu_id = (int)($data['menu_id'] ?? 0);
+        if ($menu_id > 0 && !cartaParaQr($conn, $store_id, $menu_id)) {
+            $errores['menu_id'] = 'Esa carta no existe o está desactivada';
+        }
 
         // ¿Ya existe un punto con ese nombre en esta tienda?
         //
@@ -190,8 +205,10 @@ try {
         if (!empty($errores)) Response::validationError($errores);
 
         if ($existente !== null) {
-            $conn->prepare("UPDATE dining_tables SET is_active = 1, zone = :zone WHERE table_id = :id")
-                 ->execute([':zone' => $zone, ':id' => $existente]);
+            $conn->prepare("UPDATE dining_tables SET is_active = 1, zone = :zone,
+                                                   menu_id = COALESCE(:menu_id, menu_id)
+                            WHERE table_id = :id")
+                 ->execute([':zone' => $zone, ':menu_id' => $menu_id > 0 ? $menu_id : null, ':id' => $existente]);
             $stmt = $conn->prepare("SELECT qr_token FROM dining_tables WHERE table_id = :id");
             $stmt->execute([':id' => $existente]);
             $token = (string)$stmt->fetchColumn();
@@ -210,9 +227,15 @@ try {
         }
 
         $token = bin2hex(random_bytes(16));
-        $stmt = $conn->prepare("INSERT INTO dining_tables (store_id, label, zone, qr_token, is_active)
-                                VALUES (:store_id, :label, :zone, :token, 1)");
-        $stmt->execute([':store_id' => $store_id, ':label' => $label, ':zone' => $zone, ':token' => $token]);
+        $stmt = $conn->prepare("INSERT INTO dining_tables (store_id, label, zone, menu_id, qr_token, is_active)
+                                VALUES (:store_id, :label, :zone, :menu_id, :token, 1)");
+        $stmt->execute([
+            ':store_id' => $store_id,
+            ':label' => $label,
+            ':zone' => $zone,
+            ':menu_id' => $menu_id > 0 ? $menu_id : null,
+            ':token' => $token,
+        ]);
         $nuevo_id = (int)$conn->lastInsertId();
 
         $carta = cartaParaQr($conn, $store_id, 0);
@@ -264,6 +287,15 @@ try {
             $campos[] = 'is_active = :activo';
             $params[':activo'] = ((int)$data['is_active'] === 1) ? 1 : 0;
         }
+        // La carta que abre el QR de ESTE punto. 0 o null = la carta de la tienda.
+        if (array_key_exists('menu_id', $data)) {
+            $menu_id = (int)($data['menu_id'] ?? 0);
+            if ($menu_id > 0 && !cartaParaQr($conn, $store_id, $menu_id)) {
+                Response::validationError(['menu_id' => 'Esa carta no existe o está desactivada']);
+            }
+            $campos[] = 'menu_id = :menu_id';
+            $params[':menu_id'] = $menu_id > 0 ? $menu_id : null;
+        }
         // Rotar el token invalida los QR ya impresos de ese punto (por si se filtró).
         $token_nuevo = null;
         if (!empty($data['rotate_token'])) {
@@ -277,7 +309,7 @@ try {
                                " WHERE table_id = :id AND store_id = :store_id");
         $stmt->execute($params);
 
-        $carta = cartaParaQr($conn, $store_id, 0);
+        $carta = cartaParaQr($conn, $store_id, (int)($data['menu_id'] ?? (int)($punto['menu_id'] ?? 0)));
         $token_final = $token_nuevo ?: $punto['qr_token'];
         Response::success([
             'table_id' => $table_id,

@@ -143,6 +143,13 @@
         if (!document.querySelector('.mp-overlay:not(.hidden)')) {
             document.body.classList.remove('con-capa');
         }
+        // La hoja del pedido en el teléfono: al cerrarla se vuelve a la carta. Si no, la vista
+        // "pedido" sigue puesta, la carta queda oculta y la barra del pedido escondida: el
+        // comensal ve una pantalla EN BLANCO.
+        if (id === 'modalPedido' && !pedidoEnColumna() && estado.vista === 'pedido') {
+            estado.vista = 'carta';
+            aplicarVista();
+        }
     }
 
     function mostrarAvisoModal(id, texto) {
@@ -1025,6 +1032,8 @@
     function verCarta() {
         estado.vista = 'carta';
         aplicarVista();
+        // Al volver a la carta se baja la hoja del pedido (si estaba abierta).
+        if (!pedidoEnColumna()) cerrarModal('modalPedido');
         // El enlace deja de pedir "abre en el pedido" cuando el cliente ya está viendo la carta.
         if ((window.location.hash || '').toLowerCase() === '#pedido') {
             try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (e) { /* sin history */ }
@@ -1034,6 +1043,13 @@
     function verPedido() {
         estado.vista = 'pedido';
         aplicarVista();
+        // En el teléfono "el pedido" ES la hoja inferior. Sin abrirla, la vista pedido esconde
+        // la carta (y la barra del pedido) y la pantalla queda en blanco: el comensal toca
+        // "Pedido" y no aparece nada. En escritorio y tableta manda la columna de siempre.
+        if (!pedidoEnColumna()) {
+            abrirModal('modalPedido');
+            renderPedidoModal();
+        }
         refrescarCuenta({ silencioso: false });
     }
 

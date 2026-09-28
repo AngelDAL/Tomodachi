@@ -463,7 +463,9 @@
             tpAviso(resumen, 'ok');
 
             tpCerrarModal('tpModalCobro');
-            tpCerrarModal('tpModalCuenta');
+            // La cuenta cobrada ya no está: se vuelve al mapa del salón (la cuenta vive en el
+            // apartado de su punto, no en un modal, así que no hay modal que cerrar).
+            if (typeof tpCerrarDetalle === 'function') tpCerrarDetalle();
             // El mapa y las cuentas abiertas se vuelven a leer: la cuenta ya no está.
             if (typeof tpCargar === 'function') tpCargar(true);
         } catch (e) {
@@ -509,8 +511,14 @@
     // =========================================================
 
     document.addEventListener('DOMContentLoaded', function () {
-        const btn = $('tpCuentaCobrar');
-        if (btn) btn.addEventListener('click', abrir);
+        // El botón de cobrar es una de las CUATRO acciones del apartado del punto, y esa
+        // rejilla se rearma según el estado de la mesa: el botón se reemplaza en cada
+        // repintado. Por eso se escucha por DELEGACIÓN en el documento y no en el elemento
+        // (si no, al rearmarse la rejilla el clic "no haría nada" y no habría error alguno).
+        document.addEventListener('click', function (ev) {
+            const btn = ev.target.closest('#tpCuentaCobrar');
+            if (btn && !btn.disabled) abrir();
+        });
 
         const chipsPropina = $('tpCobroPropinaChips');
         if (chipsPropina) {

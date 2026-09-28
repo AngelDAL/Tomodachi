@@ -148,6 +148,95 @@
             .tp-modal { max-height: 94vh; }
         }
         /* ============================================================
+           Interfaz en DOS NIVELES: el mapa y el apartado del punto.
+           El mapa se LEE (fichas con estado y datos, sin botones); se actúa
+           al entrar al apartado, donde caben cuatro acciones y nada más.
+           Regla del proyecto: menos botones, más intención.
+           ============================================================ */
+        /* La ficha del mapa es un botón completo: se toca donde sea. */
+        button.tp-card { text-align: left; font-family: inherit; cursor: pointer; color: var(--text-color); width: 100%; }
+        button.tp-card:hover { border-color: var(--primary-color); }
+        button.tp-card:active { transform: scale(.995); }
+        .tp-card-pie { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: auto; }
+        .tp-card-flecha { color: var(--text-muted); }
+        .tp-card-total { font-family: var(--font-heading); font-size: 1.15rem; color: var(--text-color); font-variant-numeric: tabular-nums; }
+
+        /* El apartado de un punto: reemplaza al mapa, no lo tapa. */
+        .tp-detalle { display: flex; flex-direction: column; gap: 14px; }
+        .tp-detalle.hidden { display: none; }
+        .tp-detalle-cab { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+        .tp-volver {
+            display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 10px 14px;
+            border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-color);
+            border-radius: var(--ds-radius-pill); cursor: pointer; font-family: var(--font-heading); font-size: .9rem;
+        }
+        .tp-volver:hover { border-color: var(--primary-color); color: var(--primary-color); }
+        .tp-detalle-titulo { flex: 1 1 auto; min-width: 0; }
+        .tp-detalle-titulo h2 { margin: 0; font-family: var(--font-heading); font-size: 1.35rem; color: var(--text-color); }
+        .tp-detalle-titulo .tp-zona { margin: 2px 0 0; }
+
+        /* La ficha de estado: el código, los datos y el total. Sin botones. */
+        .tp-ficha {
+            display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px;
+            background: var(--bg-card); border: 1px solid var(--border-color); border-left: 4px solid var(--danger-color);
+            border-radius: var(--ds-radius-lg); box-shadow: var(--ds-shadow-sm); padding: 16px 18px;
+        }
+        .tp-ficha-identidad { display: flex; align-items: center; gap: 14px; min-width: 0; }
+        .tp-ficha-texto h3 { margin: 0; font-family: var(--font-heading); font-size: 1.05rem; color: var(--text-color); }
+        .tp-ficha-total { text-align: right; }
+        .tp-ficha-total span { display: block; font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); }
+        .tp-ficha-total strong { font-family: var(--font-heading); font-size: 1.6rem; color: var(--text-color); font-variant-numeric: tabular-nums; }
+        .tp-ficha-libre {
+            display: flex; align-items: center; gap: 14px; background: var(--bg-card);
+            border: 1px solid var(--border-color); border-left: 4px solid var(--success-color);
+            border-radius: var(--ds-radius-lg); padding: 16px 18px;
+        }
+        .tp-ficha-libre i { font-size: 1.6rem; color: var(--success-color); }
+        .tp-ficha-libre h3 { margin: 0; font-family: var(--font-heading); font-size: 1.05rem; color: var(--text-color); }
+        .tp-ficha-libre p { margin: 2px 0 0; font-size: .86rem; color: var(--text-muted); }
+
+        /* Las acciones del apartado: máximo cuatro, grandes, con su nombre a la vista. */
+        .tp-detalle-acciones { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+        .tp-accion {
+            display: flex; align-items: center; gap: 12px; min-height: 58px; padding: 12px 16px;
+            border: 1px solid var(--border-color); border-radius: var(--ds-radius-lg);
+            background: var(--bg-card); color: var(--text-color); font-family: var(--font-heading);
+            font-size: .95rem; cursor: pointer; text-align: left;
+        }
+        .tp-accion i { font-size: 1.1rem; color: var(--primary-color); width: 22px; text-align: center; }
+        .tp-accion:hover { border-color: var(--primary-color); }
+        .tp-accion.primario { background: var(--primary-color); border-color: var(--primary-color); color: #fff; }
+        .tp-accion.primario i { color: #fff; }
+        .tp-accion.primario:hover { color: #fff; opacity: .93; }
+        .tp-accion.peligro { color: var(--danger-color); border-color: color-mix(in srgb, var(--danger-color) 40%, var(--border-color)); }
+        .tp-accion.peligro i { color: var(--danger-color); }
+        .tp-accion:disabled { opacity: .5; cursor: not-allowed; }
+
+        /* La cuenta embebida en el apartado (ya no es un modal encima del salón). */
+        .tp-cuenta-embebida {
+            display: flex; flex-direction: column; overflow: hidden;
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: var(--ds-radius-lg); height: min(62vh, 620px);
+        }
+        .tp-cuenta-embebida.hidden { display: none; }
+        .tp-cuenta-embebida .tp-cuenta-cuerpo { flex: 1 1 auto; }
+        .tp-cuenta-embebida .tp-menu-cats { border-bottom: 1px solid var(--border-lighter, #eee); }
+
+        @media (max-width: 900px) {
+            /* Dos columnas de acciones: en el teléfono también se busca con el pulgar. */
+            .tp-detalle-acciones { grid-template-columns: 1fr 1fr; }
+            .tp-accion { min-height: 64px; padding: 12px 14px; font-size: .9rem; }
+            .tp-cuenta-embebida { height: 68dvh; }
+            .tp-detalle-cab .tp-volver { padding: 10px 12px; }
+            /* El menú de tres puntos se va al extremo derecho de su renglón: así se lee como
+               "las opciones de ESTE punto" y no como un botón suelto a la izquierda. */
+            .tp-detalle-cab .tp-engranaje { margin-left: auto; }
+            .tp-detalle-titulo h2 { font-size: 1.15rem; }
+            .tp-ficha { padding: 14px; }
+            .tp-ficha-total strong { font-size: 1.35rem; }
+        }
+
+        /* ============================================================
            La cuenta: la herramienta de trabajo del mesero.
            Dos paneles —menú a la izquierda, pedido a la derecha con el total siempre
            visible— dentro de un modal grande. En móvil toma TODA la pantalla y se ve un
@@ -996,24 +1085,117 @@
                 </div>
 
                 <section class="tp-vista-panel" data-vista-panel="salon">
-                    <div class="tp-header">
-                        <div>
-                            <h1 class="tp-titulo">Puntos de servicio</h1>
-                            <p class="tp-sub">Dónde se atiende: mesas, barra, habitaciones. El QR de cada punto abre la carta ya sabiendo dónde está el cliente.</p>
+                    <!-- ===== Nivel 1: el mapa del salón =====
+                         Cada punto es una FICHA que se lee: nombre, zona y su estado actual con
+                         sus datos (código, tiempo, personas, consumo, total). No lleva botones a
+                         propósito: se toca la ficha y se entra a su apartado, que es donde están
+                         las acciones. Menos botones en pantalla, más información. -->
+                    <div id="tpMapa">
+                        <div class="tp-header">
+                            <div>
+                                <h1 class="tp-titulo">Puntos de servicio</h1>
+                                <p class="tp-sub">Dónde se atiende: mesas, barra, habitaciones. El QR de cada punto abre la carta ya sabiendo dónde está el cliente.</p>
+                            </div>
+                            <div class="tp-botones">
+                                <!-- Sin botón de actualizar a propósito: el mapa se actualiza solo
+                                     por WebSocket (canal de la tienda). Aquí se ve el estado. -->
+                                <span class="tp-vivo tp-vivo-mapa" id="tpMapaVivo" title="Se actualiza solo, en tiempo real"><i class="fas fa-bolt"></i> <span id="tpMapaVivoTexto">en vivo</span></span>
+                                <button type="button" class="tp-btn primario" id="tpBtnNuevo"><i class="fas fa-plus"></i> Nuevo punto</button>
+                                <!-- Lo que no es del día a día (ver los desactivados) vive en el
+                                     menú de tres puntos: en pantalla solo quedan los 3 datos y
+                                     una acción. -->
+                                <div class="tp-engranaje">
+                                    <button type="button" class="tp-btn tp-icono" id="tpMapaMenuBtn" aria-haspopup="true" aria-expanded="false" title="Más opciones del mapa"><i class="fas fa-ellipsis"></i></button>
+                                    <div class="tp-menu-config hidden" id="tpMapaMenu">
+                                        <button type="button" id="tpMenuApagados"><i class="fas fa-eye"></i> <span id="tpApagadosTexto">Ver desactivados</span></button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="tp-botones">
-                            <!-- Sin botón de actualizar a propósito: el mapa se actualiza solo
-                                 por WebSocket (canal de la tienda). Aquí se ve el estado. -->
-                            <span class="tp-vivo tp-vivo-mapa" id="tpMapaVivo" title="Se actualiza solo, en tiempo real"><i class="fas fa-bolt"></i> <span id="tpMapaVivoTexto">en vivo</span></span>
-                            <button type="button" class="tp-btn" id="tpBtnApagados" title="Ver también los desactivados"><i class="fas fa-eye"></i> Ver desactivados</button>
-                            <button type="button" class="tp-btn primario" id="tpBtnNuevo"><i class="fas fa-plus"></i> Nuevo punto</button>
+
+                        <div class="tp-resumen" id="tpResumen"></div>
+                        <div id="tpContenido" style="margin-top: 18px;">
+                            <div class="tp-vacio"><i class="fas fa-spinner fa-spin"></i><p>Cargando puntos de servicio…</p></div>
                         </div>
                     </div>
 
-                    <div class="tp-resumen" id="tpResumen"></div>
-                    <div id="tpContenido" style="margin-top: 18px;">
-                        <div class="tp-vacio"><i class="fas fa-spinner fa-spin"></i><p>Cargando puntos de servicio…</p></div>
-                    </div>
+                    <!-- ===== Nivel 2: el apartado de UN punto =====
+                         Sustituye al mapa (una cosa a la vez, sin modales encima de modales):
+                         la ficha del estado, cuatro acciones y, si hay cuenta, el pedido y el menú
+                         del mesero embebidos en la misma vista. -->
+                    <section class="tp-detalle hidden" id="tpDetalle">
+                        <div class="tp-detalle-cab">
+                            <button type="button" class="tp-volver" id="tpVolver"><i class="fas fa-arrow-left"></i> Puntos de servicio</button>
+                            <div class="tp-detalle-titulo">
+                                <h2 id="tpDetalleNombre">Punto de servicio</h2>
+                                <p class="tp-zona hidden" id="tpDetalleZona"></p>
+                            </div>
+                            <span class="tp-estado" id="tpDetalleEstado">Libre</span>
+                            <span class="tp-vivo" id="tpCuentaVivo" title="Se actualiza solo, en tiempo real"><i class="fas fa-bolt"></i> <span>en vivo</span></span>
+                            <!-- Menú del punto: lo que NO es flujo del día (pausar pedidos, cerrar
+                                 o cancelar la cuenta, editar, desactivar). Se pinta según el estado. -->
+                            <div class="tp-engranaje hidden" id="tpDetalleEngranaje">
+                                <button type="button" class="tp-btn tp-icono" id="tpDetalleMenuBtn" aria-haspopup="true" aria-expanded="false" title="Opciones del punto"><i class="fas fa-ellipsis"></i></button>
+                                <div class="tp-menu-config hidden" id="tpDetalleMenu"></div>
+                            </div>
+                        </div>
+
+                        <!-- La ficha: qué es este punto y cómo está. Sin un solo botón. -->
+                        <div class="tp-ficha-libre hidden" id="tpDetalleLibre"></div>
+                        <div class="tp-ficha hidden" id="tpDetalleFicha">
+                            <div class="tp-ficha-identidad">
+                                <div class="tp-codigo tp-codigo-grande" id="tpCuentaCodigo">----</div>
+                                <div class="tp-ficha-texto">
+                                    <h3 id="tpCuentaTitulo">Cuenta</h3>
+                                    <p class="tp-cuenta-sub" id="tpCuentaSub"></p>
+                                </div>
+                            </div>
+                            <div class="tp-ficha-total">
+                                <span>Total</span>
+                                <strong id="tpCuentaTotal">$0.00</strong>
+                            </div>
+                        </div>
+
+                        <!-- Las acciones del punto: máximo CUATRO, grandes y con su nombre. -->
+                        <div class="tp-detalle-acciones" id="tpDetalleAcciones"></div>
+
+                        <!-- La cuenta del punto, embebida: el pedido y el menú del mesero en la
+                             misma vista (antes vivían en un modal encima del salón). -->
+                        <div class="tp-cuenta-embebida hidden" id="tpCuentaPanel">
+                            <div class="tp-cuenta-tabs" id="tpCuentaTabs">
+                                <button type="button" class="tp-tab activo" data-lado="pedido">Pedido <span class="tp-tab-total" id="tpTabTotal">$0.00</span></button>
+                                <button type="button" class="tp-tab" data-lado="menu">Menú</button>
+                            </div>
+
+                            <div class="tp-cuenta-cuerpo" id="tpCuentaCuerpoDos" data-lado="pedido">
+                                <div class="tp-panel tp-panel-menu">
+                                    <div class="tp-panel-titulo">Menú <span class="tp-panel-nota">para anotar a nombre del cliente</span></div>
+                                    <div class="tp-menu-buscador">
+                                        <i class="fas fa-search"></i>
+                                        <input type="text" id="tpMenuBuscar" placeholder="Buscar platillo o servicio…" autocomplete="off">
+                                    </div>
+                                    <div class="tp-menu-cats" id="tpMenuCategorias"></div>
+                                    <div class="tp-panel-scroll" id="tpMenuProductos">
+                                        <div class="tp-vacio-mini"><i class="fas fa-spinner fa-spin"></i> Cargando el menú…</div>
+                                    </div>
+                                </div>
+
+                                <div class="tp-panel tp-panel-pedido">
+                                    <div class="tp-panel-titulo">
+                                        Pedido
+                                        <strong class="tp-total-destacado" id="tpCuentaTotalPedido">$0.00</strong>
+                                    </div>
+                                    <div class="tp-panel-scroll" id="tpCuentaPedido"></div>
+                                    <div class="tp-panel-pie">
+                                        <div class="tp-pie-linea" id="tpCuentaPendientes"></div>
+                                        <div class="tp-pie-acciones">
+                                            <button type="button" class="tp-btn" id="tpCuentaEnviar"><i class="fas fa-paper-plane"></i> Enviar a preparación</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
                 </section>
 
                 <!-- ============ Vista: COMANDAS (la pantalla de la estación) ============
@@ -1120,70 +1302,9 @@
         </div>
     </div>
 
-    <!-- Modal: la cuenta. Es la herramienta de trabajo del mesero: a la izquierda el menú
-         completo para anotar, a la derecha el pedido con el total siempre visible. Sin botón
-         de refrescar: se actualiza solo por WebSocket. -->
-    <div class="tp-overlay hidden" id="tpModalCuenta">
-        <div class="tp-modal tp-modal-cuenta">
-            <div class="tp-modal-head tp-cuenta-cabecera">
-                <div class="tp-cuenta-identidad">
-                    <div class="tp-codigo tp-codigo-grande" id="tpCuentaCodigo">----</div>
-                    <div>
-                        <h3 id="tpCuentaTitulo">Cuenta</h3>
-                        <p class="tp-cuenta-sub" id="tpCuentaSub"></p>
-                    </div>
-                </div>
-                <div class="tp-cuenta-acciones-cab">
-                    <span class="tp-vivo" id="tpCuentaVivo" title="Se actualiza solo, en tiempo real"><i class="fas fa-bolt"></i> <span>en vivo</span></span>
-                    <button type="button" class="tp-btn tp-icono" id="tpCuentaQr" aria-label="QR de la cuenta" title="QR para que el cliente pida desde su celular"><i class="fas fa-qrcode"></i></button>
-                    <div class="tp-engranaje">
-                        <button type="button" class="tp-btn tp-icono" id="tpCuentaEngranaje" aria-haspopup="true" aria-expanded="false" title="Configuración de la cuenta"><i class="fas fa-gear"></i></button>
-                        <div class="tp-menu-config hidden" id="tpCuentaConfig">
-                            <button type="button" data-config="pause"><i class="fas fa-pause"></i> <span id="tpConfigPausaTexto">Pausar pedidos</span></button>
-                            <button type="button" data-config="close"><i class="fas fa-flag-checkered"></i> Cerrar cuenta</button>
-                            <button type="button" data-config="cancel" class="peligro"><i class="fas fa-ban"></i> Cancelar cuenta…</button>
-                        </div>
-                    </div>
-                    <button type="button" class="tp-modal-cerrar" data-cerrar="tpModalCuenta" aria-label="Cerrar"><i class="fas fa-times"></i></button>
-                </div>
-            </div>
-
-            <!-- En móvil manda este selector: una cosa a la vez, a pantalla completa -->
-            <div class="tp-cuenta-tabs" id="tpCuentaTabs">
-                <button type="button" class="tp-tab activo" data-lado="pedido">Pedido <span class="tp-tab-total" id="tpTabTotal">$0.00</span></button>
-                <button type="button" class="tp-tab" data-lado="menu">Menú</button>
-            </div>
-
-            <div class="tp-cuenta-cuerpo" id="tpCuentaCuerpoDos">
-                <div class="tp-panel tp-panel-menu">
-                    <div class="tp-panel-titulo">Menú <span class="tp-panel-nota">para anotar a nombre del cliente</span></div>
-                    <div class="tp-menu-buscador">
-                        <i class="fas fa-search"></i>
-                        <input type="text" id="tpMenuBuscar" placeholder="Buscar platillo o servicio…" autocomplete="off">
-                    </div>
-                    <div class="tp-menu-cats" id="tpMenuCategorias"></div>
-                    <div class="tp-panel-scroll" id="tpMenuProductos">
-                        <div class="tp-vacio-mini"><i class="fas fa-spinner fa-spin"></i> Cargando el menú…</div>
-                    </div>
-                </div>
-
-                <div class="tp-panel tp-panel-pedido">
-                    <div class="tp-panel-titulo">
-                        Pedido
-                        <strong class="tp-total-destacado" id="tpCuentaTotal">$0.00</strong>
-                    </div>
-                    <div class="tp-panel-scroll" id="tpCuentaPedido"></div>
-                    <div class="tp-panel-pie">
-                        <div class="tp-pie-linea" id="tpCuentaPendientes"></div>
-                        <div class="tp-pie-acciones">
-                            <button type="button" class="tp-btn" id="tpCuentaEnviar"><i class="fas fa-paper-plane"></i> Enviar a preparación</button>
-                            <button type="button" class="tp-btn primario" id="tpCuentaCobrar"><i class="fas fa-cash-register"></i> Cobrar</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- La cuenta YA NO ES UN MODAL: vive embebida en el apartado de su punto, dentro de
+         la vista del salón (`#tpCuentaPanel`). Así no hay un modal encima de otro: el
+         mesero entra a la mesa, ve su estado y actúa desde ahí. -->
 
     <!-- Aquí vivía la hoja "Agregar: cantidad y notas", que se abría ENCIMA de la cuenta.
          Se retiró: el platillo se agrega de un toque desde el menú y las notas se escriben
@@ -1389,8 +1510,8 @@
     <script src="js/sidebar-loader.js?v=13"></script>
     <script src="js/app.js?v=12"></script>
     <script src="js/ws-realtime.js?v=1"></script>
-    <script src="js/tables.js?v=5"></script>
-    <script src="js/cobro.js?v=1"></script>
+    <script src="js/tables.js?v=6"></script>
+    <script src="js/cobro.js?v=2"></script>
     <script src="js/comandas.js?v=1"></script>
     <script src="lib/animejs/anime.min.js"></script>
     <script src="js/design-system.js?v=5"></script>

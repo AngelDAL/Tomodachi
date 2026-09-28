@@ -43,6 +43,12 @@ const tpEstado = {
     // se actualiza SOLO su tarjeta, nunca la lista completa.
     pedidoGrupos: null,
     pedidoCtx: null,
+    // El apartado abierto (mapa → punto): el id del punto, o null si se está en el mapa.
+    // Una cosa a la vez: el apartado SUSTITUYE al mapa, no lo tapa con un modal.
+    detalle: null,
+    // Firma de lo último pintado en el apartado: estado + total + consumo. Sirve para no
+    // rearmar la rejilla de acciones en cada aviso de tiempo real (repintar solo lo que cambió).
+    detalleFirma: null,
     repintados: 0,             // auditoría: cuántas veces se repintó la lista completa
     tiempoReal: null,
     vivo: true,
@@ -144,7 +150,8 @@ async function tpCargar(silencioso) {
         tpEstado.cuentas = cuentas.checks || [];
         tpPintarResumen();
         tpPintar();
-        if (!silencioso && !tpAlgunModalAbierto()) tpPintarCuenta();
+        // tpPintarCuenta se protege sola: si la cuenta no está en pantalla, no pinta nada.
+        if (!silencioso) tpPintarCuenta();
     } catch (e) {
         if (!silencioso) {
             document.getElementById('tpContenido').innerHTML =
@@ -156,13 +163,12 @@ async function tpCargar(silencioso) {
 
 function tpPintarResumen() {
     const t = tpEstado.totales || { puntos: 0, ocupados: 0, libres: 0 };
-    const abiertas = tpEstado.cuentas.length;
-    const importe = (tpEstado.cuentas || []).reduce((s, c) => s + (Number(c.total) || 0), 0);
+    const importe = (tpEstado.cuentas || []).reduce(function (s, c) { return s + (Number(c.total) || 0); }, 0);
+    // TRES datos y nada más: es lo que se mira de reojo antes de decidir a qué mesa ir.
+    // El resto (cuántos puntos hay, cuántas cuentas) se lee en el propio mapa.
     let html = '';
-    html += '<div class="tp-chip"><i class="fas fa-chair"></i> Puntos <strong>' + t.puntos + '</strong></div>';
-    html += '<div class="tp-chip ' + (t.ocupados ? 'ocupado' : '') + '"><i class="fas fa-circle-dot"></i> Ocupados <strong>' + t.ocupados + '</strong></div>';
     html += '<div class="tp-chip"><i class="fas fa-circle-check"></i> Libres <strong>' + t.libres + '</strong></div>';
-    html += '<div class="tp-chip"><i class="fas fa-receipt"></i> Cuentas abiertas <strong>' + abiertas + '</strong></div>';
+    html += '<div class="tp-chip ' + (t.ocupados ? 'ocupado' : '') + '"><i class="fas fa-circle-dot"></i> Ocupadas <strong>' + t.ocupados + '</strong></div>';
     html += '<div class="tp-chip"><i class="fas fa-sack-dollar"></i> Por cobrar <strong>' + tpDinero(importe) + '</strong></div>';
     document.getElementById('tpResumen').innerHTML = html;
 }
@@ -172,6 +178,17 @@ function tpCuentaDePunto(tableId) {
     return tpEstado.cuentas.find(function (c) {
         return (c.puntos || []).some(function (p) { return Number(p.table_id) === Number(tableId); });
     }) || null;
+}
+
+/**
+ * ¿Se está viendo la cuenta de un punto ahora mismo?
+ * Sustituye al viejo "¿hay algún modal abierto?": la cuenta ya no es un modal, es el
+ * apartado del punto. Con esto se evita repintar en segundo plano.
+ */
+function tpCuentaVisible() {
+    const panel = document.getElementById('tpCuentaPanel');
+    const det = document.getElementById('tpDetalle');
+    return !!(panel && det && !panel.classList.contains('hidden') && !det.classList.contains('hidden'));
 }
 
 /** El contador de repintados completos: para no dejar crecer el número sin freno. */
@@ -204,58 +221,341 @@ function tpPintar() {
             'No hay ninguna carta publicada, así que el QR de los puntos todavía no lleva a ninguna parte. Se arregla publicando una carta.</div>';
     }
 
-    const tarjetas = puntos.map(function (p) {
-        const cuenta = tpCuentaDePunto(p.table_id);
-        const apagado = Number(p.is_active) !== 1;
-        const clase = 'tp-card' + (cuenta ? ' ocupado' : '') + (apagado ? ' apagado' : '');
-        const estado = apagado
-            ? '<span class="tp-estado apagado">Desactivado</span>'
-            : (cuenta ? '<span class="tp-estado ocupado">Ocupado</span>' : '<span class="tp-estado">Libre</span>');
+    cont.innerHTML = aviso + '<div class="tp-grid">' + puntos.map(tpFichaDePunto).join('') + '</div>';
 
-        let datos = '';
-        if (cuenta) {
-            datos += '<div class="tp-codigo">' + tpEsc(cuenta.code) + '</div>';
-            datos += '<div class="tp-datos">' +
+    // Si hay un apartado abierto se mantiene al día (o se cierra solo si su punto dejó de
+    // existir en el mapa, p. ej. al desactivarlo sin "ver desactivados").
+    if (tpEstado.detalle !== null) {
+        if (tpPuntoPorId(tpEstado.detalle)) tpPintarDetalle();
+        else tpCerrarDetalle();
+    }
+}
+
+/**
+ * La ficha de un punto EN EL MAPA: se lee, no se opera.
+ *
+ * Lleva su estado actual y los datos que importan (código, tiempo, personas, consumo y
+ * total) y NINGÚN botón: toda la ficha es el botón que entra a su apartado. Así una pantalla
+ * con veinte mesas no son ochenta botones, y quien no está acostumbrado no tiene que decidir
+ * nada hasta que entra a la mesa que le interesa.
+ */
+function tpFichaDePunto(p) {
+    const cuenta = tpCuentaDePunto(p.table_id);
+    const apagado = Number(p.is_active) !== 1;
+    const clase = 'tp-card' + (cuenta ? ' ocupado' : '') + (apagado ? ' apagado' : '');
+    const estado = apagado
+        ? '<span class="tp-estado apagado">Desactivado</span>'
+        : (cuenta ? '<span class="tp-estado ocupado">Ocupado</span>' : '<span class="tp-estado">Libre</span>');
+
+    const flecha = '<span class="tp-card-flecha"><i class="fas fa-chevron-right"></i></span>';
+    let cuerpo = '';
+    let pie = '';
+
+    if (apagado) {
+        cuerpo = '<div class="tp-datos"><span><i class="fas fa-ban"></i> Fuera de servicio</span></div>';
+        pie = '<span class="tp-datos"><span>Entra para reactivarlo</span></span>' + flecha;
+    } else if (cuenta) {
+        cuerpo = '<div><span class="tp-codigo">' + tpEsc(cuenta.code) + '</span></div>' +
+            '<div class="tp-datos">' +
                 '<span><i class="fas fa-clock"></i> ' + Number(cuenta.minutos_abierta) + ' min</span>' +
                 '<span><i class="fas fa-user-group"></i> ' + Number(cuenta.personas) + '</span>' +
                 '<span><i class="fas fa-utensils"></i> ' + Number(cuenta.items) + '</span>' +
-                '<span><i class="fas fa-sack-dollar"></i> ' + tpDinero(cuenta.total) + '</span>' +
-                '</div>';
-            if ((cuenta.puntos || []).length > 1) {
-                datos += '<div class="tp-datos"><span><i class="fas fa-link"></i> ' + tpEsc(cuenta.puntos_texto) + '</span></div>';
-            }
-        } else if (!apagado) {
-            datos += '<div class="tp-datos"><span><i class="fas fa-circle-check"></i> Sin cuenta abierta</span></div>';
-        }
-
-        let acciones = '';
-        if (apagado) {
-            acciones += '<button type="button" class="tp-btn primario" data-accion="reactivar" data-id="' + p.table_id + '"><i class="fas fa-power-off"></i> Reactivar</button>';
-        } else if (cuenta) {
-            acciones += '<button type="button" class="tp-btn primario" data-accion="ver" data-id="' + p.table_id + '"><i class="fas fa-receipt"></i> Ver cuenta</button>';
-            acciones += '<button type="button" class="tp-btn" data-accion="juntar" data-id="' + p.table_id + '"><i class="fas fa-link"></i> Juntar</button>';
-        } else {
-            acciones += '<button type="button" class="tp-btn primario" data-accion="abrir" data-id="' + p.table_id + '"><i class="fas fa-play"></i> Abrir cuenta</button>';
-        }
-        acciones += '<button type="button" class="tp-btn tp-icono" data-accion="qr" data-id="' + p.table_id + '" title="Ver el QR"><i class="fas fa-qrcode"></i></button>';
-        acciones += '<button type="button" class="tp-btn tp-icono" data-accion="editar" data-id="' + p.table_id + '" title="Editar"><i class="fas fa-pen"></i></button>';
-        if (!apagado) {
-            acciones += '<button type="button" class="tp-btn tp-icono peligro" data-accion="desactivar" data-id="' + p.table_id + '" title="Desactivar"><i class="fas fa-ban"></i></button>';
-        }
-
-        return '<div class="' + clase + '">' +
-            '<div class="tp-card-top">' +
-                '<div><h3 class="tp-nombre">' + tpEsc(p.label) + '</h3>' +
-                (p.zone ? '<p class="tp-zona">' + tpEsc(p.zone) + '</p>' : '') + '</div>' +
-                estado +
             '</div>' +
-            datos +
-            '<div class="tp-acciones">' + acciones + '</div>' +
-            '</div>';
-    }).join('');
+            ((cuenta.puntos || []).length > 1
+                ? '<div class="tp-datos"><span><i class="fas fa-link"></i> ' + tpEsc(cuenta.puntos_texto) + '</span></div>'
+                : '');
+        pie = '<span class="tp-card-total">' + tpDinero(cuenta.total) + '</span>' + flecha;
+    } else {
+        cuerpo = '<div class="tp-datos"><span><i class="fas fa-circle-check"></i> Sin cuenta abierta</span></div>';
+        pie = '<span class="tp-datos"><span>Lista para atender</span></span>' + flecha;
+    }
 
-    cont.innerHTML = aviso + '<div class="tp-grid">' + tarjetas + '</div>';
+    return '<button type="button" class="' + clase + '" data-abrir="' + p.table_id + '" ' +
+        'aria-label="Abrir el apartado de ' + tpEsc(p.label) + '">' +
+        '<div class="tp-card-top">' +
+            '<div><h3 class="tp-nombre">' + tpEsc(p.label) + '</h3>' +
+            (p.zone ? '<p class="tp-zona">' + tpEsc(p.zone) + '</p>' : '') + '</div>' +
+            estado +
+        '</div>' +
+        cuerpo +
+        '<div class="tp-card-pie">' + pie + '</div>' +
+        '</button>';
 }
+
+// ============================================================
+// El apartado de un punto: nivel 2 del salón
+// ============================================================
+/**
+ * Entra al apartado de un punto: sustituye al mapa.
+ *
+ * No es un modal: es la misma vista del salón mostrando otra cosa. Por eso dentro se puede
+ * poner la cuenta completa (pedido y menú) sin que haya un modal encima de otro.
+ */
+function tpAbrirDetalle(tableId) {
+    const p = tpPuntoPorId(tableId);
+    if (!p) return;
+    tpEstado.detalle = Number(p.table_id);
+    tpEstado.detalleFirma = null;   // se pinta de cero la ficha y sus acciones
+    document.getElementById('tpMapa').classList.add('hidden');
+    document.getElementById('tpDetalle').classList.remove('hidden');
+
+    const cuenta = tpCuentaDePunto(p.table_id);
+    // Al cambiar de punto se suelta la cuenta anterior: si no, el panel enseñaría el pedido
+    // de la mesa que se acaba de dejar.
+    const actual = tpEstado.cuentaActual;
+    if (!cuenta || !actual || Number(actual.session.session_id) !== Number(cuenta.session_id)) {
+        tpEstado.cuentaActual = null;
+    }
+    tpPintarDetalle();
+
+    // La cuenta se pide al servidor al entrar: el mapa trae el RESUMEN, no el pedido.
+    if (cuenta) {
+        // En el teléfono se ve UN panel a la vez y el que importa al llegar es el PEDIDO (qué
+        // lleva la mesa); el menú se abre desde "Agregar platillo". Sin esto, el panel del menú
+        // quedaba primero y había que bajar por él para ver la cuenta.
+        tpMostrarLado('pedido');
+        tpCargarCuenta(cuenta.session_id);
+    }
+    window.scrollTo({ top: 0, behavior: 'auto' });
+}
+
+/** Alterna el panel visible de la cuenta (en escritorio se ven los dos a la vez). */
+function tpMostrarLado(lado) {
+    const tabs = document.getElementById('tpCuentaTabs');
+    document.getElementById('tpCuentaCuerpoDos').setAttribute('data-lado', lado);
+    tabs.querySelectorAll('.tp-tab').forEach(function (t) {
+        t.classList.toggle('activo', t.getAttribute('data-lado') === lado);
+    });
+}
+
+/** Vuelve al mapa (el botón de regresar y la tecla Esc). */
+function tpCerrarDetalle() {
+    tpEstado.detalle = null;
+    tpEstado.detalleFirma = null;
+    tpEstado.cuentaActual = null;
+    document.getElementById('tpCuentaPanel').classList.add('hidden');
+    document.getElementById('tpDetalle').classList.add('hidden');
+    document.getElementById('tpMapa').classList.remove('hidden');
+    tpPintar();   // el mapa se rearma: mientras se estaba dentro pudieron cambiar cosas
+}
+
+/**
+ * Ejecuta una de las acciones del apartado del punto.
+ *
+ * El COBRO no pasa por aquí: js/cobro.js escucha su botón (`#tpCuentaCobrar`) por delegación
+ * y se encarga del modal de cobro completo. Así el flujo de dinero sigue en un solo módulo.
+ */
+async function tpAccionDetalle(accion, boton) {
+    const id = tpEstado.detalle;
+    const p = id === null ? null : tpPuntoPorId(id);
+    if (!p) return;
+    const cuenta = tpCuentaDePunto(p.table_id);
+
+    if (accion === 'qr') return tpMostrarQr(p);
+    if (accion === 'editar') return tpEditarPunto(p.table_id);
+    if (accion === 'desactivar') return tpDesactivarPunto(p.table_id);
+    if (accion === 'reactivar') return tpReactivarPunto(p.table_id);
+
+    // OJO con el orden: "abrir cuenta" es la acción de un punto SIN cuenta, así que va ANTES
+    // del corte de abajo (si no, nunca se llega a ella: la mesa libre se queda sin hacer nada).
+    if (accion === 'abrir') {
+        if (boton) boton.disabled = true;
+        try {
+            const d = await tpPeticion(TP_API_SESSION, { method: 'POST', body: JSON.stringify({ action: 'open_table', table_id: Number(p.table_id) }) });
+            tpAviso('Cuenta ' + d.code + ' abierta en ' + d.label, 'success');
+            await tpCargar(true);      // el mapa ya sabe que este punto está ocupado
+            await tpCargarCuenta(d.session_id);
+            tpPintarDetalle();
+        } catch (e) {
+            tpAviso(tpMensajeDeError(e), 'error');
+        } finally { if (boton) boton.disabled = false; }
+        return;
+    }
+
+    // De aquí para abajo TODO es trabajo sobre la cuenta abierta del punto.
+    if (!cuenta) return;
+    if (accion === 'juntar') return tpJuntarPunto(p.table_id);
+    if (accion === 'qr_cuenta') return tpVerQrCuenta();
+
+    if (accion === 'anotar') {
+        // Anotar ES estar en el menú: se enseña ese panel y la vista se va con él.
+        tpMostrarLado('menu');
+        const panel = document.getElementById('tpCuentaPanel');
+        if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // En escritorio los dos paneles se ven a la vez: basta con dejar el cursor listo.
+        const buscar = document.getElementById('tpMenuBuscar');
+        if (buscar && window.matchMedia('(min-width: 901px)').matches) buscar.focus();
+    }
+}
+
+/** Los desactivados no ensucian el mapa: ese interruptor vive en el menú de tres puntos. */
+function tpAlternarApagados() {
+    tpEstado.verApagados = !tpEstado.verApagados;
+    const texto = document.getElementById('tpApagadosTexto');
+    if (texto) texto.textContent = tpEstado.verApagados ? 'Ocultar desactivados' : 'Ver desactivados';
+    const icono = document.querySelector('#tpMenuApagados i');
+    if (icono) icono.className = 'fas fa-' + (tpEstado.verApagados ? 'eye-slash' : 'eye');
+    tpCargar();
+}
+
+/**
+ * Engancha un menú de tres puntos: abre y cierra con su botón, se cierra al tocar fuera y
+ * delega el clic de sus opciones (el contenido se rearma según el estado del punto).
+ */
+function tpEngancharMenu(idBoton, idMenu, alElegir) {
+    const boton = document.getElementById(idBoton);
+    const menu = document.getElementById(idMenu);
+    if (!boton || !menu) return;
+    boton.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        const abierto = !menu.classList.contains('hidden');
+        menu.classList.toggle('hidden', abierto);
+        boton.setAttribute('aria-expanded', abierto ? 'false' : 'true');
+    });
+    document.addEventListener('click', function (ev) {
+        if (!menu.classList.contains('hidden') && !menu.contains(ev.target) && !boton.contains(ev.target)) {
+            menu.classList.add('hidden');
+            boton.setAttribute('aria-expanded', 'false');
+        }
+    });
+    menu.addEventListener('click', function (ev) {
+        const b = ev.target.closest('button');
+        if (!b) return;
+        menu.classList.add('hidden');
+        boton.setAttribute('aria-expanded', 'false');
+        alElegir(b);
+    });
+}
+
+/** Las acciones del punto: máximo CUATRO, cada una con su nombre a la vista. */
+function tpAccionesDePunto(p, cuenta, apagado) {
+    const acciones = [];
+    if (apagado) {
+        acciones.push({ accion: 'reactivar', icono: 'power-off', texto: 'Reactivar', clase: 'primario' });
+        acciones.push({ accion: 'qr', icono: 'qrcode', texto: 'Ver el QR' });
+        acciones.push({ accion: 'editar', icono: 'pen', texto: 'Editar el punto' });
+        return acciones;
+    }
+    if (cuenta) {
+        acciones.push({ accion: 'cobrar', icono: 'cash-register', texto: 'Cobrar la cuenta', clase: 'primario', id: 'tpCuentaCobrar' });
+        acciones.push({ accion: 'anotar', icono: 'utensils', texto: 'Agregar platillo' });
+        acciones.push({ accion: 'juntar', icono: 'link', texto: 'Juntar otra mesa' });
+        acciones.push({ accion: 'qr_cuenta', icono: 'qrcode', texto: 'QR de la cuenta' });
+        return acciones;
+    }
+    acciones.push({ accion: 'abrir', icono: 'play', texto: 'Abrir cuenta', clase: 'primario' });
+    acciones.push({ accion: 'qr', icono: 'qrcode', texto: 'Ver el QR' });
+    acciones.push({ accion: 'editar', icono: 'pen', texto: 'Editar el punto' });
+    acciones.push({ accion: 'desactivar', icono: 'ban', texto: 'Desactivar', clase: 'peligro' });
+    return acciones;
+}
+
+/**
+ * Pinta el apartado del punto abierto: nombre, estado, la ficha y sus cuatro acciones.
+ *
+ * La rejilla de acciones solo se rearma cuando cambia de verdad (estado, total o consumo):
+ * en cada aviso de tiempo real se refrescan los TEXTOS, no el HTML. Repintar todo se siente
+ * como si la pantalla parpadeara.
+ */
+function tpPintarDetalle() {
+    const id = tpEstado.detalle;
+    const p = id === null ? null : tpPuntoPorId(id);
+    if (!p) { tpCerrarDetalle(); return; }
+
+    const cuenta = tpCuentaDePunto(p.table_id);
+    const apagado = Number(p.is_active) !== 1;
+
+    document.getElementById('tpDetalleNombre').textContent = p.label;
+    const zona = document.getElementById('tpDetalleZona');
+    zona.textContent = p.zone || '';
+    zona.classList.toggle('hidden', !p.zone);
+
+    const badge = document.getElementById('tpDetalleEstado');
+    badge.textContent = apagado ? 'Desactivado' : (cuenta ? 'Ocupado' : 'Libre');
+    badge.className = 'tp-estado' + (apagado ? ' apagado' : (cuenta ? ' ocupado' : ''));
+
+    // El panel de la cuenta solo existe si el punto tiene cuenta abierta.
+    document.getElementById('tpCuentaPanel').classList.toggle('hidden', !cuenta);
+
+    const actual = tpEstado.cuentaActual;
+    const pausado = !!(cuenta && actual && actual.session &&
+        Number(actual.session.session_id) === Number(cuenta.session_id) &&
+        Number(actual.session.ordering_enabled) !== 1);
+
+    const firma = [p.table_id, apagado ? 'a' : 'n', cuenta ? 'c' : 'l',
+        cuenta ? Number(cuenta.total) || 0 : '', cuenta ? Number(cuenta.items) || 0 : '', pausado ? 'p' : 'o'].join('|');
+    if (firma === tpEstado.detalleFirma) return;
+    tpEstado.detalleFirma = firma;
+
+    // La ficha: o está disponible, o fuera de servicio, o es la cuenta con sus datos.
+    const libre = document.getElementById('tpDetalleLibre');
+    const ficha = document.getElementById('tpDetalleFicha');
+    if (cuenta) {
+        ficha.classList.remove('hidden');
+        libre.classList.add('hidden');
+        // El total se adelanta del resumen del mapa; tpPintarCuenta lo confirma con el
+        // detalle de la cuenta en cuanto llega.
+        const total = document.getElementById('tpCuentaTotal');
+        if (total) total.textContent = tpDinero(cuenta.total);
+    } else {
+        ficha.classList.add('hidden');
+        libre.classList.remove('hidden');
+        libre.innerHTML = apagado
+            ? '<i class="fas fa-ban"></i><div><h3>Desactivado</h3>' +
+              '<p>No aparece en el mapa del salón ni acepta pedidos. Reactívalo para volver a usarlo.</p></div>'
+            : '<i class="fas fa-circle-check"></i><div><h3>Disponible</h3>' +
+              '<p>Sin cuenta abierta. Al abrirla se genera el código con el que el cliente pide desde su teléfono.</p></div>';
+    }
+
+    // Las cuatro acciones.
+    document.getElementById('tpDetalleAcciones').innerHTML = tpAccionesDePunto(p, cuenta, apagado)
+        .map(function (a) {
+            return '<button type="button" class="tp-accion' + (a.clase ? ' ' + a.clase : '') + '"' +
+                (a.id ? ' id="' + a.id + '"' : '') +
+                ' data-accion-detalle="' + a.accion + '">' +
+                '<i class="fas fa-' + a.icono + '"></i> ' + tpEsc(a.texto) + '</button>';
+        }).join('');
+
+    // Una cuenta sin consumo no se cobra: se cancela con un motivo. El cobro
+    // (js/cobro.js) lee el estado del botón, así que se le deja dicho aquí.
+    const botonCobrar = document.getElementById('tpCuentaCobrar');
+    if (botonCobrar && cuenta) {
+        const totalNum = Number(cuenta.total) || 0;
+        botonCobrar.disabled = totalNum <= 0;
+        botonCobrar.title = totalNum <= 0
+            ? 'La cuenta no tiene consumo: cancélela con un motivo'
+            : 'Cobrar esta cuenta';
+    }
+
+    // Sin carta publicada, el QR no lleva a ninguna parte: es mejor decir por qué que dejar
+    // un botón que solo puede abrir un aviso de error.
+    if (tpEstado.sinCarta) {
+        document.querySelectorAll('#tpDetalleAcciones [data-accion-detalle="qr"], #tpDetalleAcciones [data-accion-detalle="qr_cuenta"]')
+            .forEach(function (b) {
+                b.disabled = true;
+                b.title = 'Todavía no hay una carta publicada: este QR no lleva a ninguna parte';
+            });
+    }
+
+    // Lo que NO es flujo del día vive en el menú de tres puntos: pausar, cerrar, cancelar
+    // y editar. Para un punto libre o desactivado no hace falta menú: sus tres o cuatro
+    // acciones ya están a la vista.
+    const engranaje = document.getElementById('tpDetalleEngranaje');
+    const menu = document.getElementById('tpDetalleMenu');
+    const opciones = [];
+    if (cuenta) {
+        opciones.push('<button type="button" data-config="' + (pausado ? 'resume' : 'pause') + '"><i class="fas fa-pause"></i> ' +
+            '<span id="tpConfigPausaTexto">' + (pausado ? 'Reanudar pedidos' : 'Pausar pedidos') + '</span></button>');
+        opciones.push('<button type="button" data-punto="editar"><i class="fas fa-pen"></i> Editar el punto</button>');
+        opciones.push('<button type="button" data-config="close"><i class="fas fa-flag-checkered"></i> Cerrar la cuenta</button>');
+        opciones.push('<button type="button" data-config="cancel" class="peligro"><i class="fas fa-ban"></i> Cancelar la cuenta…</button>');
+    } else if (apagado) {
+        opciones.push('<button type="button" data-punto="editar"><i class="fas fa-pen"></i> Editar el punto</button>');
+    }
+    engranaje.classList.toggle('hidden', !opciones.length);
+    menu.innerHTML = opciones.join('');
+}
+
 
 // ============================================================
 // Acciones sobre el punto
@@ -394,13 +694,16 @@ function tpNombreArchivoQr() {
 // ============================================================
 // Cuenta: detalle y acciones
 // ============================================================
-async function tpVerCuenta(tableId) {
+/**
+ * Abre el apartado de un punto con su cuenta a la vista.
+ *
+ * Antes esto abría el modal de la cuenta ENCIMA del mapa del salón. Ahora entra al apartado
+ * del punto (nivel 2): la cuenta vive dentro, con sus cuatro acciones.
+ */
+function tpVerCuenta(tableId) {
     const cuenta = tpCuentaDePunto(tableId);
     if (!cuenta) return;
-    // El modal se abre ANTES de cargar: tpPintarCuenta no pinta si no hay modal abierto
-    // (para no repintar en segundo plano), así que abrirlo después dejaba el "Cargando…".
-    tpAbrirModal('tpModalCuenta');
-    await tpCargarCuenta(cuenta.session_id);
+    tpAbrirDetalle(tableId);   // el apartado ya pide la cuenta del punto al entrar
 }
 
 async function tpCargarCuenta(sessionId, opciones) {
@@ -844,7 +1147,8 @@ function tpVerQrCuenta() {
 }
 
 function tpPintarCuenta() {
-    if (!tpAlgunModalAbierto()) return;
+    // La cuenta ya no es un modal: se pinta solo si su apartado está a la vista.
+    if (!tpCuentaVisible()) return;
     const d = tpEstado.cuentaActual;
     if (!d) return;
     const s = d.session;
@@ -859,11 +1163,14 @@ function tpPintarCuenta() {
         ' · <i class="fas fa-user-group"></i> ' + (s.participants || []).length + ' persona(s)' +
         ' · ' + (pausado ? 'pedidos en pausa' : 'pueden pedir');
 
-    document.getElementById('tpConfigPausaTexto').textContent = pausado ? 'Reanudar pedidos' : 'Pausar pedidos';
+    // El cambio de pausa/reanudar vive en el menú de tres puntos del apartado.
+    const pausaTexto = document.getElementById('tpConfigPausaTexto');
+    if (pausaTexto) pausaTexto.textContent = pausado ? 'Reanudar pedidos' : 'Pausar pedidos';
 
-    // El total, arriba y en el listado: es lo primero que se mira.
+    // El total, en la ficha de arriba y en el encabezado del pedido: es lo primero que se mira.
     const total = tpDinero(s.totals.total);
     document.getElementById('tpCuentaTotal').textContent = total;
+    document.getElementById('tpCuentaTotalPedido').textContent = total;
     document.getElementById('tpTabTotal').textContent = total;
 
     // El módulo de cobro (js/cobro.js) necesita saber QUÉ cuenta está abierta y cuánto
@@ -878,10 +1185,10 @@ function tpPintarCuenta() {
         personas: (s.participants || []).length,
         sin_enviar: (s.items || []).filter(function (it) { return it.status === 'pending'; }).length,
     };
+    // El botón de cobrar es una de las cuatro acciones del apartado: su estado lo pinta
+    // tpPintarDetalle (una cuenta sin consumo no se cobra, se cancela con un motivo).
     const btnCobrar = document.getElementById('tpCuentaCobrar');
     if (btnCobrar) {
-        btnCobrar.innerHTML = '<i class="fas fa-cash-register"></i> Cobrar ' + total;
-        // Una cuenta sin consumo no se cobra: se cancela con motivo.
         btnCobrar.disabled = totalNum <= 0;
         btnCobrar.title = totalNum <= 0
             ? 'La cuenta no tiene consumo: cancélela con un motivo'
@@ -929,7 +1236,11 @@ function tpPintarPedido(d) {
     tpEstado.pedidoGrupos = { bloques: bloques, porPersona: porClave };
 
     if (!claves.length) {
-        cont.innerHTML = '<div class="tp-aviso">Todavía no hay nada pedido en esta cuenta. Anota del menú de la izquierda.</div>';
+        // En el teléfono no hay "menú de la izquierda": ahí el menú es una pestaña de arriba.
+        const enTelefono = window.matchMedia('(max-width: 900px)').matches;
+        cont.innerHTML = '<div class="tp-aviso">Todavía no hay nada pedido en esta cuenta. ' +
+            (enTelefono ? 'Toca <strong>Menú</strong> aquí arriba para anotar lo que piden.' : 'Anota del menú de la izquierda.') +
+            '</div>';
     } else {
         cont.innerHTML = bloques.map(function (b) {
             return '<div class="tp-grupo-persona" data-grupo-persona="' + tpEsc(b.clave) + '">' +
@@ -1196,7 +1507,8 @@ async function tpAccionCuenta(accion) {
                     try {
                         await tpPeticion(TP_API_SESSION, { method: 'POST', body: JSON.stringify({ action: 'close', session_id: sessionId }) });
                         tpAviso('Cuenta cerrada', 'success');
-                        tpCerrarModal('tpModalCuenta');
+                        // La cuenta ya no está: se vuelve al mapa, que es donde se ve el salón.
+                        tpCerrarDetalle();
                         await tpCargar(true);
                     } catch (e) { tpAviso(tpMensajeDeError(e), 'error'); }
                 }
@@ -1205,7 +1517,8 @@ async function tpAccionCuenta(accion) {
         } else if (accion === 'cancelar') {
             const campo = document.getElementById('tpCancelarMotivo');
             campo.value = '';
-            tpCerrarModal('tpModalCuenta');
+            // El apartado del punto se queda detrás: el aviso de cancelar es un modal del
+            // sistema, no otro nivel de la cuenta.
             tpAbrirModal('tpModalCancelar');
             setTimeout(function () { campo.focus(); }, 80);
             return;
@@ -1262,41 +1575,44 @@ document.addEventListener('DOMContentLoaded', async function () {
     });
 
     document.getElementById('tpBtnNuevo').addEventListener('click', tpNuevoPunto);
-    document.getElementById('tpBtnApagados').addEventListener('click', function () {
-        tpEstado.verApagados = !tpEstado.verApagados;
-        this.className = 'tp-btn' + (tpEstado.verApagados ? ' primario' : '');
-        this.innerHTML = '<i class="fas fa-eye' + (tpEstado.verApagados ? '-slash' : '') + '"></i> ' + (tpEstado.verApagados ? 'Ocultar desactivados' : 'Ver desactivados');
-        tpCargar();
-    });
     document.getElementById('tpPuntoGuardar').addEventListener('click', tpGuardarPunto);
     document.getElementById('tpPuntoNombre').addEventListener('keydown', function (e) { if (e.key === 'Enter') tpGuardarPunto(); });
 
-    // Acciones de cada tarjeta
-    document.getElementById('tpContenido').addEventListener('click', async function (ev) {
-        const b = ev.target.closest('[data-accion]');
-        if (!b) return;
-        const id = b.getAttribute('data-id');
-        const accion = b.getAttribute('data-accion');
-        const punto = tpPuntoPorId(id);
-        if (accion === 'nuevo') return tpNuevoPunto();
-        if (accion === 'editar') return tpEditarPunto(id);
-        if (accion === 'qr') return tpMostrarQr(punto);
-        if (accion === 'desactivar') return tpDesactivarPunto(id);
-        if (accion === 'reactivar') return tpReactivarPunto(id);
-        if (accion === 'ver') return tpVerCuenta(id);
-        if (accion === 'juntar') return tpJuntarPunto(id);
-        if (accion === 'abrir') {
-            b.disabled = true;
-            try {
-                const d = await tpPeticion(TP_API_SESSION, { method: 'POST', body: JSON.stringify({ action: 'open_table', table_id: Number(id) }) });
-                tpAviso('Cuenta ' + d.code + ' abierta en ' + d.label, 'success');
-                await tpCargar(true);
-                tpAbrirModal('tpModalCuenta');
-                await tpCargarCuenta(d.session_id);
-            } catch (e) {
-                tpAviso(tpMensajeDeError(e), 'error');
-            } finally { b.disabled = false; }
-        }
+    // ── El mapa ────────────────────────────────────────────────────────────────
+    // La ficha de un punto es un botón completo: se toca y se entra a su apartado. No hay
+    // más acciones en el mapa a propósito.
+    document.getElementById('tpContenido').addEventListener('click', function (ev) {
+        const ficha = ev.target.closest('[data-abrir]');
+        if (ficha) tpAbrirDetalle(ficha.getAttribute('data-abrir'));
+    });
+
+    tpEngancharMenu('tpMapaMenuBtn', 'tpMapaMenu', function (boton) {
+        if (boton.id === 'tpMenuApagados') tpAlternarApagados();
+    });
+
+    // ── El apartado del punto ──────────────────────────────────────────────────
+    document.getElementById('tpVolver').addEventListener('click', tpCerrarDetalle);
+
+    // Las cuatro acciones del punto. El cobro NO se maneja aquí: js/cobro.js escucha el
+    // botón `#tpCuentaCobrar` por delegación y se encarga de todo el flujo de cobro.
+    document.getElementById('tpDetalleAcciones').addEventListener('click', function (ev) {
+        const b = ev.target.closest('[data-accion-detalle]');
+        if (b) tpAccionDetalle(b.getAttribute('data-accion-detalle'), b);
+    });
+
+    tpEngancharMenu('tpDetalleMenuBtn', 'tpDetalleMenu', function (boton) {
+        const config = boton.getAttribute('data-config');
+        if (config) { tpAccionCuenta(config); return; }
+        const punto = boton.getAttribute('data-punto');
+        if (punto === 'editar') tpEditarPunto(tpEstado.detalle);
+    });
+
+    // Esc regresa al mapa: en escritorio es lo que la mano espera. Si hay un modal abierto
+    // (el cobro, juntar, cancelar, el QR) se cierra ESE, no la vista de abajo.
+    document.addEventListener('keydown', function (ev) {
+        if (ev.key !== 'Escape' || tpEstado.detalle === null) return;
+        if (tpAlgunModalAbierto()) return;
+        tpCerrarDetalle();
     });
 
     // Acciones DENTRO de la cuenta: cada grupo de nota del platillo se ajusta y se anota
@@ -1349,30 +1665,6 @@ document.addEventListener('DOMContentLoaded', async function () {
     });
 
     document.getElementById('tpCuentaEnviar').addEventListener('click', tpEnviarACocina);
-    document.getElementById('tpCuentaQr').addEventListener('click', tpVerQrCuenta);
-
-    // El engranaje es para lo que NO es flujo: pausar, cerrar, cancelar.
-    const engranaje = document.getElementById('tpCuentaEngranaje');
-    const menuConfig = document.getElementById('tpCuentaConfig');
-    engranaje.addEventListener('click', function (ev) {
-        ev.stopPropagation();
-        const abierto = !menuConfig.classList.contains('hidden');
-        menuConfig.classList.toggle('hidden', abierto);
-        engranaje.setAttribute('aria-expanded', abierto ? 'false' : 'true');
-    });
-    document.addEventListener('click', function (ev) {
-        if (!menuConfig.classList.contains('hidden') && !menuConfig.contains(ev.target) && ev.target !== engranaje) {
-            menuConfig.classList.add('hidden');
-            engranaje.setAttribute('aria-expanded', 'false');
-        }
-    });
-    menuConfig.addEventListener('click', function (ev) {
-        const b = ev.target.closest('[data-config]');
-        if (!b) return;
-        menuConfig.classList.add('hidden');
-        engranaje.setAttribute('aria-expanded', 'false');
-        tpAccionCuenta(b.getAttribute('data-config'));
-    });
 
     // El menú: buscar, filtrar por categoría y agregar lo que el cliente pide.
     document.getElementById('tpMenuBuscar').addEventListener('input', function () {
@@ -1436,6 +1728,8 @@ document.addEventListener('DOMContentLoaded', async function () {
             await tpPeticion(TP_API_SESSION, { method: 'POST', body: JSON.stringify({ action: 'cancel', session_id: d.session.session_id, reason: motivo }) });
             tpAviso('Cuenta cancelada', 'success');
             tpCerrarModal('tpModalCancelar');
+            // La cuenta ya no está: al mapa, que es donde se ve el salón.
+            tpCerrarDetalle();
             await tpCargar();
         } catch (e) { tpAviso(tpMensajeDeError(e), 'error'); }
     });
@@ -1491,10 +1785,10 @@ function tpConectarTiempoReal() {
         canal: 'store',
         onEvento: function (msg) {
             tpCargar(true);
-            // Si hay una cuenta abierta en pantalla, también se refresca: el comensal pudo
-            // pedir o alguien pudo cerrarla desde otro dispositivo.
+            // Si hay una cuenta a la vista, también se refresca: el comensal pudo pedir o
+            // alguien pudo cerrarla desde otro dispositivo.
             const d = tpEstado.cuentaActual;
-            if (d && tpAlgunModalAbierto()) tpCargarCuenta(d.session.session_id);
+            if (d && tpCuentaVisible()) tpCargarCuenta(d.session.session_id);
 
             // El tablero de comandas vive en esta misma página y se alimenta de ESTE socket:
             // abrir un segundo WebSocket para lo mismo sería duplicar el aviso y el trabajo

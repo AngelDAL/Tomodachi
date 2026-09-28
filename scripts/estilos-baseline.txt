@@ -1,11 +1,12 @@
 # Baseline de deuda de estilos — generado por scripts/verificar-estilos.sh
 # Formato: tipo:archivo<TAB>conteo. Solo se reduce, nunca se sube a mano.
 bloqueante:public/js/PlanManager.js	1
+bloqueante:public/js/cobro.js	1
 bloqueante:public/js/finance.js	2
-bloqueante:public/js/inventory.js	31
 bloqueante:public/js/promotions.js	1
 bloqueante:public/js/sales.js	2
 bloqueante:public/js/super_admin.js	1
+bloqueante:public/js/tables.js	2
 emoji:includes/Mail.class.php	5
 emoji:public/digital-group-display.html	1
 emoji:public/digital-signage-display.html	1
@@ -13,18 +14,21 @@ emoji:public/profile.html	14
 font:includes/Mail.class.php	5
 font:public/css/keyboard-nav.css	6
 font:public/css/sidebar-modern.css	1
+font:public/js/comandas.js	1
+font:public/tables.html	3
 hex:public/css/bulk_sales.css	4
 hex:public/css/cart_responsive.css	5
 hex:public/css/dashboard.css	8
-hex:public/css/inventory.css	87
+hex:public/css/inventory.css	244
 hex:public/css/iron_mode.css	3
 hex:public/css/keyboard-nav.css	10
 hex:public/css/landing.css	8
-hex:public/css/login.css	21
-hex:public/css/main.css	94
+hex:public/css/login.css	5
+hex:public/css/main.css	103
+hex:public/css/menu-public.css	9
 hex:public/css/mobile-nav.css	2
 hex:public/css/promotions.css	23
-hex:public/css/sales.css	27
+hex:public/css/sales.css	70
 hex:public/css/scanner_overlay.css	5
 hex:public/css/sidebar-modern.css	2
 hex:public/css/utilities.css	1

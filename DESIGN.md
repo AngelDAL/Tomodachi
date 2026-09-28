@@ -228,7 +228,7 @@ Dos familias tipográficas: **Sora** para encabezados, controles y etiquetas;
 ## Colors
 
 - **Primary (`#39C5BB`)**: único color de marca. Sombreado de la acción
-  principal, foco de campos y acentos. En tema oscuro sube a `#4FDDD2`.
+  principal, foco de campos y acentos. En tema oscuro sube a `#49D4C6`.
 - **On-primary (`#08352F`)**: **todo texto sobre superficie primaria**. El
   texto blanco sobre el cian no pasa contraste (2.13:1) y está prohibido.
 - **Primary-ink (`#177068`)**: **texto de marca sobre superficie blanca**
@@ -246,7 +246,9 @@ Dos familias tipográficas: **Sora** para encabezados, controles y etiquetas;
 - **Border / Border-light**: contornos y separadores.
 
 En tema oscuro, los colores de marca se mantienen (con su variante propia) y
-solo cambian superficies, texto y bordes.
+solo cambian superficies, texto y bordes. Las superficies oscuras son una
+rampa con tinte azul-teal (`#0D1516` el fondo, `#162022` la tarjeta), no grises
+neutros.
 
 ## Typography
 

@@ -2,8 +2,8 @@
 
 Documento normativo de la interfaz. Aplica a **todo** el frontend de
 Tomodachi (Punto de Venta, Inventario, Dashboard, Clientes, Promociones,
-Finanzas, Reportes, Pantallas Digitales, Integraciones, Perfil y las páginas
-públicas de acceso).
+Finanzas, Reportes, Puntos de servicio, Mesas, Pantallas Digitales,
+Integraciones, Perfil, el menú público y las páginas públicas de acceso).
 
 Léelo completo antes de escribir una línea de HTML, CSS o JS de interfaz. Si
 algo de esta guía contradice tu gusto personal, gana la guía. Si crees que la
@@ -106,8 +106,11 @@ Bloquean el hilo, no son estilizables y rompen la sensación de aplicación.
   "Eliminar" y botón "Cancelar"
 - Captura de un dato → formulario en modal o drawer, nunca `prompt()`
 
-Deuda actual conocida: 38 llamadas (30 `alert`, 8 `confirm`) concentradas en
-`public/js/inventory.js` (31). Cada quien que toque una, la migra.
+Deuda actual conocida (medida el 2026-09-28 sobre community-edition): quedan 8
+llamadas bloqueantes — `sales.js` (2), `finance.js` (2), `tables.js` (2), y una
+cada una en `PlanManager.js`, `promotions.js`, `super_admin.js` y `cobro.js`.
+`inventory.js` ya se migró por completo: es el ejemplo de cómo se hace. Cada
+quien que toque una de las que quedan, la migra.
 
 ### 3.3 Prohibido: colores en duro
 
@@ -115,13 +118,16 @@ Ningún `#hex`, `rgb()` ni nombre de color CSS en archivos de módulo. Todo sale
 de los tokens de `variables.css`. La única excepción tolerada es `#fff` para
 texto sobre superficies oscuras y los colores dentro de los `url("data:image/svg+xml...")`.
 
-Motivo medible: `public/css/inventory.css` tiene 87 colores en duro, de los
-cuales 24 son `#4fddd2` (el cian del **tema oscuro**) fijos. Resultado: en
-tema oscuro ese módulo se ve con el cian equivocado y no responde al tema.
+Motivo medible: `public/css/inventory.css` es el peor caso con 244 colores en
+duro (22 de ellos `#4fddd2`, el cian del **tema oscuro**), seguido de
+`sales.css` (70) y `main.css` (103). Resultado: esas vistas no siguen el tema y
+hay que retocarlas a mano cada vez que la paleta se mueve.
 
 ### 3.4 Prohibido: modales sobre modales
 
-Ver sección 8. Un modal a la vez, siempre.
+Ver sección 8. Un modal a la vez, por regla. Si un flujo de verdad exige una
+segunda capa, se usa `--capa-overlay-2` de la escalera, nunca un `z-index`
+inventado a mano.
 
 ### 3.5 Prohibido: `?v=` olvidado
 
@@ -161,17 +167,24 @@ Respétalo tal cual:
 ```html
 <link rel="stylesheet" href="css/fonts.css?v=4">
 <link rel="stylesheet" href="lib/fontawesome/css/all.min.css?v=4">
-<link rel="stylesheet" href="css/main.css?v=4">
-<link rel="stylesheet" href="css/design-system.css?v=5">
-<link rel="stylesheet" href="css/sidebar-modern.css?v=4">
-<link rel="stylesheet" href="css/mobile-nav.css?v=4">
+<link rel="stylesheet" href="css/main.css?v=22">
+<link rel="stylesheet" href="css/design-system.css?v=8">
+<link rel="stylesheet" href="css/sidebar-modern.css?v=6">
+<link rel="stylesheet" href="css/mobile-nav.css?v=5">
 <link rel="stylesheet" href="css/dashboard.css?v=4">
 <link rel="stylesheet" href="css/<modulo>.css?v=N">   <!-- solo si hace falta -->
 ```
 
+Los números suben con cada cambio; los de arriba son los vigentes al 2026-09-28.
+
 `design-system.css` va **después** de `main.css` a propósito: refina radios,
 sombras, tipografía y animaciones de los componentes base. Si un módulo
 necesita su propia hoja, va al final para poder sobrescribir.
+
+`variables.css` no se enlaza en las vistas internas: entra por `@import` desde
+`main.css` (y desde `landing.css`). Si tocas `variables.css`, sube el `?v=` de
+**ese** `@import` y también el de `main.css` en los HTML — si no, el navegador
+sigue sirviendo la hoja vieja y el cambio no se ve.
 
 ### 4.2 Qué archivo tocar según lo que quieras hacer
 
@@ -213,14 +226,15 @@ variable.**
 
 | Token | Claro | Oscuro | Uso |
 |---|---|---|---|
-| `--primary-color` | `#39C5BB` | `#4FDDD2` | Marca, acción principal, foco, acentos |
-| `--primary-dark` | `#2CB1A7` | `#35C4B8` | Hover de la acción principal |
-| `--primary-darker` | `#1F8A82` | `#2AA79B` | Active/pressed |
-| `--primary-light` | `#E4F8F6` | `#143E3B` | Fondo suave de elementos de marca |
-| `--primary-lighter` | `#F0FBFA` | `#10322F` | Fondo casi imperceptible |
-| `--primary-shadow` | `rgba(57,197,187,.22)` | `rgba(79,221,210,.30)` | Sombra / anillo de foco |
-| `--primary-ink` | `#177068` | `#4FDDD2` | **Texto** de marca sobre superficie (5.91:1 en claro) |
-| `--secondary-color` | `#0E86A6` | `#61C2E8` | Acento secundario, botón oscuro |
+| `--primary-color` | `#39C5BB` | `#49D4C6` | Marca, acción principal, foco, acentos |
+| `--primary-dark` | `#2CB1A7` | `#32BDAF` | Hover de la acción principal |
+| `--primary-darker` | `#1F8A82` | `#2C9B90` | Active/pressed |
+| `--primary-light` | `#E4F8F6` | `#193331` | Fondo suave de elementos de marca |
+| `--primary-lighter` | `#F0FBFA` | `#152826` | Fondo casi imperceptible |
+| `--primary-shadow` | `rgba(57,197,187,.22)` | `rgba(73,212,198,.28)` | Sombra / anillo de foco |
+| `--primary-ink` | `#177068` | `#49D4C6` | **Texto** de marca sobre superficie (5.91:1 en claro) |
+| `--secondary-color` | `#0E86A6` | `#51BCD6` | Acento secundario (con texto oscuro encima) |
+| `--secondary-dark` | `#0A6A86` | `#33A5C1` | Fondo del botón "Guardar" (blanco encima) |
 
 Alias listos para usar: `--primary-hover`, `--primary-active`,
 `--primary-focus-ring`.
@@ -229,11 +243,11 @@ Alias listos para usar: `--primary-hover`, `--primary-active`,
 
 | Token | Claro | Oscuro | Uso |
 |---|---|---|---|
-| `--success-color` / `-dark` | `#2E7D32` / `#1B5E20` | `#66BB6A` / `#43A047` | Pagado, en stock, confirmación |
-| `--danger-color` / `-dark` | `#D32F2F` / `#B71C1C` | `#EF5350` / `#E53935` | Cancelado, eliminar, error |
-| `--warning-color` / `-dark` | `#F57C00` / `#E65100` | `#FFA726` / `#F57C00` | Pendiente, stock bajo, atención |
-| `--warning-ink` | `#A34A00` | `#FFA726` | Texto ámbar sobre fondo claro (badges de "Pendiente") |
-| `--info-color` / `-dark` / `-light` | `#1976D2` / `#0D47A1` / `#E3F2FD` | `#42A5F5` / `#1E88E5` / `#0D2440` | Información neutra |
+| `--success-color` / `-dark` | `#2E7D32` / `#1B5E20` | `#5DB660` / `#4AA34E` | Pagado, en stock, confirmación |
+| `--danger-color` / `-dark` | `#D32F2F` / `#B71C1C` | `#EA5A57` / `#D84845` | Cancelado, eliminar, error |
+| `--warning-color` / `-dark` | `#F57C00` / `#E65100` | `#F69A31` / `#E08420` | Pendiente, stock bajo, atención |
+| `--warning-ink` | `#A34A00` | `#F69A31` | Texto ámbar sobre superficie (badges de "Pendiente") |
+| `--info-color` / `-dark` / `-light` | `#1976D2` / `#0D47A1` / `#E3F2FD` | `#50A0E2` / `#3B8CD0` / `#14293D` | Información neutra |
 
 ### 5.3 Superficies, texto y bordes
 
@@ -252,11 +266,17 @@ Alias listos para usar: `--primary-hover`, `--primary-active`,
 | `--border-color` | Borde estándar (inputs, tabs, divisores marcados) |
 | `--border-light` / `--border-lighter` | Bordes suaves (contornos de card, separadores internos) |
 
+En tema oscuro las superficies son una rampa con tinte azul-teal, la misma
+familia que el `#f4f7f6` del claro: `--bg-body` `#0D1516`, `--bg-card`
+`#162022`, `--bg-light` `#1D282B`. No metas grises neutros ni negros puros:
+desentonan con la marca.
+
 ### 5.4 Regla de texto sobre color
 
-`#fff` sobre el cian de marca **no pasa contraste** (2.13:1). Sobre
-`--primary-color` va `--text-on-primary` (`#08352F`, 6.33:1). Lo mismo sobre
-`--warning-color`: texto oscuro (`--text-color`, 6.31:1), nunca blanco.
+`#fff` sobre el cian de marca **no pasa contraste** (2.13:1 en claro; 2.21:1
+sobre el secundario del tema oscuro). Sobre `--primary-color` va
+`--text-on-primary` (`#08352F`, 6.33:1 en claro; `#06302C`, 7.85:1 en oscuro).
+Sobre `--warning-color` va `--warning-ink` o texto oscuro, nunca blanco.
 
 ### 5.5 Tipografía
 
@@ -265,8 +285,15 @@ Dos familias, sin excepciones:
 - Encabezados y controles: `var(--font-heading)` → **Sora**
 - Cuerpo de texto: `var(--font-body)` → **Inter**
 
-Quedan prohibidas otras familias (existe una referencia heredada a `Nunito` en
-`sidebar-modern.css` que hay que retirar cuando se toque ese archivo).
+Quedan prohibidas otras familias. Deuda: `sidebar-modern.css` pide `Nunito`
+(nunca se carga, así que cae al fallback), y `tables.html` y `comandas.js`
+traen la suya propia. Se corrigen cuando se toque cada archivo.
+
+Las fuentes se sirven **localmente**: `css/fonts.css` declara los `@font-face`
+de Sora e Inter (archivos en `lib/fonts/`) y de Google Sans Flex, que usan las
+páginas públicas. Prohibido volver a enlazar Google Fonts, cdnjs o cualquier
+CDN: la interfaz tiene que verse igual sin internet. FontAwesome también vive
+en el repo (`lib/fontawesome/`).
 
 | Token | Valor | Uso típico |
 |---|---|---|
@@ -320,18 +347,23 @@ trabajo (múltiplos de 4) y no inventes 13px ni 27px:
 
 ### 5.10 Capas (`z-index`)
 
-Hoy hay valores de 99999 y 200000 sueltos. Usa esta escala y no la saltes:
+El proyecto **ya tiene una escalera formal** en `variables.css`. Úsala: no
+inventes números. Existe porque un modal con `z-index: 20300` quedaba debajo de
+la barra de navegación móvil (`99999`) y aparecía cortado.
 
-| Capa | z-index | Ejemplos |
+| Token | Valor | Para qué |
 |---|---|---|
-| Contenido | 0–1 | Elementos normales |
-| Elevado | 10 | Sticky dentro de un panel |
-| Barra pegajosa | 50 | Tabs de página, headers pegajosos |
-| Sidebar | 20000 (heredado) | `.sidebar` |
-| Drawer | 1000 | `.drawer-overlay` |
-| Modal | 1000–2000 | `.modal-overlay`, `<dialog>` |
-| Notificación | 9999 | `.notification` |
-| Emergencia | 99999 | Solo si algo tapa la notificación, con comentario del porqué |
+| `--capa-contenido` | `1` | Tarjetas, listas, el flujo normal |
+| `--capa-encima` | `100` | Menús y desplegables dentro de la página |
+| `--capa-navbar` | `99999` | Barra de navegación (inferior en móvil) |
+| `--capa-overlay` | `100000` | **Todo** modal y drawer |
+| `--capa-overlay-2` | `100100` | Modal que se abre desde otro modal |
+| `--capa-aviso` | `200000` | Avisos, notificaciones, diálogos que van sobre todo |
+
+Regla: la barra de navegación es lo más alto del **contenido**, y cualquier
+modal o drawer va por encima de ella, sin excepción. Quedan `z-index` crudos
+sueltos en algunas hojas (`1000` y `100` sobre todo): al tocar un archivo con
+alguno, cámbialo por el token que corresponda.
 
 ### 5.11 Layout
 
@@ -606,8 +638,13 @@ El select nativo se estiliza con la flecha SVG ya definida; no le pongas
 
 ### 8.1 Regla de una sola capa
 
-**Nunca un modal sobre otro modal.** Tampoco drawer sobre modal, ni modal
-sobre drawer. Si te encuentras necesitando eso, el flujo está mal diseñado.
+**Un modal a la vez, por regla.** Tampoco drawer sobre modal, ni modal sobre
+drawer. Si te encuentras necesitando eso, primero revisa el diseño del flujo.
+
+La excepción ya prevista por el sistema es la escalera de capas: si de verdad
+hace falta abrir una capa desde otra, la segunda se marca con
+`--capa-overlay-2`, nunca con un número inventado. Y la notificación
+(`.notification`) vive siempre por encima de todo, con `--capa-aviso`.
 
 Cómo resolverlo sin anidar:
 
@@ -748,35 +785,38 @@ document.dispatchEvent(new Event('ds:refresh'));
 
 ### 13.1 Contraste medido (WCAG AA = 4.5:1 en texto normal)
 
-Combinaciones verificadas (ya aplicadas en el código, salvo donde se indica):
+Combinaciones verificadas sobre el código actual (2026-09-28):
 
 | Combinación | Ratio | Estado |
 |---|---|---|
-| `--text-on-primary` `#08352F` sobre `--primary-color` (botón sólido) | 6.33 | Aplicado |
-| `--primary-ink` `#177068` sobre blanco (botón contorno, enlaces, badges) | 5.91 | Aplicado |
-| Texto blanco sobre `--secondary-dark` `#0A6A86` (botón Guardar) | 6.14 | Aplicado |
-| `--warning-ink` `#A34A00` sobre blanco (`badge-warning`) | 5.94 | Aplicado |
-| `--warning-ink` sobre fondo ámbar suave (16% de warning) | 5.89 | Aplicado |
-| `--success-dark` `#1B5E20` / `--danger-dark` `#B71C1C` sobre blanco | 7.87 / 6.57 | Ya cumplía |
-| `--text-color` sobre `--bg-body` | 15.82 | Ya cumplía |
-| Oscuro: `--text-on-primary` sobre `--primary-color` | 8.08 | Aplicado |
-| Oscuro: `--primary-ink` `#4FDDD2` sobre `--bg-body` `#121212` | 11.25 | Aplicado |
-| Oscuro: texto `#E8E8E8` sobre `--bg-card` `#1E1E1E` | 13.61 | Ya cumplía |
+| Claro: `--text-on-primary` `#08352F` sobre `--primary-color` (botón sólido) | 6.33 | Aplicado |
+| Claro: `--primary-ink` `#177068` sobre blanco (contorno, badges, enlaces) | 5.91 | Aplicado |
+| Claro: blanco sobre `--secondary-dark` `#0A6A86` (botón Guardar) | 6.14 | Aplicado |
+| Claro: `--warning-ink` `#A34A00` sobre blanco (`badge-warning`) | 5.94 | Aplicado |
+| Claro: `--text-color` sobre `--bg-body` | 15.82 | Ya cumplía |
+| Oscuro: `--text-on-primary` `#06302C` sobre `--primary-color` | 7.85 | Aplicado |
+| Oscuro: `--primary-ink` `#49D4C6` sobre `--bg-body` `#0D1516` | 10.14 | Aplicado |
+| Oscuro: `--warning-ink` `#F69A31` sobre `--bg-card` `#162022` | 7.58 | Aplicado |
+| Oscuro: `--secondary-contrast` `#062A33` sobre `--secondary-dark` `#33A5C1` | 5.26 | Aplicado |
+| Oscuro: `--text-muted` `#93A7A9` sobre card / fondo | 6.60 / 7.34 | Ya cumplía |
+
+El tema oscuro tiene la paleta afinada y validada (así lo dice el propio
+`variables.css`). El claro es el que trae la deuda pendiente.
 
 **Combinaciones prohibidas** (no cumplen AA):
 
 | Combinación | Ratio | Por qué |
 |---|---|---|
 | Texto blanco sobre `--primary-color` | 2.13 | Usar `--text-on-primary` |
-| Texto blanco sobre `--warning-color` | 2.70 | Usar texto oscuro (`--warning-ink` o `--text-color`) |
+| Texto blanco sobre `--warning-color` | 2.70 | Usar `--warning-ink` o texto oscuro |
 | `--primary-dark` `#2CB1A7` como texto sobre blanco | 2.64 | Usar `--primary-ink` |
 | `--warning-dark` `#E65100` como texto sobre blanco | 3.79 | Usar `--warning-ink` |
-| Texto blanco sobre `--secondary-color` | 4.22 | Usar `--secondary-dark` |
-| Texto blanco sobre el secundario del tema oscuro | 2.02 | Usar `--secondary-contrast` |
+| Texto blanco sobre `--secondary-color` (claro) | 4.22 | Usar `--secondary-dark` |
+| Texto blanco sobre `--secondary-color` (oscuro) | 2.21 | Usar `--secondary-contrast` |
 
-Pendiente (deuda medida): `--text-muted` en claro (`#999999`) da 2.85:1 sobre
-blanco y 2.64:1 sobre `--bg-body`. Debe subir a `#667085` (4.97 / 4.62). En
-oscuro `#808080` da 4.22:1 sobre card; subir a `#A0A0A0` (6.38).
+Pendiente (deuda medida): `--text-muted` del tema **claro** (`#999999`) da
+2.85:1 sobre blanco y 2.64:1 sobre `--bg-body`. Debe subir a `#667085`
+(4.97 / 4.62). Es el único fallo de contraste que queda en el sistema.
 
 ### 13.2 Teclado y foco
 
@@ -807,6 +847,12 @@ oscuro `#808080` da 4.22:1 sobre card; subir a `#A0A0A0` (6.38).
   help, grab, not-allowed). No lo dupliques.
 - Prohibido usar SVG de otra librería sin justificación, y prohibido usar
   emojis como iconos.
+- Los iconos de la aplicación (favicon y los del manifiesto PWA) viven en
+  `public/assets/app-icons/`, que **sí** está versionada. No los devuelvas a
+  `public/assets/images/logos/`: esa carpeta está en `.gitignore` (guarda los
+  logos que sube cada tienda), el archivo no viajaba en la imagen y el favicon
+  daba 404 en producción desde siempre. Si agregas un icono, va ahí y se apunta
+  desde el `<link>` y el `manifest.json`.
 
 ---
 
@@ -827,8 +873,10 @@ oscuro `#808080` da 4.22:1 sobre card; subir a `#A0A0A0` (6.38).
 
 ## 16. Responsive
 
-Breakpoints en uso (ordenados; los cuatro primeros son los canónicos, el resto
-deuda a unificar): **480, 640, 768, 1024** — luego 520, 600, 900, 1200.
+Breakpoints en uso: **480, 640, 768, 1024** son los canónicos; el resto es
+deuda a unificar (600 con 10 usos, 900 con 13, más sueltos en 360, 400, 460,
+520, 700, 720, 760, 769, 860, 899, 901, 960 y 1000). El de **768** es el que
+más se usa (24 veces) y es la frontera móvil/escritorio.
 
 Reglas:
 
@@ -849,15 +897,17 @@ cuando se toque cada archivo", no una excusa para copiarlo.
 
 | Hallazgo | Dónde | Regla que viola |
 |---|---|---|
-| 87 colores en duro, 24 de ellos `#4fddd2` (cian de oscuro) | `public/css/inventory.css` | 3.3 |
-| Paleta propia duplicada con otros valores (`#48bb78`, `#2d3748`, `#d5dbe3`) | `public/css/login.css` | 3.3, 11 |
+| 244 colores en duro, 22 de ellos `#4fddd2` (cian del tema oscuro) | `public/css/inventory.css` | 3.3 |
+| 70 colores en duro | `public/css/sales.css` | 3.3 |
+| 103 colores en duro (incluye la capa antigua) | `public/css/main.css` | 3.3 |
 | Fuente `Nunito` que nunca se carga | `public/css/sidebar-modern.css` | 5.5 |
-| 30 `alert()` y 8 `confirm()` | `public/js/inventory.js` (31), `sales.js`, `finance.js`, `promotions.js`, `super_admin.js`, `PlanManager.js` | 3.2 |
-| `z-index` de 99999 y 200000 sueltos | varios CSS | 5.10 |
-| `--text-muted` con contraste 2.85:1 | `variables.css` | 13.1 |
+| Fuentes propias fuera de Sora/Inter | `public/tables.html`, `public/js/comandas.js` | 5.5 |
+| 8 llamadas bloqueantes que quedan | `sales.js` (2), `finance.js` (2), `tables.js` (2), `PlanManager.js`, `promotions.js`, `super_admin.js`, `cobro.js` | 3.2 |
+| `z-index` crudos en hojas que ya podrían usar la escalera (`1000`, `100`) | varios CSS | 5.10 |
+| `--text-muted` del tema claro con 2.85:1 | `variables.css` | 13.1 |
 | Ítem activo del sidebar: texto blanco sobre cian (2.13:1) | `main.css` (`.nav-item.active`) | 13.1 |
-| Colores de estado en duro fuera de tokens (`#2e7d32`, `#4caf50`, `#dc3545`) | `bulk_sales.css`, `cart_responsive.css`, `sales.css` | 3.3 |
-| Breakpoints dispersos (520, 700, 720, 901, 960) | varios CSS | 16 |
+| 12 `var(--token)` que no existen y no aplican nada | `design-system.css`, `inventory.css`, `sales.css`, vistas de pantallas digitales, `finance.html`, `promotions.html` | 5, 11 |
+| Breakpoints dispersos (360, 400, 460, 520, 700, 720, 760, 769, 860, 899, 901, 960, 1000) | varios CSS | 16 |
 
 ---
 
@@ -915,6 +965,11 @@ inexistentes. Sale con código 1 si encuentra algo.
 ```bash
 docker compose up -d --build          # app en http://localhost:8091/public/
 ```
+
+El servidor es **nginx** (`docker/nginx.conf`), con `DocumentRoot` en
+`/var/www/html` igual que antes, así que la app se sirve bajo `/public/`. nginx
+bloquea `/docs/`, `/config/`, `/includes/` y los archivos `.md`: esta guía se
+lee en el repositorio, no por web.
 
 Entra con `admin / admin123` (cambiando la contraseña si lo pide), y revisa la
 pantalla en claro y oscuro. Para un cambio de layout relevante, deja captura

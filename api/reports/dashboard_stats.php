@@ -25,6 +25,27 @@ try {
     $start_date = isset($_GET['start_date']) ? str_replace('T', ' ', $_GET['start_date']) : date('Y-m-01 00:00:00');
     $end_date = isset($_GET['end_date']) ? str_replace('T', ' ', $_GET['end_date']) : date('Y-m-t 23:59:59');
 
+    // ---- Caché de respuestas del dashboard ----
+    // El dashboard ejecuta 8-9 consultas por carga. `dashboard` es la vista
+    // de monitoreo: cachearla 15s por tienda+día elimina la repetición de
+    // queries cuando varios clientes ven la misma tienda. Se invalida al
+    // crear/refundar ventas (ver api/sales/create_sale.php), así nunca queda
+    // desactualizado de verdad. Los demás tipos de reporte NO se cachean.
+    $CACHE_TTL = 15; // segundos
+    $cacheFile = null;
+    if ($type === 'dashboard') {
+        $cacheKey = md5('dash:' . $store_id . ':' . date('Ymd'));
+        $cacheDir = sys_get_temp_dir() . '/tomodachi_cache';
+        $cacheFile = $cacheDir . '/' . $cacheKey . '.json';
+        if (!is_dir($cacheDir)) { @mkdir($cacheDir, 0770, true); }
+        if (is_file($cacheFile) && (time() - filemtime($cacheFile)) < $CACHE_TTL) {
+            header('Content-Type: application/json');
+            echo file_get_contents($cacheFile);
+            exit;
+        }
+        ob_start(); // captura la respuesta para cachearla al final
+    }
+
     // Permisos granulares: SOLO el dashboard básico puede verlo cualquier
     // rol; el resto de reportes (incluidos movimientos de inventario, cajas
     // y movimientos de caja) requieren admin/manager. Antes había tipos que
@@ -396,6 +417,14 @@ try {
             ]
         ]
     ]);
+
+    // Guardar la respuesta del dashboard en caché (si aplicaba)
+    if ($type === 'dashboard' && $cacheFile !== null) {
+        $dashOut = ob_get_clean();
+        if (!empty($dashOut)) { @file_put_contents($cacheFile, $dashOut); }
+        echo $dashOut;
+        exit;
+    }
 
 } catch (Exception $e) {
     http_response_code(500);

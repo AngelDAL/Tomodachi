@@ -5,3 +5,52 @@
     font-style: normal;
     font-display: swap;
 }
+
+/* Sora e Inter localizadas (antes vía Google Fonts @import/CDN).
+   Las páginas de producción cargan fonts.css, así que aquí viven para
+   no depender de fonts.googleapis.com. Caminos relativos a public/css/. */
+@font-face {
+    font-family: 'Sora';
+    src: url('../lib/fonts/sora/latin-400-normal.woff2') format('woff2');
+    font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+    font-family: 'Sora';
+    src: url('../lib/fonts/sora/latin-500-normal.woff2') format('woff2');
+    font-weight: 500; font-style: normal; font-display: swap;
+}
+@font-face {
+    font-family: 'Sora';
+    src: url('../lib/fonts/sora/latin-600-normal.woff2') format('woff2');
+    font-weight: 600; font-style: normal; font-display: swap;
+}
+@font-face {
+    font-family: 'Sora';
+    src: url('../lib/fonts/sora/latin-700-normal.woff2') format('woff2');
+    font-weight: 700; font-style: normal; font-display: swap;
+}
+@font-face {
+    font-family: 'Sora';
+    src: url('../lib/fonts/sora/latin-800-normal.woff2') format('woff2');
+    font-weight: 800; font-style: normal; font-display: swap;
+}
+@font-face {
+    font-family: 'Inter';
+    src: url('../lib/fonts/inter/latin-400-normal.woff2') format('woff2');
+    font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+    font-family: 'Inter';
+    src: url('../lib/fonts/inter/latin-500-normal.woff2') format('woff2');
+    font-weight: 500; font-style: normal; font-display: swap;
+}
+@font-face {
+    font-family: 'Inter';
+    src: url('../lib/fonts/inter/latin-600-normal.woff2') format('woff2');
+    font-weight: 600; font-style: normal; font-display: swap;
+}
+@font-face {
+    font-family: 'Inter';
+    src: url('../lib/fonts/inter/latin-700-normal.woff2') format('woff2');
+    font-weight: 700; font-style: normal; font-display: swap;
+}

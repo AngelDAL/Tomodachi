@@ -174,6 +174,12 @@ fi
 if [ -f /opt/tomodachi-assets/products/default-product.svg ] && [ ! -f /var/www/html/public/assets/images/products/default-product.svg ]; then
   cp /opt/tomodachi-assets/products/default-product.svg /var/www/html/public/assets/images/products/default-product.svg
 fi
+# Fondos demo del editor de Pantallas Digitales (localizados, ya no Unsplash)
+for bg in demo-cafe.jpg demo-city.jpg demo-mountain.jpg; do
+  if [ -f "/opt/tomodachi-assets/backgrounds/$bg" ] && [ ! -f "/var/www/html/public/assets/images/backgrounds/$bg" ]; then
+    cp "/opt/tomodachi-assets/backgrounds/$bg" "/var/www/html/public/assets/images/backgrounds/$bg"
+  fi
+done
 chown -R www-data:www-data /var/www/html/public/assets/images
 chown -R www-data:www-data /var/www/html/uploads
 

@@ -72,6 +72,11 @@ try {
         'origen'          => 'pos',
     ]);
 
+    // Invalidar caché del dashboard: tras una venta, los totales cambian.
+    // Mismo directorio/forma que api/reports/dashboard_stats.php.
+    $dashKey = md5('dash:' . $store_id . ':' . date('Ymd'));
+    @unlink(sys_get_temp_dir() . '/tomodachi_cache/' . $dashKey . '.json');
+
     Response::success([
         'sale_id'         => $resultado['sale_id'],
         'total'           => $resultado['total'],

@@ -9,11 +9,11 @@
 
 const link = document.createElement('link');
 link.rel = 'stylesheet';
-link.href = 'https://cdn.jsdelivr.net/npm/driver.js@1.0.1/dist/driver.css';
+link.href = 'lib/driver/driver.css';
 document.head.appendChild(link);
 
 const script = document.createElement('script');
-script.src = 'https://cdn.jsdelivr.net/npm/driver.js@1.0.1/dist/driver.js.iife.js';
+script.src = 'lib/driver/driver.js';
 document.head.appendChild(script);
 
 window.TourSystem = {

@@ -14,7 +14,7 @@
    ================================================================ */
 
 /* ---------- Tipografía ---------- */
-@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+/* Tipografías Sora/Inter: locales via public/css/fonts.css (ya no @import de Google Fonts) */
 
 :root {
   /* Tipografía */

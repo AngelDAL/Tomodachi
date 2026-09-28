@@ -6,7 +6,7 @@
 <title>Tomodachi — Perfil de Estilos</title>
     <link rel="icon" type="image/svg+xml" href="assets/app-icons/tomodachi-favicon.svg">
     <link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="css/variables.css?v=5">
+<link rel="stylesheet" href="css/variables.css?v=6">
 <link rel="stylesheet" href="css/fonts.css?v=1">
 <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
 <!-- anime.js (vendoreado en el proyecto) -->
@@ -38,16 +38,19 @@ h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
 .hero h1 { font-size: clamp(2rem,5vw,3.3rem); font-weight: 800; letter-spacing: -.02em; margin: 14px 0 10px; }
 .hero h1 span { color: var(--primary-color); }
 .hero p { max-width: 680px; margin: 0 auto; color: var(--text-medium); font-size: 1.02rem; }
+.hero p.hero-ref { margin-top: 12px; font-size: .8rem; color: var(--text-muted); }
+.hero p.hero-ref i { color: var(--primary-color); margin-right: 4px; }
+.hero p.hero-ref code { font-family: 'SF Mono', ui-monospace, monospace; font-size: .92em; background: var(--bg-card); border: 1px solid var(--border-lighter); border-radius: 6px; padding: 2px 6px; color: var(--text-medium); }
 .theme-toggle { margin: 20px auto 0; display: inline-flex; gap: 4px; padding: 4px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 100px; box-shadow: var(--shadow-sm); }
 .theme-toggle .seg { padding: 8px 20px; border-radius: 100px; color: var(--text-muted); transition: all var(--dur-spring); cursor: pointer; }
-.theme-toggle .seg.active { background: var(--primary-color); color: #fff; box-shadow: var(--shadow-primary); }
+.theme-toggle .seg.active { background: var(--primary-color); color: var(--text-on-primary, #08352F); box-shadow: var(--shadow-primary); }
 
 /* ===== Pestañas de organización (Componentes / Modales y Drawers / Animaciones) ===== */
 .main-tabs { display: flex; justify-content: center; gap: 6px; padding: 14px 12px; position: sticky; top: 0; z-index: 60; background: color-mix(in srgb, var(--bg-body) 88%, transparent); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border-lighter); }
 .main-tab { font-family: var(--font-heading); font-size: .9rem; font-weight: 600; color: var(--text-medium); background: transparent; border: none; cursor: pointer; padding: 11px 24px; border-radius: 100px; display: inline-flex; align-items: center; gap: 9px; transition: all var(--dur-spring); }
 .main-tab i { font-size: .95em; }
 .main-tab:hover { color: var(--primary-color); background: var(--primary-light); }
-.main-tab.active { background: var(--primary-color); color: #fff; box-shadow: var(--shadow-primary); }
+.main-tab.active { background: var(--primary-color); color: var(--text-on-primary, #08352F); box-shadow: var(--shadow-primary); }
 
 .view-pane { display: none; }
 .view-pane.active { display: block; }
@@ -69,10 +72,10 @@ h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
 .btn { position: relative; overflow: hidden; font-family: var(--font-heading); display: inline-flex; align-items: center; justify-content: center; gap: 9px; font-size: .9rem; font-weight: 600; padding: 12px 26px; border-radius: 100px; border: 1.5px solid transparent; cursor: pointer; text-decoration: none; white-space: nowrap; transform: translateZ(0); -webkit-tap-highlight-color: transparent; transition: transform var(--dur), box-shadow var(--dur-spring), background var(--dur), color var(--dur), border-color var(--dur); }
 .btn:active { transform: translateY(1px) scale(.97); box-shadow: none; }
 .btn i { font-size: .95em; }
-.btn-solid { background: var(--primary-color); color: #fff; box-shadow: var(--shadow-primary); }
+.btn-solid { background: var(--primary-color); color: var(--text-on-primary, #08352F); box-shadow: var(--shadow-primary); }
 .btn-solid:hover { background: var(--primary-hover); box-shadow: var(--shadow-lg); }
-.btn-dark { background: var(--secondary-color); color: var(--secondary-contrast); }
-.btn-outline { background: transparent; color: var(--primary-color); border-color: var(--primary-color); }
+.btn-dark { background: var(--secondary-dark); color: var(--secondary-contrast); }
+.btn-outline { background: transparent; color: var(--primary-ink, var(--primary-dark)); border-color: var(--primary-color); }
 .btn-outline:hover { background: var(--primary-light); }
 .btn-soft { background: var(--primary-light); color: var(--primary-dark); }
 .btn-ghost { background: transparent; color: var(--text-medium); }
@@ -94,7 +97,7 @@ h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
 .segment { display: inline-flex; align-items: center; gap: 0; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 100px; padding: 5px; box-shadow: var(--shadow-sm); }
 .segment .cap-btn { font-family: var(--font-heading); font-size: .82rem; font-weight: 600; color: var(--text-medium); background: transparent; border: none; cursor: pointer; padding: 9px 16px; border-radius: 100px; white-space: nowrap; transition: all var(--dur); position: relative; z-index: 1; }
 .segment .cap-btn:hover { color: var(--primary-color); }
-.segment .cap-btn.active { background: var(--primary-color); color: #fff; box-shadow: var(--shadow-primary); }
+.segment .cap-btn.active { background: var(--primary-color); color: var(--text-on-primary, #08352F); box-shadow: var(--shadow-primary); }
 .segment .vslash { display: inline-flex; align-items: center; justify-content: center; width: 10px; color: var(--border-color); font-size: .95rem; user-select: none; }
 .segment .vslash::before { content: "\002F"; font-weight: 300; transform: rotate(-8deg); display: inline-block; }
 
@@ -153,11 +156,11 @@ h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
 .badge-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
 .badge { display: inline-flex; align-items: center; gap: 7px; font-family: var(--font-heading); font-size: .78rem; font-weight: 600; padding: 7px 14px; border-radius: 100px; border: 1.5px solid; transition: transform var(--dur-spring), box-shadow var(--dur); }
 .badge i { font-size: .85em; }
-.badge-primary { color: var(--primary-dark); background: var(--primary-light); border-color: color-mix(in srgb,var(--primary-color) 45%, transparent); }
+.badge-primary { color: var(--primary-ink, var(--primary-dark)); background: var(--primary-light); border-color: color-mix(in srgb,var(--primary-color) 45%, transparent); }
 .badge-primary .dot { color: var(--primary-color); }
 .badge-outline { color: var(--primary-color); background: transparent; border-color: var(--primary-color); }
 .badge-success { color: var(--success-dark); background: color-mix(in srgb,var(--success-color) 14%, transparent); border-color: color-mix(in srgb,var(--success-color) 55%, transparent); }
-.badge-warning { color: var(--warning-dark); background: color-mix(in srgb,var(--warning-color) 16%, transparent); border-color: color-mix(in srgb,var(--warning-color) 55%, transparent); }
+.badge-warning { color: var(--warning-ink, var(--warning-dark)); background: color-mix(in srgb,var(--warning-color) 16%, transparent); border-color: color-mix(in srgb,var(--warning-color) 55%, transparent); }
 .badge-danger { color: var(--danger-dark); background: color-mix(in srgb,var(--danger-color) 12%, transparent); border-color: color-mix(in srgb,var(--danger-color) 50%, transparent); }
 .badge:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
 
@@ -368,8 +371,9 @@ h1,h2,h3,h4 { font-family: var(--font-heading); line-height: 1.2; }
 
 <!-- ===== HERO ===== -->
 <header class="hero">
-  <span class="eyebrow">Perfil de estilos · v1.3</span>
+  <span class="eyebrow">Perfil de estilos · v1.4</span>
   <h1>Tomodachi <span>Design Lab</span></h1>
+  <p class="hero-ref"><i class="fas fa-book"></i> Normativa: <code>docs/GUIA_DE_ESTILOS.md</code> &middot; Tokens para agentes: <code>DESIGN.md</code> &middot; Verificación: <code>bash scripts/verificar-estilos.sh</code></p>
   <p>Componentes, modales, drawers y un catálogo de animaciones (con anime.js) para decidir la presentación de contenido. Organizado por pestañas.</p>
   <div class="theme-toggle" role="group" aria-label="Tema">
     <span class="seg active" data-theme-set="light">Claro</span>

@@ -27,6 +27,8 @@
     --primary-hover: var(--primary-dark);
     --primary-active: var(--primary-darker);
     --primary-focus-ring: 0 0 0 3px var(--primary-shadow);
+    /* Tinta de marca para TEXTO sobre superficie blanca (AA 5.91:1) */
+    --primary-ink: #177068;
 
     --secondary-color: #0E86A6;
     --secondary-dark: #0A6A86;
@@ -41,6 +43,8 @@
     --danger-dark: #B71C1C;
     --warning-color: #F57C00;
     --warning-dark: #E65100;
+    /* Tinta ámbar para TEXTO (badges) — AA sobre blanco y sobre fondo ámbar suave */
+    --warning-ink: #A34A00;
     --info-color: #1976D2;
     --info-dark: #0D47A1;
     --info-light: #E3F2FD;
@@ -137,6 +141,8 @@
     --primary-hover: #32BDAF;
     --primary-active: #2C9B90;
     --primary-focus-ring: 0 0 0 3px rgba(73, 212, 198, 0.32);
+    /* Tinta de marca para TEXTO sobre superficie oscura */
+    --primary-ink: #49D4C6;
 
     --secondary-color: #51BCD6;
     --secondary-dark: #33A5C1;
@@ -150,6 +156,8 @@
     --danger-dark: #D84845;
     --warning-color: #F69A31;
     --warning-dark: #E08420;
+    /* Tinta ámbar para TEXTO sobre superficie oscura */
+    --warning-ink: #F69A31;
     --info-color: #50A0E2;
     --info-dark: #3B8CD0;
     --info-light: #14293D;

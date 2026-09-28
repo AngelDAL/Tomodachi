@@ -340,10 +340,10 @@ input[type="checkbox"], input[type="radio"], label, select, .form-select,
    (.field/.flabel/.input-wrap/.ds-input). Se añadieron aquí para que
    todo lo que muestra el catálogo de estilos sea un componente real.
    ================================================================ */
-.btn-solid  { background: var(--primary-color); color: #fff; box-shadow: var(--shadow-primary); }
+.btn-solid  { background: var(--primary-color); color: var(--text-on-primary, #08352F); box-shadow: var(--shadow-primary); }
 .btn-solid:hover  { background: var(--primary-hover); box-shadow: var(--shadow-lg); }
-.btn-dark   { background: var(--secondary-color); color: var(--secondary-contrast); }
-.btn-outline { background: transparent; color: var(--primary-color); border-color: var(--primary-color); }
+.btn-dark   { background: var(--secondary-dark); color: var(--secondary-contrast); }
+.btn-outline { background: transparent; color: var(--primary-ink, var(--primary-dark)); border-color: var(--primary-color); }
 .btn-outline:hover { background: var(--primary-light); }
 .btn-soft   { background: var(--primary-light); color: var(--primary-dark); }
 .btn-ghost  { background: transparent; color: var(--text-medium); }

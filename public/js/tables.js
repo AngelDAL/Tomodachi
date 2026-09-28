@@ -243,18 +243,21 @@ function tpFichaDePunto(p) {
     const cuenta = tpCuentaDePunto(p.table_id);
     const apagado = Number(p.is_active) !== 1;
     const clase = 'tp-card' + (cuenta ? ' ocupado' : '') + (apagado ? ' apagado' : '');
-    const estado = apagado
-        ? '<span class="tp-estado apagado">Desactivado</span>'
-        : (cuenta ? '<span class="tp-estado ocupado">Ocupado</span>' : '<span class="tp-estado">Libre</span>');
+
+    // Un punto PUEDE estar desactivado y con la cuenta abierta a la vez (pasa de verdad: se
+    // desactiva la mesa y la cuenta sigue viva). En ese caso manda la CUENTA —es lo que hay
+    // que cobrar— y lo de "desactivado" se dice al lado, sin tapar el dato.
+    const insignias = [];
+    if (cuenta) insignias.push('<span class="tp-estado ocupado">Ocupado</span>');
+    else if (!apagado) insignias.push('<span class="tp-estado">Libre</span>');
+    if (apagado) insignias.push('<span class="tp-estado apagado">Desactivado</span>');
 
     const flecha = '<span class="tp-card-flecha"><i class="fas fa-chevron-right"></i></span>';
+    const notaApagado = '<div class="tp-datos"><span><i class="fas fa-ban"></i> Punto desactivado</span></div>';
     let cuerpo = '';
     let pie = '';
 
-    if (apagado) {
-        cuerpo = '<div class="tp-datos"><span><i class="fas fa-ban"></i> Fuera de servicio</span></div>';
-        pie = '<span class="tp-datos"><span>Entra para reactivarlo</span></span>' + flecha;
-    } else if (cuenta) {
+    if (cuenta) {
         cuerpo = '<div><span class="tp-codigo">' + tpEsc(cuenta.code) + '</span></div>' +
             '<div class="tp-datos">' +
                 '<span><i class="fas fa-clock"></i> ' + Number(cuenta.minutos_abierta) + ' min</span>' +
@@ -263,8 +266,12 @@ function tpFichaDePunto(p) {
             '</div>' +
             ((cuenta.puntos || []).length > 1
                 ? '<div class="tp-datos"><span><i class="fas fa-link"></i> ' + tpEsc(cuenta.puntos_texto) + '</span></div>'
-                : '');
+                : '') +
+            (apagado ? notaApagado : '');
         pie = '<span class="tp-card-total">' + tpDinero(cuenta.total) + '</span>' + flecha;
+    } else if (apagado) {
+        cuerpo = '<div class="tp-datos"><span><i class="fas fa-ban"></i> Fuera de servicio</span></div>';
+        pie = '<span class="tp-datos"><span>Entra para reactivarlo</span></span>' + flecha;
     } else {
         cuerpo = '<div class="tp-datos"><span><i class="fas fa-circle-check"></i> Sin cuenta abierta</span></div>';
         pie = '<span class="tp-datos"><span>Lista para atender</span></span>' + flecha;
@@ -275,7 +282,7 @@ function tpFichaDePunto(p) {
         '<div class="tp-card-top">' +
             '<div><h3 class="tp-nombre">' + tpEsc(p.label) + '</h3>' +
             (p.zone ? '<p class="tp-zona">' + tpEsc(p.zone) + '</p>' : '') + '</div>' +
-            estado +
+            '<div class="tp-card-insignias">' + insignias.join('') + '</div>' +
         '</div>' +
         cuerpo +
         '<div class="tp-card-pie">' + pie + '</div>' +
@@ -430,17 +437,18 @@ function tpEngancharMenu(idBoton, idMenu, alElegir) {
 /** Las acciones del punto: máximo CUATRO, cada una con su nombre a la vista. */
 function tpAccionesDePunto(p, cuenta, apagado) {
     const acciones = [];
-    if (apagado) {
-        acciones.push({ accion: 'reactivar', icono: 'power-off', texto: 'Reactivar', clase: 'primario' });
-        acciones.push({ accion: 'qr', icono: 'qrcode', texto: 'Ver el QR' });
-        acciones.push({ accion: 'editar', icono: 'pen', texto: 'Editar el punto' });
-        return acciones;
-    }
+    // La cuenta manda: un punto desactivado CON cuenta abierta sigue teniendo que cobrarse.
     if (cuenta) {
         acciones.push({ accion: 'cobrar', icono: 'cash-register', texto: 'Cobrar la cuenta', clase: 'primario', id: 'tpCuentaCobrar' });
         acciones.push({ accion: 'anotar', icono: 'utensils', texto: 'Agregar platillo' });
         acciones.push({ accion: 'juntar', icono: 'link', texto: 'Juntar otra mesa' });
         acciones.push({ accion: 'qr_cuenta', icono: 'qrcode', texto: 'QR de la cuenta' });
+        return acciones;
+    }
+    if (apagado) {
+        acciones.push({ accion: 'reactivar', icono: 'power-off', texto: 'Reactivar', clase: 'primario' });
+        acciones.push({ accion: 'qr', icono: 'qrcode', texto: 'Ver el QR' });
+        acciones.push({ accion: 'editar', icono: 'pen', texto: 'Editar el punto' });
         return acciones;
     }
     acciones.push({ accion: 'abrir', icono: 'play', texto: 'Abrir cuenta', clase: 'primario' });
@@ -471,8 +479,20 @@ function tpPintarDetalle() {
     zona.classList.toggle('hidden', !p.zone);
 
     const badge = document.getElementById('tpDetalleEstado');
-    badge.textContent = apagado ? 'Desactivado' : (cuenta ? 'Ocupado' : 'Libre');
-    badge.className = 'tp-estado' + (apagado ? ' apagado' : (cuenta ? ' ocupado' : ''));
+    badge.textContent = cuenta ? 'Ocupado' : (apagado ? 'Desactivado' : 'Libre');
+    badge.className = 'tp-estado' + (cuenta ? ' ocupado' : (apagado ? ' apagado' : ''));
+
+    // Un punto desactivado con la cuenta abierta (pasa de verdad) merece su explicación: su
+    // cuenta sigue viva y hay que cobrarla, aunque la mesa ya no se use.
+    const aviso = document.getElementById('tpDetalleAviso');
+    if (cuenta && apagado) {
+        aviso.classList.remove('hidden');
+        aviso.innerHTML = '<i class="fas fa-triangle-exclamation"></i> Este punto está desactivado y no acepta ' +
+            'pedidos nuevos, pero su cuenta sigue abierta: hay que cobrarla o cancelarla.';
+    } else {
+        aviso.classList.add('hidden');
+        aviso.innerHTML = '';
+    }
 
     // El panel de la cuenta solo existe si el punto tiene cuenta abierta.
     document.getElementById('tpCuentaPanel').classList.toggle('hidden', !cuenta);
@@ -547,6 +567,7 @@ function tpPintarDetalle() {
         opciones.push('<button type="button" data-config="' + (pausado ? 'resume' : 'pause') + '"><i class="fas fa-pause"></i> ' +
             '<span id="tpConfigPausaTexto">' + (pausado ? 'Reanudar pedidos' : 'Pausar pedidos') + '</span></button>');
         opciones.push('<button type="button" data-punto="editar"><i class="fas fa-pen"></i> Editar el punto</button>');
+        if (apagado) opciones.push('<button type="button" data-punto="reactivar"><i class="fas fa-power-off"></i> Reactivar el punto</button>');
         opciones.push('<button type="button" data-config="close"><i class="fas fa-flag-checkered"></i> Cerrar la cuenta</button>');
         opciones.push('<button type="button" data-config="cancel" class="peligro"><i class="fas fa-ban"></i> Cancelar la cuenta…</button>');
     } else if (apagado) {
@@ -1605,6 +1626,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         if (config) { tpAccionCuenta(config); return; }
         const punto = boton.getAttribute('data-punto');
         if (punto === 'editar') tpEditarPunto(tpEstado.detalle);
+        if (punto === 'reactivar') tpReactivarPunto(tpEstado.detalle);
     });
 
     // Esc regresa al mapa: en escritorio es lo que la mano espera. Si hay un modal abierto

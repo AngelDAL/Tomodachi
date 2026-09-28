@@ -157,6 +157,7 @@
         button.tp-card { text-align: left; font-family: inherit; cursor: pointer; color: var(--text-color); width: 100%; }
         button.tp-card:hover { border-color: var(--primary-color); }
         button.tp-card:active { transform: scale(.995); }
+        .tp-card-insignias { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
         .tp-card-pie { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: auto; }
         .tp-card-flecha { color: var(--text-muted); }
         .tp-card-total { font-family: var(--font-heading); font-size: 1.15rem; color: var(--text-color); font-variant-numeric: tabular-nums; }
@@ -1140,6 +1141,10 @@
                             </div>
                         </div>
 
+                        <!-- Aviso del punto: aparece solo cuando hay algo que explicar (por
+                             ejemplo, un punto desactivado cuya cuenta sigue abierta). -->
+                        <div class="tp-aviso hidden" id="tpDetalleAviso"></div>
+
                         <!-- La ficha: qué es este punto y cómo está. Sin un solo botón. -->
                         <div class="tp-ficha-libre hidden" id="tpDetalleLibre"></div>
                         <div class="tp-ficha hidden" id="tpDetalleFicha">
@@ -1510,7 +1515,7 @@
     <script src="js/sidebar-loader.js?v=13"></script>
     <script src="js/app.js?v=12"></script>
     <script src="js/ws-realtime.js?v=1"></script>
-    <script src="js/tables.js?v=6"></script>
+    <script src="js/tables.js?v=7"></script>
     <script src="js/cobro.js?v=2"></script>
     <script src="js/comandas.js?v=1"></script>
     <script src="lib/animejs/anime.min.js"></script>

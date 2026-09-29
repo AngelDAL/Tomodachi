@@ -25,8 +25,6 @@ const STATIC_ASSETS = [
   '/public/css/inventory.css',
   '/public/css/sales.css',
   '/public/css/promotions.css',
-  '/public/css/finance.css',
-  '/public/css/reports.css',
   '/public/js/app.js',
   '/public/js/sidebar-loader.js',
   '/public/js/theme-init.js',
@@ -42,7 +40,21 @@ const STATIC_ASSETS = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS)).then(() => self.skipWaiting())
+    caches.open(CACHE_NAME).then((cache) => Promise.allSettled(
+      // Un cache.add() por activo en vez de un addAll() atómico: addAll rechaza
+      // entero si UN solo request falla (404), el install falla y el navegador
+      // descarta el SW. Con allSettled el SW se instala igual y queda en consola
+      // qué activo faltó, en vez de perderse la funcionalidad offline completa.
+      STATIC_ASSETS.map((url) => cache.add(url))
+    ).then((results) => {
+      const fallidos = results
+        .map((r, i) => (r.status === 'rejected' ? STATIC_ASSETS[i] : null))
+        .filter(Boolean);
+      if (fallidos.length) {
+        console.warn(`[SW] precache incompleto: ${fallidos.length} de ${STATIC_ASSETS.length} activos no se cachearon (el SW sigue activo):`, fallidos);
+      }
+      return self.skipWaiting();
+    }))
   );
 });
 

@@ -135,3 +135,48 @@ bash docker/test_suite.sh http://localhost:8091
 - Tienda 1 "Tienda Principal": admin / admin123 (6 productos base)
 - Tienda 2 "Cafetería Demo": demo / demo123 (5 productos, 7 ventas históricas)
 - Store_id 1 y 2 para pruebas de aislamiento multi-tienda
+
+## Service worker — TAB-35 (2026-09-29)
+
+El SW (`public/sw.js`) **nunca se activaba**: `STATIC_ASSETS` declaraba
+`/public/css/finance.css` y `/public/css/reports.css`, que no existen en git ni
+en la instancia (404), y `cache.addAll()` es atómico — un solo request fallido
+rechaza el install y el navegador descarta el worker. `offline.js:91` solo dejaba
+un `console.warn`, así que el modo offline se perdía en silencio.
+
+**Arreglo**: fuera las dos rutas fantasma, y el precache pasó a `cache.add()` por
+activo con `Promise.allSettled`; el install ya no puede tumbar el SW y la consola
+del worker dice cuál activo falló.
+
+**Suite nueva** (nace con este fix, es la que cierra la regresión):
+
+```bash
+bash docker/test_service_worker.sh http://127.0.0.1:8091   # Chrome headless + CDP
+```
+
+Corridas medidas (Chrome 152 headless, `tests/sw/verify_service_worker.mjs`):
+
+| Escenario | Registros | active | controller 2ª carga | Caché v5 | 404 |
+|---|---|---|---|---|---|
+| Instancia 8091 (código viejo) | 0 | `redundant` | null | 0 activos | `finance.css` |
+| sw.js de HEAD en rig local | 0 | `redundant` | null | 0 activos | `finance.css` |
+| sw.js corregido, rig local | 1 | `activated` | no null | 19/19 declarados | ninguno |
+| sw.js corregido, 1 activo en 404 | 1 | `activated` | no null | 18 declarados (falta el forzado) | el forzado (el SW sigue activo) |
+
+En la tercera corrida la caché acaba con un activo extra
+(`/public/assets/app-icons/tomodachi-icon-192.png`): el SW también cachea en
+caliente lo que pide la página, que es justo lo que se quería recuperar.
+
+En la cuarta, la consola del worker reporta
+`[SW] precache incompleto: 1 de 19 activos no se cachearon (el SW sigue activo)`.
+
+Reproducir sin la instancia (sirve el árbol de trabajo por HTTP):
+
+```bash
+python3 tests/sw/static_rig.py --port 18811 --root . &
+node tests/sw/verify_service_worker.mjs --url http://127.0.0.1:18811 --page /public/sales.html
+```
+
+Verificación pendiente: el rebuild de la imagen desechable (el 8091 vivo todavía
+sirve el snapshot viejo). Después del rebuild, la misma suite debe dar PASS.
+

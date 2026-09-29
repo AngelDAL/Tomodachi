@@ -146,6 +146,16 @@ de esa mesa. Herramientas, de menor a mayor:
    hay un dedo encima para no romper el gesto.
 3. **Mesa física**: `pos_x/pos_y/shape/seats` + editor de plano; el tope de dispositivos usa los
    asientos.
+   → **Hecha (29-sep-2026).** Migración `047_plano_del_salon.sql`: `pos_x`, `pos_y` (lienzo virtual
+   de 1000 x 700, NULL = sin lugar), `shape` (`rect`/`round`/`bar`) y `seats`. El editor
+   ("Acomodar el salón", en el menú de tres puntos del mapa) es un **modo de la vista del salón**,
+   no otra pantalla: se arrastra la ficha (o se mueve con las flechas del teclado), se toca para
+   cambiar forma y asientos, y **nada se guarda hasta tocar Guardar** —Cancelar devuelve el salón
+   como estaba—. El guardado es **una sola operación** (`action: 'acomodo'`, dentro de una
+   transacción) con las cuatro cosas por punto, así no queda el acomodo a medias. El tope de
+   dispositivos por cuenta se resuelve en `api/dining/session.php`: manda
+   `max_devices_per_check` si la empresa lo fijó; si no, **los asientos de la mesa**; 0 en los dos
+   significa sin tope. Ese número ya se puede fijar en Mi Empresa.
 4. **Modo reposo** con las diapositivas del destino `mesa`.
 
 ## Decisiones que faltan

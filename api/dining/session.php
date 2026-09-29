@@ -594,6 +594,37 @@ function puntoDeQr($db, $store_id, $token) {
     return $stmt->fetch(PDO::FETCH_ASSOC) ?: false;
 }
 
+/**
+ * TOPE de dispositivos por cuenta (Fase 3).
+ *
+ * El orden manda el sentido común: si la empresa fijó `max_devices_per_check`, ese número
+ * vale. Si no lo fijó, manda el TAMAÑO DE LA MESA (`dining_tables.seats`): una mesa de 4
+ * asientos no necesita nueve celulares pidiendo. Si tampoco hay asientos declarados, no hay
+ * tope —el comportamiento de siempre—, porque inventarse un límite rompería instalaciones
+ * que ya funcionan.
+ *
+ * @return int 0 = sin tope
+ */
+function topeDeDispositivos($db, $store_id, $table_id) {
+    $conn = $db->getConnection();
+
+    $stmt = $conn->prepare("SELECT settings FROM stores WHERE store_id = :sid");
+    $stmt->execute([':sid' => $store_id]);
+    $cfg = json_decode((string)$stmt->fetchColumn(), true) ?: [];
+    $dining = (isset($cfg['dining']) && is_array($cfg['dining'])) ? $cfg['dining'] : [];
+
+    $explicito = (int)($dining['max_devices_per_check'] ?? 0);
+    if ($explicito > 0) {
+        return $explicito;
+    }
+    if ($table_id) {
+        $st = $conn->prepare("SELECT seats FROM dining_tables WHERE table_id = :id");
+        $st->execute([':id' => (int)$table_id]);
+        return (int)$st->fetchColumn();
+    }
+    return 0;
+}
+
 /** Suma un comensal a una cuenta abierta. */
 function actionJoin($db, $dining, array $data) {
     $code = strtoupper(trim($data['code'] ?? ''));
@@ -630,6 +661,23 @@ function actionJoin($db, $dining, array $data) {
 
     if (!$session) {
         Response::notFound('No encontramos una cuenta abierta. Pide al personal que abra la mesa');
+    }
+
+    // El TOPE de dispositivos por cuenta. Se revisa ANTES de crear el participante: si ya no
+    // cabe, mejor decirlo que dejar una fila de más y que el mesero tenga que expulsar.
+    $tope = topeDeDispositivos($db, (int)$session['store_id'], $session['table_id'] ?? null);
+    if ($tope > 0) {
+        $conn = $db->getConnection();
+        $cuenta = $conn->prepare("SELECT COUNT(*) FROM dining_participants
+                                   WHERE session_id = :sid AND is_active = 1");
+        $cuenta->execute([':sid' => (int)$session['session_id']]);
+        if ((int)$cuenta->fetchColumn() >= $tope) {
+            Response::error(
+                'Esta cuenta ya tiene ' . $tope . ($tope === 1 ? ' dispositivo' : ' dispositivos')
+                . ' conectados, que es el tope para esta mesa. Pide a quien te atiende que libere un lugar.',
+                409
+            );
+        }
     }
 
     $participant = $dining->joinParticipant(

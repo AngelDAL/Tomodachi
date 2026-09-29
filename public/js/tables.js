@@ -137,6 +137,10 @@ function tpConfirmar(opciones) {
 // Cargar y pintar
 // ============================================================
 async function tpCargar(silencioso) {
+    // Mientras se acomoda el salón, el servidor NO manda: un aviso de tiempo real a media
+    // obra reemplazaría el acomodo que el usuario está armando. Lo que se ve se guarda con un
+    // toque explícito ("Guardar"), y hasta entonces manda la copia local.
+    if (tpPlanoEstado.abierto) return;
     try {
         const urlPuntos = TP_API_TABLES + (tpEstado.verApagados ? '?todas=1' : '');
         const [puntos, cuentas] = await Promise.all([
@@ -592,8 +596,29 @@ function tpNuevoPunto() {
     document.getElementById('tpPuntoZona').value = '';
     document.getElementById('tpPuntoAviso').textContent = 'El QR de este punto se genera al guardarlo.';
     tpPintarChipsCarta(0);   // por defecto, la carta de la tienda
+    tpPintarFormaPunto('rect', 0);
     tpAbrirModal('tpModalPunto');
     setTimeout(function () { document.getElementById('tpPuntoNombre').focus(); }, 80);
+}
+
+/**
+ * Forma y asientos en el modal del punto (los del plano del salón, Fase 3).
+ * Se pueden fijar aquí al crear la mesa, sin tener que entrar al acomodo.
+ */
+function tpPintarFormaPunto(forma, asientos) {
+    const elegida = forma || 'rect';
+    document.querySelectorAll('#tpPuntoForma [data-forma]').forEach(function (b) {
+        const activo = b.dataset.forma === elegida;
+        b.classList.toggle('activo', activo);
+        b.setAttribute('aria-pressed', activo ? 'true' : 'false');
+    });
+    document.getElementById('tpPuntoAsientos').value = Number(asientos) || 0;
+}
+
+/** La forma elegida en el modal del punto. */
+function tpFormaElegida() {
+    const activo = document.querySelector('#tpPuntoForma .tp-chip.activo');
+    return activo ? activo.dataset.forma : 'rect';
 }
 
 function tpEditarPunto(id) {
@@ -606,6 +631,7 @@ function tpEditarPunto(id) {
     document.getElementById('tpPuntoAviso').innerHTML = 'Se puede rotar el token del QR si el impreso se filtró, pero dejará de funcionar el que ya pegaste.' +
         ' <button type="button" class="tp-btn" id="tpRotarToken" style="margin-top:8px"><i class="fas fa-rotate"></i> Rotar el QR</button>';
     tpPintarChipsCarta(p.menu_id || 0);
+    tpPintarFormaPunto(p.shape || 'rect', p.seats || 0);
     tpAbrirModal('tpModalPunto');
 
     const rotar = document.getElementById('tpRotarToken');
@@ -635,15 +661,17 @@ function tpEditarPunto(id) {
 async function tpGuardarPunto() {
     const label = document.getElementById('tpPuntoNombre').value.trim();
     const zone = document.getElementById('tpPuntoZona').value.trim();
+    const forma = tpFormaElegida();
+    const asientos = Math.max(0, Math.min(99, Number(document.getElementById('tpPuntoAsientos').value) || 0));
     if (!label) { tpAviso('Escribe cómo se llama este punto', 'error'); return; }
     try {
         let d;
         const carta = Number(tpEstado.cartaElegida) || 0;
         if (tpEstado.puntoEditando) {
-            d = await tpPeticion(TP_API_TABLES, { method: 'PUT', body: JSON.stringify({ table_id: tpEstado.puntoEditando.table_id, label: label, zone: zone, menu_id: carta }) });
+            d = await tpPeticion(TP_API_TABLES, { method: 'PUT', body: JSON.stringify({ table_id: tpEstado.puntoEditando.table_id, label: label, zone: zone, menu_id: carta, shape: forma, seats: asientos }) });
             await tpCargar(true);   // el nombre y la carta del punto se ven en el mapa
         } else {
-            d = await tpPeticion(TP_API_TABLES, { method: 'POST', body: JSON.stringify({ label: label, zone: zone, menu_id: carta }) });
+            d = await tpPeticion(TP_API_TABLES, { method: 'POST', body: JSON.stringify({ label: label, zone: zone, menu_id: carta, shape: forma, seats: asientos }) });
         }
         // El mensaje lo pone el servidor: si el punto existía desactivado, avisa que lo
         // reactivó en vez de crear otro (y que su QR impreso sigue sirviendo).
@@ -1613,7 +1641,18 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     tpEngancharMenu('tpMapaMenuBtn', 'tpMapaMenu', function (boton) {
         if (boton.id === 'tpMenuApagados') tpAlternarApagados();
+        if (boton.id === 'tpMenuAcomodo') tpAbrirPlano();
     });
+
+    // La forma de la mesa en el modal del punto: chips, un toque.
+    const chipsForma = document.getElementById('tpPuntoForma');
+    if (chipsForma) {
+        chipsForma.addEventListener('click', function (ev) {
+            const b = ev.target.closest('[data-forma]');
+            if (!b) return;
+            tpPintarFormaPunto(b.dataset.forma, document.getElementById('tpPuntoAsientos').value);
+        });
+    }
 
     // ── El apartado del punto ──────────────────────────────────────────────────
     document.getElementById('tpVolver').addEventListener('click', tpCerrarDetalle);
@@ -1903,6 +1942,515 @@ document.addEventListener('DOMContentLoaded', async function () {
         if (!document.hidden) { tpCargar(true); tpReconectarTiempoReal(); }
     });
 });
+
+// ============================================================
+// EL PLANO DEL SALÓN (Fase 3) — dónde está cada punto
+// ============================================================
+/**
+ * El acomodo del salón: un LIENZO VIRTUAL de 1000 x 700 donde cada punto tiene su lugar,
+ * su forma y sus asientos.
+ *
+ * POR QUÉ UN LIENZO VIRTUAL Y NO PÍXELES: el mismo acomodo tiene que verse bien en el
+ * teléfono del mesero (390 px), en la tableta de la caja (768) y en el monitor de la oficina
+ * (1280). Guardando coordenadas de un lienzo abstracto y pintando por PORCENTAJE, la pantalla
+ * escala sola y el plano no se deforma ni se desborda en ninguna.
+ *
+ * Es un MODO de la vista del salón —sustituye al mapa, igual que el apartado—, no otra
+ * pantalla ni un modal encima del mapa. Mientras se acomoda NO se refresca desde el servidor
+ * (un aviso de tiempo real a media obra perdería el arrastre) y nada se guarda hasta tocar
+ * "Guardar": Cancelar devuelve el salón como estaba.
+ */
+const TP_LIENZO_X = 1000;
+const TP_LIENZO_Y = 700;
+const TP_PASO_X = 20;          // cuadrícula del arrastre (2% del ancho)
+const TP_PASO_Y = 14;          // (2% del alto)
+const TP_CELDA_X = 165;        // rejilla de "acomodar los que faltan"
+const TP_CELDA_Y = 140;
+const TP_PLANO_FORMAS = [
+    { id: 'rect',  icono: 'square', texto: 'Cuadrada' },
+    { id: 'round', icono: 'circle', texto: 'Redonda' },
+    { id: 'bar',   icono: 'minus',  texto: 'Barra' },
+];
+
+const tpPlanoEstado = {
+    abierto: false,
+    elegido: null,     // table_id de la ficha abierta en el inspector
+    sucio: false,      // ¿se movió o se cambió algo desde que se abrió?
+    original: null,    // copia para poder cancelar
+    arrastre: null,    // gesto en curso
+};
+
+/** Los puntos que YA tienen lugar: los que se dibujan en el lienzo. */
+function tpPlanoColocados() {
+    return tpEstado.puntos.filter(function (p) {
+        return p.pos_x !== null && p.pos_x !== undefined && p.pos_y !== null && p.pos_y !== undefined;
+    });
+}
+
+/** Los que todavía no tienen lugar: se colocan de un toque, sin arrastrar. */
+function tpPlanoSueltos() {
+    return tpEstado.puntos.filter(function (p) {
+        return p.pos_x === null || p.pos_x === undefined || p.pos_y === null || p.pos_y === undefined;
+    });
+}
+
+function tpPlanoPorId(id) {
+    return tpEstado.puntos.find(function (p) { return Number(p.table_id) === Number(id); }) || null;
+}
+
+/** Pone una posición (o la quita, con null) y marca que hay cambios sin guardar. */
+function tpPlanoPoner(id, x, y) {
+    const p = tpPlanoPorId(id);
+    if (!p) return;
+    if (x === null || y === null) {
+        p.pos_x = null; p.pos_y = null;
+    } else {
+        p.pos_x = Math.round(x);
+        p.pos_y = Math.round(y);
+    }
+    tpPlanoEstado.sucio = true;
+}
+
+// ---------- Abrir, cerrar y cancelar ----------
+
+function tpAbrirPlano() {
+    if (!tpEstado.puntos.length) {
+        tpAviso('Primero crea un punto de servicio', 'error');
+        return;
+    }
+    tpPlanoEstado.abierto = true;
+    tpPlanoEstado.elegido = null;
+    tpPlanoEstado.sucio = false;
+    tpPlanoEstado.arrastre = null;
+    // Copia de las posiciones y formas: es lo que devuelve Cancelar.
+    tpPlanoEstado.original = tpEstado.puntos.map(function (p) {
+        return {
+            table_id: p.table_id,
+            pos_x: p.pos_x === undefined ? null : p.pos_x,
+            pos_y: p.pos_y === undefined ? null : p.pos_y,
+            shape: p.shape || 'rect',
+            seats: Number(p.seats) || 0,
+        };
+    });
+
+    document.getElementById('tpMapa').classList.add('hidden');
+    document.getElementById('tpDetalle').classList.add('hidden');
+    document.getElementById('tpPlano').classList.remove('hidden');
+    tpEngancharPlano();
+    tpPintarPlano();
+}
+
+/** Vuelve al mapa. `restaurar` deja el salón como estaba antes de abrir el acomodo. */
+function tpCerrarPlano(restaurar) {
+    if (restaurar && tpPlanoEstado.original) {
+        tpPlanoEstado.original.forEach(function (o) {
+            const p = tpPlanoPorId(o.table_id);
+            if (!p) return;
+            p.pos_x = o.pos_x; p.pos_y = o.pos_y;
+            p.shape = o.shape; p.seats = o.seats;
+        });
+    }
+    tpPlanoEstado.abierto = false;
+    tpPlanoEstado.elegido = null;
+    tpPlanoEstado.sucio = false;
+    tpPlanoEstado.arrastre = null;
+    tpPlanoEstado.original = null;
+    document.getElementById('tpPlano').classList.add('hidden');
+    document.getElementById('tpMapa').classList.remove('hidden');
+    tpPintar();
+}
+
+// ---------- Pintar ----------
+
+function tpPintarPlano() {
+    tpPintarLienzo();
+    tpPintarInspector();
+    tpPintarSueltos();
+    // El botón de guardar se apaga mientras no haya nada que guardar: una acción que no hace
+    // nada y no avisa es peor que una acción apagada.
+    const btn = document.getElementById('tpPlanoGuardar');
+    if (btn) {
+        btn.disabled = !tpPlanoEstado.sucio;
+        btn.title = tpPlanoEstado.sucio ? '' : 'No has movido nada todavía';
+    }
+}
+
+function tpPintarLienzo() {
+    const lienzo = document.getElementById('tpLienzo');
+    if (!lienzo) return;
+    const colocados = tpPlanoColocados();
+
+    if (!colocados.length) {
+        lienzo.classList.add('vacio');
+        lienzo.innerHTML = '<p class="tp-lienzo-aviso"><i class="fas fa-table-cells-large"></i><br>' +
+            (tpPlanoSueltos().length
+                ? 'Todavía no has colocado ningún punto. Toca uno de la lista y aparecerá aquí.'
+                : 'No hay puntos que acomodar.') + '</p>';
+        return;
+    }
+    lienzo.classList.remove('vacio');
+    lienzo.innerHTML = colocados.map(tpFichaPlano).join('');
+}
+
+/**
+ * Una ficha del plano. Se coloca por PORCENTAJE (pos/1000 y pos/700) y se centra en ese
+ * punto con `translate(-50%,-50%)`, así el tamaño en píxeles no descuadra la posición.
+ */
+function tpFichaPlano(p) {
+    const cuenta = tpCuentaDePunto(p.table_id);
+    const forma = p.shape || 'rect';
+    const asientos = Number(p.seats) || 0;
+    const elegida = Number(tpPlanoEstado.elegido) === Number(p.table_id);
+
+    // El conteo de personas solo se muestra si HAY personas: un "0" junto a la silla es ruido
+    // y el estado ya lo dice el color.
+    const personas = cuenta ? Number(cuenta.personas) || 0 : 0;
+    const pie = '<span class="pl-pie">' +
+        '<i class="fas fa-chair"></i> ' + (asientos > 0 ? asientos : '—') +
+        (personas > 0 ? ' <i class="fas fa-user-group"></i> ' + personas : '') +
+        '</span>';
+
+    return '<button type="button" class="pl-ficha es-' + forma +
+        (cuenta ? ' ocupada' : '') + (elegida ? ' elegida' : '') + '"' +
+        ' style="left:' + (Number(p.pos_x) / TP_LIENZO_X * 100) + '%;top:' + (Number(p.pos_y) / TP_LIENZO_Y * 100) + '%"' +
+        ' data-punto="' + p.table_id + '"' +
+        ' aria-label="' + tpEsc(p.label) + (cuenta ? ', ocupada' : ', libre') + '">' +
+        '<span class="pl-nombre">' + tpEsc(p.label) + '</span>' + pie +
+        '</button>';
+}
+
+function tpPintarInspector() {
+    const caja = document.getElementById('tpPlanoInspector');
+    const pista = document.getElementById('tpPlanoSinElegir');
+    const p = tpPlanoEstado.elegido === null ? null : tpPlanoPorId(tpPlanoEstado.elegido);
+    if (!caja) return;
+
+    if (!p) {
+        caja.classList.add('hidden');
+        caja.innerHTML = '';
+        if (pista) pista.classList.remove('hidden');
+        return;
+    }
+    if (pista) pista.classList.add('hidden');
+    caja.classList.remove('hidden');
+
+    const cuenta = tpCuentaDePunto(p.table_id);
+    const forma = p.shape || 'rect';
+    const asientos = Number(p.seats) || 0;
+
+    caja.innerHTML =
+        '<div class="tp-insp-cab">' +
+            '<h3 class="tp-insp-nombre">' + tpEsc(p.label) + '</h3>' +
+            (cuenta ? '<span class="tp-estado ocupado">Ocupado</span>' : '<span class="tp-estado">Libre</span>') +
+        '</div>' +
+        '<div class="tp-insp-grupo">' +
+            '<span class="tp-insp-etiqueta">Forma</span>' +
+            '<div class="tp-insp-chips">' +
+                TP_PLANO_FORMAS.map(function (f) {
+                    return '<button type="button" class="tp-chip' + (f.id === forma ? ' activo' : '') + '"' +
+                        ' data-forma="' + f.id + '" aria-pressed="' + (f.id === forma) + '">' +
+                        '<i class="fas fa-' + f.icono + '"></i> ' + f.texto + '</button>';
+                }).join('') +
+            '</div>' +
+        '</div>' +
+        '<div class="tp-insp-grupo">' +
+            '<span class="tp-insp-etiqueta">Asientos</span>' +
+            '<div class="tp-insp-asientos">' +
+                '<button type="button" class="tp-btn tp-icono" data-asiento="-1" aria-label="Un asiento menos"><i class="fas fa-minus"></i></button>' +
+                '<span class="tp-insp-num">' + (asientos > 0 ? asientos : '—') + '</span>' +
+                '<button type="button" class="tp-btn tp-icono" data-asiento="1" aria-label="Un asiento más"><i class="fas fa-plus"></i></button>' +
+            '</div>' +
+            '<p class="tp-insp-pista">' + (asientos > 0
+                ? 'Los asientos también son el tope de celulares de esta mesa: ' + asientos + ' dispositivos a la vez.'
+                : 'Sin asientos declarados no hay tope de celulares por cuenta.') + '</p>' +
+        '</div>' +
+        '<div class="tp-insp-acciones">' +
+            '<button type="button" class="tp-btn" id="tpInspQuitar"><i class="fas fa-circle-minus"></i> Quitar del plano</button>' +
+        '</div>';
+}
+
+function tpPintarSueltos() {
+    const caja = document.getElementById('tpPlanoSueltos');
+    if (!caja) return;
+    const sueltos = tpPlanoSueltos();
+
+    if (!sueltos.length) {
+        caja.classList.add('hidden');
+        caja.innerHTML = '';
+        return;
+    }
+    caja.classList.remove('hidden');
+    caja.innerHTML = '<p class="tp-sueltos-titulo">Sin lugar en el plano (' + sueltos.length + ')</p>' +
+        '<div class="tp-sueltos-lista">' +
+        sueltos.map(function (p) {
+            return '<button type="button" class="tp-suelto" data-suelto="' + p.table_id + '">' +
+                '<i class="fas fa-plus"></i> ' + tpEsc(p.label) + '</button>';
+        }).join('') +
+        '</div>' +
+        // La acción de acomodarlos vive AQUÍ, donde está el problema: así la barra de arriba
+        // se queda en tres botones (volver, cancelar y guardar).
+        '<button type="button" class="tp-btn tp-sueltos-auto" data-auto="1">' +
+        '<i class="fas fa-wand-magic-sparkles"></i> Acomodar los que faltan (' + sueltos.length + ')</button>';
+}
+
+// ---------- Elegir, arrastrar y teclear ----------
+
+function tpElegirPlano(id) {
+    tpPlanoEstado.elegido = (id === null ? null : Number(id));
+    // Solo se cambia la clase de las fichas: rehacer el HTML del lienzo a media interacción
+    // mataría el arrastre (el elemento que el dedo tiene capturado desaparecería).
+    document.querySelectorAll('#tpLienzo .pl-ficha').forEach(function (f) {
+        f.classList.toggle('elegida', Number(f.dataset.punto) === Number(tpPlanoEstado.elegido));
+    });
+    tpPintarInspector();
+}
+
+/** Los huecos libres de la rejilla, para los puntos que todavía no tienen lugar. */
+function tpPlanoHuecos() {
+    const cols = Math.floor((TP_LIENZO_X - 120) / TP_CELDA_X);
+    const filas = Math.floor((TP_LIENZO_Y - 100) / TP_CELDA_Y);
+    const usados = tpPlanoColocados().map(function (p) {
+        return { x: Number(p.pos_x), y: Number(p.pos_y) };
+    });
+    const libres = [];
+    for (let f = 0; f < filas; f++) {
+        for (let c = 0; c < cols; c++) {
+            const x = 100 + c * TP_CELDA_X;
+            const y = 80 + f * TP_CELDA_Y;
+            const ocupado = usados.some(function (u) {
+                return Math.abs(u.x - x) < TP_CELDA_X * 0.6 && Math.abs(u.y - y) < TP_CELDA_Y * 0.6;
+            });
+            if (!ocupado) libres.push({ x: x, y: y });
+        }
+    }
+    return libres;
+}
+
+/** Coloca UN punto en el primer hueco libre (o lo dice si ya no cabe). */
+function tpColocarSuelto(id) {
+    const libres = tpPlanoHuecos();
+    if (!libres.length) {
+        tpAviso('Ya no cabe otro punto en el plano. Mueve alguno para hacer lugar', 'error');
+        return false;
+    }
+    tpPlanoPoner(id, libres[0].x, libres[0].y);
+    tpPintarLienzo();
+    tpPintarSueltos();
+    tpElegirPlano(id);
+    tpPintarPlano();
+    return true;
+}
+
+function tpAcomodarSueltos() {
+    const sueltos = tpPlanoSueltos().slice();
+    if (!sueltos.length) return;
+    let puestos = 0;
+    sueltos.forEach(function (p) {
+        const libres = tpPlanoHuecos();
+        if (!libres.length) return;
+        tpPlanoPoner(p.table_id, libres[0].x, libres[0].y);
+        puestos++;
+    });
+    tpPintarLienzo();
+    tpPintarSueltos();
+    tpPintarPlano();
+    if (puestos) tpAviso(puestos + (puestos === 1 ? ' punto acomodado' : ' puntos acomodados') + '. Toca Guardar para que quede', 'ok');
+}
+
+// ---------- El gesto de arrastrar ----------
+
+function tpLienzoBaja(ev) {
+    const ficha = ev.target.closest ? ev.target.closest('.pl-ficha') : null;
+    if (!ficha) return;
+    const p = tpPlanoPorId(ficha.dataset.punto);
+    if (!p) return;
+
+    const lienzo = document.getElementById('tpLienzo');
+    const r = lienzo.getBoundingClientRect();
+    tpPlanoEstado.arrastre = {
+        id: Number(p.table_id),
+        ficha: ficha,
+        x0: ev.clientX,
+        y0: ev.clientY,
+        px: Number(p.pos_x),
+        py: Number(p.pos_y),
+        movido: false,
+        rect: r,
+        // Margen para que la ficha no se salga del lienzo: depende de su tamaño REAL, que en
+        // el teléfono es menor que en el monitor.
+        margenX: (ficha.offsetWidth / 2) / r.width * TP_LIENZO_X,
+        margenY: (ficha.offsetHeight / 2) / r.height * TP_LIENZO_Y,
+        pointerId: ev.pointerId,
+    };
+    try { ficha.setPointerCapture(ev.pointerId); } catch (e) { /* sin captura: sigue el gesto */ }
+    ficha.classList.add('arrastrando');
+    tpElegirPlano(p.table_id);
+    ev.preventDefault();
+}
+
+function tpLienzoMueve(ev) {
+    const a = tpPlanoEstado.arrastre;
+    if (!a) return;
+    const dx = ev.clientX - a.x0;
+    const dy = ev.clientY - a.y0;
+    // Un toque sin movimiento es una SELECCIÓN, no un arrastre mal hecho.
+    if (!a.movido && Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+    a.movido = true;
+
+    let x = a.px + dx / a.rect.width * TP_LIENZO_X;
+    let y = a.py + dy / a.rect.height * TP_LIENZO_Y;
+    x = Math.round(x / TP_PASO_X) * TP_PASO_X;
+    y = Math.round(y / TP_PASO_Y) * TP_PASO_Y;
+    x = Math.max(a.margenX, Math.min(TP_LIENZO_X - a.margenX, x));
+    y = Math.max(a.margenY, Math.min(TP_LIENZO_Y - a.margenY, y));
+
+    a.x = x; a.y = y;
+    a.ficha.style.left = (x / TP_LIENZO_X * 100) + '%';
+    a.ficha.style.top = (y / TP_LIENZO_Y * 100) + '%';
+    if (ev.cancelable) ev.preventDefault();
+}
+
+function tpLienzoSuelta() {
+    const a = tpPlanoEstado.arrastre;
+    if (!a) return;
+    tpPlanoEstado.arrastre = null;
+    a.ficha.classList.remove('arrastrando');
+    try { a.ficha.releasePointerCapture(a.pointerId); } catch (e) { /* ya no la tenía */ }
+    if (a.movido) {
+        tpPlanoPoner(a.id, a.x, a.y);
+        tpPintarPlano();
+    }
+}
+
+/** Con el teclado: la ficha elegida se mueve con las flechas (y con Shift, de a un paso). */
+function tpLienzoTecla(ev) {
+    const pasos = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+    const paso = pasos[ev.key];
+    if (!paso || tpPlanoEstado.elegido === null) return;
+    ev.preventDefault();
+    const p = tpPlanoPorId(tpPlanoEstado.elegido);
+    if (!p) return;
+    const salto = ev.shiftKey ? 5 : 1;
+    const x = Math.max(0, Math.min(TP_LIENZO_X, Number(p.pos_x) + paso[0] * TP_PASO_X * salto));
+    const y = Math.max(0, Math.min(TP_LIENZO_Y, Number(p.pos_y) + paso[1] * TP_PASO_Y * salto));
+    tpPlanoPoner(p.table_id, x, y);
+    tpPintarLienzo();
+    tpPintarPlano();
+    const ficha = document.querySelector('#tpLienzo .pl-ficha[data-punto="' + p.table_id + '"]');
+    if (ficha) ficha.focus();
+}
+
+// ---------- Enganches (una sola vez) ----------
+
+function tpEngancharPlano() {
+    const lienzo = document.getElementById('tpLienzo');
+    if (lienzo && !lienzo.dataset.enganchado) {
+        lienzo.dataset.enganchado = '1';
+        lienzo.addEventListener('pointerdown', tpLienzoBaja);
+        lienzo.addEventListener('pointermove', tpLienzoMueve);
+        lienzo.addEventListener('pointerup', tpLienzoSuelta);
+        lienzo.addEventListener('pointercancel', tpLienzoSuelta);
+        lienzo.addEventListener('keydown', tpLienzoTecla);
+        // Con el teclado, enfocar una ficha la ELIGE: Tab las recorre, las flechas la mueven.
+        // Sin esto, elegir una mesa era cosa exclusiva del dedo o del ratón.
+        lienzo.addEventListener('focusin', function (ev) {
+            const f = ev.target.closest ? ev.target.closest('.pl-ficha') : null;
+            if (f) tpElegirPlano(f.dataset.punto);
+        });
+        // Tocar el fondo del lienzo suelta la ficha elegida; tocar una ficha la elige.
+        lienzo.addEventListener('click', function (ev) {
+            const f = ev.target.closest ? ev.target.closest('.pl-ficha') : null;
+            tpElegirPlano(f ? f.dataset.punto : null);
+        });
+    }
+
+    const inspector = document.getElementById('tpPlanoInspector');
+    if (inspector && !inspector.dataset.enganchado) {
+        inspector.dataset.enganchado = '1';
+        inspector.addEventListener('click', function (ev) {
+            const p = tpPlanoEstado.elegido === null ? null : tpPlanoPorId(tpPlanoEstado.elegido);
+            if (!p) return;
+
+            const forma = ev.target.closest('[data-forma]');
+            if (forma) {
+                p.shape = forma.dataset.forma;
+                tpPlanoEstado.sucio = true;
+                // tpPintarPlano y no solo el lienzo: el botón Guardar tiene que encenderse en
+                // cuanto haya algo que guardar, también si el cambio fue de forma o asientos.
+                tpPintarPlano();
+                return;
+            }
+            const asiento = ev.target.closest('[data-asiento]');
+            if (asiento) {
+                const valor = (Number(p.seats) || 0) + Number(asiento.dataset.asiento);
+                p.seats = Math.max(0, Math.min(99, valor));
+                tpPlanoEstado.sucio = true;
+                tpPintarPlano();
+                return;
+            }
+            if (ev.target.closest('#tpInspQuitar')) {
+                tpPlanoPoner(p.table_id, null, null);
+                tpElegirPlano(null);
+                tpPintarPlano();
+            }
+        });
+    }
+
+    const sueltos = document.getElementById('tpPlanoSueltos');
+    if (sueltos && !sueltos.dataset.enganchado) {
+        sueltos.dataset.enganchado = '1';
+        sueltos.addEventListener('click', function (ev) {
+            if (ev.target.closest('[data-auto]')) { tpAcomodarSueltos(); return; }
+            const b = ev.target.closest('[data-suelto]');
+            if (!b) return;
+            tpColocarSuelto(Number(b.dataset.suelto));
+        });
+    }
+
+    const botones = [
+        ['tpPlanoVolver',   function () { tpCerrarPlano(false); }],
+        ['tpPlanoCancelar', function () { tpCerrarPlano(true); tpAviso('Sin cambios: el salón quedó como estaba', 'ok'); }],
+        ['tpPlanoGuardar',  tpGuardarAcomodo],
+    ];
+    botones.forEach(function (par) {
+        const b = document.getElementById(par[0]);
+        if (b && !b.dataset.enganchado) {
+            b.dataset.enganchado = '1';
+            b.addEventListener('click', par[1]);
+        }
+    });
+}
+
+// ---------- Guardar ----------
+
+async function tpGuardarAcomodo() {
+    const btn = document.getElementById('tpPlanoGuardar');
+    if (!btn || btn.disabled) return;
+    btn.disabled = true;
+
+    const puntos = tpEstado.puntos.map(function (p) {
+        return {
+            table_id: Number(p.table_id),
+            pos_x: p.pos_x === null || p.pos_x === undefined ? 0 : Number(p.pos_x),
+            pos_y: p.pos_y === null || p.pos_y === undefined ? 0 : Number(p.pos_y),
+            shape: p.shape || 'rect',
+            seats: Number(p.seats) || 0,
+        };
+    });
+
+    try {
+        const r = await tpPeticion(TP_API_TABLES, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'acomodo', puntos: puntos }),
+        });
+        tpAviso((r && r.aplicados ? r.aplicados + ' punto' + (r.aplicados === 1 ? '' : 's') + ' con lugar' : 'Acomodo guardado'), 'ok');
+        tpCerrarPlano(false);
+        await tpCargar();
+    } catch (e) {
+        tpAviso(tpMensajeDeError(e), 'error');
+        btn.disabled = false;
+    }
+}
 
 // ============================================================
 // La CARTA: lo que ve el cliente al escanear el QR de un punto

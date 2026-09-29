@@ -931,6 +931,15 @@ CREATE TABLE dining_tables (
     store_id INT NOT NULL,
     label VARCHAR(50) NOT NULL,
     zone VARCHAR(50) NULL,
+    -- El PLANO del salón (migración 047). Coordenadas de un lienzo virtual de 1000x700, no
+    -- píxeles: así el acomodo se ve igual en el teléfono, la tableta y el monitor.
+    -- NULL = todavía sin lugar en el plano.
+    pos_x SMALLINT NULL DEFAULT NULL,
+    pos_y SMALLINT NULL DEFAULT NULL,
+    -- La forma, para reconocer la mesa de un vistazo: cuadrada, redonda o barra.
+    shape ENUM('rect','round','bar') NOT NULL DEFAULT 'rect',
+    -- Asientos: también sirve de tope de dispositivos por cuenta (0 = sin tope).
+    seats TINYINT UNSIGNED NOT NULL DEFAULT 0,
     -- Carta que abre el QR de ESTE punto. NULL = la carta de la tienda (la primera activa).
     menu_id INT NULL DEFAULT NULL,
     qr_token VARCHAR(64) NOT NULL,

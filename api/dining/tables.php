@@ -53,6 +53,32 @@ function puedeAdministrarPuntos($apiAuth, $actor) {
 }
 
 /**
+ * La forma de la mesa, para el plano. Se limita a las tres que se dibujan.
+ * Cualquier cosa rara cae a la de siempre ('rect') en vez de romper el guardado.
+ */
+function formaValida($v) {
+    $v = (string)$v;
+    return in_array($v, ['rect', 'round', 'bar'], true) ? $v : null;
+}
+
+/**
+ * Una coordenada del LIENZO VIRTUAL del plano (1000 de ancho x 700 de alto).
+ * `null` o `0` significan "todavía sin lugar en el plano": se guarda NULL, no un cero,
+ * para poder preguntar por los que faltan de acomodar con `IS NULL`.
+ */
+function coordenadaValida($v, $max) {
+    if ($v === null || $v === '') return null;
+    $n = (int)$v;
+    if ($n <= 0) return null;
+    return min($n, $max);
+}
+
+/** Asientos de un punto: 0 = no se declaran (y entonces no hay tope por asientos). */
+function asientosValidos($v) {
+    return max(0, min(99, (int)$v));
+}
+
+/**
  * URL pública de la carta, con el punto de servicio incluido para que la cuenta nazca
  * sabiendo en qué punto se está atendiendo.
  * El esquema lo resuelve UrlHelper: detrás de un proxy, `$_SERVER['HTTPS']` no viene y el
@@ -124,7 +150,8 @@ try {
         $menu_id = isset($_GET['menu_id']) ? (int)$_GET['menu_id'] : 0;
         $solo_activos = !isset($_GET['todas']) || $_GET['todas'] !== '1';
 
-        $sql = "SELECT table_id, label, zone, menu_id, qr_token, is_active, created_at
+        $sql = "SELECT table_id, label, zone, pos_x, pos_y, shape, seats,
+                       menu_id, qr_token, is_active, created_at
                 FROM dining_tables WHERE store_id = :store_id";
         if ($solo_activos) $sql .= " AND is_active = 1";
         $sql .= " ORDER BY zone IS NULL, zone ASC, label ASC";
@@ -134,6 +161,7 @@ try {
 
         $carta = cartaParaQr($conn, $store_id, $menu_id);
         $ocupados = 0;
+        $acomodados = 0;
         foreach ($puntos as &$p) {
             $cuenta = cuentaAbierta($conn, $store_id, (int)$p['table_id']);
             $p['cuenta_abierta'] = $cuenta;
@@ -141,13 +169,25 @@ try {
             $cartaPunto = ((int)$p['menu_id'] > 0) ? cartaParaQr($conn, $store_id, (int)$p['menu_id']) : $carta;
             $p['carta'] = $cartaPunto;
             $p['url'] = $cartaPunto ? urlCartaPunto($cartaPunto['public_token'], $p['qr_token']) : null;
+            // Para el plano: si ya tiene lugar, en qué coordenadas (enteros, no texto).
+            $p['pos_x'] = ($p['pos_x'] === null) ? null : (int)$p['pos_x'];
+            $p['pos_y'] = ($p['pos_y'] === null) ? null : (int)$p['pos_y'];
+            $p['seats'] = (int)$p['seats'];
+            if ($p['pos_x'] !== null && $p['pos_y'] !== null) $acomodados++;
             if ($cuenta) $ocupados++;
         }
         unset($p);
 
         Response::success([
             'tables' => $puntos,
-            'totales' => ['puntos' => count($puntos), 'ocupados' => $ocupados, 'libres' => count($puntos) - $ocupados],
+            'totales' => [
+                'puntos' => count($puntos),
+                'ocupados' => $ocupados,
+                'libres' => count($puntos) - $ocupados,
+                // Cuántos tienen lugar en el plano: la pantalla lo usa para saber si el salón
+                // ya está acomodado o si conviene ofrecer el acomodo.
+                'con_plano' => $acomodados,
+            ],
             'menu' => $carta,
             'sin_carta' => $carta === null,
         ]);
@@ -159,6 +199,51 @@ try {
             Response::error('Tu rol no puede administrar los puntos de servicio. Pídelo a un administrador', 403);
         }
         $data = json_decode(file_get_contents('php://input'), true) ?: [];
+
+        // ─── ACOMODO DEL PLANO (Fase 3) ───
+        // Mueve MUCHOS puntos de un golpe, así que es una acción propia y va en transacción:
+        // o queda todo el acomodo, o no se movió nada. El dueño está reacomodando su salón,
+        // no pidiendo que se guarde la mitad.
+        if (($data['action'] ?? '') === 'acomodo') {
+            $puntos = $data['puntos'] ?? null;
+            if (!is_array($puntos) || !count($puntos)) {
+                Response::validationError(['puntos' => 'No llegó ningún lugar que guardar']);
+            }
+            $conn->beginTransaction();
+            try {
+                $stmt = $conn->prepare("UPDATE dining_tables
+                                           SET pos_x = :x, pos_y = :y, shape = :shape, seats = :seats
+                                         WHERE table_id = :id AND store_id = :store_id");
+                $aplicados = 0;
+                foreach ($puntos as $p) {
+                    $id = (int)($p['table_id'] ?? 0);
+                    if ($id <= 0) continue;
+                    $x = coordenadaValida($p['pos_x'] ?? null, 1000);
+                    $y = coordenadaValida($p['pos_y'] ?? null, 700);
+                    // "Sin lugar" es NULL en las DOS: media coordenada no se guarda.
+                    $colocado = ($x !== null && $y !== null);
+                    $stmt->execute([
+                        ':x' => $colocado ? $x : null,
+                        ':y' => $colocado ? $y : null,
+                        // La forma y los asientos viajan en el MISMO guardado: así "Guardar"
+                        // es una sola operación y "Cancelar" deshace todo, no la mitad.
+                        ':shape' => formaValida($p['shape'] ?? 'rect') ?? 'rect',
+                        ':seats' => asientosValidos($p['seats'] ?? 0),
+                        ':id' => $id,
+                        ':store_id' => $store_id,
+                    ]);
+                    $aplicados += $stmt->rowCount();
+                }
+                $conn->commit();
+            } catch (Exception $e) {
+                $conn->rollBack();
+                Response::error('No se pudo guardar el acomodo: ' . $e->getMessage(), 500);
+            }
+            Response::success(
+                ['aplicados' => $aplicados, 'puntos' => count($puntos)],
+                'Acomodo del salón guardado'
+            );
+        }
 
         $label = trim((string)($data['label'] ?? ''));
         $zone  = isset($data['zone']) ? trim((string)$data['zone']) : null;
@@ -227,14 +312,23 @@ try {
         }
 
         $token = bin2hex(random_bytes(16));
-        $stmt = $conn->prepare("INSERT INTO dining_tables (store_id, label, zone, menu_id, qr_token, is_active)
-                                VALUES (:store_id, :label, :zone, :menu_id, :token, 1)");
+        $stmt = $conn->prepare("INSERT INTO dining_tables
+                                    (store_id, label, zone, menu_id, qr_token, is_active,
+                                     shape, seats, pos_x, pos_y)
+                                VALUES (:store_id, :label, :zone, :menu_id, :token, 1,
+                                        :shape, :seats, :x, :y)");
         $stmt->execute([
             ':store_id' => $store_id,
             ':label' => $label,
             ':zone' => $zone,
             ':menu_id' => $menu_id > 0 ? $menu_id : null,
             ':token' => $token,
+            // El plano es opcional al crear: si no llega, el punto nace SIN lugar y el dueño
+            // lo coloca cuando entre a acomodar el salón.
+            ':shape' => formaValida($data['shape'] ?? 'rect') ?? 'rect',
+            ':seats' => asientosValidos($data['seats'] ?? 0),
+            ':x' => coordenadaValida($data['pos_x'] ?? null, 1000),
+            ':y' => coordenadaValida($data['pos_y'] ?? null, 700),
         ]);
         $nuevo_id = (int)$conn->lastInsertId();
 
@@ -295,6 +389,28 @@ try {
             }
             $campos[] = 'menu_id = :menu_id';
             $params[':menu_id'] = $menu_id > 0 ? $menu_id : null;
+        }
+        // El plano del salón (Fase 3): forma, asientos y lugar. Se editan desde el acomodo,
+        // pero también desde "Editar el punto" (así se puede corregir una mesa sin abrir el
+        // lienzo). Enviar `pos_x` y `pos_y` juntos con 0 la deja SIN lugar.
+        if (array_key_exists('shape', $data)) {
+            $forma = formaValida($data['shape']);
+            if ($forma === null) Response::validationError(['shape' => 'Forma no válida']);
+            $campos[] = 'shape = :shape';
+            $params[':shape'] = $forma;
+        }
+        if (array_key_exists('seats', $data)) {
+            $campos[] = 'seats = :seats';
+            $params[':seats'] = asientosValidos($data['seats']);
+        }
+        if (array_key_exists('pos_x', $data) || array_key_exists('pos_y', $data)) {
+            $x = coordenadaValida($data['pos_x'] ?? null, 1000);
+            $y = coordenadaValida($data['pos_y'] ?? null, 700);
+            $colocado = ($x !== null && $y !== null);
+            $campos[] = 'pos_x = :x';
+            $campos[] = 'pos_y = :y';
+            $params[':x'] = $colocado ? $x : null;
+            $params[':y'] = $colocado ? $y : null;
         }
         // Rotar el token invalida los QR ya impresos de ese punto (por si se filtró).
         $token_nuevo = null;

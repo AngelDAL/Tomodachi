@@ -653,6 +653,181 @@
             .tp-cobro-pie { position: sticky; bottom: 0; background: var(--bg-card); flex-shrink: 0; }
             .tp-modal-pie { flex-shrink: 0; }
         }
+
+        /* ============================================================
+           EL PLANO DEL SALÓN (Fase 3) — modo acomodo
+           ------------------------------------------------------------
+           El lienzo mide 1000x700 en el papel, pero se pinta por PORCENTAJE: la misma mesa
+           cae en el mismo sitio relativo en un teléfono, en una tableta y en un monitor. Las
+           fichas sí llevan tamaño en píxeles (para poder tocarlas con el dedo) y cambian de
+           tamaño por breakpoint. Solo tokens: claro y oscuro salen gratis.
+           ============================================================ */
+        .tp-plano { display: flex; flex-direction: column; gap: 14px; }
+        .tp-plano-cab {
+            display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;
+        }
+        .tp-plano-titulo { flex: 1 1 260px; min-width: 0; }
+        .tp-plano-h2 { margin: 0; font-family: var(--font-heading); font-size: 1.25rem; color: var(--text-color); }
+        .tp-plano-titulo .tp-sub { margin: 4px 0 0; }
+
+        .tp-plano-cuerpo {
+            display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start;
+        }
+
+        /* ---------- El lienzo ---------- */
+        .tp-lienzo {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 10 / 7;            /* 1000 x 700 */
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--ds-radius-lg);
+            box-shadow: var(--ds-shadow-sm);
+            overflow: hidden;
+            touch-action: manipulation;
+            /* Rejilla de referencia: ayuda a alinear sin dibujar cuadros a mano. */
+            background-image:
+                linear-gradient(to right, color-mix(in srgb, var(--border-color) 60%, transparent) 1px, transparent 1px),
+                linear-gradient(to bottom, color-mix(in srgb, var(--border-color) 60%, transparent) 1px, transparent 1px);
+            background-size: 10% 14.2857%;
+            background-position: 0 0;
+        }
+        .tp-lienzo.vacio { display: flex; align-items: center; justify-content: center; }
+        .tp-lienzo-aviso { color: var(--text-muted); text-align: center; padding: 20px; font-size: .9rem; }
+
+        /* ---------- Una ficha del plano ---------- */
+        .pl-ficha {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+            width: 108px; height: 76px;
+            padding: 6px;
+            border: 2px solid var(--border-color);
+            border-radius: var(--ds-radius-md);
+            background: var(--bg-card);
+            color: var(--text-color);
+            font-family: var(--font-heading);
+            box-shadow: var(--ds-shadow-sm);
+            cursor: grab;
+            touch-action: none;              /* el arrastre es nuestro, no el scroll */
+            user-select: none;
+            overflow: hidden;
+            transition: box-shadow var(--transition-fast, .15s ease), border-color var(--transition-fast, .15s ease);
+        }
+        .pl-ficha.es-round { width: 84px; height: 84px; border-radius: 50%; }
+        /* La barra es ancha y baja, pero no tanto como para encimarse con la vecina en el
+           lienzo más angosto (que es el del teléfono): 124 px. */
+        .pl-ficha.es-bar { width: 124px; height: 60px; }
+        .pl-ficha .pl-nombre {
+            font-size: .82rem; font-weight: 700; line-height: 1.15; text-align: center;
+            max-width: 100%; overflow-wrap: anywhere;
+        }
+        .pl-ficha .pl-pie { display: flex; align-items: center; gap: 6px; font-size: .72rem; color: var(--text-muted); }
+        .pl-ficha .pl-pie i { font-size: .7rem; }
+        .pl-ficha.ocupada { border-color: var(--danger-color); }
+        .pl-ficha.ocupada .pl-pie i { color: var(--danger-color); }
+        .pl-ficha.elegida { border-color: var(--primary-color); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 28%, transparent); }
+        .pl-ficha.arrastrando { z-index: 3; cursor: grabbing; box-shadow: var(--ds-shadow-lg); }
+        .pl-ficha:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+
+        /* ---------- El lado: inspector + los que todavía no tienen lugar ---------- */
+        .tp-plano-lado { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+        .tp-plano-pista {
+            border: 1px dashed var(--border-color); border-radius: var(--ds-radius-lg);
+            padding: 18px 16px; text-align: center; color: var(--text-muted); font-size: .88rem;
+        }
+        .tp-plano-pista i { font-size: 1.2rem; color: var(--primary-color); display: block; margin-bottom: 8px; }
+        .tp-plano-pista p { margin: 0; }
+
+        .tp-inspector {
+            border: 1px solid var(--border-color); border-radius: var(--ds-radius-lg);
+            background: var(--bg-card); box-shadow: var(--ds-shadow-sm);
+            padding: 16px; display: flex; flex-direction: column; gap: 14px;
+        }
+        .tp-insp-cab { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .tp-insp-nombre { font-family: var(--font-heading); font-size: 1.05rem; color: var(--text-color); margin: 0; }
+        .tp-insp-grupo { display: flex; flex-direction: column; gap: 8px; }
+        .tp-insp-etiqueta {
+            font-family: var(--font-heading); font-size: .75rem; text-transform: uppercase; letter-spacing: .05em;
+            color: var(--text-muted);
+        }
+        .tp-insp-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+        .tp-chip.activo { border-color: var(--primary-color); color: var(--primary-color); background: color-mix(in srgb, var(--primary-color) 12%, var(--bg-card)); }
+        .tp-insp-asientos { display: flex; align-items: center; gap: 10px; }
+        .tp-insp-num {
+            font-family: var(--font-heading); font-size: 1.3rem; font-weight: 700; color: var(--text-color);
+            min-width: 44px; text-align: center;
+        }
+        .tp-insp-pista { margin: 0; font-size: .8rem; color: var(--text-muted); line-height: 1.45; }
+        .tp-insp-acciones { display: flex; flex-wrap: wrap; gap: 8px; }
+        .tp-insp-acciones .tp-btn { flex: 1 1 auto; justify-content: center; }
+
+        .tp-sueltos {
+            border: 1px solid var(--border-color); border-radius: var(--ds-radius-lg);
+            background: var(--bg-card); padding: 14px; display: flex; flex-direction: column; gap: 10px;
+        }
+        .tp-sueltos-titulo {
+            margin: 0; font-family: var(--font-heading); font-size: .82rem; text-transform: uppercase;
+            letter-spacing: .05em; color: var(--text-muted);
+        }
+        .tp-sueltos-lista { display: flex; flex-wrap: wrap; gap: 8px; }
+        .tp-suelto {
+            border: 1px dashed var(--border-color); border-radius: var(--ds-radius-pill);
+            background: var(--bg-body); color: var(--text-color);
+            padding: 8px 14px; min-height: 40px; cursor: pointer;
+            font-family: var(--font-heading); font-size: .85rem;
+            display: inline-flex; align-items: center; gap: 8px;
+            max-width: 100%; overflow-wrap: anywhere; text-align: left;
+        }
+        .tp-suelto:hover { border-color: var(--primary-color); color: var(--primary-color); }
+        .tp-suelto i { color: var(--text-muted); }
+        /* Acomodar los que faltan vive DENTRO de la tarjeta de los que faltan: la acción está
+           donde está el problema, y así la barra de arriba queda en tres botones. */
+        .tp-sueltos-auto { width: 100%; justify-content: center; }
+
+        /* ---------- Tableta y teléfono ----------
+           El inspector baja DEBAJO del lienzo: en una pantalla angosta, un panel al lado
+           dejaría el plano en un par de centímetros. */
+        @media (max-width: 1023px) {
+            .tp-plano-cuerpo { grid-template-columns: 1fr; }
+            .tp-plano-lado { flex-direction: row; flex-wrap: wrap; }
+            .tp-plano-lado > * { flex: 1 1 260px; }
+        }
+        @media (max-width: 767px) {
+            .tp-plano-cab { gap: 10px; }
+            .tp-plano-titulo { flex: 1 1 100%; order: -1; }
+            .tp-plano-cab .tp-botones { flex: 1 1 100%; }
+            .tp-plano-cab .tp-botones .tp-btn { flex: 1 1 auto; justify-content: center; }
+            .pl-ficha { width: 88px; height: 64px; }
+            .pl-ficha.es-round { width: 68px; height: 68px; }
+            .pl-ficha.es-bar { width: 118px; height: 54px; }
+            .pl-ficha .pl-nombre { font-size: .76rem; }
+            .pl-ficha .pl-pie { font-size: .68rem; gap: 4px; }
+            .tp-plano-lado { flex-direction: column; }
+        }
+
+        /* En el teléfono el lienzo NO se encoge hasta volverse ilegible: conserva un ancho
+           mínimo y la ventana se desliza de lado. A 700 px, dos puntos vecinos de la rejilla
+           (165 unidades) quedan a ~115 px, más que una ficha: sin esto, el mismo acomodo se
+           veía amontonado y encimado en 390. */
+        .tp-plano-ventana { min-width: 0; }
+        .tp-plano-marco { position: relative; min-width: 0; }
+        .tp-solo-angosto { display: none; }
+        @media (max-width: 639px) {
+            .tp-plano-ventana { overflow-x: auto; overscroll-behavior-x: contain; padding-bottom: 6px; }
+            .tp-lienzo { min-width: 700px; }
+            .tp-solo-angosto { display: inline; }
+            /* Señal de que hay más plano a la derecha: sin esto, el borde cortado parece un
+               defecto y nadie descubre que se desliza. Va en el MARCO y no en la ventana con
+               scroll: un elemento absoluto dentro de un contenedor que se desliza viaja con el
+               contenido y terminaría fuera de la vista. */
+            .tp-plano-marco::after {
+                content: ''; position: absolute; top: 0; right: 0; bottom: 6px; width: 14px;
+                pointer-events: none;
+                box-shadow: inset -10px 0 12px -10px color-mix(in srgb, var(--text-color) 45%, transparent);
+                border-radius: 0 var(--ds-radius-lg) var(--ds-radius-lg) 0;
+            }
+        }
     </style>
     <style>
         /* ============================================================
@@ -1182,6 +1357,7 @@
                                 <div class="tp-engranaje">
                                     <button type="button" class="tp-btn tp-icono" id="tpMapaMenuBtn" aria-haspopup="true" aria-expanded="false" title="Más opciones del mapa"><i class="fas fa-ellipsis"></i></button>
                                     <div class="tp-menu-config hidden" id="tpMapaMenu">
+                                        <button type="button" id="tpMenuAcomodo"><i class="fas fa-table-cells-large"></i> Acomodar el salón</button>
                                         <button type="button" id="tpMenuApagados"><i class="fas fa-eye"></i> <span id="tpApagadosTexto">Ver desactivados</span></button>
                                     </div>
                                 </div>
@@ -1193,6 +1369,46 @@
                             <div class="tp-vacio"><i class="fas fa-spinner fa-spin"></i><p>Cargando puntos de servicio…</p></div>
                         </div>
                     </div>
+
+                    <!-- ===== El PLANO del salón (modo acomodo) =====
+                         Sustituye al mapa, igual que el apartado: una cosa a la vez. Se entra
+                         desde el menú de tres puntos del mapa. Sirve para decir dónde está cada
+                         mesa, con qué forma y cuántos asientos; el acomodo se guarda de un
+                         golpe. En pantalla quedan cuatro acciones como mucho. -->
+                    <section class="tp-plano hidden" id="tpPlano">
+                        <div class="tp-plano-cab">
+                            <button type="button" class="tp-volver" id="tpPlanoVolver"><i class="fas fa-arrow-left"></i> Puntos de servicio</button>
+                            <div class="tp-plano-titulo">
+                                <h2 class="tp-plano-h2">Acomodar el salón</h2>
+                                <p class="tp-sub" id="tpPlanoAyuda">Arrastra cada punto a su lugar —o muévelo con las flechas del teclado—. Toca uno para cambiar su forma o sus asientos.<span class="tp-solo-angosto"> En el teléfono puedes deslizar el plano de lado.</span></p>
+                            </div>
+                            <div class="tp-botones">
+                                <button type="button" class="tp-btn" id="tpPlanoCancelar">Cancelar</button>
+                                <button type="button" class="tp-btn primario" id="tpPlanoGuardar"><i class="fas fa-check"></i> Guardar</button>
+                            </div>
+                        </div>
+
+                        <div class="tp-plano-cuerpo">
+                            <!-- El lienzo: 1000x700 virtuales. Las fichas se colocan por PORCENTAJE,
+                                 así el mismo acomodo se ve bien en teléfono, tableta y monitor.
+                                 En el teléfono el lienzo no se encoge hasta ser ilegible: conserva un
+                                 ancho mínimo y se desliza de lado. -->
+                            <div class="tp-plano-marco">
+                                <div class="tp-plano-ventana" id="tpPlanoVentana">
+                                    <div class="tp-lienzo" id="tpLienzo" role="application" aria-label="Plano del salón"></div>
+                                </div>
+                            </div>
+
+                            <aside class="tp-plano-lado">
+                                <div class="tp-plano-pista" id="tpPlanoSinElegir">
+                                    <i class="fas fa-hand-pointer"></i>
+                                    <p>Toca un punto del plano para cambiar su forma o sus asientos.</p>
+                                </div>
+                                <div class="tp-inspector hidden" id="tpPlanoInspector"></div>
+                                <div class="tp-sueltos hidden" id="tpPlanoSueltos"></div>
+                            </aside>
+                        </div>
+                    </section>
 
                     <!-- ===== Nivel 2: el apartado de UN punto =====
                          Sustituye al mapa (una cosa a la vez, sin modales encima de modales):
@@ -1453,6 +1669,21 @@
                     <label>¿Qué carta abre su QR?</label>
                     <div class="tp-chips" id="tpPuntoCarta"></div>
                     <p class="tp-aviso" id="tpPuntoCartaAyuda">La carta decide si el cliente que escanea puede pedir desde su teléfono o solo mirar.</p>
+                </div>
+                <!-- Del plano del salón: la forma con la que se dibuja la mesa y sus asientos.
+                     Los asientos sirven de tope de celulares por cuenta. -->
+                <div class="tp-campo">
+                    <label>Forma de la mesa</label>
+                    <div class="tp-chips" id="tpPuntoForma">
+                        <button type="button" class="tp-chip" data-forma="rect"><i class="fas fa-square"></i> Cuadrada</button>
+                        <button type="button" class="tp-chip" data-forma="round"><i class="fas fa-circle"></i> Redonda</button>
+                        <button type="button" class="tp-chip" data-forma="bar"><i class="fas fa-minus"></i> Barra</button>
+                    </div>
+                </div>
+                <div class="tp-campo">
+                    <label for="tpPuntoAsientos">Asientos (opcional)</label>
+                    <input type="number" id="tpPuntoAsientos" min="0" max="99" step="1" inputmode="numeric" placeholder="0">
+                    <p class="tp-aviso">Con asientos declarados, esta mesa pone su propio tope de celulares por cuenta. Sin asientos no hay tope.</p>
                 </div>
                 <div class="tp-aviso" id="tpPuntoAviso">El QR de este punto se genera al guardarlo.</div>
             </div>

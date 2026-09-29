@@ -217,6 +217,8 @@ async function loadCompanySettings() {
                 document.getElementById('diningRequireActivation').checked = !!dining.require_activation;
                 document.getElementById('diningActivationGroup').style.display = dining.require_activation ? 'block' : 'none';
                 document.getElementById('diningActivationMinutes').value = dining.activation_minutes || 10;
+                // 0 = el tope lo pone la mesa, según sus asientos.
+                document.getElementById('diningMaxDevices').value = dining.max_devices_per_check || 0;
             }
             // Cargar configuracion Stripe
             if (store.settings && store.settings.stripe) {
@@ -703,7 +705,9 @@ document.getElementById('companyForm').addEventListener('submit', async (e) => {
         // El QR de la mesa: sin esto, todo el que tenga el enlace pide sin estar ahí.
         dining: {
             require_activation: document.getElementById('diningRequireActivation').checked,
-            activation_minutes: parseInt(document.getElementById('diningActivationMinutes').value, 10) || 10
+            activation_minutes: parseInt(document.getElementById('diningActivationMinutes').value, 10) || 10,
+            // 0 = sin tope explícito: manda el tamaño de la mesa (sus asientos).
+            max_devices_per_check: Math.max(0, Math.min(50, parseInt(document.getElementById('diningMaxDevices').value, 10) || 0))
         },
         stripe: {
             enabled: document.getElementById('stripeEnabled').checked,

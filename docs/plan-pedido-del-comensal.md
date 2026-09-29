@@ -136,7 +136,14 @@ de esa mesa. Herramientas, de menor a mayor:
 
 1. **Activación (números + QR) + pantalla del mesero + Integrar cliente + Expulsar/Reiniciar mesa +
    configuración de empresa**, con el WebSocket de presencia desde el primer paso.
+   → **Hecha la activación, la pantalla del mesero, Expulsar y Reiniciar mesa** (commit
+   `d68f482`). Queda **Integrar cliente** en una cuenta ya servida.
 2. **Carrito con swipe y por comensal** (columna en escritorio, hoja deslizable en el teléfono).
+   → **Hecha (29-sep-2026).** La hoja del pedido se arrastra por su asa (70dvh ↔ 92dvh y se
+   cierra), el total y "Enviar a cocina" quedan pegados abajo, **deslizar un platillo propio lo
+   quita con Deshacer**, y la lista va **por comensal**: "Tú" primero, separador "De la mesa" y
+   cada grupo con sus piezas y su subtotal. El repintado (sondeo/WebSocket) se aplaza mientras
+   hay un dedo encima para no romper el gesto.
 3. **Mesa física**: `pos_x/pos_y/shape/seats` + editor de plano; el tope de dispositivos usa los
    asientos.
 4. **Modo reposo** con las diapositivas del destino `mesa`.

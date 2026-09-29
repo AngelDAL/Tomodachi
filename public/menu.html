@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="/public/lib/fontawesome/css/all.min.css?v=4">
     <link rel="stylesheet" href="/public/css/variables.css?v=6">
     <link rel="stylesheet" href="/public/css/design-system.css?v=8">
-    <link rel="stylesheet" href="/public/css/menu-public.css?v=5">
+    <link rel="stylesheet" href="/public/css/menu-public.css?v=7">
 
     <script>
         // El comensal no tiene sesión: el tema se decide por la preferencia de
@@ -99,6 +99,7 @@
                     <div>
                         <h2 id="pedidoPanelTitulo" class="pedido-panel-titulo">Tu pedido</h2>
                         <p id="pedidoPanelCodigo" class="pedido-panel-codigo"></p>
+                        <p id="pedidoPanelResumen" class="mp-pedido-resumen"></p>
                     </div>
                     <button type="button" id="pedidoPanelCerrar" class="mp-cerrar" data-accion="cerrarPanel" aria-label="Cerrar el pedido">
                         <i class="fas fa-xmark"></i>
@@ -203,32 +204,45 @@
     <!-- 4) El pedido de la mesa. SOLO se usa en pantallas angostas: en escritorio y
          tableta el pedido vive en la columna derecha (ver #pedidoPanel). Se conserva
          porque en el teléfono es ESTA la que se usa como hoja inferior; además es el
-         respaldo si algo falla con la columna. -->
+         respaldo si algo falla con la columna.
+
+         Es una HOJA que se arrastra: el asa (#hojaAsa) es lo único que se jala, así el
+         desplazamiento de la lista sigue siendo el de siempre. Arriba expande a pantalla
+         completa; abajo la baja y (si ya está en media) la cierra. -->
     <div id="modalPedido" class="mp-overlay hidden">
         <div class="mp-modal mp-modal-grande" role="dialog" aria-modal="true" aria-labelledby="pedidoTitulo">
+            <div id="hojaAsa" class="mp-hoja-asa" aria-hidden="true"><span></span></div>
             <div class="mp-modal-head">
                 <div>
                     <h3 id="pedidoTitulo">Pedido de la mesa</h3>
                     <p id="pedidoCodigo" class="mp-pedido-codigo"></p>
+                    <p id="pedidoResumen" class="mp-pedido-resumen"></p>
                 </div>
                 <button type="button" class="mp-cerrar" data-cerrar="modalPedido" aria-label="Cerrar">
                     <i class="fas fa-xmark"></i>
                 </button>
             </div>
             <div class="mp-modal-body">
+                <p id="pedidoGestoAyuda" class="mp-gesto-ayuda hidden">
+                    Desliza un platillo propio a la izquierda para quitarlo.
+                </p>
                 <div id="pedidoLista" class="mp-pedido-lista">
                     <p class="mp-vacio">Cargando el pedido…</p>
                 </div>
-                <div class="mp-pedido-totales">
-                    <span>Total de la cuenta</span>
-                    <strong id="pedidoTotal">$0.00</strong>
+                <!-- El total y la acción van PEGADOS abajo: en el teléfono no se puede
+                     "Enviar a cocina" si el botón vive al final de una lista larga. -->
+                <div class="mp-hoja-pie">
+                    <div class="mp-pedido-totales">
+                        <span>Total de la cuenta</span>
+                        <strong id="pedidoTotal">$0.00</strong>
+                    </div>
+                    <p id="pedidoError" class="mp-aviso-error hidden"></p>
+                    <p id="pedidoExito" class="mp-aviso-exito hidden"></p>
+                    <p id="pedidoPieAyuda" class="mp-pedido-ayuda"></p>
+                    <button type="button" id="btnEnviarCocina" class="mp-accion mp-boton-grande" data-accion="enviar">
+                        <i class="fas fa-paper-plane"></i> Enviar a cocina
+                    </button>
                 </div>
-                <p id="pedidoError" class="mp-aviso-error hidden"></p>
-                <p id="pedidoExito" class="mp-aviso-exito hidden"></p>
-                <p id="pedidoPieAyuda" class="mp-pedido-ayuda"></p>
-                <button type="button" id="btnEnviarCocina" class="mp-accion mp-boton-grande" data-accion="enviar">
-                    <i class="fas fa-paper-plane"></i> Enviar a cocina
-                </button>
             </div>
         </div>
     </div>
@@ -267,6 +281,6 @@
     <!-- El QR del par de números: la librería ya viene en el proyecto (la usan los QR de los
          puntos de servicio), así que no se depende de ningún servicio externo. -->
     <script src="/public/lib/qrcodejs/qrcode.min.js"></script>
-    <script src="/public/js/menu-public.js?v=7"></script>
+    <script src="/public/js/menu-public.js?v=9"></script>
 </body>
 </html>

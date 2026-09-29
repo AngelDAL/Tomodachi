@@ -135,6 +135,9 @@
         if (!el) return;
         el.classList.remove('hidden');
         document.body.classList.add('con-capa');
+        // La hoja del pedido nace en su altura media (se ve la cuenta y el botón) y se
+        // expande a pantalla completa con el asa, si el comensal quiere ver todo.
+        if (id === 'modalPedido') ponerAltoHoja('media');
     }
 
     function cerrarModal(id) {
@@ -171,6 +174,38 @@
         avisoTemporizador = setTimeout(function () {
             el.classList.add('hidden');
         }, tipo === 'error' ? 5200 : 3000);
+    }
+
+    /**
+     * Aviso CON una acción ("Deshacer").
+     *
+     * Quitar un platillo con un desliz no puede ser irreversible: en un teléfono el dedo
+     * resbala, y el comensal no tiene forma de saber que se equivocó. Dura más que un
+     * aviso normal (7 s) porque hay que alcanzar el botón.
+     */
+    function avisoConAccion(texto, etiqueta, accion) {
+        var el = qs('mpAviso');
+        if (!el) return;
+        el.innerHTML = '<span class="mp-aviso-texto">' + esc(texto) + '</span>' +
+                       '<button type="button" class="mp-aviso-accion">' + esc(etiqueta) + '</button>';
+        el.classList.remove('hidden', 'es-error', 'es-exito');
+        el.classList.add('es-exito');
+
+        var ocultar = function () {
+            el.classList.add('hidden');
+            el.innerHTML = '';
+        };
+        if (avisoTemporizador) clearTimeout(avisoTemporizador);
+        avisoTemporizador = setTimeout(ocultar, 7000);
+
+        var boton = el.querySelector('.mp-aviso-accion');
+        if (boton) {
+            boton.addEventListener('click', function () {
+                if (avisoTemporizador) clearTimeout(avisoTemporizador);
+                ocultar();
+                accion();
+            });
+        }
     }
 
     // ============================================================
@@ -612,11 +647,28 @@
         // El estado de la activación se pregunta en cada cambio de cuenta (al unirse y en cada
         // refresco/sondeo): así el drawer se pone en verde solo, aunque no haya WebSocket.
         revisarActivacion();
+
+        // Con el dedo encima NO se repinta: el sondeo (cada 10 s) o el WebSocket pueden
+        // reemplazar el renglón que se está arrastrando, y el gesto se perdería en el aire
+        // —el dedo seguiría sobre un nodo ya fuera del documento—. Se deja para el final.
+        if (deslizLinea) { renderPendiente = true; return; }
+        renderPedido();
+    }
+
+    /** Pinta el pedido donde le toque: columna (escritorio) o hoja (teléfono). */
+    function renderPedido() {
         if (pedidoEnColumna()) {
             renderPedidoPanel();
         } else if (qs('modalPedido') && !qs('modalPedido').classList.contains('hidden')) {
             renderPedidoModal();
         }
+    }
+
+    /** Repinta lo que quedó pendiente por un gesto en curso. */
+    function volcarRenderPendiente() {
+        if (!renderPendiente) return;
+        renderPendiente = false;
+        renderPedido();
     }
 
     /** Arranca la observación de la cuenta: refresco inicial, socket y sondeo. */
@@ -890,9 +942,20 @@
     // Pedido: modal "El pedido de la mesa"
     // ============================================================
 
-    function renderGrupo(g) {
-        var propio = estado.socio && g.id === String(estado.socio.participant_id);
+    function renderGrupo(g, propio) {
         var nombre = propio ? 'Tú' : (g.nombre || 'Comensal');
+
+        // Cuántas piezas y cuánto suma ESTE comensal: es la primera pregunta que hace
+        // cualquiera en una cuenta compartida. Sale de las líneas ya recibidas.
+        var piezas = 0, suma = 0;
+        g.items.forEach(function (it) {
+            piezas += Number(it.quantity) || 0;
+            suma += Number(it.line_total) || 0;
+        });
+        var resumen = piezas > 0
+            ? '<span class="mp-grupo-resumen">' + esc(piezas) + (piezas === 1 ? ' pieza' : ' piezas') +
+              ' · ' + dinero(suma) + '</span>'
+            : '';
 
         var filas = g.items.map(function (it) { return renderItem(it, propio); }).join('');
         if (!filas) {
@@ -900,7 +963,7 @@
         }
 
         return '<section class="mp-grupo' + (propio ? ' es-propio' : '') + '">' +
-                   '<div class="mp-grupo-cabecera"><i class="fas fa-user"></i><span>' + esc(nombre) + '</span></div>' +
+                   '<div class="mp-grupo-cabecera"><i class="fas fa-user"></i><span>' + esc(nombre) + '</span>' + resumen + '</div>' +
                    '<div class="mp-grupo-items">' + filas + '</div>' +
                '</section>';
     }
@@ -940,7 +1003,8 @@
                 '</div>';
         }
 
-        return '<div class="mp-item">' +
+        var contenido =
+            '<div class="mp-item" data-item="' + esc(it.order_item_id) + '">' +
                    '<div class="mp-item-cant">' + esc(cant) + 'x</div>' +
                    '<div class="mp-item-info">' +
                        '<p class="mp-item-nombre">' + esc(it.product_name) + '</p>' +
@@ -952,6 +1016,16 @@
                    '<div class="mp-item-derecha">' +
                        '<span class="mp-item-precio">' + dinero(it.line_total) + '</span>' +
                    '</div>' +
+               '</div>';
+
+        // Solo lo MÍO y PENDIENTE se quita con un desliz: lo que ya está en cocina lo
+        // cancela el personal, y lo que pidió otro comensal no es decisión mía. El bote de
+        // la fila de acciones se queda: el desliz no lo anuncia un lector de pantalla.
+        if (!puedeEditar) return contenido;
+
+        return '<div class="mp-item-desliz" data-item="' + esc(it.order_item_id) + '">' +
+                   '<div class="mp-item-fondo" aria-hidden="true"><i class="fas fa-trash-can"></i> Quitar</div>' +
+                   contenido +
                '</div>';
     }
 
@@ -967,20 +1041,36 @@
         if (!c) {
             cont.innerHTML = '<p class="mp-vacio">Cargando el pedido…</p>';
             qs('pedidoTotal').textContent = dinero(0);
+            mostrarEl(qs('pedidoResumen'), false);
+            mostrarEl(qs('pedidoGestoAyuda'), false);
             return;
         }
+
+        qs('pedidoResumen').textContent = resumenCuentaTexto(c);
+        mostrarEl(qs('pedidoResumen'), true);
+
+        // La ayuda del gesto solo aparece si HAY algo que se pueda deslizar: prometer un
+        // gesto que no hace nada es peor que no mencionarlo.
+        mostrarEl(qs('pedidoGestoAyuda'), hayLineaDeslizable(c));
 
         // Se muestran todos los comensales; quien no pidió aparece como vacío.
         cont.innerHTML = listaDeCuenta(c);
 
         qs('pedidoTotal').textContent = dinero((c.totals && c.totals.total) || 0);
 
-        // El botón de enviar se activa si hay algo pendiente en la cuenta.
         var pendientes = pendientesDe(c);
         var btn = qs('btnEnviarCocina');
         if (btn) btn.disabled = pendientes === 0;
         var ayuda = qs('pedidoPieAyuda');
         if (ayuda) ayuda.textContent = textoSegunPendientes(pendientes);
+    }
+
+    /** ¿Hay alguna línea PROPIA y todavía pendiente? Es lo único que se puede deslizar. */
+    function hayLineaDeslizable(c) {
+        if (!c || !estado.socio) return false;
+        return (c.items || []).some(function (it) {
+            return String(it.participant_id) === String(estado.socio.participant_id) && esPendiente(it.status);
+        });
     }
 
     /** El pedido en la columna de la derecha (escritorio/tableta). Mismo contenido que el
@@ -996,8 +1086,12 @@
         if (!c) {
             cont.innerHTML = '<p class="mp-vacio">Cargando el pedido…</p>';
             qs('pedidoPanelTotal').textContent = dinero(0);
+            mostrarEl(qs('pedidoPanelResumen'), false);
             return;
         }
+
+        qs('pedidoPanelResumen').textContent = resumenCuentaTexto(c);
+        mostrarEl(qs('pedidoPanelResumen'), true);
 
         cont.innerHTML = listaDeCuenta(c);
         qs('pedidoPanelTotal').textContent = dinero((c.totals && c.totals.total) || 0);
@@ -1009,10 +1103,18 @@
         if (ayuda) ayuda.textContent = textoSegunPendientes(pendientes);
     }
 
-    /** Agrupa por comensal y devuelve el HTML de la lista. Compartido por la columna
-     *  y el modal: se ven igual aunque vivan en sitios distintos. */
+    /**
+     * Agrupa por comensal y devuelve el HTML de la lista. Compartido por la columna y el
+     * modal: se ven igual aunque vivan en sitios distintos.
+     *
+     * ORDEN: primero lo MÍO, después lo de la mesa (con su separador). Es la razón por la
+     * que el comensal abre esta pantalla: ver y ajustar su parte. Antes los grupos salían
+     * en orden de llegada y "Tú" podía quedar hasta abajo, en una cuenta de seis.
+     */
     function listaDeCuenta(c) {
         var grupos = [], porId = {};
+        var yo = estado.socio ? String(estado.socio.participant_id) : null;
+
         (c.participants || []).forEach(function (p) {
             var g = { id: String(p.participant_id), nombre: p.display_name, items: [] };
             porId[g.id] = g;
@@ -1028,9 +1130,39 @@
             g.items.push(it);
         });
 
-        return grupos.length
-            ? grupos.map(renderGrupo).join('')
-            : '<p class="mp-vacio">Todavía no hay nada en esta cuenta.</p>';
+        if (!grupos.length) {
+            return '<p class="mp-vacio">Todavía no hay nada en esta cuenta.</p>';
+        }
+
+        // Lo mío primero (orden estable: entre los demás no se toca el de llegada).
+        grupos.sort(function (a, b) {
+            if (a.id === yo) return -1;
+            if (b.id === yo) return 1;
+            return 0;
+        });
+
+        var html = '', ajenos = false;
+        grupos.forEach(function (g) {
+            var propio = yo !== null && g.id === yo;
+            if (!propio && !ajenos) {
+                ajenos = true;
+                html += '<p class="mp-grupo-sep"><span>De la mesa</span></p>';
+            }
+            html += renderGrupo(g, propio);
+        });
+        return html;
+    }
+
+    /** "3 personas · 6 piezas · $210.00" — la cabecera de la cuenta, en una línea. */
+    function resumenCuentaTexto(c) {
+        if (!c) return '';
+        var personas = (c.participants || []).length;
+        var piezas = 0;
+        (c.items || []).forEach(function (it) { piezas += Number(it.quantity) || 0; });
+        var total = (c.totals && c.totals.total) || 0;
+
+        return personas + (personas === 1 ? ' persona' : ' personas') + ' · ' +
+               piezas + (piezas === 1 ? ' pieza' : ' piezas') + ' · ' + dinero(total);
     }
 
     function pendientesDe(c) {
@@ -1175,6 +1307,215 @@
             renderPedidoModal();
         }
         refrescarCuenta({ silencioso: false });
+    }
+
+    // ============================================================
+    // GESTOS DEL TELÉFONO — hoja que se arrastra y línea que se desliza
+    // ============================================================
+    //
+    // En un teléfono el pedido es una hoja inferior. Dos gestos que antes no existían:
+    //   · Subir desde la barra del pedido para abrirla, y jalarla por su asa (arriba =
+    //     pantalla completa, abajo = se baja y luego se cierra).
+    //   · Deslizar a la izquierda un platillo PROPIO y pendiente para quitarlo.
+    // Todo vive detrás de `esHojaMovil()`: en escritorio y tableta no se enciende nada y
+    // la columna del pedido sigue siendo la de siempre.
+
+    var UMBRAL_CERRAR   = 110;  // px hacia abajo para bajar/cerrar la hoja
+    var UMBRAL_EXPANDIR = 55;   // px hacia arriba para ponerla completa
+    var UMBRAL_ABRIR    = 45;   // px hacia arriba en la barra para abrirla
+    var UMBRAL_QUITAR   = 88;   // px hacia la izquierda para quitar la línea
+
+    function esHojaMovil() {
+        return !pedidoEnColumna();
+    }
+
+    function hojaModal() {
+        return document.querySelector('#modalPedido .mp-modal');
+    }
+
+    /** Altura de la hoja: 'media' (por defecto) o 'completa'. */
+    function ponerAltoHoja(alto) {
+        var m = hojaModal();
+        if (!m) return;
+        m.classList.toggle('es-completa', alto === 'completa');
+    }
+
+    var arrastreHoja = null;
+
+    /** El asa y la cabecera son la zona de arrastre: la lista NO, para no pelear con el scroll. */
+    function conectarHoja() {
+        var modal = hojaModal();
+        if (!modal) return;
+        [qs('hojaAsa'), modal.querySelector('.mp-modal-head')].forEach(function (zona) {
+            if (!zona) return;
+            zona.addEventListener('touchstart', hojaToca, { passive: true });
+            zona.addEventListener('touchmove', hojaMueve, { passive: false });
+            zona.addEventListener('touchend', hojaSuelta);
+            zona.addEventListener('touchcancel', hojaSuelta);
+        });
+
+        var bar = qs('orderBar');
+        if (bar) {
+            bar.addEventListener('touchstart', barraToca, { passive: true });
+            bar.addEventListener('touchmove', barraMueve, { passive: false });
+            bar.addEventListener('touchend', function () { arrastreBarra = null; });
+        }
+    }
+
+    function hojaToca(ev) {
+        if (!esHojaMovil()) return;
+        var t = ev.touches && ev.touches[0];
+        if (!t) return;
+        arrastreHoja = { y0: t.clientY, dy: 0 };
+    }
+
+    function hojaMueve(ev) {
+        if (!arrastreHoja) return;
+        var t = ev.touches && ev.touches[0];
+        var m = hojaModal();
+        if (!t || !m) return;
+
+        var dy = t.clientY - arrastreHoja.y0;
+        arrastreHoja.dy = dy;
+
+        // Se sigue al dedo con un tope: arriba poco (la hoja no se despega del borde), abajo
+        // lo suficiente para que se vea que se está bajando.
+        var topeArriba = m.classList.contains('es-completa') ? -8 : -70;
+        var d = Math.max(topeArriba, Math.min(dy, 240));
+
+        m.classList.add('arrastrando');
+        m.style.transform = 'translateY(' + d + 'px)';
+        if (Math.abs(dy) > 6 && ev.cancelable) ev.preventDefault();
+    }
+
+    function hojaSuelta() {
+        if (!arrastreHoja) return;
+        var dy = arrastreHoja.dy;
+        arrastreHoja = null;
+
+        var m = hojaModal();
+        if (!m) return;
+        m.classList.remove('arrastrando');
+        m.style.transform = '';
+
+        var completa = m.classList.contains('es-completa');
+
+        if (dy < -UMBRAL_EXPANDIR) { ponerAltoHoja('completa'); return; }
+        if (dy > UMBRAL_CERRAR) {
+            // Estando completa, bajar la deja "media" (no se cierra de un tirón).
+            if (completa) { ponerAltoHoja('media'); return; }
+            verCarta();   // baja la hoja y devuelve la vista a la carta
+            return;
+        }
+        if (dy > 40) ponerAltoHoja('media');
+    }
+
+    var arrastreBarra = null;
+
+    function barraToca(ev) {
+        if (!esHojaMovil()) return;
+        var t = ev.touches && ev.touches[0];
+        if (!t) return;
+        arrastreBarra = { y0: t.clientY };
+    }
+
+    /** Un tirón hacia arriba en la barra del pedido abre la hoja (sin buscar el botón). */
+    function barraMueve(ev) {
+        if (!arrastreBarra) return;
+        var t = ev.touches && ev.touches[0];
+        if (!t) return;
+        if (t.clientY - arrastreBarra.y0 > -UMBRAL_ABRIR) return;
+        arrastreBarra = null;
+        if (ev.cancelable) ev.preventDefault();
+        abrirPedido();
+    }
+
+    // ---------- Deslizar una línea para quitarla ----------
+
+    var deslizLinea = null;
+    var renderPendiente = false;
+
+    function conectarDeslizLineas() {
+        ['pedidoLista', 'pedidoPanelLista'].forEach(function (id) {
+            var cont = qs(id);
+            if (!cont || cont.dataset.deslizListo) return;
+            cont.dataset.deslizListo = '1';
+            cont.addEventListener('touchstart', deslizToca, { passive: true });
+            cont.addEventListener('touchmove', deslizMueve, { passive: false });
+            cont.addEventListener('touchend', deslizSuelta);
+            cont.addEventListener('touchcancel', deslizSuelta);
+        });
+    }
+
+    function deslizToca(ev) {
+        var fila = ev.target && ev.target.closest ? ev.target.closest('.mp-item-desliz') : null;
+        if (!fila) { deslizLinea = null; return; }
+        var t = ev.touches && ev.touches[0];
+        if (!t) return;
+        deslizLinea = { fila: fila, x0: t.clientX, y0: t.clientY, dx: 0, decidido: null };
+    }
+
+    function deslizMueve(ev) {
+        if (!deslizLinea) return;
+        var t = ev.touches && ev.touches[0];
+        if (!t) return;
+
+        var dx = t.clientX - deslizLinea.x0;
+        var dy = t.clientY - deslizLinea.y0;
+
+        // Hasta que el movimiento no es claramente horizontal no se decide: si el dedo va
+        // vertical, el gesto es el scroll de la lista y aquí no se toca nada.
+        if (!deslizLinea.decidido) {
+            if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+            deslizLinea.decidido = Math.abs(dx) > Math.abs(dy) * 1.3 ? 'x' : 'y';
+        }
+        if (deslizLinea.decidido !== 'x') return;
+
+        if (ev.cancelable) ev.preventDefault();
+        deslizLinea.dx = Math.max(-140, Math.min(0, dx));
+
+        var linea = deslizLinea.fila.querySelector('.mp-item');
+        if (linea) {
+            linea.classList.add('sin-transicion');
+            linea.style.transform = 'translateX(' + deslizLinea.dx + 'px)';
+        }
+    }
+
+    function deslizSuelta() {
+        if (!deslizLinea) return;
+        var d = deslizLinea;
+        deslizLinea = null;
+
+        var linea = d.fila.querySelector('.mp-item');
+        if (linea) {
+            linea.classList.remove('sin-transicion');
+            linea.style.transform = '';
+        }
+        if (d.decidido === 'x' && d.dx <= -UMBRAL_QUITAR) {
+            quitarConDeshacer(d.fila.dataset.item);
+        }
+        // Se suelta el dedo: ahora sí lo que hubiera quedado pendiente de pintar.
+        volcarRenderPendiente();
+    }
+
+    /**
+     * Quita una línea y ofrece DESHACERLA.
+     *
+     * El desliz es cómodo pero se dispara sin querer: sin deshacer, un platillo se cae de la
+     * cuenta y el comensal lo vuelve a agregar (o se queda sin pedirlo).
+     */
+    function quitarConDeshacer(itemId) {
+        var it = ((estado.cuenta && estado.cuenta.items) || []).filter(function (x) {
+            return String(x.order_item_id) === String(itemId);
+        })[0];
+        if (!it) return;
+
+        quitarItem(itemId);
+        avisoConAccion(Number(it.quantity) + ' x ' + it.product_name + ' fuera', 'Deshacer', function () {
+            agregarItem(it.product_id, it.quantity, it.notes)
+                .then(function () { aviso('Se volvió a agregar', 'ok'); })
+                .catch(function (e) { aviso(e.message, 'error'); });
+        });
     }
 
     // ============================================================
@@ -1430,7 +1771,7 @@
             case 'agregar':      agregarUno(b.dataset.producto); break;
             case 'mas':          agregarUno(b.dataset.producto); break;
             case 'menos':        quitarUnoDeProducto(b.dataset.producto); break;
-            case 'quitar':       quitarItem(b.dataset.item); break;
+            case 'quitar':       quitarConDeshacer(b.dataset.item); break;
             // Controles POR LÍNEA (cada platillo con sus notas)
             case 'lineamenos':   cambiarCantidadLinea(b.dataset.item, Number(b.dataset.cantidad) - 1); break;
             case 'lineamas':     cambiarCantidadLinea(b.dataset.item, Number(b.dataset.cantidad) + 1); break;
@@ -1482,6 +1823,11 @@
         document.addEventListener('visibilitychange', function () {
             if (!document.hidden && estado.socio) refrescarCuenta({ silencioso: true });
         });
+
+        // Gestos del teléfono: la hoja del pedido y el desliz de las líneas. Se conectan
+        // una sola vez, sobre los contenedores fijos del documento.
+        conectarHoja();
+        conectarDeslizLineas();
 
         mostrar('cartaCargando');
 

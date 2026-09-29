@@ -1092,3 +1092,174 @@ body.vista-pedido.con-pedido .pedido-barra { display: none; }
     .pedido-panel-cab { background: var(--bg-body); border-bottom: 1px solid var(--border-lighter); }
     /* La columna nunca convive con la barra flotante: en el teléfono manda la columna. */
 }
+
+/* ============================================================
+   FASE 2 — HOJA DEL PEDIDO QUE SE ARRASTRA Y LÍNEAS QUE SE DESLIZAN
+   ------------------------------------------------------------
+   Dos gestos que en un teléfono ya se esperan:
+     · La hoja del pedido se jala por su ASA (arriba = completa, abajo = se baja o
+       se cierra). Se arrastra SOLO por el asa y la cabecera: así el desplazamiento
+       de la lista sigue siendo el del navegador.
+     · Un platillo propio y todavía pendiente se desliza a la izquierda para quitarlo.
+   En escritorio y tableta nada de esto se enciende: ahí el pedido es su columna.
+   ============================================================ */
+
+/* ---------- Asa de la hoja (solo teléfono) ---------- */
+
+.mp-hoja-asa {
+    display: none;
+    justify-content: center;
+    padding: 8px 0 2px;
+    cursor: grab;
+    touch-action: none;
+}
+.mp-hoja-asa span {
+    display: block;
+    width: 44px;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--border-color);
+}
+
+/* ---------- Cuenta en una línea: personas · piezas · total ---------- */
+
+.mp-pedido-resumen {
+    margin: 4px 0 0;
+    font-size: .8rem;
+    color: var(--text-medium);
+}
+
+/* ---------- Pie del pedido (total + enviar) ---------- */
+
+.mp-hoja-pie { margin-top: 10px; }
+.mp-gesto-ayuda {
+    margin: 0 0 10px;
+    font-size: .78rem;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+/* ---------- Separador "De la mesa" ---------- */
+
+.mp-grupo-sep {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 2px 0 10px;
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+.mp-grupo-sep::before,
+.mp-grupo-sep::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border-lighter);
+}
+.mp-grupo-sep span { flex: 0 0 auto; }
+.mp-grupo-resumen {
+    margin-left: auto;
+    font-size: .78rem;
+    font-weight: 600;
+    color: var(--text-medium);
+    white-space: nowrap;
+}
+
+/* ---------- Aviso con acción (Deshacer) ---------- */
+
+.mp-aviso-accion {
+    margin-left: 10px;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .22);
+    color: inherit;
+    font-family: inherit;
+    font-size: .82rem;
+    font-weight: 800;
+    cursor: pointer;
+}
+.mp-aviso-accion:hover { background: rgba(255, 255, 255, .34); }
+
+/* ---------- Línea que se desliza para quitarse ---------- */
+
+.mp-item-desliz {
+    position: relative;
+    overflow: hidden;
+    border-top: 1px solid var(--border-lighter);
+}
+.mp-item-desliz:first-child { border-top: none; }
+.mp-item-fondo {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-right: 18px;
+    background: var(--danger-color);
+    color: #fff;
+    font-size: .82rem;
+    font-weight: 700;
+}
+.mp-item-desliz > .mp-item {
+    position: relative;
+    background: var(--bg-body);
+    border-top: none;
+    transition: transform .16s ease;
+    /* El desliz horizontal es nuestro; el vertical sigue siendo el scroll. */
+    touch-action: pan-y;
+    will-change: transform;
+}
+.mp-item-desliz > .mp-item.sin-transicion { transition: none; }
+
+/* ============================================================
+   TELÉFONO — la hoja del pedido con asa y dos alturas
+   ============================================================ */
+
+@media (max-width: 768px) {
+    /* Anclada abajo, a todo lo ancho, con la cabecera y el pie siempre a la vista. */
+    #modalPedido { align-items: flex-end; }
+    #modalPedido .mp-modal {
+        max-width: none;
+        border-radius: 20px 20px 0 0;
+        height: 70dvh;
+        max-height: 92dvh;
+        /* Se anima la altura (no el transform): así el contenido no salta al soltar. */
+        transition: height .2s cubic-bezier(.4, 0, .2, 1);
+    }
+    #modalPedido .mp-modal.es-completa { height: 92dvh; }
+    /* Mientras el dedo manda, ninguna transición pelea con él. */
+    #modalPedido .mp-modal.arrastrando {
+        transition: none;
+        animation: none;
+    }
+    #modalPedido .mp-hoja-asa { display: flex; }
+    #modalPedido .mp-modal-head {
+        padding-top: 6px;
+        touch-action: none;
+    }
+
+    /* La lista NO tiene su propio scroll: se desplaza el cuerpo entero y el pie
+       —total y "Enviar a cocina"— queda pegado abajo con `sticky`. */
+    #modalPedido .mp-modal-body {
+        display: flex;
+        flex-direction: column;
+        padding-bottom: 0;
+    }
+    #modalPedido .mp-pedido-lista {
+        max-height: none;
+        overflow: visible;
+    }
+    #modalPedido .mp-hoja-pie {
+        position: sticky;
+        bottom: 0;
+        margin-top: auto;
+        padding: 10px 0 calc(12px + env(safe-area-inset-bottom, 0px));
+        background: var(--bg-card);
+        border-top: 1px solid var(--border-lighter);
+    }
+}

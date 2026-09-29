@@ -3,6 +3,8 @@
  * Clase Auth - Manejo de autenticación y sesiones
  */
 
+require_once __DIR__ . '/RequestContext.class.php';
+
 class Auth {
     private $db;
     
@@ -49,6 +51,11 @@ class Auth {
                 // y aplicar el bloqueo por contraseña pendiente de cambio.
                 $this->refreshSession();
                 $this->enforcePasswordChange();
+                // Contexto de la petición: ids de la sesión ya validados (nunca
+                // del request) para que los logs de este request digan quién es.
+                if ($this->isLoggedIn()) {
+                    RequestContext::bind($_SESSION['store_id'] ?? null, $_SESSION['user_id'] ?? null);
+                }
             }
         }
     }
@@ -92,7 +99,7 @@ class Auth {
             );
         } catch (Exception $e) {
             // Si la consulta falla (p. ej. migración pendiente) no bloquear
-            error_log('refreshSession: ' . $e->getMessage());
+            RequestContext::error('refreshSession: ' . $e->getMessage());
             return;
         }
         if (!$row || $row['status'] !== STATUS_ACTIVE) {
@@ -152,7 +159,7 @@ class Auth {
             );
             return $row && (int)$row['must_change_password'] === 1;
         } catch (Exception $e) {
-            error_log('fetchMustChangePassword: ' . $e->getMessage());
+            RequestContext::error('fetchMustChangePassword: ' . $e->getMessage());
             return false;
         }
     }
@@ -194,7 +201,11 @@ class Auth {
             
             // Actualizar último login
             $this->updateLastLogin($user['user_id']);
-            
+
+            // A partir de aquí la petición está autenticada: el log de login
+            // (incluido un error posterior) ya sabe de qué tienda/usuario es.
+            RequestContext::bind($user['store_id'], $user['user_id']);
+
             unset($user['password_hash']);
             return $user;
         }

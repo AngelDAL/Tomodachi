@@ -3,6 +3,8 @@
  * Clase Response - Manejo de respuestas JSON estandarizadas
  */
 
+require_once __DIR__ . '/RequestContext.class.php';
+
 class Response {
     
     /**
@@ -13,6 +15,7 @@ class Response {
      */
     public static function success($data = null, $message = 'Operación exitosa', $code = 200) {
         http_response_code($code);
+        self::requestIdHeader();
         self::noCacheHeaders();
         header('Content-Type: application/json; charset=utf-8');
         
@@ -34,6 +37,7 @@ class Response {
      */
     public static function error($message = 'Error en la operación', $code = 400, $details = null) {
         http_response_code($code);
+        self::requestIdHeader();
         self::noCacheHeaders();
         header('Content-Type: application/json; charset=utf-8');
         
@@ -47,6 +51,18 @@ class Response {
         exit;
     }
     
+    /**
+     * Publicar el id de la petición en la respuesta. Sólo cabecera: el cuerpo
+     * JSON no cambia, así que el frontend no se entera. Es la mitad "respuesta"
+     * de la correlación: el usuario (o quien lea un ticket de soporte) puede
+     * pegar este id y encontrar la línea exacta en los logs de nginx/php-fpm.
+     */
+    private static function requestIdHeader() {
+        if (!headers_sent()) {
+            header(RequestContext::headerLine());
+        }
+    }
+
     /**
      * Evitar que las respuestas de la API (dependientes de la sesión) se cacheen
      * en navegador, service worker o proxies/CDN. Sin esto, un proxy podría servir

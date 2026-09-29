@@ -62,6 +62,10 @@ RUN mkdir -p /var/lib/php/sessions \
 # nginx + supervisord (en vez de Apache/mod_php): contenedor único
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 RUN mkdir -p /etc/nginx/html  # evita warning si falta
+# El access log (que ya trae el request id) sale por stdout del PID 1, igual que
+# el error log de nginx y el de php-fpm: así `docker logs` es el único sitio que
+# hay que mirar para correlacionar una petición de punta a punta.
+RUN ln -sf /dev/stdout /var/log/nginx/access.log
 COPY docker/supervisord.conf /etc/supervisor/supervisord.conf
 
 # Permisos
@@ -80,8 +84,12 @@ ENV DB_HOST=db \
 
 EXPOSE 80
 
+# Salud REAL: /api/health/ready.php comprueba BD (SELECT 1 con timeout 2 s),
+# configuración, control de migraciones, migraciones pendientes/fallidas y
+# almacenamiento. El endpoint anterior (api/auth/permissions.php) es estático:
+# respondía 200 con la base de datos caída y abría una sesión por chequeo.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD curl -fsS http://localhost/api/auth/permissions.php || exit 1
+    CMD curl -fsS --max-time 3 http://localhost/api/health/ready.php || exit 1
 
 ENTRYPOINT ["/var/www/html/docker/entrypoint.sh"]
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf"]

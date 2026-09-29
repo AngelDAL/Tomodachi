@@ -18,6 +18,8 @@
  *   $actor = $apiAuth->getActor($auth); // ['store_id' => N, 'via' => 'session'|'token', 'scopes' => [...]]
  */
 
+require_once __DIR__ . '/RequestContext.class.php';
+
 class ApiAuth {
 
     private $db;
@@ -117,6 +119,9 @@ class ApiAuth {
         // 1. Intentar sesión
         if ($auth && $auth->isLoggedIn()) {
             $user = $auth->getCurrentUser();
+            // Ya autenticado: el contexto de la petición puede llevar la tienda
+            // y el usuario (ids validados contra la sesión, no del request).
+            RequestContext::bind($user['store_id'], isset($user['user_id']) ? $user['user_id'] : null);
             return [
                 'store_id' => (int)$user['store_id'],
                 'user_id'  => isset($user['user_id']) ? (int)$user['user_id'] : null,
@@ -135,6 +140,7 @@ class ApiAuth {
                 'SELECT user_id FROM users WHERE store_id = ? AND role IN (?, ?) AND status = ? ORDER BY user_id ASC LIMIT 1',
                 [$token['store_id'], ROLE_SUPER_ADMIN, ROLE_ADMIN, STATUS_ACTIVE]
             );
+            RequestContext::bind($token['store_id'], $admin ? (int)$admin['user_id'] : null);
             return [
                 'store_id' => $token['store_id'],
                 'user_id'  => $admin ? (int)$admin['user_id'] : null,

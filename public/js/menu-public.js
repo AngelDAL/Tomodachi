@@ -682,16 +682,13 @@
     function actualizarCtaPedir() {
         if (!admitePedido(estado.mode)) {
             mostrarEl(qs('pedidoPanelCta'), false);
-            mostrarEl(qs('ctaPedir'), false);
             return;
         }
         var sinCuenta = !estado.socio;
-        var mostrarPildora = sinCuenta && !pedidoEnColumna();
+        // La invitación del teléfono es la PESTAÑA "Pedido" (ver `verPedido()`), no una
+        // píldora flotante: flotando tapaba el botón "Agregar" del platillo que quedara
+        // debajo. En el escritorio vive dentro de la columna.
         mostrarEl(qs('pedidoPanelCta'), sinCuenta && pedidoEnColumna());
-        mostrarEl(qs('ctaPedir'), mostrarPildora);
-        // La píldora flota sobre la carta: hay que dejarle hueco al final o tapa el botón
-        // del último platillo.
-        document.body.classList.toggle('con-cta', mostrarPildora);
 
         var texto = qs('pedidoPanelCtaTexto');
         if (texto) {
@@ -1318,6 +1315,12 @@
     }
 
     function verPedido() {
+        // Sin cuenta, "Pedido" ES la invitación: la pestaña abre el flujo para empezar
+        // (abrir cuenta o unirse). Antes abría una hoja vacía que decía "Cargando…".
+        if (!estado.socio) {
+            abrirPedirModal();
+            return;
+        }
         estado.vista = 'pedido';
         aplicarVista();
         // En el teléfono "el pedido" ES la hoja inferior. Sin abrirla, la vista pedido esconde

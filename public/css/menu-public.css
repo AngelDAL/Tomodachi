@@ -310,33 +310,14 @@
    respeta claro/oscuro del teléfono.
    ============================================================ */
 
-/* ---------- Invitación a pedir----------
-   Aquí vivía la "barra del comensal" (un renglón de ancho completo con el nombre de la
-   cuenta, su código y un botón "Pedir"). Se retiró: el código no le sirve al comensal
-   —ya hay otra forma de empezar a pedir— y la barra ocupaba alto en TODAS las vistas.
-   Ahora la invitación vive donde vive el pedido: en la columna del escritorio y en una
-   píldora flotante en el teléfono. */
-
-.cta-pedir {
-    position: fixed;
-    right: 16px;
-    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-    z-index: 490;
-    display: inline-flex;
-    align-items: center;
-    gap: 9px;
-    padding: 13px 20px;
-    border: none;
-    border-radius: 999px;
-    background: var(--primary-color);
-    color: #fff;
-    font-family: var(--font-heading);
-    font-size: .95rem;
-    font-weight: 700;
-    box-shadow: var(--shadow-lg);
-    cursor: pointer;
-}
-.cta-pedir:active { transform: translateY(1px); }
+/* ---------- Invitación a pedir ----------
+   Aquí vivía la "barra del comensal": un renglón de ancho completo con el nombre de la
+   cuenta, su código y un botón "Pedir". Se retiró: el código no le sirve al comensal —ya
+   hay otra forma de empezar a pedir— y la barra ocupaba alto en TODAS las vistas.
+   Ahora la invitación vive donde vive el pedido: en la columna del escritorio
+   (`#pedidoPanelCta`) y, en el teléfono, en la PESTAÑA "Pedido" (ver `verPedido()`).
+   Se probó una píldora flotante y se descartó: flotando tapaba el botón "Agregar" del
+   platillo que quedara debajo. */
 
 /* ---------- Panel del pedido (fijo abajo) ---------- */
 
@@ -379,9 +360,6 @@
 
 /* Deja hueco bajo la carta para que la barra no tape el último producto. */
 body.con-pedido { padding-bottom: 96px; }
-
-/* Hueco para la píldora "Empezar a pedir": sin esto tapa el botón del último platillo. */
-body.con-cta { padding-bottom: 88px; }
 
 /* ---------- Control de pedido en cada producto ---------- */
 
@@ -991,7 +969,6 @@ body.vista-pedido.con-pedido .pedido-barra { display: none; }
     }
     /* El pie flotante estorba cuando el pedido ya tiene su columna. */
     .pedido-barra { display: none !important; }
-    .cta-pedir { display: none !important; }
     body.con-pedido { padding-bottom: 32px; }
 }
 

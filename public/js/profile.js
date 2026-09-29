@@ -211,6 +211,13 @@ async function loadCompanySettings() {
                 if (codi.api_key) document.getElementById('codiApiKey').value = codi.api_key;
                 if (codi.endpoint) document.getElementById('codiEndpoint').value = codi.endpoint;
             }
+            // Pedidos desde el QR: la verificación de presencia y cuánto viven los números.
+            if (store.settings && store.settings.dining) {
+                const dining = store.settings.dining;
+                document.getElementById('diningRequireActivation').checked = !!dining.require_activation;
+                document.getElementById('diningActivationGroup').style.display = dining.require_activation ? 'block' : 'none';
+                document.getElementById('diningActivationMinutes').value = dining.activation_minutes || 10;
+            }
             // Cargar configuracion Stripe
             if (store.settings && store.settings.stripe) {
                 const stripe = store.settings.stripe;
@@ -692,6 +699,11 @@ document.getElementById('companyForm').addEventListener('submit', async (e) => {
             environment: document.getElementById('codiEnvironment').value,
             api_key: document.getElementById('codiApiKey').value || undefined,
             endpoint: document.getElementById('codiEndpoint').value || 'https://api.bite-size.mx'
+        },
+        // El QR de la mesa: sin esto, todo el que tenga el enlace pide sin estar ahí.
+        dining: {
+            require_activation: document.getElementById('diningRequireActivation').checked,
+            activation_minutes: parseInt(document.getElementById('diningActivationMinutes').value, 10) || 10
         },
         stripe: {
             enabled: document.getElementById('stripeEnabled').checked,
@@ -1299,6 +1311,14 @@ function removePasswordChangeNotice() {
   const el = document.getElementById('passwordChangeNotice');
   if (el) el.remove();
 }
+
+// El campo de los minutos solo tiene sentido con la verificación encendida: se muestra y se
+// esconde con ella (delegado, así da igual cuándo aparezca el bloque en el DOM).
+document.addEventListener('change', function (ev) {
+  if (!ev.target || ev.target.id !== 'diningRequireActivation') return;
+  const grupo = document.getElementById('diningActivationGroup');
+  if (grupo) grupo.style.display = ev.target.checked ? 'block' : 'none';
+});
 
 document.addEventListener('DOMContentLoaded', function () {
   const wantsChange = new URLSearchParams(window.location.search).get('change_password') === '1';

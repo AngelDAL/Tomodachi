@@ -233,6 +233,40 @@
         </div>
     </div>
 
-    <script src="/public/js/menu-public.js?v=5"></script>
+    <!-- 5) Activación: el comensal pide y el mesero lo autoriza con dos números (o su QR).
+         Mismo par en texto y en QR a propósito: dictarlo en un lugar con ruido se presta a
+         errores, y escanear debe dar exactamente el mismo resultado. -->
+    <div id="drawerActivar" class="mp-overlay hidden">
+        <div class="mp-modal mp-modal-compacto" role="dialog" aria-modal="true" aria-labelledby="activarTitulo">
+            <div class="mp-modal-head">
+                <div>
+                    <h3 id="activarTitulo">Para pedir, que te activen</h3>
+                </div>
+                <button type="button" class="mp-cerrar" data-cerrar="drawerActivar" aria-label="Cerrar">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </div>
+            <div class="mp-modal-body">
+                <p class="mp-aviso" id="activarPaso1">1. Dile estos dos números a quien te atiende, o muéstrale este código:</p>
+                <div class="mp-activar-par" id="activarPar">--</div>
+                <div class="mp-activar-qr" id="activarQr"></div>
+                <p class="mp-aviso" id="activarPaso2">2. En cuanto los escriba o lo escanee, esta pantalla te avisa sola.</p>
+                <p class="mp-hint" id="activarNota">Son de este dispositivo. Nadie más puede pedir por ti.</p>
+                <p id="activarEstado" class="mp-pedido-ayuda"></p>
+                <p id="activarError" class="mp-aviso-error hidden"></p>
+                <button type="button" id="btnActivarOtraVez" class="mp-accion mp-accion-sec hidden" data-accion="reactivar">
+                    <i class="fas fa-rotate"></i> Generar otros números
+                </button>
+                <button type="button" class="mp-accion mp-boton-grande hidden" id="btnActivadoListo" data-accion="cerrarActivacion">
+                    <i class="fas fa-circle-check"></i> Empezar a pedir
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- El QR del par de números: la librería ya viene en el proyecto (la usan los QR de los
+         puntos de servicio), así que no se depende de ningún servicio externo. -->
+    <script src="/public/lib/qrcodejs/qrcode.min.js"></script>
+    <script src="/public/js/menu-public.js?v=7"></script>
 </body>
 </html>

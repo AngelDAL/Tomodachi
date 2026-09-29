@@ -535,6 +535,28 @@
                                 </div>
                             </div>
 
+                            <!-- Pedidos desde el QR: verificación de presencia. El comensal recibe
+                                 dos números (o su QR) y quien lo atiende los teclea para autorizar
+                                 a ESE dispositivo. No es una contraseña: es la prueba de que está
+                                 ahí, con el factor humano a cargo. -->
+                            <div class="settings-block">
+                                <h5 class="settings-subhead"><i class="fas fa-user-check"></i> Pedidos desde el QR de la mesa</h5>
+                                <label class="catalog-check">
+                                    <input type="checkbox" name="dining_require_activation" id="diningRequireActivation">
+                                    <span class="catalog-check-box"></span>
+                                    <span class="catalog-check-label">Que quien atiende active el pedido</span>
+                                </label>
+                                <p class="settings-hint">Al tocar «Listo para pedir», el comensal ve dos números y quien lo atiende los escribe (o escanea su QR) para autorizar ese teléfono. Los números caducan y son de un solo uso.</p>
+                                <p class="settings-hint" style="margin-left: 0;"><strong>Si lo apagas</strong>, cualquiera que tenga el enlace de una mesa puede pedir desde donde sea.</p>
+
+                                <div id="diningActivationGroup" style="display:none; margin-top: 12px;">
+                                    <div class="form-group" style="margin-bottom: 10px;">
+                                        <label style="font-size: 0.85rem; margin-bottom: 4px;">Cuánto viven los números (minutos)</label>
+                                        <input type="number" id="diningActivationMinutes" min="1" max="60" value="10" style="width:100%; padding:8px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-input); color: var(--text-color);">
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="settings-block">
                                 <h5 class="settings-subhead"><i class="fas fa-credit-card"></i> Stripe (Tarjeta de credito/debito)</h5>
                                 <label class="catalog-check">
@@ -1185,7 +1207,7 @@
 
     <script src="js/sidebar-loader.js?v=13"></script>
     <script src="js/app.js?v=12"></script>
-    <script src="js/profile.js?v=3"></script>
+    <script src="js/profile.js?v=5"></script>
     <script src="lib/animejs/anime.min.js"></script>
     <script src="js/design-system.js?v=5"></script>
 </body>

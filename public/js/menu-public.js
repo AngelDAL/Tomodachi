@@ -485,11 +485,133 @@
         return document.querySelector('.carta-vista-tab[data-vista-tab="' + vista + '"]');
     }
 
+    // ============================================================
+    // Activación: dos números (o su QR) y el mesero que autoriza
+    // ============================================================
+    /**
+     * Pregunta en qué va la solicitud de ESTE dispositivo.
+     *
+     * Se llama en cada cambio de cuenta (al unirse y en cada refresco/sondeo) y también al
+     * terminar de pintar, así el drawer se pone en verde solo aunque el WebSocket esté caído.
+     * Nunca regenera el par: eso solo pasa si el cliente lo pide a propósito.
+     */
+    function revisarActivacion() {
+        if (!estado.socio || !estado.socio.join_token) {
+            estado.activacion = null;
+            estado.puedePedir = true;
+            return;
+        }
+        peticion(API_SESSION, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'estado_activacion', join_token: estado.socio.join_token })
+        }).then(function (r) {
+            // Se cerró la cuenta, o quien atiende expulsó a ESTE dispositivo: se suelta el
+            // vínculo y se le dice qué hacer, en vez de dejarlo esperando algo que ya no llega.
+            if (r.status === 404) {
+                cerrarModal('drawerActivar');
+                olvidarSocio();
+                estado.socio = null;
+                estado.activacion = null;
+                estado.puedePedir = false;
+                pintarControlesProducto();
+                actualizarPedidoBar();
+                aviso('Te sacaron de la cuenta. Toca «Pedir» para volver a entrar', 'error');
+                return;
+            }
+            if (!r.ok) return;
+
+            var d = (r.body && r.body.data) || null;
+            var antes = estado.activacion && estado.activacion.estado;
+            estado.activacion = d;
+            pintarActivacion();
+            // Aviso corto la primera vez que pasa a activo: el comensal tiene que enterarse.
+            if (d && d.estado === 'activo' && antes !== 'activo') {
+                aviso('Ya puedes pedir', 'ok');
+            }
+        }).catch(function () { /* sin red: se queda como estaba y el sondeo lo reintenta */ });
+    }
+
+    /** El par de números, en su QR: el MISMO dato. Escanearlo y teclearlo dan lo mismo. */
+    function urlDeActivacion(codigo) {
+        var url = window.location.origin + '/public/tables.html?vista=activar&c=' + encodeURIComponent(codigo);
+        if (estado.punto) url += '&p=' + encodeURIComponent(estado.punto);
+        return url;
+    }
+
+    function pintarQrActivacion(codigo) {
+        var caja = qs('activarQr');
+        if (!caja) return;
+        caja.innerHTML = '';
+        if (!codigo || !window.QRCode) return;
+        try {
+            new QRCode(caja, { text: urlDeActivacion(codigo), width: 168, height: 168, correctLevel: QRCode.CorrectLevel.M });
+        } catch (e) { caja.innerHTML = ''; }
+    }
+
+    /** El drawer de activación: pendiente (con sus números), activo o rechazado. */
+    function pintarActivacion() {
+        var a = estado.activacion;
+        var drawer = qs('drawerActivar');
+        if (!drawer) return;
+
+        var activo = !a || a.requiere === false || a.estado === 'activo';
+        estado.puedePedir = activo;
+        pintarControlesProducto();
+
+        if (activo) {
+            if (!a || a.requiere === false || drawer.classList.contains('hidden')) return;
+            // Se activó mientras el drawer estaba abierto: se le dice que ya puede.
+            qs('activarPar').textContent = 'Listo';
+            qs('activarQr').innerHTML = '';
+            qs('activarPaso1').textContent = 'Ya te activaron.';
+            qs('activarPaso2').classList.add('hidden');
+            qs('activarEstado').textContent = 'Toca lo que quieras del menú.';
+            mostrarEl(qs('btnActivarOtraVez'), false);
+            mostrarEl(qs('btnActivadoListo'), true);
+            return;
+        }
+
+        abrirModal('drawerActivar');
+        var vencido = a.vencido === true || !a.codigo;
+        var rechazado = a.estado === 'rechazado';
+
+        qs('activarPar').textContent = (vencido || rechazado)
+            ? '--'
+            : String(a.codigo).charAt(0) + ' ' + String(a.codigo).charAt(1);
+        qs('activarPaso1').textContent = rechazado
+            ? 'Quien te atiende no autorizó este dispositivo.'
+            : (vencido ? 'Tus números vencieron.' : '1. Dile estos dos números a quien te atiende, o muéstrale este código:');
+        mostrarEl(qs('activarPaso2'), !vencido && !rechazado);
+        qs('activarEstado').textContent = rechazado
+            ? 'Toca "Generar otros números" para intentarlo otra vez.'
+            : 'Esperando a que te activen…';
+        mostrarEl(qs('btnActivarOtraVez'), vencido || rechazado);
+        mostrarEl(qs('btnActivadoListo'), false);
+        pintarQrActivacion((vencido || rechazado) ? null : a.codigo);
+    }
+
+    /** Pide (o vuelve a pedir) el par de números para este dispositivo. */
+    function pedirActivacion() {
+        if (!estado.socio) return;
+        mostrarAvisoModal('activarError', '');
+        apiPost(API_SESSION, { action: 'solicitar_activacion', join_token: estado.socio.join_token })
+            .then(function (d) {
+                estado.activacion = d || null;
+                pintarActivacion();
+                aviso('Listos: muéstraselos a quien te atiende', 'ok');
+            })
+            .catch(function (e) { mostrarAvisoModal('activarError', e.message); });
+    }
+
     /** Avisa a la vista de que la cuenta cambió: repinta donde corresponda.
      *  Si el pedido está en su columna, repinta esa columna; si no, el modal de respaldo. */
     function alCambiarCuenta() {
         actualizarPedidoBar();
         pintarControlesProducto();
+        // El estado de la activación se pregunta en cada cambio de cuenta (al unirse y en cada
+        // refresco/sondeo): así el drawer se pone en verde solo, aunque no haya WebSocket.
+        revisarActivacion();
         if (pedidoEnColumna()) {
             renderPedidoPanel();
         } else if (qs('modalPedido') && !qs('modalPedido').classList.contains('hidden')) {
@@ -598,7 +720,9 @@
         var slots = document.querySelectorAll('.producto-pedir');
         if (!slots.length) return;
 
-        var activo = !!estado.socio;
+        // Sin cuenta no hay dónde anotar; y con verificación pendiente el dispositivo TODAVÍA no
+        // puede pedir (el mesero no lo ha activado): en los dos casos no se ofrecen controles.
+        var activo = !!estado.socio && estado.puedePedir !== false;
         var pausado = activo && estado.cuenta && estado.cuenta.session &&
                       estado.cuenta.session.ordering_enabled === false;
 
@@ -1315,6 +1439,9 @@
             case 'iniciar':      iniciarPedido(); break;
             case 'unirse':       unirsePedido(); break;
             case 'enviar':       enviarCocina(); break;
+            // Activación: pedir otra vez el par de números, o cerrar el drawer al quedar listo.
+            case 'reactivar':         pedirActivacion(); break;
+            case 'cerrarActivacion':  cerrarModal('drawerActivar'); break;
         }
     }
 

@@ -1686,6 +1686,64 @@ document.addEventListener('DOMContentLoaded', async function () {
         if (b) tpPintarChipsCarta(b.getAttribute('data-carta'));
     });
 
+    // ── Activar (la tableta del mesero) ────────────────────────────────────────
+    // El número se puede teclear o llegar por el QR del comensal (?c=47), que abre ESTA vista.
+    const params = new URLSearchParams(window.location.search);
+    const codigoUrl = (params.get('c') || '').replace(/\D/g, '').slice(0, 2);
+    if (codigoUrl) {
+        const campo = document.getElementById('actCodigo');
+        campo.value = codigoUrl;
+        const ayuda = document.getElementById('actAyuda');
+        if (ayuda) ayuda.innerHTML = '<i class="fas fa-qrcode"></i> Escaneaste el código <strong>' + tpEsc(codigoUrl) +
+            '</strong>. Toca «Activar» y ese dispositivo podrá pedir.';
+    }
+    document.getElementById('actBtnActivar').addEventListener('click', function () {
+        const codigo = (document.getElementById('actCodigo').value || '').replace(/\D/g, '');
+        if (codigo.length < 1) { actError('Escribe los dos números que te dicen'); return; }
+        actAccion({ action: 'activar', code: codigo }, function (d) {
+            return 'Activado: ' + (d.punto ? d.punto + ' ' : '') + 'ya puede pedir';
+        });
+    });
+    document.getElementById('actCodigo').addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter') document.getElementById('actBtnActivar').click();
+    });
+    document.getElementById('actLista').addEventListener('click', function (ev) {
+        const b = ev.target.closest('[data-act-activar],[data-act-rechazar],[data-act-expulsar],[data-act-reiniciar]');
+        if (!b) return;
+        if (b.hasAttribute('data-act-activar')) {
+            return actAccion({ action: 'activar', participant_id: Number(b.getAttribute('data-act-activar')) },
+                function (d) { return 'Activado: ' + (d.punto ? d.punto + ' ' : '') + 'ya puede pedir'; });
+        }
+        if (b.hasAttribute('data-act-rechazar')) {
+            return actAccion({ action: 'rechazar', participant_id: Number(b.getAttribute('data-act-rechazar')) },
+                function () { return 'Solicitud rechazada'; });
+        }
+        if (b.hasAttribute('data-act-expulsar')) {
+            const pid = Number(b.getAttribute('data-act-expulsar'));
+            return tpConfirmar({
+                titulo: 'Expulsar este dispositivo',
+                texto: 'Deja de poder pedir en esta cuenta ahora mismo. Si es un cliente que sigue en la mesa, tendrá que pedir activación otra vez (dos toques).',
+                boton: 'Expulsar',
+                peligro: true,
+                alConfirmar: function () {
+                    actAccion({ action: 'expulsar', participant_id: pid }, function () { return 'Dispositivo expulsado'; });
+                }
+            });
+        }
+        const tableId = Number(b.getAttribute('data-act-reiniciar'));
+        tpConfirmar({
+            titulo: 'Reiniciar la mesa',
+            texto: 'Se expulsa a TODOS los dispositivos de esta cuenta sin cerrarla: el consumo sigue y quien esté sentado vuelve a pedir su activación. Úsalo cuando la mesa cambió de gente.',
+            boton: 'Reiniciar la mesa',
+            peligro: true,
+            alConfirmar: function () {
+                actAccion({ action: 'reiniciar_mesa', table_id: tableId }, function (d) {
+                    return 'Mesa reiniciada: ' + ((d && d.dispositivos) || 0) + ' dispositivo(s) fuera';
+                });
+            }
+        });
+    });
+
     // Esc regresa al mapa: en escritorio es lo que la mano espera. Si hay un modal abierto
     // (el cobro, juntar, cancelar, el QR) se cierra ESE, no la vista de abajo.
     document.addEventListener('keydown', function (ev) {
@@ -2215,6 +2273,152 @@ async function tpPintarChipsCarta(seleccionado) {
                 (carta.mode === 'open_tab' ? '. Primero abre la cuenta del punto (o el cliente pide y el personal la abre).' : '.');
         }
     }
+}
+
+// ============================================================
+// ACTIVAR: la tableta del mesero autoriza a los dispositivos
+// ============================================================
+/**
+ * El comensal pide permiso desde su teléfono y aparece aquí. El mesero teclea los DOS NÚMEROS
+ * que le dicen (o escanea el QR del comensal, que abre esta vista con el número puesto).
+ *
+ * Se refresca cada 5 s mientras la vista está abierta: el aviso de "hay alguien esperando" tiene
+ * que llegar solo, y el WebSocket de la tienda no reparte los canales de cada cuenta.
+ */
+const TP_API_ACTIVACIONES = '../api/dining/activaciones.php';
+
+const actEstado = { dispositivos: [], resumen: null, temporizador: null, enviando: false };
+
+async function actCargar(silencioso) {
+    const cont = document.getElementById('actLista');
+    if (!cont) return;
+    if (!silencioso && !actEstado.dispositivos.length) {
+        cont.innerHTML = '<div class="tp-vacio"><i class="fas fa-spinner fa-spin"></i><p>Buscando dispositivos…</p></div>';
+    }
+    try {
+        const d = await tpPeticion(TP_API_ACTIVACIONES);
+        actEstado.dispositivos = d.dispositivos || [];
+        actEstado.resumen = d.resumen || null;
+    } catch (e) {
+        if (!silencioso) {
+            cont.innerHTML = '<div class="tp-vacio"><i class="fas fa-triangle-exclamation"></i><h3>No se pudieron leer las activaciones</h3><p>' + tpEsc(tpMensajeDeError(e)) + '</p></div>';
+        }
+        return;
+    }
+    actPintar();
+}
+
+function actPintar() {
+    const insignia = document.getElementById('tpVistaActivarN');
+    const esperando = (actEstado.resumen || {}).esperando || 0;
+    if (insignia) {
+        insignia.textContent = esperando;
+        insignia.classList.toggle('hidden', esperando === 0);
+    }
+
+    const cont = document.getElementById('actLista');
+    if (!cont) return;
+    if (!actEstado.dispositivos.length) {
+        cont.innerHTML = '<div class="tp-vacio"><i class="fas fa-user-check"></i>' +
+            '<h3>Nadie está pidiendo permiso</h3>' +
+            '<p>Cuando un cliente toque «Listo para pedir» en su teléfono, aparecerá aquí con sus dos números.</p></div>';
+        return;
+    }
+
+    // Agrupados por punto: el mesero ve la mesa primero y luego quién está en ella.
+    const grupos = {};
+    actEstado.dispositivos.forEach(function (d) {
+        const clave = String(d.table_id || 0) + '|' + d.punto;
+        (grupos[clave] = grupos[clave] || []).push(d);
+    });
+
+    cont.innerHTML = Object.keys(grupos).map(function (clave) {
+        const ds = grupos[clave];
+        const primera = ds[0];
+        const enEspera = ds.filter(function (d) { return d.estado === 'pendiente'; }).length;
+        const activos = ds.filter(function (d) { return d.estado === 'activo'; }).length;
+        const resumen = [];
+        if (enEspera) resumen.push(enEspera + ' esperando');
+        if (activos) resumen.push(activos + ' pueden pedir');
+        return '<div class="tp-card" style="margin-bottom:14px">' +
+            '<div class="tp-card-top">' +
+                '<div><h3 class="tp-nombre">' + tpEsc(primera.punto) + '</h3>' +
+                '<p class="tp-zona">Cuenta ' + tpEsc(primera.cuenta) + ' · ' + tpEsc(resumen.join(' · ') || 'sin dispositivos') + '</p></div>' +
+                (primera.table_id ? '<button type="button" class="tp-btn" data-act-reiniciar="' + primera.table_id + '" title="Echa a TODOS los dispositivos de esta cuenta sin cerrarla"><i class="fas fa-rotate-left"></i> Reiniciar mesa</button>' : '') +
+            '</div>' +
+            '<div style="margin-top:10px">' + ds.map(actDispositivo).join('') + '</div>' +
+            '</div>';
+    }).join('');
+}
+
+/** Un renglón por dispositivo: sus números (o su estado) y las acciones del mesero. */
+function actDispositivo(d) {
+    const pendiente = d.estado === 'pendiente';
+    const rechazado = d.estado === 'rechazado';
+    const sinSenal = (d.sin_latir_min !== null && d.sin_latir_min >= 10)
+        ? ' · sin señal hace ' + d.sin_latir_min + ' min' : '';
+
+    let meta;
+    if (pendiente) meta = 'Esperando hace ' + d.esperando_min + ' min' + sinSenal;
+    else if (rechazado) meta = 'Rechazado';
+    else meta = 'Ya puede pedir' + (d.esperando_min ? ' · se unió hace ' + d.esperando_min + ' min' : '');
+
+    let acciones = '';
+    if (pendiente) {
+        acciones = '<button type="button" class="tp-accion primario" data-act-activar="' + d.participant_id + '">' +
+                '<i class="fas fa-user-check"></i> Activar</button>' +
+            '<button type="button" class="tp-accion" data-act-rechazar="' + d.participant_id + '">' +
+                '<i class="fas fa-ban"></i> Rechazar</button>';
+    } else {
+        acciones = '<button type="button" class="tp-accion peligro" data-act-expulsar="' + d.participant_id + '">' +
+            '<i class="fas fa-right-from-bracket"></i> Expulsar</button>';
+    }
+
+    return '<div class="act-dispositivo' + (pendiente ? ' pendiente' : '') + '">' +
+        '<div class="act-par">' + (pendiente && d.codigo ? tpEsc(d.codigo) : (rechazado ? '--' : 'sí')) + '</div>' +
+        '<div class="act-info">' +
+            '<div class="act-nombre">' + (d.display_name ? tpEsc(d.display_name) : 'Dispositivo del cliente') + '</div>' +
+            '<div class="act-meta">' + tpEsc(meta) + '</div>' +
+        '</div>' +
+        '<div class="act-acciones">' + acciones + '</div>' +
+        '</div>';
+}
+
+function actError(msg) {
+    const caja = document.getElementById('actError');
+    if (!caja) return;
+    caja.textContent = msg || '';
+    caja.classList.toggle('hidden', !msg);
+}
+
+async function actAccion(cuerpo, exito) {
+    if (actEstado.enviando) return;
+    actEstado.enviando = true;
+    actError('');
+    try {
+        const d = await tpPeticion(TP_API_SESSION, { method: 'POST', body: JSON.stringify(cuerpo) });
+        tpAviso(typeof exito === 'function' ? exito(d) : (d && d.mensaje) || 'Listo', 'success');
+        const campo = document.getElementById('actCodigo');
+        if (campo && cuerpo.action === 'activar') campo.value = '';
+        await actCargar(true);
+    } catch (e) {
+        actError(tpMensajeDeError(e));
+        tpAviso(tpMensajeDeError(e), 'error');
+    } finally { actEstado.enviando = false; }
+}
+
+/** Vigila mientras la vista está a la vista (no se deja un temporizador corriendo de fondo). */
+function actVigilar(activo) {
+    if (actEstado.temporizador) {
+        clearInterval(actEstado.temporizador);
+        actEstado.temporizador = null;
+    }
+    if (!activo) return;
+    actEstado.temporizador = setInterval(function () {
+        const panel = document.querySelector('[data-vista-panel="activar"]');
+        if (!panel || panel.classList.contains('hidden')) return;
+        actCargar(true);
+    }, 5000);
 }
 
 // ============================================================

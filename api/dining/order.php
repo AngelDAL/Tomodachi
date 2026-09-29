@@ -176,12 +176,61 @@ function handlePost($db, $dining, $auth, $apiAuth) {
         Response::error('Los pedidos están en pausa. Pide al personal que los reactive', 409);
     }
 
+    // ── Verificación de presencia ───────────────────────────────────────────────
+    // Si la empresa la pidió, este dispositivo no pide hasta que el mesero teclee (o escanee)
+    // su par de números. El mensaje es de persona: el comensal tiene que saber qué hacer, no
+    // leer un 403 seco.
+    $pid = (int)($session['token_participant_id'] ?? 0);
+    if ($pid > 0 && $verificacion = activacionDelDispositivo($db, (int)$session['store_id'], $pid)) {
+        Response::error('Pide a quien te atiende que active tu pedido: dile los dos números que ves en tu pantalla', 403);
+    }
+
     if ($action === 'send') {
         actionSend($db, $dining, $session, 'customer', null);
         return;
     }
 
     actionAddItems($db, $dining, $session, $data);
+}
+
+// ============================================================
+// Verificación de presencia (Fase 1)
+// ============================================================
+/**
+ * ¿Este dispositivo necesita activación y todavía no la tiene?
+ *
+ * Devuelve null cuando no hay verificación (la empresa no la pidió) o cuando el dispositivo ya
+ * está autorizado. La tienda se toma de la CUENTA del participante, no del parámetro: así no hay
+ * forma de colar un dispositivo de otra tienda ni de "fallar hacia abierto".
+ */
+function activacionDelDispositivo($db, $store_id, $participant_id) {
+    $conn = $db->getConnection();
+    $stmt = $conn->prepare("
+        SELECT p.activated_at, p.rejected_at, s.store_id
+        FROM dining_participants p
+        JOIN dining_sessions s ON s.session_id = p.session_id
+        WHERE p.participant_id = :pid
+    ");
+    $stmt->execute([':pid' => $participant_id]);
+    $p = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$p) {
+        return null;   // sin participante no hay nada que verificar (lo resuelve el resto del flujo)
+    }
+    if ($p['activated_at'] !== null) {
+        return null;   // ya autorizado
+    }
+
+    $store = (int)($p['store_id'] ?: $store_id);
+    // Los ajustes de la tienda son su JSON `settings` (igual que CoDi): ahí se enciende la
+    // verificación. Si la tienda no la pidió, este dispositivo pide como siempre.
+    $cfg = $conn->prepare("SELECT settings FROM stores WHERE store_id = :sid");
+    $cfg->execute([':sid' => $store]);
+    $ajustes = json_decode((string)$cfg->fetchColumn(), true) ?: [];
+    if (empty($ajustes['dining']['require_activation'])) {
+        return null;
+    }
+
+    return ['pendiente' => true, 'rechazado' => $p['rejected_at'] !== null];
 }
 
 /** Agrega ítems a la cuenta, del comensal o del personal (el mesero anota). */

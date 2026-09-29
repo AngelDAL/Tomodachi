@@ -991,12 +991,21 @@ CREATE TABLE dining_participants (
     session_id INT NOT NULL,
     display_name VARCHAR(60) NULL,
     join_token VARCHAR(64) NOT NULL,
+    -- Activación por DOS NÚMEROS (o su QR): el mesero los teclea/escanéa y autoriza a ESTE
+    -- dispositivo. Prueba de presencia con el factor humano a cargo, no autenticación fuerte.
+    -- Ver database/migrations/046_activacion_comensal.sql
+    activation_code CHAR(2) NULL DEFAULT NULL,
+    activation_expires DATETIME NULL DEFAULT NULL,
+    activated_at DATETIME NULL DEFAULT NULL,
+    activated_by INT NULL DEFAULT NULL,
+    rejected_at DATETIME NULL DEFAULT NULL,
     device_hash VARCHAR(64) NULL,
     joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_seen_at DATETIME NULL,
     is_active TINYINT(1) NOT NULL DEFAULT 1,
     UNIQUE KEY uk_participant_token (join_token),
     INDEX idx_participant_session (session_id, is_active),
+    KEY idx_participantes_activacion (activation_code, activation_expires),
     FOREIGN KEY (session_id) REFERENCES dining_sessions(session_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

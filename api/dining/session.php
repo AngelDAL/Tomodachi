@@ -196,6 +196,27 @@ function handlePost($db, $dining, $auth, $apiAuth) {
             actionCancel($db, $dining, $apiAuth, $auth, $data);
             break;
 
+        // ---- Activación del comensal (Fase 1: dos números o su QR) ----
+        // El cliente pide activación y recibe un par; el mesero lo teclea o escanea el QR.
+        case 'solicitar_activacion':
+            actionSolicitarActivacion($db, $data);
+            break;
+        case 'estado_activacion':
+            actionEstadoActivacion($db, $data);
+            break;
+        case 'activar':
+            actionActivar($db, $apiAuth, $auth, $data);
+            break;
+        case 'rechazar':
+            actionRechazar($db, $apiAuth, $auth, $data);
+            break;
+        case 'expulsar':
+            actionExpulsar($db, $apiAuth, $auth, $data);
+            break;
+        case 'reiniciar_mesa':
+            actionReiniciarMesa($db, $apiAuth, $auth, $data);
+            break;
+
         default:
             Response::error('Acción inválida', 422);
     }
@@ -617,6 +638,10 @@ function actionJoin($db, $dining, array $data) {
         $data['device_hash'] ?? null
     );
 
+    // Verificación de presencia: si la empresa la pidió, este dispositivo NO puede pedir hasta
+    // que el mesero teclee (o escanee) el par de números que se le muestra al comensal.
+    $activacion = activacionDeTienda($db, (int)$session['store_id'], (int)$participant['participant_id']);
+
     DiningSession::broadcast((int)$session['session_id'], 'participant_joined');
 
     Response::success([
@@ -624,7 +649,336 @@ function actionJoin($db, $dining, array $data) {
         'participant_id' => $participant['participant_id'],
         'session_id'     => (int)$session['session_id'],
         'code'           => $session['code'],
+        'activacion'     => $activacion,
     ], 'Te uniste a la cuenta', 201);
+}
+
+// ============================================================
+// Activación del comensal: un par de números (o su QR) por DISPOSITIVO
+// ============================================================
+/**
+ * ¿Esta tienda pide verificación, y este dispositivo ya está activado?
+ *
+ * Devuelve null cuando no hay verificación (comportamiento de siempre), o el estado del
+ * dispositivo: `pendiente` con su par y su caducidad, o `activo`.
+ */
+function activacionDeTienda($db, $store_id, $participant_id, $regenerar = false) {
+    $conn = $db->getConnection();
+
+    // Los ajustes de la tienda son su JSON `settings.dining`, igual que CoDi: no hay tabla de
+    // ajustes aparte. Ver database/migrations/046_activacion_comensal.sql
+    $cfg = $conn->prepare("SELECT settings FROM stores WHERE store_id = :sid");
+    $cfg->execute([':sid' => $store_id]);
+    $deTienda = json_decode((string)$cfg->fetchColumn(), true) ?: [];
+    $dining = (isset($deTienda['dining']) && is_array($deTienda['dining'])) ? $deTienda['dining'] : [];
+    if (empty($dining['require_activation'])) {
+        return null;   // la empresa no pide verificación: se pide directo
+    }
+    $minutos = max(1, (int)($dining['activation_minutes'] ?? 10));
+
+    $stmt = $conn->prepare("SELECT participant_id, activation_code, activation_expires, activated_at
+                            FROM dining_participants WHERE participant_id = :pid");
+    $stmt->execute([':pid' => $participant_id]);
+    $p = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$p) {
+        Response::notFound('Dispositivo no encontrado');
+    }
+    if ($p['activated_at'] !== null && !$regenerar) {
+        return ['requiere' => true, 'estado' => 'activo', 'activated_at' => $p['activated_at']];
+    }
+
+    // El par caduca y se puede regenerar; se guarda su caducidad para poder limpiar solos.
+    $codigo = parDeActivacionLibre($conn, $store_id);
+    $conn->prepare("UPDATE dining_participants
+                       SET activation_code = :codigo,
+                           activation_expires = DATE_ADD(NOW(), INTERVAL :min MINUTE),
+                           rejected_at = NULL
+                     WHERE participant_id = :pid")
+         ->execute([':codigo' => $codigo, ':min' => $minutos, ':pid' => $participant_id]);
+
+    return ['requiere' => true, 'estado' => 'pendiente', 'codigo' => $codigo, 'minutos' => $minutos];
+}
+
+/**
+ * Un par de dos dígitos LIBRE en toda la tienda entre solicitudes vivas.
+ *
+ * Único a propósito: dos mesas con el "47" al mismo tiempo es un error garantizado en el
+ * mostrador. Con 90 combinaciones y pocas solicitudes vivas siempre hay hueco; si el azar cae
+ * en uno ocupado se reintenta (no se calcula "el siguiente libre", que sería adivinable).
+ */
+function parDeActivacionLibre($conn, $store_id) {
+    $busca = $conn->prepare("
+        SELECT 1 FROM dining_participants p
+        JOIN dining_sessions s ON s.session_id = p.session_id
+        WHERE s.store_id = :sid
+          AND p.activation_code = :codigo
+          AND p.activation_expires > NOW()
+          AND p.is_active = 1
+        LIMIT 1
+    ");
+    for ($i = 0; $i < 40; $i++) {
+        $codigo = str_pad((string)random_int(0, 99), 2, '0', STR_PAD_LEFT);
+        $busca->execute([':sid' => $store_id, ':codigo' => $codigo]);
+        if (!$busca->fetch()) {
+            return $codigo;
+        }
+    }
+    Response::error('No se pudo generar el código de activación. Intenta de nuevo', 503);
+}
+
+/** POST {join_token} — el comensal pregunta en qué va su solicitud (sin regenerar el par). */
+function actionEstadoActivacion($db, array $data) {
+    $conn = $db->getConnection();
+    $token = trim((string)($data['join_token'] ?? ''));
+    if (strlen($token) < 8) {
+        Response::validationError(['join_token' => 'Falta la identificación del dispositivo']);
+    }
+
+    $stmt = $conn->prepare("SELECT p.participant_id, p.activation_code, p.activation_expires,
+                                   p.activated_at, p.rejected_at, s.store_id, s.status
+                            FROM dining_participants p
+                            JOIN dining_sessions s ON s.session_id = p.session_id
+                            WHERE p.join_token = :token AND p.is_active = 1");
+    $stmt->execute([':token' => $token]);
+    $fila = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$fila) {
+        Response::notFound('Tu pedido ya no está activo. Vuelve a unirte a la cuenta');
+    }
+
+    // Ajustes de la tienda (JSON `settings.dining`), igual que en activacionDeTienda().
+    $cfg = $conn->prepare("SELECT settings FROM stores WHERE store_id = :sid");
+    $cfg->execute([':sid' => (int)$fila['store_id']]);
+    $deTienda = json_decode((string)$cfg->fetchColumn(), true) ?: [];
+    $ajustes = (isset($deTienda['dining']) && is_array($deTienda['dining'])) ? $deTienda['dining'] : [];
+    if (empty($ajustes['require_activation'])) {
+        Response::success(['requiere' => false, 'estado' => 'activo']);
+    }
+
+    if ($fila['activated_at'] !== null) {
+        Response::success(['requiere' => true, 'estado' => 'activo', 'activated_at' => $fila['activated_at']]);
+    }
+    if ($fila['rejected_at'] !== null) {
+        Response::success(['requiere' => true, 'estado' => 'rechazado']);
+    }
+
+    $vencido = $fila['activation_expires'] !== null && strtotime($fila['activation_expires']) <= time();
+    Response::success([
+        'requiere' => true,
+        'estado'   => 'pendiente',
+        'codigo'   => $vencido ? null : $fila['activation_code'],
+        'vencido'  => $vencido,
+        'minutos'  => (int)($ajustes['activation_minutes'] ?? 10),
+    ]);
+}
+
+/** POST {join_token} — el comensal pide (o vuelve a pedir) su par de números. */
+function actionSolicitarActivacion($db, array $data) {
+    $conn = $db->getConnection();
+    $token = trim((string)($data['join_token'] ?? ''));
+    if (strlen($token) < 8) {
+        Response::validationError(['join_token' => 'Falta la identificación del dispositivo']);
+    }
+
+    $stmt = $conn->prepare("SELECT p.participant_id, s.store_id, s.session_id, s.status
+                            FROM dining_participants p
+                            JOIN dining_sessions s ON s.session_id = p.session_id
+                            WHERE p.join_token = :token AND p.is_active = 1");
+    $stmt->execute([':token' => $token]);
+    $fila = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$fila) {
+        Response::notFound('Tu pedido ya no está activo. Vuelve a unirte a la cuenta');
+    }
+    if (!in_array($fila['status'], ['open', 'awaiting_payment'], true)) {
+        Response::error('La cuenta ya se cerró', 409);
+    }
+
+    $activacion = activacionDeTienda($db, (int)$fila['store_id'], (int)$fila['participant_id'], true);
+    if ($activacion === null) {
+        // La empresa no pide verificación: nada que solicitar, el dispositivo ya puede pedir.
+        Response::success(['requiere' => false], 'No hace falta activación: ya puedes pedir');
+    }
+    Response::success($activacion, 'Muéstrale estos números a quien te atiende');
+}
+
+/**
+ * POST {code} o {participant_id} — el MESERO activa un dispositivo.
+ *
+ * Acepta el par tecleado o el participante concreto (cuando el QR del comensal se escanea o
+ * cuando es la única persona esperando en la mesa y no hay ambigüedad).
+ */
+function actionActivar($db, $apiAuth, $auth, array $data) {
+    $actor = $apiAuth->requireActor($auth);
+    $apiAuth->requireScope($actor, 'write');
+    $store_id = (int)$actor['store_id'];
+    $conn = $db->getConnection();
+
+    $participant_id = (int)($data['participant_id'] ?? 0);
+    $codigo = trim((string)($data['code'] ?? ''));
+
+    if ($participant_id <= 0) {
+        if (!preg_match('/^\d{1,2}$/', $codigo)) {
+            Response::validationError(['code' => 'Escribe los dos números que te dicen']);
+        }
+        $codigo = str_pad($codigo, 2, '0', STR_PAD_LEFT);
+        $stmt = $conn->prepare("
+            SELECT p.participant_id
+            FROM dining_participants p
+            JOIN dining_sessions s ON s.session_id = p.session_id
+            WHERE s.store_id = :sid
+              AND p.activation_code = :codigo
+              AND p.is_active = 1
+              AND p.activated_at IS NULL
+              AND p.rejected_at IS NULL
+              AND p.activation_expires > NOW()
+            ORDER BY p.joined_at ASC
+            LIMIT 1
+        ");
+        $stmt->execute([':sid' => $store_id, ':codigo' => $codigo]);
+        $participant_id = (int)$stmt->fetchColumn();
+        if ($participant_id <= 0) {
+            Response::error('Ese código no está esperando. Los códigos vencen: pídele al cliente que genere otros', 404);
+        }
+    }
+
+    $stmt = $conn->prepare("
+        SELECT p.participant_id, p.session_id, p.display_name, s.code, s.status,
+               (SELECT GROUP_CONCAT(t.label SEPARATOR ' + ')
+                  FROM check_service_points csp
+                  JOIN dining_tables t ON t.table_id = csp.table_id
+                 WHERE csp.session_id = s.session_id) AS puntos,
+               (SELECT t.label FROM dining_tables t WHERE t.table_id = s.table_id) AS punto_directo
+        FROM dining_participants p
+        JOIN dining_sessions s ON s.session_id = p.session_id
+        WHERE p.participant_id = :pid AND s.store_id = :sid
+    ");
+    $stmt->execute([':pid' => $participant_id, ':sid' => $store_id]);
+    $p = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$p) {
+        Response::notFound('Ese dispositivo no pertenece a una cuenta de esta tienda');
+    }
+    if (!in_array($p['status'], ['open', 'awaiting_payment'], true)) {
+        Response::error('Esa cuenta ya se cerró', 409);
+    }
+
+    $conn->prepare("UPDATE dining_participants
+                       SET activated_at = NOW(), activated_by = :uid,
+                           activation_expires = NULL, rejected_at = NULL
+                     WHERE participant_id = :pid")
+         ->execute([':uid' => (int)$actor['user_id'], ':pid' => $participant_id]);
+
+    DiningSession::broadcast((int)$p['session_id'], 'participant_activated');
+
+    Response::success([
+        'participant_id' => $participant_id,
+        'session_id'     => (int)$p['session_id'],
+        'code'           => $p['code'],
+        'punto'          => $p['puntos'] ?: ($p['punto_directo'] ?: null),
+        'display_name'   => $p['display_name'],
+    ], 'Listo: ese dispositivo ya puede pedir');
+}
+
+/** POST {participant_id} — el mesero dice que no (el dispositivo vuelve a la carta). */
+function actionRechazar($db, $apiAuth, $auth, array $data) {
+    $actor = $apiAuth->requireActor($auth);
+    $apiAuth->requireScope($actor, 'write');
+    $conn = $db->getConnection();
+    $participant_id = (int)($data['participant_id'] ?? 0);
+    if ($participant_id <= 0) {
+        Response::validationError(['participant_id' => 'Falta el dispositivo']);
+    }
+
+    $stmt = $conn->prepare("SELECT p.session_id FROM dining_participants p
+                            JOIN dining_sessions s ON s.session_id = p.session_id
+                            WHERE p.participant_id = :pid AND s.store_id = :sid");
+    $stmt->execute([':pid' => $participant_id, ':sid' => (int)$actor['store_id']]);
+    $session_id = (int)$stmt->fetchColumn();
+    if ($session_id <= 0) {
+        Response::notFound('Ese dispositivo no pertenece a una cuenta de esta tienda');
+    }
+
+    $conn->prepare("UPDATE dining_participants
+                       SET rejected_at = NOW(), activation_expires = NULL
+                     WHERE participant_id = :pid")
+         ->execute([':pid' => $participant_id]);
+
+    DiningSession::broadcast($session_id, 'participant_rejected');
+    Response::success(['participant_id' => $participant_id], 'Solicitud rechazada');
+}
+
+/** POST {participant_id} — fuera el dispositivo (el que se fue, el que molesta). */
+function actionExpulsar($db, $apiAuth, $auth, array $data) {
+    $actor = $apiAuth->requireActor($auth);
+    $apiAuth->requireScope($actor, 'write');
+    $conn = $db->getConnection();
+    $participant_id = (int)($data['participant_id'] ?? 0);
+    if ($participant_id <= 0) {
+        Response::validationError(['participant_id' => 'Falta el dispositivo']);
+    }
+
+    $stmt = $conn->prepare("SELECT p.session_id FROM dining_participants p
+                            JOIN dining_sessions s ON s.session_id = p.session_id
+                            WHERE p.participant_id = :pid AND s.store_id = :sid");
+    $stmt->execute([':pid' => $participant_id, ':sid' => (int)$actor['store_id']]);
+    $session_id = (int)$stmt->fetchColumn();
+    if ($session_id <= 0) {
+        Response::notFound('Ese dispositivo no pertenece a una cuenta de esta tienda');
+    }
+
+    $conn->prepare("UPDATE dining_participants
+                       SET is_active = 0, activated_at = NULL, activation_code = NULL,
+                           activation_expires = NULL
+                     WHERE participant_id = :pid")
+         ->execute([':pid' => $participant_id]);
+
+    DiningSession::broadcast($session_id, 'participant_removed');
+    Response::success(['participant_id' => $participant_id], 'Dispositivo expulsado');
+}
+
+/**
+ * POST {table_id} — "Reiniciar la mesa": fuera TODOS los dispositivos de esa cuenta, sin cerrarla.
+ *
+ * El caso real: la mesa cambió de gente y los que se fueron dejaron la carta abierta en su
+ * teléfono. El consumo sigue, así que cerrar la cuenta no sirve; lo que hay que limpiar son los
+ * permisos. Los que ahora están sentados vuelven a pedir su activación en dos toques.
+ */
+function actionReiniciarMesa($db, $apiAuth, $auth, array $data) {
+    $actor = $apiAuth->requireActor($auth);
+    $apiAuth->requireScope($actor, 'write');
+    $store_id = (int)$actor['store_id'];
+    $conn = $db->getConnection();
+    $table_id = (int)($data['table_id'] ?? 0);
+    if ($table_id <= 0) {
+        Response::validationError(['table_id' => 'Falta el punto de servicio']);
+    }
+
+    // Las cuentas abiertas de ese punto: la directa y las que lo juntaron.
+    $stmt = $conn->prepare("
+        SELECT DISTINCT s.session_id
+        FROM dining_sessions s
+        LEFT JOIN check_service_points csp ON csp.session_id = s.session_id
+        WHERE s.store_id = :sid
+          AND s.status IN ('open','awaiting_payment')
+          AND (s.table_id = :tabla_directa OR csp.table_id = :tabla_juntada)
+    ");
+    $stmt->execute([':sid' => $store_id, ':tabla_directa' => $table_id, ':tabla_juntada' => $table_id]);
+    $sesiones = array_map('intval', array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'session_id'));
+    if (!$sesiones) {
+        Response::notFound('Ese punto no tiene una cuenta abierta');
+    }
+
+    $marcadores = implode(',', array_fill(0, count($sesiones), '?'));
+    $upd = $conn->prepare("UPDATE dining_participants
+                              SET is_active = 0, activated_at = NULL, activation_code = NULL,
+                                  activation_expires = NULL
+                            WHERE session_id IN ($marcadores) AND is_active = 1");
+    $upd->execute($sesiones);
+    $cuantos = $upd->rowCount();
+
+    foreach ($sesiones as $sid) {
+        DiningSession::broadcast($sid, 'participants_reset');
+    }
+    Response::success(['sessiones' => $sesiones, 'dispositivos' => $cuantos],
+        'Mesa reiniciada: ' . $cuantos . ' dispositivo(s) tendrán que pedir activación otra vez');
 }
 
 /** Pausa o reanuda los pedidos de una cuenta. SOLO personal. */

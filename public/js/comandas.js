@@ -226,9 +226,10 @@ function kdEsValido(actual, destino) {
 // ============================================================
 // Pestañas: salón y comandas
 // ============================================================
-/** Pestañas del módulo del piso: salón, comandas y carta. */
+/** Pestañas del módulo del piso: salón, comandas, carta y activar. */
 function kdPonerVista(nombre, guardar) {
-    kdEstado.vista = (nombre === 'comandas' || nombre === 'carta') ? nombre : 'salon';
+    const validas = ['comandas', 'carta', 'activar'];
+    kdEstado.vista = validas.indexOf(nombre) >= 0 ? nombre : 'salon';
 
     document.querySelectorAll('.tp-vista').forEach(function (b) {
         b.classList.toggle('activo', b.getAttribute('data-vista') === kdEstado.vista);
@@ -243,6 +244,16 @@ function kdPonerVista(nombre, guardar) {
     // La carta vive en tables.js (la otra cara del QR de los puntos): se pide al entrar.
     if (kdEstado.vista === 'carta' && typeof ctaCargar === 'function') {
         ctaCargar();
+    }
+    // Activar también: es la pantalla del mesero y tiene que estar fresca al abrirla.
+    if (kdEstado.vista === 'activar' && typeof actCargar === 'function') {
+        actCargar();
+        const campo = document.getElementById('actCodigo');
+        if (campo && !campo.value) campo.focus();
+    }
+    // El sondeo de las activaciones solo corre mientras esta vista está a la vista.
+    if (typeof actVigilar === 'function') {
+        actVigilar(kdEstado.vista === 'activar');
     }
 
     // El estado vive en la URL para que la tableta de la cocina se abra directo:
@@ -1283,11 +1294,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const anularBtn = kd$('kdAnularConfirmar');
     if (anularBtn) anularBtn.addEventListener('click', kdConfirmarAnular);
 
-    // Vista inicial: la tableta de la cocina entra directo con ?vista=comandas
+    // Vista inicial: la tableta de la cocina entra directo con ?vista=comandas, y la del mesero
+    // con ?vista=activar (el QR del comensal abre justo ahí, con su número ya puesto).
     const params = new URLSearchParams(window.location.search);
     if (params.get('estacion')) kdEstado.filtro = Number(params.get('estacion')) || 0;
-    kdPonerVista(params.get('vista') === 'comandas' ? 'comandas'
-        : (params.get('vista') === 'carta' ? 'carta' : 'salon'), false);
+    const vistaInicial = ['comandas', 'carta', 'activar'].indexOf(params.get('vista')) >= 0
+        ? params.get('vista') : 'salon';
+    kdPonerVista(vistaInicial, false);
 
     // Al volver a la pestaña, el tablero se pone al día (una tableta de cocina pasa horas
     // abierta y puede haber perdido avisos).

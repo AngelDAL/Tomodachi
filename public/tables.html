@@ -576,6 +576,38 @@
         }
         .tp-chips .tp-chip.activo { background: var(--primary-color); border-color: var(--primary-color); color: #fff; }
 
+        /* ── Activar: la pantalla del mesero que autoriza dispositivos ─────────── */
+        .act-activador {
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: var(--ds-radius-lg); box-shadow: var(--ds-shadow-sm);
+            padding: 16px 18px; margin-bottom: 16px;
+        }
+        .act-etiqueta { display: block; font-family: var(--font-heading); font-size: .85rem; color: var(--text-medium); margin-bottom: 8px; }
+        .act-fila { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .act-input {
+            width: 128px; text-align: center; font-family: var(--font-heading);
+            font-size: 1.7rem; font-weight: 700; letter-spacing: .18em; font-variant-numeric: tabular-nums;
+            padding: 8px 10px; border: 2px dashed var(--primary-color); border-radius: 12px;
+            background: var(--bg-body); color: var(--text-color);
+        }
+        .act-input:focus { outline: 2px solid var(--primary-color); outline-offset: 1px; }
+        .act-dispositivo {
+            display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+            padding: 10px 12px; border: 1px solid var(--border-color);
+            border-radius: var(--ds-radius-md); background: var(--bg-body); margin-bottom: 8px;
+        }
+        .act-dispositivo.pendiente { border-left: 4px solid var(--primary-color); }
+        .act-par {
+            font-family: var(--font-heading); font-size: 1.6rem; font-weight: 800;
+            letter-spacing: .14em; font-variant-numeric: tabular-nums;
+            min-width: 72px; text-align: center; color: var(--primary-darker, var(--primary-color));
+        }
+        .act-dispositivo:not(.pendiente) .act-par { color: var(--text-muted); font-size: 1.1rem; letter-spacing: 0; }
+        .act-info { flex: 1 1 160px; min-width: 0; }
+        .act-nombre { font-size: .95rem; color: var(--text-color); }
+        .act-meta { font-size: .78rem; color: var(--text-muted); }
+        .act-acciones { display: flex; gap: 8px; flex-wrap: wrap; }
+
         /* ── Móvil: el modal toma TODA la pantalla y se ve un panel a la vez ── */
         @media (max-width: 900px) {
             .tp-modal-cuenta {
@@ -1118,6 +1150,13 @@
                     <button type="button" class="tp-vista" data-vista="carta">
                         <i class="fas fa-book-open"></i> Carta
                     </button>
+                    <!-- ACTIVAR: la pantalla del mesero para autorizar a los dispositivos que
+                         piden permiso. Es una vista y no un modal porque se usa DE PIE, en una
+                         tableta, durante toda la jornada. -->
+                    <button type="button" class="tp-vista" data-vista="activar">
+                        <i class="fas fa-user-check"></i> Activar
+                        <span class="tp-vista-num hidden" id="tpVistaActivarN">0</span>
+                    </button>
                 </div>
 
                 <section class="tp-vista-panel" data-vista-panel="salon">
@@ -1323,6 +1362,38 @@
                             <input type="text" id="ctaBuscar" placeholder="Buscar un producto…" autocomplete="off">
                         </div>
                         <div id="ctaProductos" class="cta-productos"></div>
+                    </div>
+                </section>
+                <!-- ============ Vista: ACTIVAR (la tableta del mesero) ============
+                     El cliente pide permiso desde su teléfono y aquí aparece en vivo. El mesero
+                     teclea los dos números que le dicen (o escanea el QR del comensal, que trae
+                     la vista con el código puesto) y ese dispositivo queda autorizado. -->
+                <section class="tp-vista-panel hidden" data-vista-panel="activar">
+                    <div class="tp-header">
+                        <div>
+                            <h1 class="tp-titulo">Activar pedidos</h1>
+                            <p class="tp-sub">Aquí aparecen los dispositivos que piden permiso para pedir. Escribe los dos números que te dicen, o escanea el código del cliente.</p>
+                        </div>
+                        <div class="tp-botones">
+                            <span class="tp-vivo" id="actVivo" title="Se actualiza solo"><i class="fas fa-bolt"></i> <span>al día</span></span>
+                        </div>
+                    </div>
+
+                    <div class="act-activador">
+                        <label for="actCodigo" class="act-etiqueta">Número de activación</label>
+                        <div class="act-fila">
+                            <input type="text" id="actCodigo" class="act-input" inputmode="numeric" maxlength="2"
+                                   placeholder="47" autocomplete="off" aria-describedby="actAyuda">
+                            <button type="button" class="tp-accion primario" id="actBtnActivar">
+                                <i class="fas fa-user-check"></i> Activar
+                            </button>
+                        </div>
+                        <p class="tp-aviso" id="actAyuda">Los números se dictan de un vistazo: si el cliente no los tiene a la vista, que abra su pantalla y te los muestre.</p>
+                        <p id="actError" class="tp-aviso hidden"></p>
+                    </div>
+
+                    <div id="actLista">
+                        <div class="tp-vacio"><i class="fas fa-spinner fa-spin"></i><p>Buscando dispositivos…</p></div>
                     </div>
                 </section>
             </div>
@@ -1623,9 +1694,9 @@
     <script src="js/sidebar-loader.js?v=13"></script>
     <script src="js/app.js?v=12"></script>
     <script src="js/ws-realtime.js?v=1"></script>
-    <script src="js/tables.js?v=8"></script>
+    <script src="js/tables.js?v=10"></script>
     <script src="js/cobro.js?v=2"></script>
-    <script src="js/comandas.js?v=2"></script>
+    <script src="js/comandas.js?v=4"></script>
     <script src="lib/animejs/anime.min.js"></script>
     <script src="js/design-system.js?v=5"></script>
 </body>

@@ -117,3 +117,12 @@ define('LOGIN_MAX_ATTEMPTS',      (int)(getenv('LOGIN_MAX_ATTEMPTS') ?: 5));    
 define('LOGIN_LOCK_BASE_SECONDS', (int)(getenv('LOGIN_LOCK_BASE_SECONDS') ?: 60)); // duración del 1er bloqueo (seg)
 define('LOGIN_LOCK_MAX_SECONDS',  (int)(getenv('LOGIN_LOCK_MAX_SECONDS') ?: 7200));// tope de duración de bloqueo (seg)
 define('LOGIN_LOCK_MULTIPLIER',   (int)(getenv('LOGIN_LOCK_MULTIPLIER') ?: 5));    // factor de escalamiento por bloqueo
+
+// Salud (liveness/readiness) — api/health/live.php, api/health/ready.php e
+// includes/HealthCheck.class.php. Como el resto de la configuración, se inyecta
+// en runtime (nunca se hornea en la imagen): por eso se leen con getenv().
+$envHealthMinFreeMb = getenv('HEALTH_MIN_FREE_MB');
+define('HEALTH_MIN_FREE_MB', (int)($envHealthMinFreeMb !== false && $envHealthMinFreeMb !== '' ? $envHealthMinFreeMb : 200));
+// Token opcional para que un monitor EXTERNO pueda pedir el detalle de los
+// checks (header X-Health-Token). Vacío = el detalle solo se expone a loopback.
+define('HEALTH_TOKEN', getenv('HEALTH_TOKEN') ?: '');

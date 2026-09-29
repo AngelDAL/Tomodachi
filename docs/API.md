@@ -4,7 +4,7 @@
 > Base URL: `https://tomodachi.tabtap.dev` (o tu host). Ruta de ejemplo: `/api/inventory/products.php`.
 
 Este documento es la **referencia operativa** de la API para integrar aplicaciones
-y para que un agente de IA controle el sistema. Cubre los **91 endpoints funcionales**
+y para que un agente de IA controle el sistema. Cubre los **93 endpoints funcionales**
 de la Community Edition. Los endpoints de `api/ai/*` (5) están **deshabilitados** en esta
 edición (responden 403) y se documentan aparte.
 
@@ -304,6 +304,48 @@ completa en `stripe/README.md`.
 
 ---
 
+### 4.18 Salud (liveness / readiness)
+
+Sin auth a propósito: los consume el `HEALTHCHECK` del contenedor cada 30 s y
+cualquier orquestador. **No abren sesión** (el healthcheck corre 2,880 veces al
+día: con `session_start()` creaba un archivo por corrida) y **no leen ni aceptan
+`store_id`**, así que el aislamiento multi-tienda no se toca. Solo leen.
+
+| Método | Ruta | Descripción | Auth |
+|---|---|---|---|
+| GET | `api/health/live.php` | Liveness: 200 siempre que PHP responde (`{"status":"live"}`) | público |
+| GET | `api/health/ready.php` | Readiness real: BD, config, migraciones y disco | público (detalle: loopback o `X-Health-Token`) |
+
+`ready.php` responde:
+
+| Código | `status` | Significado |
+|---|---|---|
+| 200 | `ok` | Todo en orden |
+| 200 | `degraded` | Atiende, pero hay migraciones fallidas registradas |
+| 503 | `not_ready` | Esquema sin inicializar o migraciones pendientes |
+| 503 | `down` | BD, disco o configuración: no puede atender |
+
+Checks: `db` (`SELECT 1` con `PDO::ATTR_TIMEOUT=2`), `config` (constantes `DB_*` +
+`config/database.php`), `schema_control` (tabla `schema_migrations`),
+`migrations_pending`, `migrations_failed` (hoy `unknown`: el entrypoint registra
+las fallidas como aplicadas) y `storage` (`is_writable` + espacio libre mayor a
+`HEALTH_MIN_FREE_MB`, default 200).
+
+El cuerpo SIEMPRE trae `status`. El detalle (`checks`, `version`, `time`) solo
+llega si `REMOTE_ADDR` es loopback o si el header `X-Health-Token` coincide con
+`HEALTH_TOKEN`; desde fuera es `{"status":"…"}` y nada más:
+
+```bash
+curl -s https://tu-host/api/health/ready.php                          # {"status":"ok"}
+curl -s -H "X-Health-Token: $HEALTH_TOKEN" https://tu-host/api/health/ready.php   # + checks
+```
+
+El `HEALTHCHECK` del `Dockerfile` usa `ready.php`; antes usaba
+`api/auth/permissions.php`, que es estático y devolvía 200 (exit 0) con la base
+de datos caída.
+
+---
+
 ## 5. IA (deshabilitada en Community Edition)
 
 Los 5 endpoints `api/ai/*` (`analyze_image`, `generate_image`, `remove_background`,
@@ -333,6 +375,7 @@ Buenas prácticas:
 ## 7. Verificación de la API (estado)
 
 - Suite de pruebas automatizada: `docker/test_suite.sh <base_url>` → **33/33 PASS** en instalación limpia.
+- Salud (live/ready + contrato del HEALTHCHECK): `bash docker/test_health_endpoints.sh <base_url>`.
 - Smoke test manual amplio (30 endpoints clave): **todos OK** con los parámetros correctos.
   (Los 4 que en un primer barrido dieron 403/422 era por faltar parámetros/permisos; con los
   valores correctos responden 200, comportamiento esperado.)

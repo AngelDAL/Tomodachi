@@ -46,6 +46,11 @@ services:
       # suscripción (el relay ya no acepta canales de tienda ni de cuenta sin
       # token). El MISMO valor debe estar en el servicio `ws`.
       WS_SECRET: ${WS_SECRET:-}
+      # Salud: espacio libre mínimo (MB) que debe quedar en disco para que la
+      # instancia se declare lista, y token opcional para que un monitor
+      # externo vea el detalle de /api/health/ready.php (vacío = solo loopback).
+      HEALTH_MIN_FREE_MB: ${HEALTH_MIN_FREE_MB:-200}
+      HEALTH_TOKEN: ${HEALTH_TOKEN:-}
     ports:
       - "127.0.0.1:${PORT:-8091}:80"
     volumes:

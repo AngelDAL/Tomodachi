@@ -133,8 +133,8 @@ class RequestContext {
     }
 
     /**
-     * Error de servidor, con contexto de la petición. Sustituye a error_log()
-     * en includes/ y api/: mismo destino (el error log de php-fpm, que
+     * Error de servidor, con contexto de la petición. Sustituye a las llamadas
+     * directas al log del servidor en includes/ y api/: mismo destino (el error log de php-fpm, que
      * supervisord publica en `docker logs`) pero correlacionable.
      *
      * @param string $message

@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/RequestContext.class.php';
 /**
  * HealthCheck — liveness y readiness REALES de Tomodachi POS.
  * Lo consumen `api/health/live.php` y `api/health/ready.php`.
@@ -194,7 +195,7 @@ class HealthCheck
             return ['pdo' => $pdo, 'code' => null];
         } catch (Throwable $e) {
             // Credenciales/host solo al log del servidor, nunca al cliente.
-            error_log('HealthCheck::connect - ' . $e->getMessage());
+            RequestContext::error('HealthCheck::connect - ' . $e->getMessage());
             return ['pdo' => null, 'code' => $e->getCode() !== '' ? (string) $e->getCode() : 'error'];
         }
     }
@@ -226,7 +227,7 @@ class HealthCheck
             $pdo->query('SELECT 1');
             return self::result(self::OK, 'SELECT 1 respondió');
         } catch (Throwable $e) {
-            error_log('HealthCheck::checkDb - ' . $e->getMessage());
+            RequestContext::error('HealthCheck::checkDb - ' . $e->getMessage());
             return self::result(self::DOWN, 'la consulta de prueba falló'
                 . ($e->getCode() !== '' ? ' (SQLSTATE ' . $e->getCode() . ')' : ''));
         }
@@ -274,7 +275,7 @@ class HealthCheck
             }
             return self::result(self::OK, "tabla de control `{$table}` presente");
         } catch (Throwable $e) {
-            error_log('HealthCheck::checkSchemaControl - ' . $e->getMessage());
+            RequestContext::error('HealthCheck::checkSchemaControl - ' . $e->getMessage());
             return self::result(self::UNKNOWN, 'no se pudo consultar el esquema');
         }
     }
@@ -300,7 +301,7 @@ class HealthCheck
             $stmt = $pdo->query("SELECT version FROM `{$table}`");
             $applied = $stmt->fetchAll(PDO::FETCH_COLUMN);
         } catch (Throwable $e) {
-            error_log('HealthCheck::checkMigrationsPending - ' . $e->getMessage());
+            RequestContext::error('HealthCheck::checkMigrationsPending - ' . $e->getMessage());
             return self::result(self::UNKNOWN, 'no se pudo leer la tabla de control');
         }
         $applied = array_map('strval', is_array($applied) ? $applied : []);
@@ -336,7 +337,7 @@ class HealthCheck
             $stmt = $pdo->query("SELECT COUNT(*) FROM `{$table}`");
             $failed = (int) $stmt->fetchColumn();
         } catch (Throwable $e) {
-            error_log('HealthCheck::checkMigrationsFailed - ' . $e->getMessage());
+            RequestContext::error('HealthCheck::checkMigrationsFailed - ' . $e->getMessage());
             return self::result(self::UNKNOWN, 'no se pudo consultar el registro de fallos');
         }
 

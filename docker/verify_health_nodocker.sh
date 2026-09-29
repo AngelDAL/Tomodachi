@@ -43,7 +43,10 @@ print('' if d is None else d)"; }
 # ---------- instancia desechable (copia, no el repo) ----------
 rm -rf "$INST"; mkdir -p "$INST/api" "$INST/includes" "$INST/config" "$INST/database" "$SCR/sessions"
 cp -r "$REPO/api/health" "$INST/api/health"
-cp "$REPO/includes/HealthCheck.class.php" "$INST/includes/"
+# Se copia includes/ COMPLETO, no archivo por archivo: HealthCheck require
+# RequestContext (request id), y copiar solo el que uno conoce hace que el
+# endpoint reviente con un fatal (500) en cuanto alguien añade una dependencia.
+cp -r "$REPO/includes/." "$INST/includes/"
 cp "$REPO/config/constants.php" "$INST/config/"
 cp -r "$REPO/database/migrations" "$INST/database/migrations"
 

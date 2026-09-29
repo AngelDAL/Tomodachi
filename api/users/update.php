@@ -9,6 +9,7 @@ require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
 require_once '../../includes/Validator.class.php';
 require_once '../../includes/Auth.class.php';
+require_once __DIR__ . '/../../includes/RequestContext.class.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Methods: PUT');
@@ -103,6 +104,6 @@ try {
     $updated = $db->selectOne('SELECT user_id, username, full_name, email, role, store_id, status FROM users WHERE user_id = ?',[$user_id]);
     Response::success($updated,'Usuario actualizado');
 } catch (Exception $e) {
-    error_log('Error en users/update: '.$e->getMessage());
+    RequestContext::error('Error en users/update: '.$e->getMessage());
     Response::error('Error interno del servidor',500);
 }

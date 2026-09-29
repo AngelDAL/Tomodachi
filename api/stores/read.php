@@ -13,6 +13,7 @@ header('Content-Type: application/json; charset=utf-8');
 require_once '../../includes/Validator.class.php';
 require_once '../../includes/Auth.class.php';
 require_once '../../includes/ApiAuth.class.php';
+require_once __DIR__ . '/../../includes/RequestContext.class.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -33,6 +34,6 @@ try {
     }
     Response::success($stores,'Listado tiendas');
 } catch (Exception $e) {
-    error_log('Error al listar tiendas: '.$e->getMessage());
+    RequestContext::error('Error al listar tiendas: '.$e->getMessage());
     Response::error('Error interno del servidor',500);
 }

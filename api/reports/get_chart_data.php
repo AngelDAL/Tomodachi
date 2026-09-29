@@ -5,6 +5,7 @@ require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
 require_once '../../includes/Auth.class.php';
 require_once '../../includes/ApiAuth.class.php';
+require_once __DIR__ . '/../../includes/RequestContext.class.php';
 
 header('Content-Type: application/json');
 
@@ -93,7 +94,7 @@ try {
     ]);
 
 } catch (Exception $e) {
-    error_log('Error en get_chart_data: ' . $e->getMessage());
+    RequestContext::error('Error en get_chart_data: ' . $e->getMessage());
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'Error interno del servidor']);
 }

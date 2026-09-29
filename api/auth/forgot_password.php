@@ -13,6 +13,7 @@ require_once '../../includes/Mail.class.php';
 require_once '../../includes/LoginRateLimiter.class.php';
 
 require_once __DIR__ . '/../../includes/Cors.class.php';
+require_once __DIR__ . '/../../includes/RequestContext.class.php';
 Cors::apply();
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Methods: POST');
@@ -75,7 +76,7 @@ try {
             $mailer = new Mail();
             $mailer->sendPasswordResetEmail($email, $user['full_name'], $resetLink);
         } catch (Exception $e) {
-            error_log("Error enviando correo de recuperación: " . $e->getMessage());
+            RequestContext::error("Error enviando correo de recuperación: " . $e->getMessage());
             Response::error('Error al enviar el correo. Intente más tarde.', 500);
         }
     }
@@ -84,6 +85,6 @@ try {
     Response::success([], 'Si el correo existe en nuestro sistema, recibirás un enlace para restablecer tu contraseña.');
     
 } catch (Exception $e) {
-    error_log('Error en forgot_password: ' . $e->getMessage());
+    RequestContext::error('Error en forgot_password: ' . $e->getMessage());
     Response::error('Error interno del servidor', 500);
 }

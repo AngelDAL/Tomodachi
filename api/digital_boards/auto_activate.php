@@ -6,6 +6,7 @@
  */
 require_once '../../config/database.php';
 require_once '../../includes/Database.class.php';
+require_once __DIR__ . '/../../includes/RequestContext.class.php';
 
 // Solo ejecutable desde CLI o con flag especial
 $is_cli = php_sapi_name() === 'cli';
@@ -36,7 +37,7 @@ try {
             'UPDATE digital_boards SET is_active = 1 WHERE board_id = ?',
             [$board['board_id']]
         );
-        error_log("[Digital Signage] Board activado automáticamente: ID {$board['board_id']} '{$board['name']}' (Store {$board['store_id']})");
+        RequestContext::info("[Digital Signage] Board activado automáticamente: ID {$board['board_id']} '{$board['name']}' (Store {$board['store_id']})");
     }
     
     // Desactivar boards cuyo scheduled_end ya pasó
@@ -54,7 +55,7 @@ try {
             'UPDATE digital_boards SET is_active = 0 WHERE board_id = ?',
             [$board['board_id']]
         );
-        error_log("[Digital Signage] Board desactivado automáticamente (expiró): ID {$board['board_id']} '{$board['name']}' (Store {$board['store_id']})");
+        RequestContext::info("[Digital Signage] Board desactivado automáticamente (expiró): ID {$board['board_id']} '{$board['name']}' (Store {$board['store_id']})");
     }
     
     $result = [
@@ -71,7 +72,7 @@ try {
     }
     
 } catch (Exception $e) {
-    error_log("[Digital Signage] Error en auto-activation: " . $e->getMessage());
+    RequestContext::error("[Digital Signage] Error en auto-activation: " . $e->getMessage());
     if ($is_cli) {
         fwrite(STDERR, "Error: " . $e->getMessage() . "\n");
         exit(1);

@@ -5,6 +5,7 @@ require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
 require_once '../../includes/Auth.class.php';
 require_once '../../includes/ApiAuth.class.php';
+require_once __DIR__ . '/../../includes/RequestContext.class.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     Response::error('Método no permitido', 405);
@@ -45,6 +46,6 @@ try {
     }
 
 } catch (Exception $e) {
-    error_log('Error al eliminar promoción: ' . $e->getMessage());
+    RequestContext::error('Error al eliminar promoción: ' . $e->getMessage());
     Response::error('Error interno del servidor', 500);
 }

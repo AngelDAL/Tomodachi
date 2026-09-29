@@ -14,6 +14,7 @@ require_once '../../includes/Response.class.php';
 require_once '../../includes/Validator.class.php';
 require_once '../../includes/Auth.class.php';
 require_once '../../includes/ApiAuth.class.php';
+require_once __DIR__ . '/../../includes/RequestContext.class.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -81,6 +82,6 @@ try {
             : 'Guarda este token ahora; no podrás verlo de nuevo.'
     ], 'Token creado');
 } catch (Exception $e) {
-    error_log('Error en api_tokens/create: ' . $e->getMessage());
+    RequestContext::error('Error en api_tokens/create: ' . $e->getMessage());
     Response::error('Error interno del servidor', 500);
 }

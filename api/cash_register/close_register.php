@@ -12,6 +12,7 @@ require_once '../../includes/FormatHelper.class.php';
 require_once '../../includes/Validator.class.php';
 require_once '../../includes/Auth.class.php';
 require_once '../../includes/ApiAuth.class.php';
+require_once __DIR__ . '/../../includes/RequestContext.class.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
@@ -150,7 +151,7 @@ try {
         }
     } catch (Exception $e) {
         // No fallamos el request si falla el correo, solo lo logueamos
-        error_log("Error enviando reporte de cierre: " . $e->getMessage());
+        RequestContext::error("Error enviando reporte de cierre: " . $e->getMessage());
     }
     // --- FIN LÓGICA DE CORREO ---
 

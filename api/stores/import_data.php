@@ -12,6 +12,7 @@ require_once '../../includes/Auth.class.php';
 require_once '../../includes/Validator.class.php';
 
 require_once __DIR__ . '/../../includes/Cors.class.php';
+require_once __DIR__ . '/../../includes/RequestContext.class.php';
 Cors::apply();
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Methods: POST');
@@ -131,11 +132,11 @@ try {
         
     } catch (Exception $e) {
         $conn->rollBack();
-        error_log('Error durante la importación: ' . $e->getMessage());
+        RequestContext::error('Error durante la importación: ' . $e->getMessage());
         Response::error('Error durante la importación', 500);
     }
     
 } catch (Exception $e) {
-    error_log('Error en import_data: ' . $e->getMessage());
+    RequestContext::error('Error en import_data: ' . $e->getMessage());
     Response::error('Error interno del servidor', 500);
 }

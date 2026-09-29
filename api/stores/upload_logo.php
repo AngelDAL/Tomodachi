@@ -9,6 +9,7 @@ require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
 require_once '../../includes/Auth.class.php';
 require_once '../../includes/ImageUpload.class.php';
+require_once __DIR__ . '/../../includes/RequestContext.class.php';
 
 $db = new Database();
 $auth = new Auth($db);
@@ -55,6 +56,6 @@ try {
     Response::success(['logo_url' => $relativeUrl], 'Logo actualizado');
 
 } catch (Exception $e) {
-    error_log('Error al subir logo: ' . $e->getMessage());
+    RequestContext::error('Error al subir logo: ' . $e->getMessage());
     Response::error('Error interno del servidor', 500);
 }

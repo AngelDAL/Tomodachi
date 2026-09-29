@@ -3,6 +3,8 @@
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
+require_once __DIR__ . '/RequestContext.class.php';
+
 class Mail {
     private $mailer;
     private $config;
@@ -46,7 +48,7 @@ class Mail {
             // Recipients
             $this->mailer->setFrom($this->config['from_email'], $this->config['from_name']);
         } catch (Exception $e) {
-            error_log("Mailer Setup Error: {$this->mailer->ErrorInfo}");
+            RequestContext::error("Mailer Setup Error: {$this->mailer->ErrorInfo}");
         }
     }
 
@@ -89,7 +91,7 @@ class Mail {
             $this->mailer->send();
             return true;
         } catch (Exception $e) {
-            error_log("Message could not be sent. Mailer Error: {$this->mailer->ErrorInfo}");
+            RequestContext::error("Message could not be sent. Mailer Error: {$this->mailer->ErrorInfo}");
             return false;
         }
     }
@@ -132,7 +134,7 @@ class Mail {
             $this->mailer->send();
             return true;
         } catch (Exception $e) {
-            error_log("Message could not be sent. Mailer Error: {$this->mailer->ErrorInfo}");
+            RequestContext::error("Message could not be sent. Mailer Error: {$this->mailer->ErrorInfo}");
             return false;
         }
     }
@@ -175,7 +177,7 @@ class Mail {
             $this->mailer->send();
             return true;
         } catch (Exception $e) {
-            error_log("Message could not be sent. Mailer Error: {$this->mailer->ErrorInfo}");
+            RequestContext::error("Message could not be sent. Mailer Error: {$this->mailer->ErrorInfo}");
             return false;
         }
     }
@@ -255,7 +257,7 @@ class Mail {
             $this->mailer->send();
             return true;
         } catch (Exception $e) {
-            error_log("Message could not be sent. Mailer Error: {$this->mailer->ErrorInfo}");
+            RequestContext::error("Message could not be sent. Mailer Error: {$this->mailer->ErrorInfo}");
             return false;
         }
     }
@@ -266,7 +268,7 @@ class Mail {
             // puede configurar SUPPORT_EMAIL en el entorno de su instalación.
             $supportEmail = getenv('SUPPORT_EMAIL') ?: '';
             if ($supportEmail === '') {
-                error_log('Support message not sent: SUPPORT_EMAIL is not configured.');
+                RequestContext::error('Support message not sent: SUPPORT_EMAIL is not configured.');
                 return false;
             }
             
@@ -300,7 +302,7 @@ class Mail {
             $this->mailer->send();
             return true;
         } catch (Exception $e) {
-            error_log("Message could not be sent. Mailer Error: {$this->mailer->ErrorInfo}");
+            RequestContext::error("Message could not be sent. Mailer Error: {$this->mailer->ErrorInfo}");
             return false;
         }
     }
@@ -332,7 +334,7 @@ class Mail {
             $this->mailer->send();
             return true;
         } catch (Exception $e) {
-            error_log("Database backup email error: {$this->mailer->ErrorInfo}");
+            RequestContext::error("Database backup email error: {$this->mailer->ErrorInfo}");
             return false;
         }
     }

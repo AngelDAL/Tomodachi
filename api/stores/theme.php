@@ -19,6 +19,7 @@ require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
 require_once '../../includes/Auth.class.php';
 require_once '../../includes/ApiAuth.class.php';
+require_once __DIR__ . '/../../includes/RequestContext.class.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -141,6 +142,6 @@ try {
         Response::error('Método no permitido', 405);
     }
 } catch (Exception $e) {
-    error_log('Error en stores/theme: ' . $e->getMessage());
+    RequestContext::error('Error en stores/theme: ' . $e->getMessage());
     Response::error('Error interno del servidor', 500);
 }

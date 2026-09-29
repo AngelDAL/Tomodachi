@@ -13,6 +13,7 @@ if (APP_MODE === 'OPEN_SOURCE') {
     Response::error('Funciones de IA no incluidas en Community Edition', 403);
 }
 require_once 'config.php';
+require_once __DIR__ . '/../../includes/RequestContext.class.php';
 
 // Verificar sesión y permisos
 $db = new Database();
@@ -108,7 +109,7 @@ try {
         echo $jsonText;
     } else {
         // Log error for debugging
-        error_log("Gemini Error: " . print_r($result, true));
+        RequestContext::error("Gemini Error: " . print_r($result, true));
         
         // Intentar extraer mensaje de error legible de Gemini
         $errorMessage = 'No se pudo analizar la imagen con IA';

@@ -11,6 +11,7 @@ require_once '../../includes/Validator.class.php';
 require_once '../../includes/Auth.class.php';
 require_once '../../includes/Mail.class.php';
 require_once '../../includes/ImageUpload.class.php';
+require_once __DIR__ . '/../../includes/RequestContext.class.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Methods: POST');
@@ -105,7 +106,7 @@ try {
                 $db->update('UPDATE stores SET logo_url = ? WHERE store_id = ?', [$logoUrl, $store_id]);
             } catch (Exception $e) {
                 // Un logo inválido no debe interrumpir el registro
-                error_log('Logo rechazado en registro: ' . $e->getMessage());
+                RequestContext::error('Logo rechazado en registro: ' . $e->getMessage());
             }
         }
 
@@ -124,7 +125,7 @@ try {
                 $mailer->sendWelcomeEmail($email, $full_name, $store_name, $username);
             } catch (Throwable $e) {
                 // No interrumpir el flujo si falla el correo o la librería no está instalada
-                error_log("Error enviando correo de bienvenida: " . $e->getMessage());
+                RequestContext::error("Error enviando correo de bienvenida: " . $e->getMessage());
             }
         }
 
@@ -159,6 +160,6 @@ try {
     }
 
 } catch (Exception $e) {
-    error_log('Error en registro: ' . $e->getMessage());
+    RequestContext::error('Error en registro: ' . $e->getMessage());
     Response::error('Error interno del servidor', 500);
 }

@@ -13,6 +13,7 @@ require_once '../../includes/Auth.class.php';
 require_once '../../includes/LoginRateLimiter.class.php';
 
 require_once __DIR__ . '/../../includes/Cors.class.php';
+require_once __DIR__ . '/../../includes/RequestContext.class.php';
 Cors::apply();
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Methods: POST');
@@ -95,6 +96,6 @@ try {
     }
     
 } catch (Exception $e) {
-    error_log('Error en login: ' . $e->getMessage());
+    RequestContext::error('Error en login: ' . $e->getMessage());
     Response::error('Error interno del servidor', 500);
 }

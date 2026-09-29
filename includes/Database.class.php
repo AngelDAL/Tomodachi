@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/RequestContext.class.php';
 /**
  * Clase Database - Manejo de conexión y consultas PDO
  * Implementa prepared statements para prevención de SQL injection
@@ -37,7 +38,7 @@ class Database {
         } catch (PDOException $e) {
             // Detalle solo en el log del servidor; el cliente no debe ver
             // credenciales, hosts ni la estructura interna de la BD.
-            error_log("Database::connect - " . $e->getMessage());
+            RequestContext::error("Database::connect - " . $e->getMessage());
             throw new Exception("Error interno del servidor");
         }
     }
@@ -61,7 +62,7 @@ class Database {
             $stmt->execute($params);
             return $stmt;
         } catch (PDOException $e) {
-            error_log("Database::query - " . $e->getMessage() . " | SQL: " . $sql);
+            RequestContext::error("Database::query - " . $e->getMessage() . " | SQL: " . $sql);
             throw new Exception("Error interno del servidor");
         }
     }

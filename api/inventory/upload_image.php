@@ -15,6 +15,7 @@ require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
 require_once '../../includes/Auth.class.php';
 require_once '../../includes/ImageUpload.class.php';
+require_once __DIR__ . '/../../includes/RequestContext.class.php';
 
 $db = new Database();
 $auth = new Auth($db);
@@ -83,6 +84,6 @@ try {
     $updated = $db->selectOne('SELECT product_id, product_name, image_path FROM products WHERE product_id = ?', [$product_id]);
     Response::success($updated, 'Imagen actualizada');
 } catch (Exception $e) {
-    error_log('Error en upload_image: ' . $e->getMessage());
+    RequestContext::error('Error en upload_image: ' . $e->getMessage());
     Response::error('Error interno del servidor', 500);
 }

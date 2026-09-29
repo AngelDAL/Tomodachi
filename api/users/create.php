@@ -10,6 +10,7 @@ require_once '../../includes/Response.class.php';
 require_once '../../includes/Validator.class.php';
 require_once '../../includes/Auth.class.php';
 require_once '../../includes/Mail.class.php';
+require_once __DIR__ . '/../../includes/RequestContext.class.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Methods: POST');
@@ -70,7 +71,7 @@ try {
             $mailer = new Mail();
             $mailer->sendNewUserEmail($email, $full_name, $store['store_name'], $username, $password, $role);
         } catch (Throwable $e) {
-            error_log("Error enviando correo a nuevo usuario: " . $e->getMessage());
+            RequestContext::error("Error enviando correo a nuevo usuario: " . $e->getMessage());
         }
     }
 

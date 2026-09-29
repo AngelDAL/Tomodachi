@@ -311,16 +311,8 @@
         }
 
         var nombre = (tienda && tienda.name) || 'Carta';
-        var logo = document.getElementById('cartaLogo');
-        if (tema.logo_path) {
-            logo.style.backgroundImage = 'url(' + JSON.stringify(tema.logo_path).slice(1, -1) + ')';
-            logo.textContent = '';
-        } else {
-            // Sin logo cargado: inicial del negocio, para que no quede vacío
-            logo.textContent = nombre.trim().charAt(0).toUpperCase() || '?';
-        }
-
-        document.getElementById('cartaTienda').textContent = tienda.name || '';
+        // El nombre del negocio ya no se pinta en la carta (se retiró el encabezado); sigue
+        // vivo en la pestaña del navegador, que es donde se consulta.
         document.title = nombre + ' · Carta';
     }
 
@@ -390,19 +382,14 @@
     function renderCarta(datos) {
         aplicarMarca(datos.store);
 
+        // La carta ya NO pinta encabezado: ni logo, ni nombre de la tienda, ni título, ni
+        // descripción. El comensal acaba de escanear el QR de ESTE negocio; lo que necesita
+        // es ver platillos, y ese bloque se comía la parte alta de la pantalla. La marca
+        // queda en los colores del tema (aplicarMarca) y el nombre del negocio en la
+        // pestaña del navegador.
         var menu = datos.menu || {};
-        document.getElementById('cartaNombre').textContent = menu.name || 'Carta';
-
-        if (menu.welcome_message) {
-            var b = document.getElementById('cartaBienvenida');
-            b.textContent = menu.welcome_message;
-            b.classList.remove('hidden');
-        }
-        if (menu.description) {
-            var d = document.getElementById('cartaDescripcion');
-            d.textContent = menu.description;
-            d.classList.remove('hidden');
-        }
+        document.title = (datos.store && datos.store.name ? datos.store.name + ' · ' : '') +
+                         (menu.name || 'Carta');
 
         var secciones = datos.sections || [];
         if (!secciones.length) {
@@ -492,15 +479,16 @@
         // menu_only: la carta se comporta como siempre, sin controles de pedido.
         if (!admitePedido(estado.mode)) return;
 
-        mostrarEl(qs('dinerBar'), true);
-
         estado.socio = leerSocio();
-        actualizarBarraComensal();
         pintarControlesProducto();
 
         // Pestañas del teléfono: solo tienen sentido si se puede pedir.
         mostrarEl(qs('cartaVistaTabs'), true);
         aplicarVista();
+
+        // La invitación a pedir (columna en el escritorio, píldora en el teléfono) y, si ya
+        // hay cuenta, el pedido de verdad con su barra.
+        actualizarPedidoBar();
 
         if (estado.socio) activarCuenta();
     }
@@ -673,31 +661,43 @@
 
     /** Arranca la observación de la cuenta: refresco inicial, socket y sondeo. */
     function activarCuenta() {
-        actualizarBarraComensal();
+        actualizarCtaPedir();
+        actualizarPedidoBar();
         refrescarCuenta({ silencioso: true });
         conectarSocket();
         iniciarSondeo();
     }
 
-    function actualizarBarraComensal() {
-        var bar = qs('dinerBar');
-        if (!bar) return;
-        var btn = qs('dinerBarBoton');
+    /**
+     * La invitación a pedir, y dónde vive.
+     *
+     * Antes era la "barra del comensal": un renglón de ancho completo bajo el encabezado,
+     * con el nombre de la cuenta, su código y un botón. Se retiró: el código no lo usa el
+     * comensal (ya hay otra forma de empezar a pedir) y la barra se comía alto en TODAS las
+     * vistas. Ahora la invitación vive donde vive el pedido:
+     *   - escritorio → dentro de la columna "Tu pedido";
+     *   - teléfono   → una píldora flotante.
+     * Con cuenta abierta, ninguna de las dos aparece: manda el pedido de verdad.
+     */
+    function actualizarCtaPedir() {
+        if (!admitePedido(estado.mode)) {
+            mostrarEl(qs('pedidoPanelCta'), false);
+            mostrarEl(qs('ctaPedir'), false);
+            return;
+        }
+        var sinCuenta = !estado.socio;
+        var mostrarPildora = sinCuenta && !pedidoEnColumna();
+        mostrarEl(qs('pedidoPanelCta'), sinCuenta && pedidoEnColumna());
+        mostrarEl(qs('ctaPedir'), mostrarPildora);
+        // La píldora flota sobre la carta: hay que dejarle hueco al final o tapa el botón
+        // del último platillo.
+        document.body.classList.toggle('con-cta', mostrarPildora);
 
-        if (estado.socio) {
-            qs('dinerBarTitulo').textContent = 'Cuenta ' + (estado.socio.code || '');
-            qs('dinerBarSub').textContent = estado.punto
-                ? ('Estás en ' + estado.punto + ' · agrega platillos a la cuenta')
-                : 'Agrega platillos a la cuenta de la mesa';
-            btn.textContent = 'Ver pedido';
-            btn.dataset.accion = 'ver';
-        } else {
-            qs('dinerBarTitulo').textContent = 'Pide desde tu teléfono';
-            qs('dinerBarSub').textContent = (estado.mode === 'open_tab')
-                ? 'Únete a la cuenta de tu mesa con su código'
-                : 'Arma tu pedido y envíalo a cocina';
-            btn.textContent = 'Pedir';
-            btn.dataset.accion = 'pedir';
+        var texto = qs('pedidoPanelCtaTexto');
+        if (texto) {
+            texto.textContent = (estado.mode === 'open_tab')
+                ? 'Únete a la cuenta de tu mesa con su código, o pide que te la abran.'
+                : 'Arma tu pedido y envíalo a cocina cuando estés listo.';
         }
     }
 
@@ -705,16 +705,30 @@
         var bar = qs('orderBar');
         if (!bar) return;
 
-        if (!estado.socio || !estado.cuenta) {
-            bar.classList.add('hidden');
-            document.body.classList.remove('con-pedido');
+        var enColumna = pedidoEnColumna();
+        var hayCuenta = !!estado.socio && !!estado.cuenta;
+
+        // La columna del pedido también se muestra SIN cuenta: ahí vive la invitación a
+        // pedir (antes era una barra de ancho completo la que lo hacía).
+        if (enColumna && admitePedido(estado.mode)) {
+            mostrarEl(qs('pedidoPanel'), true);
+            document.body.classList.add('con-panel');
+        } else {
             mostrarEl(qs('pedidoPanel'), false);
             document.body.classList.remove('con-panel');
+        }
+
+        actualizarCtaPedir();
+
+        if (!hayCuenta) {
+            bar.classList.add('hidden');
+            document.body.classList.remove('con-pedido');
             // Sin cuenta no hay pestaña de pedido: el teléfono se queda en la carta.
-            if (estado.vista === 'pedido' && !pedidoEnColumna()) {
+            if (estado.vista === 'pedido' && !enColumna) {
                 estado.vista = 'carta';
                 aplicarVista();
             }
+            renderPedido();
             return;
         }
 
@@ -731,17 +745,9 @@
         bar.classList.remove('hidden');
         document.body.classList.add('con-pedido');
 
-        // La columna del pedido (escritorio/tableta) siempre visible; el modal solo
-        // en pantallas angostas, donde el pedido es una hoja inferior.
-        if (pedidoEnColumna()) {
-            mostrarEl(qs('pedidoPanel'), true);
-            document.body.classList.add('con-panel');
-            if (qs('modalPedido') && !qs('modalPedido').classList.contains('hidden')) {
-                cerrarModal('modalPedido');
-            }
-        } else {
-            mostrarEl(qs('pedidoPanel'), false);
-            document.body.classList.remove('con-panel');
+        // En el teléfono el pedido es la hoja inferior: la columna no se usa.
+        if (enColumna && qs('modalPedido') && !qs('modalPedido').classList.contains('hidden')) {
+            cerrarModal('modalPedido');
         }
     }
 
@@ -772,19 +778,30 @@
         var slots = document.querySelectorAll('.producto-pedir');
         if (!slots.length) return;
 
-        // Sin cuenta no hay dónde anotar; y con verificación pendiente el dispositivo TODAVÍA no
-        // puede pedir (el mesero no lo ha activado): en los dos casos no se ofrecen controles.
+        // TRES situaciones, y cada una ofrece algo distinto:
+        //   · sin cuenta            → se muestra "Agregar" y al tocarlo se abre el flujo para
+        //                             empezar a pedir. Antes la carta salía SIN un solo botón
+        //                             y el comensal no tenía por dónde (fricción anotada).
+        //   · con cuenta y activa   → los controles de verdad (cantidad, notas, enviar).
+        //   · activación pendiente  → nada: es el candado del mesero, el dispositivo todavía
+        //                             no está autorizado.
         var activo = !!estado.socio && estado.puedePedir !== false;
         var pausado = activo && estado.cuenta && estado.cuenta.session &&
                       estado.cuenta.session.ordering_enabled === false;
+        var sinCuenta = !estado.socio;
 
         slots.forEach(function (slot) {
             var id = slot.dataset.productoId;
             var p = estado.productos[id];
             slot.innerHTML = '';
 
-            // Sin sesión, producto agotado o inexistente: no hay control.
-            if (!activo || !p || p.sold_out) {
+            // Producto agotado o inexistente: no hay control.
+            if (!p || p.sold_out) {
+                slot.classList.add('hidden');
+                return;
+            }
+            // Activación pendiente: el mesero todavía no autoriza a ESTE dispositivo.
+            if (estado.socio && estado.puedePedir === false) {
                 slot.classList.add('hidden');
                 return;
             }
@@ -795,8 +812,8 @@
                 return;
             }
 
-            var pend = cantidadPropia(id, 'pending');
-            var enviado = cantidadPropia(id, 'sent');
+            var pend = sinCuenta ? 0 : cantidadPropia(id, 'pending');
+            var enviado = sinCuenta ? 0 : cantidadPropia(id, 'sent');
             var html = '';
 
             if (pend > 0) {
@@ -875,7 +892,6 @@
             .catch(function (e) {
                 if (esSesionInvalida(e)) {
                     olvidarSocio();
-                    actualizarBarraComensal();
                     pintarControlesProducto();
                     actualizarPedidoBar();
                     aviso('La cuenta se cerró. Vuelve a unirte para pedir.', 'error');
@@ -1033,10 +1049,8 @@
         var cont = qs('pedidoLista');
         if (!cont) return;
 
-        // textContent no interpreta HTML: aquí NO se escapa (evita doble codificación).
-        qs('pedidoCodigo').textContent = (estado.socio && estado.socio.code)
-            ? ('Código de la cuenta: ' + estado.socio.code) : '';
-
+        // Aquí se pintaba el "Código de la cuenta: XPWW". Retirado: el comensal no lo usa
+        // para nada (la cuenta la abre el mesero o él mismo, y para unirse hay código aparte).
         var c = estado.cuenta;
         if (!c) {
             cont.innerHTML = '<p class="mp-vacio">Cargando el pedido…</p>';
@@ -1079,8 +1093,15 @@
         var cont = qs('pedidoPanelLista');
         if (!cont) return;
 
-        qs('pedidoPanelCodigo').textContent = (estado.socio && estado.socio.code)
-            ? ('Código ' + estado.socio.code) : '';
+        var sinCuenta = !estado.socio;
+
+        // Sin cuenta: la columna muestra la INVITACIÓN a pedir; la lista y el pie
+        // (total + enviar) no tienen nada que decir todavía.
+        mostrarEl(qs('pedidoPanelCta'), sinCuenta && admitePedido(estado.mode));
+        mostrarEl(cont, !sinCuenta);
+        mostrarEl(qs('pedidoPanelPie'), !sinCuenta);
+        mostrarEl(qs('pedidoPanelResumen'), !sinCuenta);
+        if (sinCuenta) return;
 
         var c = estado.cuenta;
         if (!c) {

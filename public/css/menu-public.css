@@ -56,58 +56,11 @@
 }
 @keyframes carta-girar { to { transform: rotate(360deg); } }
 
-/* ---------- Encabezado ---------- */
-
-.carta-encabezado {
-    padding: 22px 18px 16px;
-    background: var(--bg-card);
-    border-bottom: 1px solid var(--border-color);
-}
-.carta-encabezado-marca {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-.carta-logo {
-    width: 46px;
-    height: 46px;
-    border-radius: 14px;
-    background: var(--primary-color);
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 1.25rem;
-    flex-shrink: 0;
-    background-size: cover;
-    background-position: center;
-}
-.carta-tienda {
-    margin: 0 0 2px;
-    font-size: .78rem;
-    letter-spacing: .06em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-}
-.carta-nombre {
-    margin: 0;
-    font-size: 1.35rem;
-    line-height: 1.2;
-    color: var(--text-color);
-}
-.carta-bienvenida {
-    margin: 14px 0 0;
-    font-size: .95rem;
-    line-height: 1.55;
-    color: var(--text-medium);
-}
-.carta-descripcion {
-    margin: 8px 0 0;
-    font-size: .88rem;
-    line-height: 1.5;
-    color: var(--text-light);
-}
+/* ---------- Encabezado ----------
+   SE RETIRÓ (29-sep-2026). Antes la carta abría con logo, nombre de la tienda, título
+   ("Carta del salón") y descripción: un bloque de ~100 px que al comensal no le dice
+   nada —acaba de escanear el QR de ESTE negocio— y que se comía justo el sitio donde
+   hacen falta los platillos. La marca se conserva en los COLORES del tema. */
 
 /* ---------- Promociones ---------- */
 
@@ -183,18 +136,23 @@
 /* ---------- Reparto de la pantalla ----------
    Móvil: una columna. El pedido es la pestaña de pantalla completa (ver
    .carta-vista-tabs); el pie flotante siempre deja ver el total.
-   Escritorio/tableta (>= 900px): menú a la izquierda, pedido en su columna
-   a la derecha y fija al hacer scroll. El total NUNCA se esconde. */
+   Escritorio/tableta (>= 900px): la vista se reparte 70/30 — productos a la izquierda,
+   pedido en su columna a la derecha, pegada al hacer scroll. El total NUNCA se esconde.
+   Ancho COMPLETO: antes todo iba dentro de un bloque de 940 px centrado y sobraba un
+   desierto a los lados mientras las tarjetas se apretaban. */
 
 .carta-layout {
-    max-width: 940px;
-    margin: 0 auto;
+    /* Sin `width: 100%` a propósito: esta página NO trae el reset de `box-sizing`, así que un
+       100% más el relleno del reparto de escritorio desbordaba 25 px y sacaba una barra
+       horizontal. Un bloque ya ocupa el ancho de su padre. */
+    box-sizing: border-box;
 }
 .carta-secciones {
-    padding: 18px 18px 0;
+    padding: 14px 18px 0;
     display: flex;
     flex-direction: column;
     gap: 26px;
+    min-width: 0;
 }
 .carta-seccion-titulo {
     margin: 0 0 12px;
@@ -204,14 +162,19 @@
     border-bottom: 2px solid var(--primary-light);
 }
 
+/* Rejilla ADAPTABLE: tantas columnas como quepan de verdad, con un mínimo de 250 px por
+   tarjeta. Antes eran columnas fijas (1/2/3) que a 1280 px daban tarjetas de 171 px: la
+   foto se llevaba 84 y al texto le quedaban 49, así que el botón "+ Agregar" se salía y
+   pisaba a la tarjeta vecina. Con el mínimo, la tarjeta siempre tiene sitio para lo suyo. */
 .carta-grid {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
     gap: 12px;
 }
 
 .producto-carta {
     display: flex;
+    flex-wrap: wrap;
     gap: 12px;
     padding: 12px;
     background: var(--bg-card);
@@ -219,15 +182,16 @@
     border-radius: var(--ds-radius-lg, 14px);
     box-shadow: var(--shadow-sm);
     position: relative;
+    min-width: 0;
 }
 /* Sin hover: la carta es para leer y tocar, no una rejilla de la que se espera
    una acción al pasar el mouse. */
 
 .producto-imagen {
-    width: 84px;
-    height: 84px;
+    width: 72px;
+    height: 72px;
     border-radius: 12px;
-    flex-shrink: 0;
+    flex: 0 0 auto;
     background-color: var(--bg-light);
     background-size: cover;
     background-position: center;
@@ -241,7 +205,7 @@
 }
 
 .producto-datos {
-    flex: 1;
+    flex: 1 1 150px;
     min-width: 0;
     display: flex;
     flex-direction: column;
@@ -329,17 +293,12 @@
     font-size: .8rem;
 }
 
-/* ---------- Pantallas anchas ---------- */
+/* ---------- Pantallas anchas ----------
+   La rejilla ya se reparte sola (auto-fill), así que aquí solo queda el aire lateral. */
 
 @media (min-width: 640px) {
-    .carta-encabezado, .promo-tira, .carta-secciones, .carta-pie { padding-left: 28px; padding-right: 28px; }
+    .promo-tira, .carta-secciones, .carta-pie { padding-left: 28px; padding-right: 28px; }
     .seccion-nav-lista { padding: 0 28px; }
-    .carta-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .carta-encabezado { max-width: 940px; margin: 0 auto; }
-}
-
-@media (min-width: 1024px) {
-    .carta-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
 /* ============================================================
@@ -351,41 +310,33 @@
    respeta claro/oscuro del teléfono.
    ============================================================ */
 
-/* ---------- Barra del comensal (bajo el encabezado) ---------- */
+/* ---------- Invitación a pedir----------
+   Aquí vivía la "barra del comensal" (un renglón de ancho completo con el nombre de la
+   cuenta, su código y un botón "Pedir"). Se retiró: el código no le sirve al comensal
+   —ya hay otra forma de empezar a pedir— y la barra ocupaba alto en TODAS las vistas.
+   Ahora la invitación vive donde vive el pedido: en la columna del escritorio y en una
+   píldora flotante en el teléfono. */
 
-.diner-barra {
-    display: flex;
+.cta-pedir {
+    position: fixed;
+    right: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    z-index: 490;
+    display: inline-flex;
     align-items: center;
-    gap: 12px;
-    padding: 12px 18px;
-    background: var(--bg-card);
-    border-bottom: 1px solid var(--border-color);
-}
-.diner-barra-info {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex: 1;
-    min-width: 0;
-}
-.diner-barra-info > i {
-    color: var(--primary-color);
-    font-size: 1.1rem;
-    flex-shrink: 0;
-}
-.diner-barra-textos { min-width: 0; }
-.diner-barra-titulo {
-    margin: 0;
+    gap: 9px;
+    padding: 13px 20px;
+    border: none;
+    border-radius: 999px;
+    background: var(--primary-color);
+    color: #fff;
+    font-family: var(--font-heading);
     font-size: .95rem;
     font-weight: 700;
-    color: var(--text-color);
+    box-shadow: var(--shadow-lg);
+    cursor: pointer;
 }
-.diner-barra-sub {
-    margin: 2px 0 0;
-    font-size: .8rem;
-    color: var(--text-medium);
-}
-.diner-barra .btn { flex-shrink: 0; padding: 9px 18px; font-size: .9rem; }
+.cta-pedir:active { transform: translateY(1px); }
 
 /* ---------- Panel del pedido (fijo abajo) ---------- */
 
@@ -429,6 +380,9 @@
 /* Deja hueco bajo la carta para que la barra no tape el último producto. */
 body.con-pedido { padding-bottom: 96px; }
 
+/* Hueco para la píldora "Empezar a pedir": sin esto tapa el botón del último platillo. */
+body.con-cta { padding-bottom: 88px; }
+
 /* ---------- Control de pedido en cada producto ---------- */
 
 .producto-pedir {
@@ -437,11 +391,16 @@ body.con-pedido { padding-bottom: 96px; }
     align-items: center;
     gap: 8px;
     flex-wrap: wrap;
+    min-width: 0;
 }
 .mp-agregar {
     display: inline-flex;
     align-items: center;
+    justify-content: center;   /* se estira o se encoge sin desbordar la tarjeta */
     gap: 7px;
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 100%;
     padding: 8px 16px;
     border: none;
     border-radius: 999px;
@@ -686,6 +645,14 @@ body.con-pedido { padding-bottom: 96px; }
     max-width: 90vw;
     text-align: center;
 }
+/* En el teléfono el aviso va ARRIBA: abajo se topaba con el pie pegado de la hoja del
+   pedido y tapaba justo la línea del total (medido, no supuesto). */
+@media (max-width: 768px) {
+    .mp-aviso {
+        top: calc(10px + env(safe-area-inset-top, 0px));
+        bottom: auto;
+    }
+}
 .mp-aviso.es-error { background: var(--danger-color); color: #fff; }
 .mp-aviso.es-exito { background: var(--success-color); color: #fff; }
 
@@ -755,12 +722,7 @@ body.con-pedido { padding-bottom: 96px; }
 
 /* ---------- El pedido de la mesa ---------- */
 
-.mp-pedido-codigo {
-    margin: 2px 0 0;
-    font-size: .82rem;
-    color: var(--text-medium);
-    letter-spacing: .04em;
-}
+/* Aquí vivía `.mp-pedido-codigo` (el "Código de la cuenta" en la hoja): retirado. */
 .mp-pedido-lista {
     max-height: 46vh;
     overflow-y: auto;
@@ -945,15 +907,9 @@ body.con-pedido { padding-bottom: 96px; }
 @media (min-width: 640px) {
     .mp-overlay { align-items: center; padding: 24px; }
     .mp-modal { border-radius: var(--ds-radius-lg); }
-    .diner-barra { padding-left: 28px; padding-right: 28px; }
+    /* La barra del pedido va a lo ancho de la vista: el reparto ya no está limitado a
+       940 px, así que centrarla con topes la dejaría desalineada con la carta. */
     .pedido-barra { padding-left: 28px; padding-right: 28px; }
-    .pedido-barra {
-        max-width: 940px;
-        margin: 0 auto;
-        border-left: 1px solid var(--border-color);
-        border-right: 1px solid var(--border-color);
-        border-radius: var(--ds-radius-lg) var(--ds-radius-lg) 0 0;
-    }
 }
 
 /* ============================================================
@@ -1004,31 +960,38 @@ body.vista-pedido.con-pedido .pedido-barra { display: none; }
     .carta-vista-tabs { display: none !important; }
     body.vista-pedido .carta-layout { display: block; }
 
+    /* REPARTO 70 / 30. Los productos se llevan siete partes del ancho y el pedido tres,
+       con un mínimo para la columna (300 px) de modo que en pantallas medianas no se
+       aprieta. Antes eran "1fr + 380px fijos": a 1280 el pedido se quedaba con el 30% y
+       los productos con el resto... pero todo dentro de 940 px centrados, así que las
+       tarjetas salían de 171 px y se desbordaban. */
     .carta-layout {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) 380px;
+        grid-template-columns: minmax(0, 7fr) minmax(300px, 3fr);
         align-items: start;
-        gap: 22px;
-        padding: 0 28px;
+        gap: 18px;
+        padding: 0 20px;
     }
-    .carta-secciones { padding: 18px 0 0; }
+    .carta-secciones { padding: 14px 0 0; }
 
-    /* La columna del pedido: fija mientras se hace scroll. */
+    /* La columna del pedido: fija mientras se hace scroll y con el alto de la ventana,
+       para que no se vea "cortada" a media lista (su lista se desplaza por dentro). */
     .pedido-panel {
         position: sticky;
-        top: 16px;
-        margin-top: 18px;
+        top: 14px;
+        margin-top: 14px;
         background: var(--bg-card);
         border: 1px solid var(--border-color);
         border-radius: var(--ds-radius-lg);
         box-shadow: var(--shadow-md);
-        max-height: calc(100vh - 32px);
+        max-height: calc(100dvh - 28px);
         overflow: hidden;
         display: flex;
         flex-direction: column;
     }
     /* El pie flotante estorba cuando el pedido ya tiene su columna. */
     .pedido-barra { display: none !important; }
+    .cta-pedir { display: none !important; }
     body.con-pedido { padding-bottom: 32px; }
 }
 
@@ -1048,12 +1011,34 @@ body.vista-pedido.con-pedido .pedido-barra { display: none; }
     font-size: 1rem;
     color: var(--text-color);
 }
-.pedido-panel-codigo {
-    margin: 2px 0 0;
-    font-size: .8rem;
-    letter-spacing: .06em;
+/* La invitación a pedir dentro de la columna (escritorio, todavía sin cuenta).
+   Aquí vivía `#pedidoPanelCodigo` ("Código XPWW"): el comensal no usa ese código. */
+.pedido-panel-cta {
+    padding: 30px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    text-align: center;
+}
+.pedido-panel-cta-icono {
+    font-size: 1.7rem;
+    color: var(--primary-color);
+}
+.pedido-panel-cta-titulo {
+    margin: 0;
+    font-family: var(--font-heading);
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-color);
+}
+.pedido-panel-cta-texto {
+    margin: 0 0 8px;
+    font-size: .85rem;
+    line-height: 1.5;
     color: var(--text-medium);
 }
+.pedido-panel-cta .mp-accion { align-self: stretch; }
 .pedido-panel-lista {
     flex: 1;
     overflow-y: auto;

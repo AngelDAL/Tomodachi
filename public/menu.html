@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="/public/lib/fontawesome/css/all.min.css?v=4">
     <link rel="stylesheet" href="/public/css/variables.css?v=6">
     <link rel="stylesheet" href="/public/css/design-system.css?v=8">
-    <link rel="stylesheet" href="/public/css/menu-public.css?v=7">
+    <link rel="stylesheet" href="/public/css/menu-public.css?v=10">
 
     <script>
         // El comensal no tiene sesión: el tema se decide por la preferencia de
@@ -46,29 +46,11 @@
     <!-- Carta -->
     <div id="cartaContenido" class="hidden">
 
-        <header class="carta-encabezado">
-            <div class="carta-encabezado-marca">
-                <div id="cartaLogo" class="carta-logo"></div>
-                <div>
-                    <p id="cartaTienda" class="carta-tienda"></p>
-                    <h1 id="cartaNombre" class="carta-nombre"></h1>
-                </div>
-            </div>
-            <p id="cartaBienvenida" class="carta-bienvenida hidden"></p>
-            <p id="cartaDescripcion" class="carta-descripcion hidden"></p>
-        </header>
-
-        <!-- Barra del comensal: solo aparece si la carta permite pedir -->
-        <section id="dinerBar" class="diner-barra hidden">
-            <div class="diner-barra-info">
-                <i class="fas fa-utensils"></i>
-                <div class="diner-barra-textos">
-                    <p id="dinerBarTitulo" class="diner-barra-titulo">Pide desde tu teléfono</p>
-                    <p id="dinerBarSub" class="diner-barra-sub"></p>
-                </div>
-            </div>
-            <button type="button" id="dinerBarBoton" class="btn btn-solid" data-accion="pedir">Pedir</button>
-        </section>
+        <!-- Aquí vivía el encabezado con el logo, el nombre de la tienda, el título de la
+             carta y su descripción. Se retiró: al comensal no le dice nada que no sepa
+             (acaba de escanear el QR de ESTE negocio) y se comía la parte de arriba de la
+             pantalla, que es justo donde hacen falta los platillos. La marca sigue puesta
+             en los COLORES del tema, que es lo que de verdad identifica. -->
 
         <!-- Pestañas del teléfono: la carta y el pedido, a pantalla completa. En
              escritorio no se ven (ahí manda el reparto de dos columnas).
@@ -89,26 +71,37 @@
         </nav>
 
         <div id="cartaLayout" class="carta-layout">
-            <!-- Secciones y productos -->
+            <!-- Secciones y productos: 70% del ancho en escritorio -->
             <main id="secciones" class="carta-secciones"></main>
 
-            <!-- El pedido: columna propia a la derecha (escritorio/tableta) y hoja
-                 inferior en el teléfono. Nunca esconde el total. -->
+            <!-- El pedido: 30% del ancho en escritorio (columna propia) y hoja inferior en el
+                 teléfono. Nunca esconde el total. -->
             <aside id="pedidoPanel" class="pedido-panel hidden" aria-label="Tu pedido">
                 <header class="pedido-panel-cab">
                     <div>
                         <h2 id="pedidoPanelTitulo" class="pedido-panel-titulo">Tu pedido</h2>
-                        <p id="pedidoPanelCodigo" class="pedido-panel-codigo"></p>
                         <p id="pedidoPanelResumen" class="mp-pedido-resumen"></p>
                     </div>
                     <button type="button" id="pedidoPanelCerrar" class="mp-cerrar" data-accion="cerrarPanel" aria-label="Cerrar el pedido">
                         <i class="fas fa-xmark"></i>
                     </button>
                 </header>
+
+                <!-- Sin cuenta todavía: la invitación a pedir vive AQUÍ, en la columna del
+                     pedido, no en una barra de ancho completo que se comía el alto. -->
+                <div id="pedidoPanelCta" class="pedido-panel-cta hidden">
+                    <i class="fas fa-utensils pedido-panel-cta-icono"></i>
+                    <p class="pedido-panel-cta-titulo">Pide desde tu teléfono</p>
+                    <p id="pedidoPanelCtaTexto" class="pedido-panel-cta-texto"></p>
+                    <button type="button" id="pedidoPanelCtaBtn" class="mp-accion" data-accion="pedir">
+                        <i class="fas fa-plus"></i> Empezar a pedir
+                    </button>
+                </div>
+
                 <div id="pedidoPanelLista" class="pedido-panel-lista">
                     <p class="mp-vacio">Cargando el pedido…</p>
                 </div>
-                <div class="pedido-panel-pie">
+                <div id="pedidoPanelPie" class="pedido-panel-pie">
                     <div class="pedido-panel-total">
                         <span>Total de la cuenta</span>
                         <strong id="pedidoPanelTotal">$0.00</strong>
@@ -127,6 +120,12 @@
             <p id="cartaPieAviso"></p>
         </footer>
     </div>
+
+    <!-- Invitación a pedir, en el teléfono y solo mientras no hay cuenta: sustituye a la
+         barra de ancho completo que antes ocupaba un renglón entero bajo el encabezado. -->
+    <button type="button" id="ctaPedir" class="cta-pedir hidden" data-accion="pedir">
+        <i class="fas fa-utensils"></i> Empezar a pedir
+    </button>
 
     <!-- Panel del pedido (fijo abajo). Discreto cuando está vacío. -->
     <div id="orderBar" class="pedido-barra hidden">
@@ -214,8 +213,7 @@
             <div id="hojaAsa" class="mp-hoja-asa" aria-hidden="true"><span></span></div>
             <div class="mp-modal-head">
                 <div>
-                    <h3 id="pedidoTitulo">Pedido de la mesa</h3>
-                    <p id="pedidoCodigo" class="mp-pedido-codigo"></p>
+                    <h3 id="pedidoTitulo">Tu pedido</h3>
                     <p id="pedidoResumen" class="mp-pedido-resumen"></p>
                 </div>
                 <button type="button" class="mp-cerrar" data-cerrar="modalPedido" aria-label="Cerrar">
@@ -281,6 +279,6 @@
     <!-- El QR del par de números: la librería ya viene en el proyecto (la usan los QR de los
          puntos de servicio), así que no se depende de ningún servicio externo. -->
     <script src="/public/lib/qrcodejs/qrcode.min.js"></script>
-    <script src="/public/js/menu-public.js?v=9"></script>
+    <script src="/public/js/menu-public.js?v=12"></script>
 </body>
 </html>

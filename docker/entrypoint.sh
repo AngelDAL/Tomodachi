@@ -91,8 +91,12 @@ date_default_timezone_set('$(php_single_quote_escape "${TZ:-America/Mexico_City}
 
 define('DEBUG_MODE', false);
 
-error_reporting(0);
-ini_set('display_errors', 0);
+// Observabilidad: los errores de la aplicación se REGISTRAN (salen por el error
+// log de php-fpm y supervisord los publica en docker logs) pero NO se muestran
+// al cliente: ni rutas ni consultas SQL en la respuesta HTTP.
+error_reporting(E_ALL);
+ini_set('log_errors', '1');
+ini_set('display_errors', '0');
 PHP
 fi
 

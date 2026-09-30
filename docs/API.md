@@ -38,7 +38,8 @@ edición (responden 403) y se documentan aparte.
 - **Scopes por método**: `GET`→`read` · `POST/PUT/DELETE`→`write` · `custom` (solo tema). El scope `write` **incluye `read` automáticamente**, porque un agente que modifica datos debe poder consultar el estado primero.
 - Endpoints **solo sesión** (no admiten token): `auth/*`, `users/create|update|delete|profile`,
   `stores/create|import_data|upload_logo|save_background`, `terminals/*`, `super_admin/*`,
-  `ai/*`, `sales/cart_sync.php`, `inventory/upload_image.php`.
+  `ai/*`, `inventory/upload_image.php`, y `sales/cart_sync.php` **POST y DELETE** (su `GET`
+  admite sesión o el token firmado del carrito, ver 4.8).
 - **Rate limiter de login**: `login.php` bloquea la IP por 60s (escalando ×5, tope 2h) tras
   5 fallos consecutivos → `429` con header `Retry-After`. Configurable por env `LOGIN_*`.
 
@@ -148,8 +149,10 @@ Los inputs de fecha SIEMPRE usan ISO en la API, independientemente del formato d
 | GET | `api/sales/sale_details.php` | Detalle de venta | sesión/token read |
 | POST | `api/sales/cancel_sale.php` | Cancelar venta | admin/manager write |
 | POST | `api/sales/refund_sale.php` | Devolución parcial | admin/manager write |
-| POST/GET/DELETE | `api/sales/cart_sync.php` | Sincronizar carrito (UUID) | solo sesión |
-| GET | `api/sales/cart_sse.php` | SSE del carrito (display) | público (UUID=llave) |
+| POST | `api/sales/cart_sync.php` | Guardar carrito en curso + emitir token del display | solo sesión |
+| GET | `api/sales/cart_sync.php` | Leer el carrito en curso (display) | sesión o token del carrito |
+| DELETE | `api/sales/cart_sync.php` | Borrar el carrito en curso | solo sesión |
+| GET | `api/sales/cart_sse.php` | SSE del carrito (display) | sesión o token del carrito |
 
 - `create_sale`: `{store_id, items:[{product_id, quantity}], payment_method: cash|card|transfer|mixed|credit, cash_amount?, discount?, tax?, customer_id?, amount_paid?, register_id?, stripe_payment_intent?}`.
   **Los precios se recalculan en el servidor** (ignora el `price` del cliente). Devuelve `data.sale_id`.
@@ -159,6 +162,13 @@ Los inputs de fecha SIEMPRE usan ISO en la API, independientemente del formato d
 - `sale_details`: query `sale_id` → incluye `customer_name` y `created_via` (session|token).
 - `cancel_sale`: `{sale_id}` → devuelve stock.
 - `refund_sale`: `{sale_id, items:[{product_id, quantity}], reason?}` → reingresa stock y registra devolución (parcial acumulable).
+- Carrito en curso (`cart_sync.php`, `cart_sse.php`): **la UUID no es credencial**. La lectura
+  exige sesión de navegador **o** el token firmado del carrito (canal `cart:<uuid>`,
+  `hash_hmac('sha256', "cart:<uuid>|<exp>", WS_SECRET)`) que devuelve el POST autenticado en
+  `data.cart_token`; el POS lo añade al enlace del display (`?cart=<uuid>&exp=<exp>&token=<firma>`).
+  El `DELETE` exige sesión. Sin `WS_SECRET` no hay lectura por token (fail closed): el display
+  del mismo navegador sigue funcionando por sesión, el de otro dispositivo no.
+  `GET`/`DELETE` con la sesión de otra tienda → `403`.
 
 ### 4.9 Tiendas / Configuración
 
@@ -304,7 +314,76 @@ completa en `stripe/README.md`.
 
 ---
 
-### 4.18 Salud (liveness / readiness)
+### 4.18 CoDi — cobro digital (webhook con firma)
+
+| Método | Ruta | Descripción | Auth |
+|---|---|---|---|
+| POST | `api/codi/webhook.php` | Notificación del proveedor CoDi (pagado / expirado / cancelado) | público **con firma HMAC** |
+
+- La petición se autentica con la **firma HMAC-SHA256 del cuerpo crudo**,
+  calculada con el `webhook_secret` de la tienda (`codi_settings.webhook_secret`):
+  - Header `X-Webhook-Signature: <hex hmac-sha256>` (respaldo `X-Signature`;
+    se acepta el prefijo opcional `sha256=`).
+  - **Byte-string firmado**: el cuerpo tal como llegó por el cable
+    (`file_get_contents('php://input')`). No se re-serializa: firmar
+    `json_encode(json_decode($body))` produce otra cadena, así que **no valida**;
+    la firma tampoco se acepta dentro del payload.
+  - Ejemplo: `SIG=$(php -r 'echo hash_hmac("sha256", file_get_contents("body.json"), $secreto);')`,
+    enviado con `--data-binary @body.json` (nunca reescribiendo el JSON).
+- **Fail closed**: sin `webhook_secret` (vacío o NULL) o sin firma ⇒ **401** y
+  `codi_payments.status` intacto. No existe el modo "sin firma", tampoco en
+  desarrollo.
+- Otras puertas antes de tocar estado: CoDi deshabilitado para la tienda
+  (`codi_settings.enabled = 0`) ⇒ **403**; folio que pertenece a otra tienda ⇒
+  **403** (queda en el log con `RequestContext`, con ids y sin payload).
+- El `store_id` del payload elige de qué tienda es el secreto; el folio debe
+  pertenecer a esa misma tienda.
+- Folio inexistente con firma válida ⇒ **200** con `warning` y sin escribir: el
+  webhook no es un oráculo de folios.
+- Idempotencia: `provider_event_id` repetido no reprocesa, y un pago ya `paid`
+  no se vuelve a marcar.
+- Verificación: `MARIADB_BIN=<dir> bash docker/verify_codi_webhook_nodocker.sh`
+  (crea su propia base desechable y mide HTTP + SQL antes/después) y
+  `php tests/codi_webhook_signature_test.php` (firma, sin base de datos).
+
+---
+
+### 4.19 Comandas y estaciones (preparación)
+
+La ronda que se manda a preparar. **No es la cuenta** (`api/dining/session.php`) ni
+el cobro (el POS). Las comandas se parten por estación y el tablero es lo que ve la
+cocina.
+
+| Método | Ruta | Descripción | Auth |
+|---|---|---|---|
+| GET | `api/dining/comandas.php` | Tablero: `?estacion=N`, `?historicas=1`, `?comanda=N`, `?catalogo=N` | sesión o token, scope `read` |
+| POST | `api/dining/comandas.php` | `{action:'start'\|'ready'\|'served'\|'print'\|'reimprimir'\|'cancel', comanda_id}` | sesión o token, scope `write` |
+| GET | `api/dining/stations.php` | Estaciones, sus salidas y cuántos productos tiene cada una | sesión o token, scope `read` |
+| POST | `api/dining/stations.php` | `{action:'guardar'\|'activar'\|'borrar'\|'asignar', ...}` | rol de piso o token con `write` |
+
+#### Cola de impresión ESC/POS (TAB-22)
+
+Si la estación tiene una salida `kind='print'` **activa y con `host`**, el `send` de
+la comanda encola un trabajo en `print_jobs` con el ticket ya renderizado en ESC/POS.
+Lo consume `scripts/print-worker.php`, que escribe los bytes por TCP al puerto 9100.
+
+- `{action:'reimprimir', comanda_id}` pone el trabajo de vuelta en la cola (botón
+  "Reintentar" del tablero). Responde **409** con el motivo cuando no hay a dónde
+  imprimir (sin salida configurada, o la cola apagada por `PRINT_QUEUE_ENABLED=false`).
+- La respuesta del tablero incluye, por comanda, `print_status`
+  (`none|queued|printed|failed`), `print_attempts`, `print_last_error` y
+  `print_failed_at`; y a nivel raíz `impresion.enabled`, que le dice a la pantalla si
+  la impresión sale del servidor o sigue siendo la del navegador.
+- **Lo que "impreso" significa:** 9100 no devuelve confirmación de impresión física.
+  `printed` = "los bytes salieron de la máquina", no "hay papel en la cocina". Sin
+  papel o con la tapa abierta el puerto acepta TCP y traga el ticket.
+- Configuración de la salida (`stations.php`, dentro de `salidas[]`): `kind`, `target`
+  (etiqueta humana), `host` (IPv4 privada), `paper_width` (`58|80`), `charset`
+  (`cp437|cp850`), `has_drawer`. Un `host` que no sea IPv4 de rango privado se rechaza
+  con **422**: es la barrera contra SSRF (campo de usuario -> conexión saliente del
+  servidor). La UI todavía no captura `host`; pendiente la pasada de Security Lead.
+
+### 4.20 Salud (liveness / readiness)
 
 Sin auth a propósito: los consume el `HEALTHCHECK` del contenedor cada 30 s y
 cualquier orquestador. **No abren sesión** (el healthcheck corre 2,880 veces al

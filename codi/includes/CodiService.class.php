@@ -14,6 +14,29 @@
  * @package Tomodachi\CoDi
  */
 
+/**
+ * Rechazo de un webhook de CoDi con el código HTTP que corresponde.
+ *
+ * El webhook es una ruta de dinero: un rechazo debe llegar al proveedor con un
+ * código distinto de 200 (401 firma / 403 tienda o módulo) y sin tocar estado.
+ */
+class CodiWebhookException extends Exception
+{
+    /** @var int */
+    private $httpCode;
+
+    public function __construct(string $message, int $httpCode = 400)
+    {
+        parent::__construct($message);
+        $this->httpCode = $httpCode;
+    }
+
+    public function getHttpCode(): int
+    {
+        return $this->httpCode;
+    }
+}
+
 class CodiService
 {
     /** @var Database */
@@ -446,20 +469,43 @@ class CodiService
     }
     
     /**
-     * Procesar webhook de Banxico/proveedor
-     * 
-     * @param array $payload Datos del webhook
-     * @param string $signature Firma del webhook
+     * Procesar webhook de Banxico/proveedor.
+     *
+     * La petición se autentica con la FIRMA HMAC-SHA256 del **cuerpo crudo**,
+     * calculada con el `webhook_secret` de esta tienda (`codi_settings`), y
+     * viaja en el header `X-Webhook-Signature` (respaldo `X-Signature`). El
+     * byte-string firmado es el cuerpo tal cual llegó
+     * (`file_get_contents('php://input')`): **no** se re-serializa el payload.
+     *
+     * Puertas, en orden, antes de tocar estado:
+     *   1. firma sobre el cuerpo crudo — fail closed (401);
+     *   2. módulo CoDi habilitado para la tienda (403);
+     *   3. el folio debe pertenecer a esta tienda (403).
+     *
+     * @param array $payload Datos del webhook (sólo lectura de campos; no autentica)
+     * @param string $signature Firma recibida (header)
+     * @param string|null $rawBody Cuerpo crudo; null ⇒ se lee de php://input
      * @return bool
+     * @throws CodiWebhookException si la firma, el módulo o la tienda no pasan
      * @throws Exception
      */
-    public function handleWebhook(array $payload, string $signature = ''): bool
+    public function handleWebhook(array $payload, string $signature = '', ?string $rawBody = null): bool
     {
-        // Validar firma del webhook
-        if (!$this->validateWebhookSignature($payload, $signature)) {
-            throw new Exception('Firma de webhook inválida');
+        if ($rawBody === null) {
+            $raw = file_get_contents('php://input');
+            $rawBody = ($raw === false) ? '' : $raw;
         }
-        
+
+        // 1) Validar firma sobre el byte-string que llegó (nunca re-serializado)
+        if (!$this->validateWebhookSignature($rawBody, $signature)) {
+            throw new CodiWebhookException('Firma de webhook inválida', 401);
+        }
+
+        // 2) CoDi deshabilitado ⇒ no se marca nada
+        if (!$this->isEnabled()) {
+            throw new CodiWebhookException('CoDi deshabilitado para la tienda', 403);
+        }
+
         $folioCodi = $payload['folio_codi'] ?? $payload['folioCoDi'] ?? null;
         $eventType = $payload['event_type'] ?? $payload['resultado'] ?? 'unknown';
         
@@ -467,11 +513,20 @@ class CodiService
             throw new Exception('Webhook sin folioCoDi');
         }
         
-        // Buscar pago por folio
+        // 3) Buscar el pago por folio. Sin filtro de tienda a propósito: así se
+        //    detecta un folio ajeno (dos tiendas ≠ confundir sus pagos).
         $payment = $this->db->selectOne(
-            'SELECT payment_id, status FROM codi_payments WHERE folio_codi = ? AND store_id = ?',
-            [$folioCodi, $this->storeId]
+            'SELECT payment_id, store_id, status FROM codi_payments WHERE folio_codi = ?',
+            [$folioCodi]
         );
+        
+        if ($payment && (int)$payment['store_id'] !== $this->storeId) {
+            $this->logRequestError(
+                'CodiService::handleWebhook - el folio no pertenece a la tienda del webhook'
+                . ' (store_id=' . $this->storeId . ', dueño=' . (int)$payment['store_id'] . ')'
+            );
+            throw new CodiWebhookException('Tienda no coincide con el folio del pago', 403);
+        }
         
         if (!$payment) {
             throw new Exception('Pago no encontrado para folio: ' . $folioCodi);
@@ -848,19 +903,80 @@ class CodiService
     }
     
     /**
-     * Validar firma del webhook
+     * Secreto de webhook de ESTA tienda.
+     *
+     * Se resuelve de `codi_settings.webhook_secret` (una fila por tienda): los 8
+     * llamadores construyen el servicio sin configuración, así que el secreto no
+     * puede depender del tercer argumento del constructor. Ese argumento queda
+     * sólo como respaldo explícito para pruebas.
+     *
+     * @return string Secreto, o '' si no hay (fail closed: no valida nada)
      */
-    private function validateWebhookSignature(array $payload, string $signature): bool
+    public function getWebhookSecret(): string
     {
-        $secret = $this->config['webhook_secret'] ?? '';
-        
-        // Si no hay secreto configurado, aceptar (solo desarrollo)
-        if (!$secret) {
-            return true;
+        $configured = $this->config['webhook_secret'] ?? '';
+        if (is_string($configured) && $configured !== '') {
+            return $configured;
         }
-        
-        $expected = hash_hmac('sha256', json_encode($payload), $secret);
-        return hash_equals($expected, $signature);
+
+        try {
+            $settings = $this->db->selectOne(
+                'SELECT webhook_secret FROM codi_settings WHERE store_id = ?',
+                [$this->storeId]
+            );
+        } catch (Exception $e) {
+            // Sin tabla/columna no hay secreto con el que validar: fail closed.
+            $this->logRequestError('CodiService::getWebhookSecret - ' . $e->getMessage());
+            return '';
+        }
+
+        $secret = $settings['webhook_secret'] ?? '';
+        return is_string($secret) ? $secret : '';
+    }
+
+    /**
+     * Validar firma del webhook: HMAC-SHA256 del CUERPO CRUDO con el secreto de
+     * la tienda, comparado en tiempo constante (`hash_equals`).
+     *
+     * El byte-string firmado es el cuerpo tal cual llegó, no una
+     * re-serialización: `json_encode(json_decode($body))` produce otro
+     * byte-string (orden/espacios/escapes) y su firma es INVÁLIDA.
+     *
+     * FAIL CLOSED: sin secreto configurado, o sin firma, el resultado es
+     * inválido. No existe el "aceptar todo" (tampoco en desarrollo).
+     *
+     * @param string $rawBody Cuerpo crudo de la petición
+     * @param string $signature Firma del header (hex; se acepta prefijo `sha256=`)
+     * @return bool
+     */
+    private function validateWebhookSignature(string $rawBody, string $signature): bool
+    {
+        $secret = $this->getWebhookSecret();
+
+        if ($secret === '' || $signature === '') {
+            return false;
+        }
+
+        $signature = trim($signature);
+        if (stripos($signature, 'sha256=') === 0) {
+            $signature = substr($signature, 7);
+        }
+
+        $expected = hash_hmac('sha256', $rawBody, $secret);
+        return hash_equals($expected, strtolower($signature));
+    }
+
+    /**
+     * Registrar un rechazo del webhook en el log de la petición.
+     *
+     * Sólo ids y la ruta: nunca el payload ni la firma (datos de negocio y
+     * material de autenticación no van al log).
+     */
+    private function logRequestError(string $message): void
+    {
+        if (class_exists('RequestContext')) {
+            RequestContext::error($message);
+        }
     }
     
     /**

@@ -10,6 +10,7 @@ require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
 require_once '../../includes/Validator.class.php';
 require_once '../../includes/Mail.class.php';
+require_once '../../includes/UrlHelper.class.php';
 require_once '../../includes/LoginRateLimiter.class.php';
 
 require_once __DIR__ . '/../../includes/Cors.class.php';
@@ -35,6 +36,24 @@ try {
     if (!Validator::validateEmail($email)) {
         Response::validationError(['email' => 'Correo electrónico inválido']);
     }
+
+    // El enlace de recuperación se ENVÍA POR CORREO y lleva el token en claro: su
+    // base no puede salir de la petición. `UrlHelper::base()` prefiere APP_URL y
+    // sólo cae a HTTP_HOST cuando APP_URL está vacía — y HTTP_HOST lo elige el
+    // cliente, así que con `Host: evil.com` el token acabaría en el servidor del
+    // atacante. Sin APP_URL no hay forma de firmar un enlace confiable, así que
+    // aquí se FALLA CERRADO: ni token ni correo.
+    //
+    // Va ANTES de buscar al usuario (y del rate limiter) para que la respuesta sea
+    // idéntica exista o no el correo: si dependiera de eso, añadiría enumeración.
+    if (trim((string)getenv('APP_URL')) === '') {
+        RequestContext::error('forgot_password: APP_URL no está definida; no se emite enlace de recuperación (configuración incompleta)');
+        Response::error(
+            'La recuperación de contraseña no está disponible en este servidor: falta configurar APP_URL.',
+            500,
+            ['code' => 'app_url_missing']
+        );
+    }
     
     $db = new Database();
 
@@ -55,22 +74,24 @@ try {
     if ($user) {
         // Generar token único
         $token = bin2hex(random_bytes(32));
-        $expires = date('Y-m-d H:i:s', strtotime('+1 hour'));
         
         // Guardar SOLO el hash del token: si la base de datos se filtra, los
         // enlaces de recuperación pendientes no son utilizables.
-        $db->update('UPDATE users SET reset_token_hash = ?, reset_token_expires_at = ? WHERE user_id = ?', [hash('sha256', $token), $expires, $user['user_id']]);
+        //
+        // La caducidad la calcula SQL (NOW() + 1 hora), NO PHP: el contenedor va en
+        // hora de México y MariaDB en UTC, así que un `date('Y-m-d H:i:s')` de PHP se
+        // guardaba 6 h en el futuro y `reset_password.php` (que compara contra
+        // NOW()) lo veía vencido desde el primer segundo. Ver AGENTS.md, sección de
+        // tiempo y fechas: nada temporal calculado en PHP que después se compare
+        // contra la base.
+        $db->update(
+            'UPDATE users SET reset_token_hash = ?, reset_token_expires_at = DATE_ADD(NOW(), INTERVAL 1 HOUR) WHERE user_id = ?',
+            [hash('sha256', $token), $user['user_id']]
+        );
         
-        // URL pública de la app: definir APP_URL (p. ej.
-        // https://tu-dominio) para no depender del header Host de la petición.
-        $baseUrl = getenv('APP_URL');
-        if (!$baseUrl) {
-            $isHttps = (!empty($_SERVER['HTTPS']) && strtolower($_SERVER['HTTPS']) !== 'off')
-                || ((int)($_SERVER['SERVER_PORT'] ?? 0) === 443)
-                || (getenv('TRUSTED_PROXY_HEADER') && strtolower(trim(explode(',', $_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')[0])) === 'https');
-            $baseUrl = ($isHttps ? 'https://' : 'http://') . ($_SERVER['HTTP_HOST'] ?? 'localhost');
-        }
-        $resetLink = rtrim($baseUrl, '/') . '/public/reset_password.html?token=' . urlencode($token);
+        // Base URL confiable: la de APP_URL (garantizada más arriba), nunca
+        // HTTP_HOST. Es la misma política que documenta includes/UrlHelper.class.php.
+        $resetLink = UrlHelper::base() . '/public/reset_password.html?token=' . urlencode($token);
         
         try {
             $mailer = new Mail();

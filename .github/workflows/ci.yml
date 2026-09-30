@@ -12,6 +12,10 @@ name: CI — suites sin instancia
 #
 # Este workflow no publica imágenes ni usa credenciales: solo lee el repo.
 on:
+  # Gate de publicación: build-images.yml lo invoca como job (`uses:`) y sus jobs
+  # de imagen declaran `needs: ci`. `needs` NO cruza archivos de workflow, así que
+  # la única forma de que las suites bloqueen la publicación es llamarlo aquí.
+  workflow_call:
   push:
     branches: [community-edition]
   pull_request:

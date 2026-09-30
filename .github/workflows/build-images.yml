@@ -20,7 +20,13 @@ env:
   IMAGE_WS: ghcr.io/angeldal/tomodachi-ws
 
 jobs:
+  # Puerta: mismas suites sin instancia que corre ci.yml. Si fallan, no se
+  # construye ni se publica ninguna imagen (fail fast en el borde).
+  ci:
+    uses: ./.github/workflows/ci.yml
+
   build:
+    needs: ci
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

@@ -1,0 +1,69 @@
+name: CI — suites sin instancia
+
+# Suites que NO necesitan un servidor vivo: reglas de negocio del frontend y del
+# backend, y la matriz de estados del healthcheck. Corren en un runner limpio, en
+# segundos, y sin tocar la red ni la base de datos.
+#
+# Lo que queda FUERA a propósito (ver la tarea TAB-15 para el plan):
+# docker/test_*.sh y docker/test_suite.sh hablan con una instancia viva
+# (MariaDB + app + sesión admin), tests/ws_*.py con el relay WebSocket, y
+# docker/test_service_worker.sh con Chrome headless. Nada de eso corre hoy aquí:
+# exige aprovisionar servicios en el job.
+#
+# Este workflow no publica imágenes ni usa credenciales: solo lee el repo.
+on:
+  push:
+    branches: [community-edition]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  suites-sin-instancia:
+    name: Suites sin instancia (node + php)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # node >= 22: lo pide docker/test_service_worker.sh y basta para los tests
+      # de tests/*_test.js, que usan node:assert sin dependencias.
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Misma versión que la imagen (Dockerfile:5 -> FROM php:8.2-fpm), para que
+      # el verde de CI signifique lo mismo que en el contenedor que se publica.
+      - name: PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: none
+
+      - name: Sintaxis PHP de todo el árbol
+        run: |
+          set -o pipefail
+          echo "Archivos PHP en el checkout: $(find . -name '*.php' -not -path './vendor/*' | wc -l)"
+          find . -name '*.php' -not -path './vendor/*' -print0 \
+            | xargs -0 -n1 -P4 php -l
+
+      - name: Reglas JS (existencias + promociones)
+        run: bash docker/unit_tests.sh
+
+      - name: Reglas de promociones (PHP)
+        run: php tests/promotion_rules_test.php
+
+      - name: Matriz de estados del healthcheck (sin BD)
+        run: php tests/health_check_test.php
+
+      - name: Sintaxis de las suites de WebSocket
+        run: python3 -m py_compile tests/ws_auth_test.py tests/ws_event_test.py

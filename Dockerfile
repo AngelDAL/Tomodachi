@@ -35,8 +35,16 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www/html
 COPY . .
 
-# Dependencias PHP (phpmailer)
-RUN if [ -f composer.json ]; then composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader || true; fi
+# Dependencias PHP (phpmailer + stripe-php).
+# Sin `|| true` a propósito: un fallo al instalar deja la imagen sin vendor/ y el
+# correo revienta en runtime (includes/Mail.class.php:16 instancia PHPMailer).
+# Falla temprano y ruidoso: el build se cae y no se publica nada.
+RUN if [ -f composer.json ]; then \
+        composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-progress; \
+    else \
+        echo "ERROR: falta composer.json — la imagen quedaría sin phpmailer ni stripe-php" >&2; \
+        exit 1; \
+    fi
 
 # Assets por defecto (fuera del volumen app_uploads para poder sembrarlos al arranque)
 RUN mkdir -p /opt/tomodachi-assets/products /opt/tomodachi-assets/backgrounds

@@ -54,7 +54,8 @@ class FakeDb
         private array $tables = [],
         private array $versions = [],
         private int $failures = 0,
-        private bool $muerta = false
+        private bool $muerta = false,
+        private array $columns = ['status', 'attempts', 'error_text', 'last_attempt_at']
     ) {}
 
     public function query(string $sql): FakeStatement
@@ -78,8 +79,16 @@ class FakeDb
         if (str_contains($sql, 'SELECT 1')) {
             return 1;
         }
+        // information_schema.columns: params = [tabla, columna]
+        if (str_contains($sql, 'information_schema.columns')) {
+            return in_array($params[1] ?? '', $this->columns, true) ? 1 : 0;
+        }
         if (str_contains($sql, 'information_schema')) {
             return in_array($params[0] ?? '', $this->tables, true) ? 1 : 0;
+        }
+        // Conteo de fallos: la tabla de control (TAB-39) o la tabla aparte antigua.
+        if (str_contains($sql, "status = 'failed'")) {
+            return $this->failures;
         }
         if (str_contains($sql, HealthCheck::FAILURE_TABLE)) {
             return $this->failures;
@@ -142,7 +151,7 @@ $todo = HealthCheck::evaluate($opts + ['pdo' => $viva]);
 probar('ready: todo en orden → ok / 200', $todo['status'] === HealthCheck::OK && $todo['http_code'] === 200, json_encode($todo['checks'], JSON_UNESCAPED_UNICODE));
 probar('ready: el cuerpo trae las 6 familias de checks', count($todo['checks']) === 6, implode(', ', array_keys($todo['checks'])));
 probar('ready: control de migraciones presente → ok', $todo['checks']['schema_control']['status'] === HealthCheck::OK, $todo['checks']['schema_control']['detail']);
-probar('ready: sin registro de fallos → unknown (informativo, no cambia el código)', $todo['checks']['migrations_failed']['status'] === HealthCheck::UNKNOWN, $todo['checks']['migrations_failed']['detail']);
+probar('ready: tabla de control al día → migrations_failed ok con failed=0', $todo['checks']['migrations_failed']['status'] === HealthCheck::OK && ($todo['checks']['migrations_failed']['failed'] ?? null) === 0, $todo['checks']['migrations_failed']['detail']);
 
 $faltantes = array_slice($todas, 0, 2);
 $parcial = new FakeDb(['schema_migrations'], array_values(array_diff($todas, $faltantes)));
@@ -150,9 +159,25 @@ $pendientes = HealthCheck::evaluate($opts + ['pdo' => $parcial]);
 probar('ready: migraciones pendientes → not_ready / 503', $pendientes['status'] === HealthCheck::NOT_READY && $pendientes['http_code'] === 503, $pendientes['checks']['migrations_pending']['detail']);
 probar('ready: el detalle nombra la migración pendiente', str_contains($pendientes['checks']['migrations_pending']['detail'], $faltantes[0]), $pendientes['checks']['migrations_pending']['detail']);
 
-$conFallos = new FakeDb(['schema_migrations', HealthCheck::FAILURE_TABLE], $todas, 2);
+// TAB-39: la tabla de control distingue estados. Una fila `status='failed'` → degraded
+// y el número queda en `failed` (criterio `migrations_failed:1` de la tarea).
+$conFallos = new FakeDb(['schema_migrations'], $todas, 1);
 $degradado = HealthCheck::evaluate($opts + ['pdo' => $conFallos]);
-probar('ready: migración fallida → degraded / 200', $degradado['status'] === HealthCheck::DEGRADED && $degradado['http_code'] === 200, $degradado['checks']['migrations_failed']['detail']);
+probar('ready: 1 migración fallida en la tabla de control → degraded / 200', $degradado['status'] === HealthCheck::DEGRADED && $degradado['http_code'] === 200, $degradado['checks']['migrations_failed']['detail']);
+probar('ready: el check expone el número en `failed` (=1)', ($degradado['checks']['migrations_failed']['failed'] ?? null) === 1, json_encode($degradado['checks']['migrations_failed'], JSON_UNESCAPED_UNICODE));
+probar('ready: el detalle de las fallidas apunta a schema_status.sh', str_contains($degradado['checks']['migrations_failed']['detail'], 'schema_status.sh'), $degradado['checks']['migrations_failed']['detail']);
+
+// Esquema viejo (código nuevo, base sin la columna `status`): no se puede saber, y un
+// `ok` mentiría. Se responde `unknown` con la instrucción.
+$esquemaViejo = new FakeDb(['schema_migrations'], $todas, 0, false, ['attempts']);
+$sinEstado = HealthCheck::evaluate($opts + ['pdo' => $esquemaViejo]);
+probar('ready: tabla de control sin columna status → unknown (no ok)', $sinEstado['checks']['migrations_failed']['status'] === HealthCheck::UNKNOWN, $sinEstado['checks']['migrations_failed']['detail']);
+probar('ready: el detalle del unknown dice qué hacer', str_contains($sinEstado['checks']['migrations_failed']['detail'], 'status'), $sinEstado['checks']['migrations_failed']['detail']);
+
+// Compatibilidad con la tabla de fallos aparte de ediciones antiguas.
+$fallosViejos = new FakeDb(['schema_migrations', HealthCheck::FAILURE_TABLE], $todas, 2, false, []);
+$degradadoViejo = HealthCheck::evaluate($opts + ['pdo' => $fallosViejos]);
+probar('ready: edición antigua con tabla de fallos aparte → degraded', $degradadoViejo['status'] === HealthCheck::DEGRADED, $degradadoViejo['checks']['migrations_failed']['detail']);
 
 $sinControl = new FakeDb([], $todas);
 $sinEsquema = HealthCheck::evaluate($opts + ['pdo' => $sinControl]);

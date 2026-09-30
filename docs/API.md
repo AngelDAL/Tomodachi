@@ -327,9 +327,20 @@ día: con `session_start()` creaba un archivo por corrida) y **no leen ni acepta
 
 Checks: `db` (`SELECT 1` con `PDO::ATTR_TIMEOUT=2`), `config` (constantes `DB_*` +
 `config/database.php`), `schema_control` (tabla `schema_migrations`),
-`migrations_pending`, `migrations_failed` (hoy `unknown`: el entrypoint registra
-las fallidas como aplicadas) y `storage` (`is_writable` + espacio libre mayor a
-`HEALTH_MIN_FREE_MB`, default 200).
+`migrations_pending`, `migrations_failed` y `storage` (`is_writable` + espacio
+libre mayor a `HEALTH_MIN_FREE_MB`, default 200).
+
+`migrations_failed` cuenta las filas con `status='failed'` de `schema_migrations`
+(desde TAB-39; antes el entrypoint registraba las fallidas como aplicadas y el
+dato no existía) y expone el número en el campo `failed`:
+
+```json
+{"status":"degraded","detail":"1 migración(es) fallida(s) en `schema_migrations`: …","failed":1}
+```
+
+Si la tabla de control todavía no tiene la columna `status` (contenedor sin
+reiniciar tras actualizar), el check responde `unknown` —informativo, no cambia el
+código HTTP— en vez de un `ok` que mentiría.
 
 El cuerpo SIEMPRE trae `status`. El detalle (`checks`, `version`, `time`) solo
 llega si `REMOTE_ADDR` es loopback o si el header `X-Health-Token` coincide con

@@ -19,7 +19,8 @@ require_once __DIR__ . '/RequestContext.class.php';
  *   config             configuración inyectada en runtime (DB_* + config/database.php)
  *   schema_control     tabla de control de migraciones (`schema_migrations`)
  *   migrations_pending migraciones del repo sin registrar en la tabla de control
- *   migrations_failed  migraciones fallidas (si la edición las registra; si no: unknown)
+ *   migrations_failed  migraciones con `status='failed'` en la tabla de control
+ *                      (desde TAB-39; antes se registraban como aplicadas)
  *   storage            escritura en uploads/sesiones + espacio libre > HEALTH_MIN_FREE_MB
  *
  * ESTADOS Y CÓDIGOS
@@ -61,7 +62,7 @@ class HealthCheck
     /** Tabla de control que crea `docker/entrypoint.sh`. */
     public const CONTROL_TABLE = 'schema_migrations';
 
-    /** Tabla opcional de fallos de migración (si la edición la registra). */
+    /** Tabla de fallos de migración de ediciones antiguas (compatibilidad). */
     public const FAILURE_TABLE = 'schema_migration_failures';
 
     /** Tope de espera al conectar a la BD, en segundos (el HEALTHCHECK corta a los 3 s). */
@@ -266,6 +267,16 @@ class HealthCheck
         return (int) $stmt->fetchColumn() > 0;
     }
 
+    /** Consulta a information_schema: ¿existe la columna en esa tabla? */
+    private static function columnExists($pdo, string $table, string $column): bool
+    {
+        $stmt = $pdo->prepare(
+            'SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?'
+        );
+        $stmt->execute([$table, $column]);
+        return (int) $stmt->fetchColumn() > 0;
+    }
+
     /** `schema_control`: existe la tabla de control de migraciones. */
     public static function checkSchemaControl($pdo, string $table = self::CONTROL_TABLE): array
     {
@@ -318,33 +329,58 @@ class HealthCheck
     /**
      * `migrations_failed`: migraciones que fallaron al aplicarse.
      *
-     * Esta edición NO las registra: `docker/entrypoint.sh` anota las fallidas
-     * como aplicadas (decisión documentada, para no reintentarlas en cada boot),
-     * así que hoy ese dato no existe en ningún lado y se reporta `unknown`
-     * (informativo, no cambia el código HTTP). Si en el futuro existe la tabla
-     * `schema_migration_failures`, este check la lee y devuelve:
-     *   > 0 filas → degraded (200)   ·   0 filas → ok
+     * Desde TAB-39 la tabla de control las distingue: `docker/migrations.sh` marca
+     * la fila `status='failed'` y guarda el stderr del cliente en `error_text`
+     * (además de loguearlo). Este check cuenta esas filas:
+     *   > 0 filas → degraded (200)  ·  0 filas → ok
+     * El número viaja en el campo `failed` del propio check, para que un monitor
+     * pueda leerlo sin parsear el texto:
+     *   {"status":"degraded","detail":"…","failed":1}
+     *
+     * COMPATIBILIDAD
+     * - Esquema viejo (código nuevo con base que aún no tiene la columna `status`,
+     *   p. ej. contenedor sin reiniciar): el dato NO existe, así que se responde
+     *   `unknown` con la instrucción en vez de un `ok` que mentiría.
+     * - Ediciones que registraban los fallos en una tabla aparte
+     *   (`schema_migration_failures`): se sigue leyendo si esa tabla existe.
      */
-    public static function checkMigrationsFailed($pdo, string $table = self::FAILURE_TABLE): array
+    public static function checkMigrationsFailed($pdo, string $controlTable = self::CONTROL_TABLE, string $failureTable = self::FAILURE_TABLE): array
     {
         try {
-            if (!self::tableExists($pdo, $table)) {
-                return self::result(
-                    self::UNKNOWN,
-                    'esta edición no registra migraciones fallidas: el entrypoint marca las fallidas como aplicadas'
-                );
+            if (!self::tableExists($pdo, $controlTable)) {
+                return self::result(self::UNKNOWN, "sin tabla de control `{$controlTable}`");
             }
-            $stmt = $pdo->query("SELECT COUNT(*) FROM `{$table}`");
-            $failed = (int) $stmt->fetchColumn();
+
+            if (self::columnExists($pdo, $controlTable, 'status')) {
+                $stmt = $pdo->prepare("SELECT COUNT(*) FROM `{$controlTable}` WHERE status = 'failed'");
+                $stmt->execute();
+                $failed = (int) $stmt->fetchColumn();
+                if ($failed > 0) {
+                    return self::result(
+                        self::DEGRADED,
+                        "{$failed} migración(es) fallida(s) en `{$controlTable}`: `docker/schema_status.sh` las lista con su error"
+                    ) + ['failed' => $failed];
+                }
+                return self::result(self::OK, 'sin migraciones fallidas registradas') + ['failed' => 0];
+            }
+
+            if (self::tableExists($pdo, $failureTable)) {
+                $stmt = $pdo->query("SELECT COUNT(*) FROM `{$failureTable}`");
+                $failed = (int) $stmt->fetchColumn();
+                if ($failed > 0) {
+                    return self::result(self::DEGRADED, "{$failed} migración(es) fallida(s) registrada(s): revisar `{$failureTable}`") + ['failed' => $failed];
+                }
+                return self::result(self::OK, 'sin migraciones fallidas registradas') + ['failed' => 0];
+            }
+
+            return self::result(
+                self::UNKNOWN,
+                "la tabla de control `{$controlTable}` no distingue estados (falta la columna status): reinicia el contenedor para que el arranque añada las columnas"
+            );
         } catch (Throwable $e) {
             RequestContext::error('HealthCheck::checkMigrationsFailed - ' . $e->getMessage());
             return self::result(self::UNKNOWN, 'no se pudo consultar el registro de fallos');
         }
-
-        if ($failed > 0) {
-            return self::result(self::DEGRADED, "{$failed} migración(es) fallida(s) registrada(s): revisar `{$table}`");
-        }
-        return self::result(self::OK, 'sin migraciones fallidas registradas');
     }
 
     /**
@@ -424,6 +460,7 @@ class HealthCheck
                 );
                 $checks['migrations_failed'] = self::checkMigrationsFailed(
                     $pdo,
+                    $opts['control_table'] ?? self::CONTROL_TABLE,
                     $opts['failure_table'] ?? self::FAILURE_TABLE
                 );
             } else {

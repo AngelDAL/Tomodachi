@@ -33,6 +33,10 @@ services:
       DB_PASS: ${DB_PASS:-tomodachi_secret}
       APP_MODE: ${APP_MODE:-OPEN_SOURCE}
       SEED_DEMO: ${SEED_DEMO:-false}
+      # Intentos por migración fallida antes de dejar de reintentarla en cada
+      # arranque (ver `docker/migrations.sh`); 0 = no se reintenta ninguna.
+      # `docker/schema_status.sh` y `ready.php` dicen qué quedó fallido.
+      MIGRATION_MAX_ATTEMPTS: ${MIGRATION_MAX_ATTEMPTS:-3}
       TZ: ${TZ:-America/Mexico_City}
       # Proxy confiable (p. ej. Cloudflare Tunnel → CF-Connecting-IP): usa la
       # IP real del cliente en el rate limiting. Vacío = usar REMOTE_ADDR.

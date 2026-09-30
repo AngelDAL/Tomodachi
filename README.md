@@ -81,6 +81,7 @@ regístrate para crear tu negocio.
 | `DB_PASS` | `tomodachi_secret` | Contraseña de la BD |
 | `APP_MODE` | `OPEN_SOURCE` | `OPEN_SOURCE` = todo habilitado; `SAAS` = planes freemium |
 | `SEED_DEMO` | `false` | `true` = carga semilla inicial de prueba; `false` (default) = catálogo vacío |
+| `MIGRATION_MAX_ATTEMPTS` | `3` | Intentos por migración fallida antes de dejar de reintentarla en cada arranque |
 | `TZ` | `America/Mexico_City` | Zona horaria |
 
 Tu información (base de datos e imágenes) vive en los volúmenes Docker
@@ -99,6 +100,14 @@ docker compose up -d          # imagen precompilada (rápido)
 El contenedor detecta y aplica automáticamente las migraciones pendientes,
 registrándolas en la tabla `schema_migrations`. No hay que ejecutar SQL a
 mano.
+
+Cada fila guarda **en qué quedó**: `applied` (se ejecutó), `baseline` (ya venía
+en `database/schema.sql`, no se ejecutó) o `failed` (falló; el error del cliente
+queda en `error_text` y se reintenta hasta `MIGRATION_MAX_ATTEMPTS`, default 3).
+Una migración que falla **no** bloquea el arranque, pero deja de ser invisible:
+`api/health/ready.php` responde `degraded` y el operador tiene la vista completa
+con `bash docker/schema_status.sh` (lista versiones, estado, intentos, cuándo fue
+el último intento y el error).
 
 ## Agentes de IA e integraciones
 

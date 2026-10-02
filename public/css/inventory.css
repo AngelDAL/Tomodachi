@@ -4066,13 +4066,23 @@
 /* El historial en tarjetas por debajo de 1024: la tabla de siete columnas no cabe sin
    apretarse y no hay razón para leerla apretada en una tableta. */
 @media (max-width: 1023px) {
-    /* Movimientos: convertir tabla a cards */
+    /* Movimientos: convertir tabla a cards.
+       Se deja de SER tabla de verdad: con `display:table` el algoritmo sigue calculando el
+       ancho mínimo de las celdas y, con renglones que ya son flex, la tabla terminaba midiendo
+       336 px dentro de un contenedor de 286 y recortaba 60 px a la derecha. En bloque, el 100%
+       es el 100%. */
     .movements-table-wrap { overflow-x: visible; }
-    .movements-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+    .movements-table { display: block; width: 100%; border-collapse: separate; border-spacing: 0; }
+    .movements-table tbody { display: block; width: 100%; }
     .movements-table thead { display: none; }
     .movements-table tbody tr {
         display: flex;
         flex-direction: column;
+        /* `box-sizing` explícito: con el valor por defecto (content-box) el relleno se SUMA al
+           100% del ancho y la tarjeta queda 24 px más ancha que su contenedor; como la tabla se
+           dimensiona con la fila más ancha, el bloque acababa recortando 60 px a la derecha. */
+        box-sizing: border-box;
+        max-width: 100%;
         background: var(--bg-card);
         border: 1px solid var(--border-light, #e5e7eb);
         border-radius: 10px;
@@ -4086,12 +4096,19 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
+        /* Sin esto, un texto en una sola línea (el nombre del producto con su foto) impone su
+           ancho completo como mínimo y la tarjeta se sale 56 px de su contenedor: la tabla no
+           puede encogerse por debajo del min-content de sus celdas. */
+        min-width: 0;
+        max-width: 100%;
+        gap: 10px;
         padding: 3px 0;
         border-bottom: 1px solid var(--border-lighter, #f3f4f6);
         font-size: 0.82rem;
         white-space: normal;
     }
     .movements-table td:last-child { border-bottom: none; }
+    .movements-table td > * { min-width: 0; }
     .movements-table td::before {
         content: attr(data-label);
         font-weight: 600;
@@ -4469,7 +4486,7 @@
 
 /* La foto del producto también en el historial: la misma lectura en todas las listas. */
 .mov-producto { display:flex; align-items:center; gap:8px; min-width:0; }
-.mov-producto > span:last-child { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mov-producto > span:last-child { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .mov-producto .mov-foto { width:32px; height:32px; }
 
 /* ---- El resumen de lo administrativo, en la propia Lista ---- */

@@ -57,6 +57,17 @@ define('MOVEMENT_SALE', 'sale');
 define('MOVEMENT_RETURN', 'return');
 define('MOVEMENT_PURCHASE', 'purchase');
 define('MOVEMENT_LOSS', 'loss');
+define('MOVEMENT_TRANSFER', 'transfer');
+
+// Motivos de un EGRESO de inventario (inventory_exits.reason). El motivo es OPCIONAL:
+// NULL = sin especificar. 'loss', 'damage' y 'expiry' se registran como pérdida en el
+// libro de movimientos; 'transfer' tiene su propio tipo; el resto como salida normal.
+define('EXIT_REASON_TRANSFER', 'transfer');
+define('EXIT_REASON_LOSS', 'loss');
+define('EXIT_REASON_DAMAGE', 'damage');
+define('EXIT_REASON_EXPIRY', 'expiry');
+define('EXIT_REASON_INTERNAL', 'internal');
+define('EXIT_REASON_OTHER', 'other');
 
 // Estados de compra
 define('PURCHASE_DRAFT', 'draft');

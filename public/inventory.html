@@ -160,6 +160,24 @@
                         </div>
                         <div id="purchasesList" class="purchases-list"></div>
                     </div>
+
+                    <!-- EGRESOS DE INVENTARIO (salidas que no son ventas): traspaso, pérdida,
+                         siniestro, caducidad, consumo interno. Es una subsección de este mismo
+                         tab, hermana de «Próximas Compras»: el ingreso mete y el egreso saca.
+                         Aquí NO hay precios ni confirmación: al registrar, el stock ya bajó. -->
+                    <div class="purchases-container" style="margin-top:20px;">
+                        <div class="purchases-header">
+                            <h3><i class="fas fa-box-open"></i> Salidas de inventario</h3>
+                            <button type="button" id="newExitBtn" class="btn-add-product">
+                                <i class="fas fa-arrow-right-from-bracket"></i> Nueva salida
+                            </button>
+                        </div>
+                        <div class="purchases-filters">
+                            <div class="filter-chips" id="exitFilterChips"></div>
+                        </div>
+                        <div id="exitsList" class="purchases-list"></div>
+                    </div>
+
                     <div class="movements-container" style="margin-top:20px;">
                         <div class="movements-header">
                             <h3><i class="fas fa-arrows-spin"></i> Historial de Movimientos</h3>
@@ -173,6 +191,7 @@
                                 <option value="sale">Venta</option>
                                 <option value="return">Devolución</option>
                                 <option value="loss">Pérdida</option>
+                                <option value="transfer">Traspaso</option>
                                 <option value="adjustment">Ajuste</option>
                             </select>
                             <input type="date" id="movementDateFrom" class="filter-date" placeholder="Desde">
@@ -1261,7 +1280,8 @@
     <script src="js/tour.js?v=4"></script>
     <script src="js/inventory.js?v=21"></script>
     <script src="js/stock-rule.js?v=1"></script>
-    <script src="js/purchases.js?v=11"></script>
+    <script src="js/purchases.js?v=12"></script>
+    <script src="js/inventory-exits.js?v=1"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             const session = await checkSession();

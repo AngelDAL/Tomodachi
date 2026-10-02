@@ -4238,3 +4238,42 @@
  .detail-item-fields { grid-template-columns:1fr; }
  .detail-item-name strong { font-size:.82rem; }
 }
+
+/* ============================================================
+   EGRESOS DE INVENTARIO (salidas que no son ventas)
+   ------------------------------------------------------------
+   Las tarjetas y el composer son los MISMOS de «Próximas Compras»
+   (purchase-card, composer-layout, purchase-product-card…): el mismo
+   problema se ve igual en toda la pantalla. Aquí solo vive lo que el
+   egreso tiene de propio: el motivo y el destino del traspaso.
+   ============================================================ */
+.exit-field-label { display:block; font-size:.82rem; font-weight:600; color:var(--text-muted); margin-bottom:6px; }
+.exit-field-label small { font-weight:400; }
+.exit-reason-chips { margin-bottom:10px; }
+.exit-reason-chips .filter-chip { min-height:38px; }
+.exit-destino-caja {
+  display:flex; flex-direction:column; gap:10px; margin-bottom:12px; padding:10px;
+  border:1px dashed var(--border-color); border-radius:var(--ds-radius-md);
+}
+.exit-destino-caja label { display:flex; flex-direction:column; gap:4px; font-size:.82rem; color:var(--text-muted); }
+.exit-destino-caja input, .exit-destino-caja select { min-height:38px; }
+.exit-detail p { margin:0 0 8px; color:var(--text-color); }
+.exit-detail-head { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.exit-detail-head .purchase-status { position:static; }
+.exit-num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+/* En el teléfono el botón de la salida ocupa su renglón: se toca con el pulgar. */
+@media (max-width: 600px) {
+  .purchases-header .btn-add-product { width:100%; justify-content:center; }
+  .exit-reason-chips .filter-chip { flex:1 1 auto; justify-content:center; }
+}
+.exit-sin-destinos { margin:0; font-size:.82rem; color:var(--text-muted); display:flex; gap:8px; align-items:flex-start; }
+.exit-sin-destinos i { margin-top:2px; color:var(--primary-color); }
+
+/* En el teléfono el encabezado de sección se APILA: el título en su renglón y el botón de
+   abajo a lo ancho. En fila, un título de tres palabras se partía en tres líneas al lado
+   del botón (visto en 390). */
+@media (max-width: 600px) {
+  .purchases-header { flex-direction: column; align-items: stretch; gap: 8px; }
+  .purchases-header h3 { font-size: 1.02rem; }
+  .purchases-header .btn-add-product { width: 100%; justify-content: center; }
+}

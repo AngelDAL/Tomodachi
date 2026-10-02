@@ -4,8 +4,8 @@
  */
 const PURCHASE_STATUS_LABELS = { draft:'Borrador', pending:'Pendiente', executed:'Ejecutada', cancelled:'Cancelada' };
 const PURCHASE_STATUS_COLORS = { draft:'#6b7280', pending:'#f59e0b', executed:'#10b981', cancelled:'#ef4444' };
-const MOVEMENT_TYPE_LABELS = { entry:'Entrada', exit:'Salida', adjustment:'Ajuste', sale:'Venta', return:'Devolución', purchase:'Compra', loss:'Pérdida' };
-const MOVEMENT_TYPE_COLORS = { entry:'#10b981', exit:'#ef4444', adjustment:'#6b7280', sale:'#3b82f6', return:'#f59e0b', purchase:'#8b5cf6', loss:'#dc2626' };
+const MOVEMENT_TYPE_LABELS = { entry:'Entrada', exit:'Salida', adjustment:'Ajuste', sale:'Venta', return:'Devolución', purchase:'Compra', loss:'Pérdida', transfer:'Traspaso' };
+const MOVEMENT_TYPE_COLORS = { entry:'#10b981', exit:'#ef4444', adjustment:'#6b7280', sale:'#3b82f6', return:'#f59e0b', purchase:'#8b5cf6', loss:'#dc2626', transfer:'#0ea5e9' };
 let purchaseProducts = [];
 let selectedPurchaseProducts = new Map();
 let currentPurchaseId = null;

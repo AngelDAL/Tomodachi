@@ -286,16 +286,22 @@ class BomHelper {
      * @param float $qty  unidades del ensamblado vendidas.
      * @param array $lotOverrides  [product_id => lot_id] selección explícita de presentación
      *                             (utilizado en modo 'manual' de ese componente).
+     * @param string $etiqueta     'venta' (por omisión) o 'salida' para un egreso de inventario:
+     *                             solo cambia la NOTA del libro de movimientos.
+     * @param string $refType      reference_type del movimiento: 'sale' o 'exit'.
+     * @param string $movType      tipo de movimiento ('exit', 'loss', 'transfer'): un egreso
+     *                             por pérdida o traspaso no se registra igual que una venta.
      */
-    public function consumeForSale($db, $store_id, $user_id, $sale_id, $product_id, $qty, $lotOverrides = [], $allowNegative = false) {
+    public function consumeForSale($db, $store_id, $user_id, $sale_id, $product_id, $qty, $lotOverrides = [], $allowNegative = false, $etiqueta = 'venta', $refType = 'sale', $movType = MOVEMENT_EXIT) {
         $leaves = [];
         $stack = [];
+        $ref = ['id' => $sale_id, 'type' => $refType];
         $this->explodeInto($store_id, $product_id, (float)$qty, $leaves, $stack);
         foreach ($leaves as $lid => $need) {
             $m = $this->meta($store_id, $lid);
             if ($m['tracking_type'] === 'none') continue;
             if ($m['tracking_type'] === TRACKING_COMPONENT) {
-                $this->consumeLots($db, $store_id, $user_id, $lid, $need, 'Compone venta #'.$sale_id, $m['consume_mode'], $lotOverrides[$lid] ?? null, $allowNegative);
+                $this->consumeLots($db, $store_id, $user_id, $lid, $need, 'Compone '.$etiqueta.' #'.$sale_id, $m['consume_mode'], $lotOverrides[$lid] ?? null, $allowNegative, $ref, $movType);
                 continue;
             }
             $prev = $m['current_stock'];
@@ -305,8 +311,8 @@ class BomHelper {
                 [$new, $lid, $store_id]
             );
             $db->insert(
-                'INSERT INTO inventory_movements (store_id, product_id, user_id, movement_type, quantity, previous_stock, new_stock, notes, created_at) VALUES (?,?,?,?,?,?,?,?,NOW())',
-                [$store_id, $lid, $user_id, MOVEMENT_EXIT, $need, $prev, $new, 'Compone venta #'.$sale_id]
+                'INSERT INTO inventory_movements (store_id, product_id, user_id, movement_type, quantity, previous_stock, new_stock, notes, reference_id, reference_type, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,NOW())',
+                [$store_id, $lid, $user_id, $movType, $need, $prev, $new, 'Compone '.$etiqueta.' #'.$sale_id, $ref['id'], $ref['type']]
             );
             $this->setCachedStock($lid, $new);
         }
@@ -326,7 +332,9 @@ class BomHelper {
      * alcanzan las presentaciones se descuenta de la última que se tocó —dejándola en
      * negativo—, que es lo que representa la realidad: se debe esa mercancía.
      */
-    private function consumeLots($db, $store_id, $user_id, $pid, $need, $note, $consumeMode = CONSUME_FIFO, $lotId = null, $allowNegative = false) {
+    private function consumeLots($db, $store_id, $user_id, $pid, $need, $note, $consumeMode = CONSUME_FIFO, $lotId = null, $allowNegative = false, $ref = null, $movType = MOVEMENT_EXIT) {
+        $refId = $ref ? $ref['id'] : null;
+        $refType = $ref ? $ref['type'] : null;
         $consumeMode = $this->normalizeConsume($consumeMode);
         if ($consumeMode === CONSUME_MANUAL && $lotId !== null) {
             $lots = $this->db->select(
@@ -349,8 +357,8 @@ class BomHelper {
             $newQty = $qty - $use;
             $this->db->update('UPDATE product_lots SET quantity=? WHERE lot_id=?', [$newQty, (int)$L['lot_id']]);
             $this->db->insert(
-                'INSERT INTO inventory_movements (store_id, product_id, user_id, movement_type, quantity, previous_stock, new_stock, notes, created_at) VALUES (?,?,?,?,?,?,?,?,NOW())',
-                [$store_id, $pid, $user_id, MOVEMENT_EXIT, $use, $qty, $newQty, $note]
+                'INSERT INTO inventory_movements (store_id, product_id, user_id, movement_type, quantity, previous_stock, new_stock, notes, reference_id, reference_type, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,NOW())',
+                [$store_id, $pid, $user_id, $movType, $use, $qty, $newQty, $note, $refId, $refType]
             );
             $remaining -= $use;
             $ultimoLote = ['lot_id' => (int)$L['lot_id'], 'quantity' => $newQty];
@@ -366,8 +374,8 @@ class BomHelper {
             $nuevo = $ultimoLote['quantity'] - $remaining;
             $this->db->update('UPDATE product_lots SET quantity=? WHERE lot_id=?', [$nuevo, $ultimoLote['lot_id']]);
             $this->db->insert(
-                'INSERT INTO inventory_movements (store_id, product_id, user_id, movement_type, quantity, previous_stock, new_stock, notes, created_at) VALUES (?,?,?,?,?,?,?,?,NOW())',
-                [$store_id, $pid, $user_id, MOVEMENT_EXIT, $remaining, $ultimoLote['quantity'], $nuevo, $note . ' (sin existencias)']
+                'INSERT INTO inventory_movements (store_id, product_id, user_id, movement_type, quantity, previous_stock, new_stock, notes, reference_id, reference_type, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,NOW())',
+                [$store_id, $pid, $user_id, $movType, $remaining, $ultimoLote['quantity'], $nuevo, $note . ' (sin existencias)', $refId, $refType]
             );
             return;
         }
@@ -379,8 +387,8 @@ class BomHelper {
             [$pid, $store_id, 'Sin existencias', -$remaining, 0]
         );
         $this->db->insert(
-            'INSERT INTO inventory_movements (store_id, product_id, user_id, movement_type, quantity, previous_stock, new_stock, notes, created_at) VALUES (?,?,?,?,?,?,?,?,NOW())',
-            [$store_id, $pid, $user_id, MOVEMENT_EXIT, $remaining, 0, -$remaining, $note . ' (sin presentaciones)']
+            'INSERT INTO inventory_movements (store_id, product_id, user_id, movement_type, quantity, previous_stock, new_stock, notes, reference_id, reference_type, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,NOW())',
+            [$store_id, $pid, $user_id, $movType, $remaining, 0, -$remaining, $note . ' (sin presentaciones)', $refId, $refType]
         );
     }
 
@@ -388,15 +396,16 @@ class BomHelper {
      * Restituye ingredientes-hoja de un ensamblado (cancelación/devolución).
      * Debe llamarse DENTRO de una transacción abierta. Movimiento 'return'.
      */
-    public function restoreForSale($db, $store_id, $user_id, $sale_id, $product_id, $qty, $note) {
+    public function restoreForSale($db, $store_id, $user_id, $sale_id, $product_id, $qty, $note, $etiqueta = 'venta', $refType = 'sale') {
         $leaves = [];
         $stack = [];
+        $ref = ['id' => $sale_id, 'type' => $refType];
         $this->explodeInto($store_id, $product_id, (float)$qty, $leaves, $stack);
         foreach ($leaves as $lid => $need) {
             $m = $this->meta($store_id, $lid);
             if ($m['tracking_type'] === 'none') continue;
             if ($m['tracking_type'] === TRACKING_COMPONENT) {
-                $this->restoreLots($db, $store_id, $user_id, $lid, $need, $note.' venta #'.$sale_id, $m['consume_mode']);
+                $this->restoreLots($db, $store_id, $user_id, $lid, $need, $note.' '.$etiqueta.' #'.$sale_id, $m['consume_mode'], $ref);
                 continue;
             }
             $prev = $m['current_stock'];
@@ -406,8 +415,8 @@ class BomHelper {
                 [$new, $lid, $store_id]
             );
             $db->insert(
-                'INSERT INTO inventory_movements (store_id, product_id, user_id, movement_type, quantity, previous_stock, new_stock, notes, created_at) VALUES (?,?,?,?,?,?,?,?,NOW())',
-                [$store_id, $lid, $user_id, MOVEMENT_RETURN, $need, $prev, $new, $note.' venta #'.$sale_id]
+                'INSERT INTO inventory_movements (store_id, product_id, user_id, movement_type, quantity, previous_stock, new_stock, notes, reference_id, reference_type, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,NOW())',
+                [$store_id, $lid, $user_id, MOVEMENT_RETURN, $need, $prev, $new, $note.' '.$etiqueta.' #'.$sale_id, $ref['id'], $ref['type']]
             );
             $this->setCachedStock($lid, $new);
         }
@@ -417,7 +426,9 @@ class BomHelper {
      * Restituye cantidad a un componente: la devuelve a la presentación según consume_mode
      * (fifo/manual → la más antigua; lifo → la más reciente). Si no había, crea "Reintegro".
      */
-    private function restoreLots($db, $store_id, $user_id, $pid, $qty, $note, $consumeMode = CONSUME_FIFO) {
+    private function restoreLots($db, $store_id, $user_id, $pid, $qty, $note, $consumeMode = CONSUME_FIFO, $ref = null) {
+        $refId = $ref ? $ref['id'] : null;
+        $refType = $ref ? $ref['type'] : null;
         $consumeMode = $this->normalizeConsume($consumeMode);
         $order = ($consumeMode === CONSUME_LIFO) ? 'DESC' : 'ASC';
         $first = $this->db->selectOne(
@@ -428,8 +439,8 @@ class BomHelper {
             $newQty = (float)$first['quantity'] + (float)$qty;
             $this->db->update('UPDATE product_lots SET quantity=? WHERE lot_id=?', [$newQty, (int)$first['lot_id']]);
             $this->db->insert(
-                'INSERT INTO inventory_movements (store_id, product_id, user_id, movement_type, quantity, previous_stock, new_stock, notes, created_at) VALUES (?,?,?,?,?,?,?,?,NOW())',
-                [$store_id, $pid, $user_id, MOVEMENT_RETURN, (float)$qty, (float)$first['quantity'], $newQty, $note]
+                'INSERT INTO inventory_movements (store_id, product_id, user_id, movement_type, quantity, previous_stock, new_stock, notes, reference_id, reference_type, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,NOW())',
+                [$store_id, $pid, $user_id, MOVEMENT_RETURN, (float)$qty, (float)$first['quantity'], $newQty, $note, $refId, $refType]
             );
         } else {
             $this->db->insert(
@@ -437,8 +448,8 @@ class BomHelper {
                 [$store_id, $pid, 'Reintegro', (float)$qty]
             );
             $this->db->insert(
-                'INSERT INTO inventory_movements (store_id, product_id, user_id, movement_type, quantity, previous_stock, new_stock, notes, created_at) VALUES (?,?,?,?,?,?,?,?,NOW())',
-                [$store_id, $pid, $user_id, MOVEMENT_RETURN, (float)$qty, 0, (float)$qty, $note]
+                'INSERT INTO inventory_movements (store_id, product_id, user_id, movement_type, quantity, previous_stock, new_stock, notes, reference_id, reference_type, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,NOW())',
+                [$store_id, $pid, $user_id, MOVEMENT_RETURN, (float)$qty, 0, (float)$qty, $note, $refId, $refType]
             );
         }
     }

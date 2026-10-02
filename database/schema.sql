@@ -112,7 +112,7 @@ CREATE TABLE inventory_movements (
     store_id INT NOT NULL,
     product_id INT NOT NULL,
     user_id INT NOT NULL,
-    movement_type ENUM('entry', 'exit', 'adjustment', 'sale', 'return', 'purchase', 'loss') NOT NULL,
+    movement_type ENUM('entry', 'exit', 'adjustment', 'sale', 'return', 'purchase', 'loss', 'transfer') NOT NULL,
     quantity DECIMAL(12,3) NOT NULL,
     previous_stock DECIMAL(12,3) NOT NULL,
     new_stock DECIMAL(12,3) NOT NULL,
@@ -158,6 +158,43 @@ CREATE TABLE IF NOT EXISTS product_lots (
     KEY idx_lot_store (store_id),
     FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE CASCADE,
     FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: inventory_exits (Egresos de inventario: salidas sin dinero)
+-- El motivo es OPCIONAL (NULL = sin especificar) y NO hay estados: la fila nace
+-- ejecutada porque el stock se movió en la misma transacción. El destino es informativo.
+CREATE TABLE IF NOT EXISTS inventory_exits (
+    exit_id INT AUTO_INCREMENT PRIMARY KEY,
+    store_id INT NOT NULL,
+    user_id INT NOT NULL,
+    reason ENUM('transfer','loss','damage','expiry','internal','other') NULL,
+    reason_note VARCHAR(255) NULL,
+    destination_store_id INT NULL,
+    destination_note VARCHAR(150) NULL,
+    notes TEXT NULL,
+    item_count INT NOT NULL DEFAULT 0,
+    total_quantity DECIMAL(12,3) NOT NULL DEFAULT 0.000,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE RESTRICT,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE RESTRICT,
+    FOREIGN KEY (destination_store_id) REFERENCES stores(store_id) ON DELETE SET NULL,
+    INDEX idx_exit_store_date (store_id, created_at),
+    INDEX idx_exit_reason (reason),
+    INDEX idx_exit_destination (destination_store_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS inventory_exit_items (
+    item_id INT AUTO_INCREMENT PRIMARY KEY,
+    exit_id INT NOT NULL,
+    product_id INT NOT NULL,
+    quantity DECIMAL(12,3) NOT NULL,
+    previous_stock DECIMAL(12,3) NOT NULL DEFAULT 0.000,
+    new_stock DECIMAL(12,3) NOT NULL DEFAULT 0.000,
+    notes VARCHAR(255) NULL,
+    FOREIGN KEY (exit_id) REFERENCES inventory_exits(exit_id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE RESTRICT,
+    INDEX idx_exit_item_exit (exit_id),
+    INDEX idx_exit_item_product (product_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabla: terminals (Terminales / Puntos de Venta)

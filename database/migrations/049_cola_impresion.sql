@@ -15,7 +15,7 @@
 -- `includes/CashRegister.class.php` quedan intactos.
 --
 -- Por qué 049 y no 048: cuando esta tarea se ejecutó, el número 048 ya lo ocupaba
--- `048_schema_migrations_status.sql` (TAB-39). Los archivos se aplican por nombre
+-- `050_schema_migrations_status.sql` (TAB-39). Los archivos se aplican por nombre
 -- (`sort -V` en docker/migrations.sh), así que meter un segundo 048 aplicaría la
 -- cola ANTES del arreglo del estado de migraciones y dejaría el orden ambiguo.
 --

@@ -63,6 +63,12 @@ jobs:
       - name: Reglas JS (existencias + promociones)
         run: bash docker/unit_tests.sh
 
+      # Un archivo estático que cambia SIN subir su `?v=` es invisible para quien ya visitó la
+      # página: el service worker sirve la copia guardada y parece que el despliegue no llegó
+      # (pasó el 2-oct-2026 con inventory.css). Esta comprobación lo detiene en el push.
+      - name: Versiones de los estáticos (?v=)
+        run: python3 scripts/verificar-versiones.py
+
       - name: Reglas de promociones (PHP)
         run: php tests/promotion_rules_test.php
 

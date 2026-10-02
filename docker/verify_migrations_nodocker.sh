@@ -60,7 +60,7 @@ RUN="$$"
 DB="tomodachi_pos_tab39_${RUN}"
 DB048="tomodachi_pos_tab39_048_${RUN}"
 # Base aparte para el camino del ARRANQUE (tabla de control + columnas): así la
-# aserción del índice de la 048 (sección 5) sigue midiendo la 048 y no el arranque.
+# aserción del índice de la 050 (sección 5) sigue midiendo la 050 y no el arranque.
 DB_FRESCA="tomodachi_pos_tab39_fresca_${RUN}"
 
 MARIADB_BIN="${MARIADB_BIN:?falta MARIADB_BIN (directorio con el cliente `mysql` de MariaDB 10.11)}"
@@ -142,9 +142,9 @@ comprobar "base nueva: status/error_text/attempts/last_attempt_at presentes" "4"
 comprobar "base nueva: el default de status es 'applied'" "'applied'" \
   "$(q "SELECT COLUMN_DEFAULT FROM information_schema.columns WHERE table_schema='$DB048' AND table_name='schema_migrations' AND column_name='status';" "$DB048")"
 
-# 0.a-bis El índice que crea la 048 (`idx_schema_migrations_status`) también lo crea el
+# 0.a-bis El índice que crea la 050 (`idx_schema_migrations_status`) también lo crea el
 # ARRANQUE. La 048 NO se ejecuta en una instalación nueva (las versionadas se registran
-# como `baseline` sin ejecutarse), así que si el índice solo viviera en la 048 las
+# como `baseline` sin ejecutarse), así que si el índice solo viviera en la 050 las
 # instalaciones nuevas se quedarían sin él y las que actualizan sí lo tendrían: dos
 # esquemas para el mismo `schema.sql` (riesgo 1 del veredicto de TAB-47).
 ( DB_NAME="$DB_FRESCA" migrations_ensure_control_table >/dev/null; DB_NAME="$DB_FRESCA" migrations_ensure_columns >/dev/null )
@@ -306,7 +306,7 @@ comprobar "criterio 3: cero fallidas" "0" "$(q "SELECT COUNT(*) FROM schema_migr
 SALIDA4=$(migrations_apply_pending "$MIGRATIONS_DIR" 2>&1)
 printf '%s\n' "$SALIDA4" > "$SCR/run4.txt"
 contiene "criterio 3: lo ya aplicado sigue en [skip]" "$SALIDA4" "[skip] 999_test_falla.sql (applied)"
-contiene "criterio 3: y el baseline también" "$SALIDA4" "[skip] 048_schema_migrations_status.sql (baseline)"
+contiene "criterio 3: y el baseline también" "$SALIDA4" "[skip] 050_schema_migrations_status.sql (baseline)"
 
 ready ready_ok
 comprobar "criterio 3: ready.php → 200" "200" "$READY_CODE"
@@ -374,9 +374,9 @@ comprobar "criterio 6: el camino del dinero no se toca" "0" \
 comprobar "criterio 6: se trabaja en community-edition (main intacta)" "community-edition" \
   "$(git -C "$REPO" rev-parse --abbrev-ref HEAD)"
 
-# Criterio 5: la 048 en una base con la tabla VIEJA, dos veces seguidas.
-OUT5=$(sed '/^[[:space:]]*USE[[:space:]]/Id' "$REPO/database/migrations/048_schema_migrations_status.sql" | $MYSQL "$DB048" 2>&1); RC5=$?
-OUT5B=$(sed '/^[[:space:]]*USE[[:space:]]/Id' "$REPO/database/migrations/048_schema_migrations_status.sql" | $MYSQL "$DB048" 2>&1); RC5B=$?
+# Criterio 5: la 050 en una base con la tabla VIEJA, dos veces seguidas.
+OUT5=$(sed '/^[[:space:]]*USE[[:space:]]/Id' "$REPO/database/migrations/050_schema_migrations_status.sql" | $MYSQL "$DB048" 2>&1); RC5=$?
+OUT5B=$(sed '/^[[:space:]]*USE[[:space:]]/Id' "$REPO/database/migrations/050_schema_migrations_status.sql" | $MYSQL "$DB048" 2>&1); RC5B=$?
 comprobar "criterio 5: 048 sobre tabla vieja, 1.ª vez sin error" "0" "$RC5"
 comprobar "criterio 5: 048 2.ª vez sin error" "0" "$RC5B"
 comprobar "criterio 5: columna status añadida una sola vez" "1" \
@@ -384,8 +384,8 @@ comprobar "criterio 5: columna status añadida una sola vez" "1" \
 comprobar "criterio 5: índice por status presente" "1" \
   "$(q "SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema='$DB048' AND table_name='schema_migrations' AND index_name='idx_schema_migrations_status';" "$DB048")"
 no_contiene "criterio 5: sin 'Duplicate column' en la 2.ª corrida" "$OUT5B" "Duplicate column"
-# Y con las columnas ya puestas por el arranque (no por la 048): tampoco falla.
-OUT5C=$(sed '/^[[:space:]]*USE[[:space:]]/Id' "$REPO/database/migrations/048_schema_migrations_status.sql" | $MYSQL "$DB" 2>&1); RC5C=$?
+# Y con las columnas ya puestas por el arranque (no por la 050): tampoco falla.
+OUT5C=$(sed '/^[[:space:]]*USE[[:space:]]/Id' "$REPO/database/migrations/050_schema_migrations_status.sql" | $MYSQL "$DB" 2>&1); RC5C=$?
 comprobar "criterio 5: 048 sobre la tabla que ya preparó el arranque, sin error" "0" "$RC5C"
 
 # ---------------------------------------------------------------------------
@@ -464,8 +464,8 @@ comprobar "H3: una fallida se registra como 'failed' aunque nadie resolvió el f
 contiene "H3: y su error se guarda" \
   "$(q "SELECT LEFT(error_text,80) FROM schema_migrations WHERE version='995_h3_falla.sql';")" "ERROR"
 contiene "H3: lo ya registrado sigue en [skip] (no se re-ejecuta todo)" "$SALIDA_H3" \
-  "[skip] 048_schema_migrations_status.sql (baseline)"
-no_contiene "H3: la 048 no se vuelve a ejecutar" "$SALIDA_H3" "[ok] 048_schema_migrations_status.sql"
+  "[skip] 050_schema_migrations_status.sql (baseline)"
+no_contiene "H3: la 050 no se vuelve a ejecutar" "$SALIDA_H3" "[ok] 050_schema_migrations_status.sql"
 q "DELETE FROM schema_migrations WHERE version='995_h3_falla.sql';" >/dev/null
 rm -f "$MIGRATIONS_DIR/995_h3_falla.sql"
 ready ready_hallazgos_final

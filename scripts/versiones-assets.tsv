@@ -1,0 +1,41 @@
+# Archivos con ?v= en su URL, su versión actual y el md5 de su contenido.
+# Lo mantiene scripts/verificar-versiones.py --actualizar; no editar a mano.
+# ruta	version	md5
+css/bulk_sales.css	4	0c6f3294f5ee1bf1e36f6cf59eaa90c8
+css/cart_responsive.css	12	93e389961bcab19a1d2a402808f95422
+css/dashboard.css	4	7db3bc104f9e0c845350b21748808cec
+css/design-system.css	8	562206364130d50720fbc825cf93547e
+css/fonts.css	4	35e58fb00cdd00a6d2260d26dc38d3d0
+css/inventory.css	27	862d60fb74f2f76b8fc26ea04139d6f1
+css/landing.css	4	5c70436f4f0c59a13476cbc3062587b4
+css/login.css	12	07632a90a320c3381d1b73e65fa29ebf
+css/main.css	22	c56b6bd66ea417bc5b0cdfdff80e6040
+css/mobile-nav.css	5	cd112fc5358a29e7240bfd7cb33f2bcf
+css/promotions-v2.css	1	73295de67e4dbe5f89e7e4eb19e8e37f
+css/promotions.css	6	10abda9b5e089e80a667c17fc945d7e7
+css/sales.css	47	b721d7ea623fd4fb0d944a292bc85794
+css/scanner_overlay.css	10	ddec787393fac0826aa9a65008753ccc
+css/sidebar-modern.css	6	fa87435b6b0664ddeb4d90b71e8bfc04
+css/variables.css	6	121f6dc3caf9e57ee6af96f4db718ffd
+js/app.js	12	1fd1d24ce2db5b0ce2bf34038d3b768b
+js/cobro.js	2	c01638082a57f1bc9d4ba847e920761b
+js/comandas.js	4	ab84e73c653e427d3f8f3f28e0f156ec
+js/compositor-inventario.js	1	38b5024b58468a02388eb650f19363d7
+js/dashboard.js	3	200245e5ecfc4f29165cffa70760314e
+js/design-system.js	7	a6d47b4914401e512f34f7e692a94b56
+js/inventory-exits.js	2	6370f69254e433bdde41c37fba3a5c0e
+js/inventory.js	21	ff6c352ce8d2b5f505f31efc190fe9b4
+js/profile.js	5	bb6c414aa5f7ca4976761d1a84235828
+js/promotion-client-rules.js	1	43d1b0dc3b3aacfbef6afde115df655d
+js/promotions-v2.js	2	685ed10b0d03cee6df18d1e6908aa8d9
+js/promotions.js	5	3f6b93d5652920d75ff8b5f5ef2a5c1d
+js/purchases.js	13	799ce82e8de197ffb285a98d9676198a
+js/sales.js	46	fe5facc76de868034d3775f7c633c144
+js/scanner.js	4	828bfb406a22a54d12d54517a37faece
+js/sidebar-loader.js	13	d7bd4144a7a76b248ea7dd147f97b6cd
+js/stock-rule.js	1	5818188ed9718de696abeffe9d55909f
+js/stripe-pos.js	1	a261c0664235a63f2da8b4ae3c1194c7
+js/tables.js	10	5a1f87bc2671e64d6920ca09185e032b
+js/theme-init.js	3	f19a5338c4808273acba84e0f21aa214
+js/tour.js	4	45da073236616c3069a0bf1977d34178
+js/ws-realtime.js	1	461256bedbddbc69af5bcd627e5241d7

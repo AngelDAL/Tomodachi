@@ -1,5 +1,5 @@
 -- =============================================================
--- 048 — La tabla de control de migraciones distingue `applied` / `baseline` / `failed`
+-- 050 — La tabla de control de migraciones distingue `applied` / `baseline` / `failed`
 -- =============================================================
 --
 -- Hallazgo 2 de TAB-11: `docker/entrypoint.sh` registraba la migración fallida con

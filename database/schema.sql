@@ -1145,7 +1145,7 @@ CREATE TABLE print_jobs (
     comanda_id INT NULL COMMENT 'NULL en un job que no nace de comanda',
     output_id INT NULL COMMENT 'La salida concreta (station_outputs)',
     kind ENUM('comanda','ticket','corte') NOT NULL DEFAULT 'comanda',
-    payload MEDIUMTEXT NOT NULL COMMENT 'Bytes ESC/POS YA renderizados',
+    payload MEDIUMBLOB NOT NULL COMMENT 'Bytes ESC/POS YA renderizados (binario: cp850/cp437 no son UTF-8 válido)',
     status ENUM('pending','sending','done','failed') NOT NULL DEFAULT 'pending',
     attempts TINYINT UNSIGNED NOT NULL DEFAULT 0,
     last_error VARCHAR(255) NULL,

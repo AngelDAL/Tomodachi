@@ -4642,6 +4642,10 @@
        aparecer (y en una captura se veía lavado). Entra y sale seco, pero se desliza. */
     .ci-pane-activo { visibility:visible; pointer-events:auto; }
     .ci-lista, .ci-detalles { border:0; border-radius:0; background:transparent; }
+    /* La cabecera de la Lista y el renglón-resumen se quedan pegados arriba: mientras se
+       recorren los renglones, el proveedor y las notas siguen a la vista (lo pedido). */
+    .ci-lista > .ci-lista-cab { position:sticky; top:0; z-index:2; padding-bottom:6px; background:var(--bg-body); }
+    .ci-lista > .ci-resumen { position:sticky; top:38px; z-index:2; }
     .ci-seleccion { max-height:none; }
     .ci-galeria, .ci-galeria.en-lista { max-height:none; overflow-y:visible; }
     .ci-galeria { grid-template-columns:repeat(auto-fill,minmax(132px,1fr)); }

@@ -4332,3 +4332,192 @@
   .hist-scroll .movements-table th:nth-child(7), .hist-scroll .movements-table td:nth-child(7) { width:10%; }
   .hist-scroll .movements-table td { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 }
+
+/* ============================================================
+   COMPOSITOR DE INVENTARIO (el de entrada y el de salida)
+   ------------------------------------------------------------
+   Mismo patrón que Punto de Venta: la lupa va DENTRO del campo, los filtros
+   se pliegan y la vista se cambia con un conmutador. Cada tarjeta trae su
+   foto con alt, su nombre completo en el title y un botón EXPLÍCITO; los
+   renglones elegidos llevan la foto de fondo para ahorrar espacio.
+   Solo tokens del tema.
+   ============================================================ */
+.ci-layout { display:grid; grid-template-columns:minmax(0,1.3fr) minmax(330px,1fr); gap:16px; align-items:start; }
+.ci-catalogo, .ci-lista { min-width:0; }
+
+/* ---- Buscador: la lupa dentro de la caja ---- */
+.ci-buscador { display:flex; gap:8px; align-items:stretch; margin-bottom:10px; }
+.ci-caja { position:relative; flex:1 1 auto; min-width:0; display:flex; align-items:center; }
+.ci-caja > i { position:absolute; left:12px; color:var(--text-muted); pointer-events:none; }
+.ci-caja input {
+    width:100%; box-sizing:border-box; padding:11px 12px 11px 36px;
+    border:1px solid var(--border-color); border-radius:var(--ds-radius-md);
+    background:var(--bg-card); color:var(--text-color); font-size:.92rem;
+}
+.ci-caja input:focus-visible { outline:2px solid var(--primary-color); outline-offset:1px; }
+.ci-express { flex:0 0 auto; white-space:nowrap; }
+
+/* ---- Filtros plegables (igual que Punto de Venta) ---- */
+.ci-filtros-cab { display:flex; margin-bottom:8px; }
+.ci-filtros-toggle {
+    display:inline-flex; align-items:center; gap:8px; min-height:40px; padding:8px 14px;
+    border:1px solid var(--border-color); border-radius:var(--ds-radius-pill);
+    background:var(--bg-card); color:var(--text-color); font-family:inherit; font-size:.85rem; cursor:pointer;
+}
+.ci-filtros-toggle:hover { border-color:var(--primary-color); }
+.ci-filtros-flecha, .ci-flecha { transition:transform .18s ease; }
+.ci-filtros-toggle.abierto .ci-flecha { transform:rotate(180deg); }
+.ci-filtros { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; margin-bottom:10px; }
+.ci-filtros .filter-select { min-height:40px; }
+.ci-vista { display:inline-flex; border:1px solid var(--border-color); border-radius:var(--ds-radius-pill); overflow:hidden; justify-self:end; }
+.ci-vista-btn {
+    display:grid; place-items:center; width:44px; min-height:40px; border:0; cursor:pointer;
+    background:var(--bg-card); color:var(--text-muted);
+}
+.ci-vista-btn + .ci-vista-btn { border-left:1px solid var(--border-color); }
+.ci-vista-btn.activo { background:color-mix(in srgb,var(--primary-color) 14%,var(--bg-card)); color:var(--primary-color); }
+
+/* ---- Catálogo ---- */
+.ci-galeria {
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px;
+    max-height:52vh; overflow-y:auto; overscroll-behavior:contain; padding:2px;
+}
+.ci-galeria.en-lista { grid-template-columns:1fr; max-height:52vh; }
+.ci-card {
+    display:flex; flex-direction:column; gap:8px; padding:10px;
+    border:1px solid var(--border-color); border-radius:var(--ds-radius-lg); background:var(--bg-card);
+    box-shadow:var(--ds-shadow-sm);
+}
+.ci-card.elegida { border-color:var(--primary-color); box-shadow:inset 0 0 0 1px var(--primary-color); }
+.ci-galeria.en-lista .ci-card { flex-direction:row; align-items:center; }
+.ci-card-media {
+    flex:0 0 auto; display:grid; place-items:center; width:100%; height:76px;
+    background:var(--bg-body); border-radius:var(--ds-radius-md); overflow:hidden;
+}
+.ci-galeria.en-lista .ci-card-media { width:64px; height:56px; }
+.ci-card-media img { max-width:100%; max-height:100%; object-fit:contain; }
+.ci-card-datos { min-width:0; flex:1 1 auto; display:flex; flex-direction:column; gap:2px; }
+.ci-card-nombre { font-size:.86rem; line-height:1.2; color:var(--text-color); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ci-card-meta { font-size:.74rem; color:var(--text-muted); }
+.ci-card-hay.bajo { color:var(--danger-color); font-weight:700; }
+.ci-card-accion {
+    display:inline-flex; align-items:center; justify-content:center; gap:6px;
+    min-height:40px; padding:8px 10px; border-radius:var(--ds-radius-pill); cursor:pointer;
+    border:1px solid var(--primary-color); background:transparent; color:var(--primary-color);
+    font-family:inherit; font-size:.82rem; font-weight:600;
+}
+.ci-card-accion.puesta { background:color-mix(in srgb,var(--primary-color) 14%,var(--bg-card)); }
+.ci-card-accion:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
+
+/* ---- La lista elegida ---- */
+.ci-lista {
+    background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--ds-radius-lg);
+    padding:14px; display:flex; flex-direction:column; gap:10px;
+}
+.ci-lista-cab { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.ci-lista-cab h3 { margin:0; font-family:var(--font-heading); font-size:1rem; color:var(--text-color); display:flex; align-items:center; gap:8px; }
+.ci-icono {
+    display:grid; place-items:center; width:40px; height:40px; border-radius:var(--ds-radius-pill);
+    border:1px solid var(--border-color); background:var(--bg-card); color:var(--text-muted); cursor:pointer;
+}
+.ci-icono:hover { border-color:var(--danger-color); color:var(--danger-color); }
+.ci-campo { display:flex; flex-direction:column; gap:4px; font-size:.82rem; color:var(--text-muted); }
+.ci-campo-titulo { font-size:.82rem; color:var(--text-muted); }
+.ci-campo input, .ci-campo select, .ci-campo textarea {
+    width:100%; box-sizing:border-box; min-height:40px; padding:9px 10px;
+    border:1px solid var(--border-color); border-radius:var(--ds-radius-md);
+    background:var(--bg-card); color:var(--text-color); font-family:inherit; font-size:.88rem;
+}
+.ci-ayuda { margin:0; font-size:.78rem; color:var(--text-muted); display:flex; align-items:center; gap:8px; }
+.ci-seleccion { display:flex; flex-direction:column; gap:8px; max-height:34vh; overflow-y:auto; }
+.ci-vacio { text-align:center; color:var(--text-muted); font-size:.85rem; padding:18px 10px; }
+.ci-vacio i { font-size:1.3rem; color:var(--primary-color); display:block; margin-bottom:8px; }
+.ci-vacio p { margin:0; }
+
+/* El renglón elegido: la foto va de FONDO (ahorra renglones) con un velo para que el
+   texto se lea sobre cualquier imagen. */
+.ci-fila {
+    position:relative; display:flex; align-items:center; gap:10px; padding:10px;
+    border:1px solid var(--border-color); border-radius:var(--ds-radius-md); background:var(--bg-card);
+    overflow:hidden; touch-action:pan-y; transition:transform .18s ease, background .18s ease;
+}
+.ci-fila-fondo {
+    position:absolute; inset:0; background-size:cover; background-position:center;
+    opacity:.16; filter:saturate(.9); pointer-events:none;
+}
+.ci-fila-velo { position:absolute; inset:0; background:linear-gradient(to right,var(--bg-card),transparent 55%); pointer-events:none; }
+.ci-fila-datos { position:relative; flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:2px; }
+.ci-fila-datos strong { font-size:.87rem; color:var(--text-color); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ci-fila-datos small { font-size:.74rem; color:var(--text-muted); }
+.ci-fila.recien { background:color-mix(in srgb,var(--primary-color) 10%,var(--bg-card)); }
+.ci-fila.arrastrando { transition:none; }
+.ci-fila.para-quitar { background:color-mix(in srgb,var(--danger-color) 16%,var(--bg-card)); border-color:var(--danger-color); }
+.ci-fila-quitar {
+    position:relative; display:grid; place-items:center; width:40px; height:40px; flex:0 0 auto;
+    border:1px solid var(--border-color); border-radius:var(--ds-radius-pill);
+    background:var(--bg-card); color:var(--text-muted); cursor:pointer;
+}
+.ci-fila-quitar:hover { border-color:var(--danger-color); color:var(--danger-color); }
+
+/* Cantidades: de UNA en UNA. Se ocultan las flechitas del navegador porque el
+   control de verdad son los botones de − y +. */
+.ci-paso { position:relative; display:inline-flex; align-items:center; gap:4px; flex:0 0 auto; }
+.ci-paso-btn {
+    display:grid; place-items:center; width:40px; height:40px; cursor:pointer;
+    border:1px solid var(--border-color); border-radius:var(--ds-radius-pill);
+    background:var(--bg-card); color:var(--text-color);
+}
+.ci-paso-btn:hover { border-color:var(--primary-color); color:var(--primary-color); }
+.ci-paso-num {
+    width:60px; min-height:40px; text-align:center; box-sizing:border-box;
+    border:1px solid var(--border-color); border-radius:var(--ds-radius-md);
+    background:var(--bg-card); color:var(--text-color); font-family:var(--font-heading); font-size:.95rem; font-weight:700;
+}
+.ci-paso-num::-webkit-outer-spin-button, .ci-paso-num::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+.ci-paso-num[type=number] { -moz-appearance:textfield; appearance:textfield; }
+
+.ci-pie { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; font-size:.85rem; color:var(--text-muted); }
+.ci-pie-total { display:inline-flex; align-items:baseline; gap:6px; }
+.ci-pie-total strong { font-family:var(--font-heading); font-size:1.05rem; color:var(--text-color); }
+
+/* ---- Motivos (solo salida) ---- */
+.ci-motivos { display:flex; flex-wrap:wrap; gap:6px; }
+.ci-motivo {
+    display:inline-flex; align-items:center; gap:6px; min-height:38px; padding:8px 12px; cursor:pointer;
+    border:1px solid var(--border-color); border-radius:var(--ds-radius-pill);
+    background:var(--bg-card); color:var(--text-color); font-family:inherit; font-size:.8rem;
+}
+.ci-motivo.activo { border-color:var(--primary-color); color:var(--primary-color); background:color-mix(in srgb,var(--primary-color) 12%,var(--bg-card)); }
+.ci-destino { display:flex; flex-direction:column; gap:8px; padding:10px; border:1px dashed var(--border-color); border-radius:var(--ds-radius-md); }
+
+/* ---- Alta express ---- */
+.ci-express-panel {
+    display:flex; flex-direction:column; gap:10px; padding:12px; margin-bottom:4px;
+    border:1px solid var(--primary-color); border-radius:var(--ds-radius-md);
+    background:color-mix(in srgb,var(--primary-color) 6%,var(--bg-card));
+}
+.ci-express-cab { display:flex; align-items:center; justify-content:space-between; }
+.ci-express-cab h4 { margin:0; font-family:var(--font-heading); font-size:.95rem; color:var(--text-color); }
+.ci-express-intro { margin:0; font-size:.8rem; color:var(--text-muted); }
+.ci-express-campos { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:8px; }
+
+/* ---- Tableta y teléfono: una sola columna, catálogo primero ---- */
+@media (max-width: 900px) {
+    .ci-layout { grid-template-columns:1fr; }
+    .ci-galeria, .ci-galeria.en-lista { max-height:none; }
+    .ci-galeria { grid-template-columns:repeat(auto-fill,minmax(132px,1fr)); }
+    .ci-seleccion { max-height:none; }
+    .ci-lista { padding:12px; }
+}
+@media (max-width: 480px) {
+    .ci-galeria { grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:8px; }
+    .ci-card-media { height:64px; }
+    .ci-paso-num { width:52px; }
+    .ci-express { flex:1 1 auto; justify-content:center; }
+}
+
+/* `hidden` tiene que ganarle a mis reglas de display. El atributo lo apaga la hoja del
+   navegador, pero CUALQUIER regla de autor con display (`.ci-filtros{display:grid}`) le gana:
+   sin esto, los filtros no se plegaban y el bloque de destino salía aunque el motivo no
+   fuera un traspaso. */
+.ci-filtros[hidden], .ci-destino[hidden], .ci-galeria[hidden] { display: none; }

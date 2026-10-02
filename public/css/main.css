@@ -3255,3 +3255,21 @@ body .form-actions-centered.acciones-al-menu { display: none; }
     body .client-dialog .modal-header h2 { font-size: 1.02rem; }
     body .client-dialog .modal-body { flex: 1; min-height: 0; overflow-y: auto; padding: 14px; max-height: none !important; }
 }
+
+/* ============================================================
+   .sr-only — texto solo para lectores de pantalla
+   ------------------------------------------------------------
+   Punto de Venta ya usaba esta clase en sus etiquetas («Categoría»,
+   «Ordenar por») pero NO estaba definida en ningún archivo: los rótulos
+   salían a la vista como texto suelto. Se define aquí, que es la hoja que
+   cargan todas las pantallas.
+   ============================================================ */
+.sr-only {
+    position: absolute !important;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}

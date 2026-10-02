@@ -108,9 +108,12 @@ probar('tooltip en cero/negativo dice que no hay existencias', () => {
 
 // ─── 4. Contrato: una sola regla y ningún umbral fijo escondido ────────────
 const dirJs = path.join(__dirname, '..', 'public', 'js');
+// Quién dibuja el badge de existencias y por lo tanto DEBE usar la regla compartida.
+// La captura de inventario (entrada y salida) vive en compositor-inventario.js desde
+// el 2-oct-2026: purchases.js dejó de pintar tarjetas y por eso ya no es consumidor.
 const consumidores = [
   ['punto de venta (badge de las tarjetas)', 'sales.js'],
-  ['compras (Próximas Compras)', 'purchases.js'],
+  ['captura de inventario (entrada y salida)', 'compositor-inventario.js'],
 ];
 for (const [etiqueta, archivo] of consumidores) {
   probar(etiqueta + ': usa la regla compartida', () => {

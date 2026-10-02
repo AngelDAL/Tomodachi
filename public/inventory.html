@@ -45,7 +45,7 @@
                         <i class="fas fa-box"></i> Inventario
                     </button>
                     <button class="inv-tab" data-tab="movements">
-                        <i class="fas fa-arrows-spin"></i> Movimientos
+                        <i class="fas fa-up-down"></i> Entradas y Salidas
                     </button>
                 </div>
 
@@ -125,15 +125,20 @@
                 </section>
                 </div><!-- /inv-tab-content inventory -->
 
-                <!-- TAB: Movimientos y Compras -->
+                <!-- TAB: Entradas y Salidas
+                     Dos secciones SEPARADAS a propósito (entrada arriba, salida abajo) con su
+                     propio color e icono: lo que entra y lo que sale se parecen demasiado como
+                     para compartir botón. El historial va al final, partido en los mismos dos
+                     bloques. -->
                 <div class="inv-tab-content" data-tab="movements" style="display:none;">
-                    <div class="purchases-container">
+                    <div class="purchases-container seccion-entrada">
                         <div class="purchases-header">
-                            <h3><i class="fas fa-cart-shopping"></i> Próximas Compras</h3>
+                            <h3><i class="fas fa-arrow-down-long"></i> Entrada de inventario</h3>
                             <button type="button" id="newPurchaseBtn" class="btn-add-product">
-                                <i class="fas fa-plus"></i> Nueva Orden
+                                <i class="fas fa-plus"></i> Nueva entrada
                             </button>
                         </div>
+                        <p class="seccion-nota">Lo que compras y entra al almacén: se planea, se recibe y se paga.</p>
                         <div class="purchases-filters">
                             <div class="filter-chips" id="purchaseFilterChips">
                                 <button type="button" class="filter-chip active" data-filter="pending">
@@ -161,17 +166,18 @@
                         <div id="purchasesList" class="purchases-list"></div>
                     </div>
 
-                    <!-- EGRESOS DE INVENTARIO (salidas que no son ventas): traspaso, pérdida,
-                         siniestro, caducidad, consumo interno. Es una subsección de este mismo
-                         tab, hermana de «Próximas Compras»: el ingreso mete y el egreso saca.
-                         Aquí NO hay precios ni confirmación: al registrar, el stock ya bajó. -->
-                    <div class="purchases-container" style="margin-top:20px;">
+                    <!-- SALIDA DE INVENTARIO: traspaso, pérdida, siniestro, caducidad, consumo
+                         interno. Hermana de la entrada pero con su propio color, su icono y su
+                         botón, para que nadie confunda una con otra. Aquí NO hay precios ni
+                         confirmación: al registrar, el stock ya bajó. -->
+                    <div class="purchases-container seccion-salida" style="margin-top:20px;">
                         <div class="purchases-header">
-                            <h3><i class="fas fa-box-open"></i> Salidas de inventario</h3>
+                            <h3><i class="fas fa-arrow-up-long"></i> Salida de inventario</h3>
                             <button type="button" id="newExitBtn" class="btn-add-product">
-                                <i class="fas fa-arrow-right-from-bracket"></i> Nueva salida
+                                <i class="fas fa-plus"></i> Nueva salida
                             </button>
                         </div>
+                        <p class="seccion-nota">Lo que sale sin cobrarse: traspaso, pérdida, siniestro, caducidad o consumo interno.</p>
                         <div class="purchases-filters">
                             <div class="filter-chips" id="exitFilterChips"></div>
                         </div>
@@ -180,7 +186,7 @@
 
                     <div class="movements-container" style="margin-top:20px;">
                         <div class="movements-header">
-                            <h3><i class="fas fa-arrows-spin"></i> Historial de Movimientos</h3>
+                            <h3><i class="fas fa-clock-rotate-left"></i> Historial de movimientos</h3>
                         </div>
                         <div class="movements-filters">
                             <select id="movementTypeFilter" class="filter-select">

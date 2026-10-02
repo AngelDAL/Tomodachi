@@ -13,6 +13,9 @@ let currentPurchaseId = null;
 const esc = value => String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 const money = value => (window.FormatUtils?.currency ? window.FormatUtils.currency(Number(value)||0) : `$${(Number(value)||0).toFixed(2)}`);
 const dateText = value => value ? new Date(String(value).replace(' ','T')).toLocaleString('es-MX',{dateStyle:'medium',timeStyle:'short'}) : '—';
+// Corta, para el historial: con siete columnas, la fecha larga se partía en tres renglones
+// y sacaba la tabla del ancho de su tarjeta.
+const dateTextCorto = value => value ? new Date(String(value).replace(' ','T')).toLocaleString('es-MX',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}) : '—';
 const notify = (message, type='info') => window.showNotification ? window.showNotification(message,type) : undefined;
 
 function modalFrame(id, title, body, actions='') {
@@ -100,7 +103,7 @@ function updateFilterCounts() {
 function renderPurchaseList(purchases) {
     const list = document.getElementById('purchasesList'); if (!list) return;
     if (!purchases.length) {
-        list.innerHTML = '<div class="empty-state"><i class="fas fa-cart-shopping"></i><br>No hay órdenes de compra</div>';
+        list.innerHTML = '<div class="empty-state"><i class="fas fa-arrow-down-long"></i><br>No hay entradas</div>';
         return;
     }
     list.innerHTML = purchases.map(p => `
@@ -193,7 +196,7 @@ async function openPurchaseComposer(existingPurchaseId=null) {
         const categories=[...new Map(purchaseProducts.filter(p=>p.category_id).map(p=>[p.category_id,p.category_name])).entries()];
         const body=`<div class="composer-layout"><section class="composer-catalog"><div class="composer-intro"><p>${existing?'Agrega productos a esta lista de compra.':'Selecciona todo lo que deseas comprar.'}</p><button type="button" class="btn-secondary btn-express" id="openExpressProduct"><i class="fas fa-wand-magic-sparkles"></i> Alta express</button></div><div class="catalog-filters"><input type="search" id="purchaseCatalogSearch" placeholder="Buscar por nombre o código" aria-label="Buscar productos"><select id="purchaseCatalogType"><option value="">Producto o componente</option><option value="stock">Productos finales</option><option value="component">Componentes</option></select><select id="purchaseCatalogCategory"><option value="">Todas las categorías</option>${categories.map(([id,name])=>`<option value="${id}">${esc(name)}</option>`).join('')}</select></div><div id="purchaseProductCatalog" class="purchase-product-catalog"></div></section><aside class="composer-order"><div class="composer-order-heading"><h3><i class="fas fa-list-check"></i> Lista de compra</h3><div class="composer-order-tools"><button type="button" class="icon-button danger discard-purchase-list" id="discardPurchaseSelection" title="Vaciar carrito" aria-label="Vaciar carrito"><i class="fas fa-trash"></i></button></div></div><div class="composer-fields"><label>Proveedor<input type="text" id="composerSupplier" maxlength="150" value="${esc(existing?.supplier_name||'')}" placeholder="Opcional"></label><label>Notas<textarea id="composerNotes" rows="2" maxlength="1000" placeholder="Notas de la compra">${esc(existing?.notes||'')}</textarea></label></div><div id="selectedPurchaseItems" class="selected-purchase-items"></div><div class="composer-cart-total"><span>Presupuesto aproximado</span><strong id="composerCartTotal">$0.00</strong></div></aside></div>`;
         const actions=`<button type="button" class="btn-secondary" data-close-modal="purchaseComposerModal">Cerrar</button><button type="button" class="btn-primary" id="savePurchaseComposer"><i class="fas fa-check"></i> Confirmar</button>`;
-        const modal=modalFrame('purchaseComposerModal',`<i class="fas fa-cart-shopping"></i> ${existing?'Editar compra':'Nueva próxima compra'}`,body,actions);
+        const modal=modalFrame('purchaseComposerModal',`<i class="fas fa-arrow-down-long"></i> ${existing?'Editar entrada':'Nueva entrada'}`,body,actions);
         modal.querySelector('[data-close-modal]')?.addEventListener('click',()=>modal.remove());
         ['purchaseCatalogSearch','purchaseCatalogType','purchaseCatalogCategory'].forEach(id=>modal.querySelector('#'+id).addEventListener(id==='purchaseCatalogSearch'?'input':'change',renderComposerCatalog));
         modal.querySelector('#openExpressProduct').addEventListener('click',openExpressProductPanel);
@@ -284,11 +287,11 @@ function renderPurchaseDetail(p) {
     const plannedGrandTotal=p.items.reduce((sum,i)=>sum+Number(i.planned_total_cost||((Number(i.unit_cost)||0)*Number(i.planned_quantity)||0)),0);
     const visibleTotal=p.status==='executed'?Number(p.total_cost||0):plannedGrandTotal;
     const totalLabel=p.status==='executed'?'Total pagado':'Presupuesto aproximado';
-    const body=`<div class="purchase-detail-meta"><div class="detail-meta-row"><i class="fas fa-store"></i><div><strong>Proveedor</strong><span>${esc(p.supplier_name||'Sin proveedor')}</span></div></div><div class="detail-meta-row"><i class="fas fa-calendar"></i><div><strong>Creada</strong><span>${dateText(p.created_at)}</span></div></div><div class="detail-meta-row"><i class="fas fa-circle"></i><div><strong>Estado</strong><span class="purchase-status" style="background:${PURCHASE_STATUS_COLORS[p.status]}">${esc(PURCHASE_STATUS_LABELS[p.status])}</span></div></div><div class="detail-meta-row total"><i class="fas fa-dollar-sign"></i><div><strong>${totalLabel}</strong><strong class="detail-grand-total" id="detailGrandTotal">${money(visibleTotal)}</strong></div></div></div>${p.status==='pending'?'<p class="execution-intro"><i class="fas fa-circle-info"></i> Captura la cantidad recibida y el costo total real pagado por cada producto. La diferencia se ajustará al confirmar.</p><div class="detail-field detail-register-field"><span class="detail-field-label">Caja que paga esta compra</span><select id="purchaseRegisterSelect" class="form-select"><option value="">Cargando cajas…</option></select><small class="detail-register-hint">El dinero sale de esta caja, para que puedas separar tus gastos.</small></div>':''}<div class="detail-list-heading"><h3><i class="fas fa-list"></i> Productos</h3>${editable?'<button type="button" class="btn-secondary" id="detailAddProducts"><i class="fas fa-plus"></i> Agregar productos</button>':''}</div><div class="purchase-detail-items">${hasItems?rows:'<div class="empty-state">Esta orden no tiene productos</div>'}</div>`;
+    const body=`<div class="purchase-detail-meta"><div class="detail-meta-row"><i class="fas fa-store"></i><div><strong>Proveedor</strong><span>${esc(p.supplier_name||'Sin proveedor')}</span></div></div><div class="detail-meta-row"><i class="fas fa-calendar"></i><div><strong>Creada</strong><span>${dateText(p.created_at)}</span></div></div><div class="detail-meta-row"><i class="fas fa-circle"></i><div><strong>Estado</strong><span class="purchase-status" style="background:${PURCHASE_STATUS_COLORS[p.status]}">${esc(PURCHASE_STATUS_LABELS[p.status])}</span></div></div><div class="detail-meta-row total"><i class="fas fa-dollar-sign"></i><div><strong>${totalLabel}</strong><strong class="detail-grand-total" id="detailGrandTotal">${money(visibleTotal)}</strong></div></div></div>${p.status==='pending'?'<p class="execution-intro"><i class="fas fa-circle-info"></i> Captura la cantidad recibida y el costo total real pagado por cada producto. La diferencia se ajustará al confirmar.</p><div class="detail-field detail-register-field"><span class="detail-field-label">Caja que paga esta compra</span><select id="purchaseRegisterSelect" class="form-select"><option value="">Cargando cajas…</option></select><small class="detail-register-hint">El dinero sale de esta caja, para que puedas separar tus gastos.</small></div>':''}<div class="detail-list-heading"><h3><i class="fas fa-list"></i> Productos</h3>${editable?'<button type="button" class="btn-secondary" id="detailAddProducts"><i class="fas fa-plus"></i> Agregar productos</button>':''}</div><div class="purchase-detail-items">${hasItems?rows:'<div class="empty-state">Esta entrada no tiene productos</div>'}</div>`;
     let actions='';
     if(p.status==='pending')actions+='<button type="button" class="btn-primary" id="detailExecute"><i class="fas fa-check"></i> Confirmar</button>';
     if(editable)actions='<button type="button" class="btn-danger-outline" id="detailCancel"><i class="fas fa-ban"></i> Cancelar</button>'+actions;
-    const modal=modalFrame('purchaseDetailModal',`<i class="fas fa-receipt"></i> Compra #${p.purchase_id}`,body,actions);
+    const modal=modalFrame('purchaseDetailModal',`<i class="fas fa-arrow-down-long"></i> Entrada #${p.purchase_id}`,body,actions);
     if(p.status==='pending') {
         const refreshDetailTotal=()=>{const total=[...modal.querySelectorAll('[data-detail-total]')].reduce((sum,input)=>sum+(Number(input.value)||0),0);const label=modal.querySelector('#detailGrandTotal');if(label)label.textContent=money(total);};
         modal.querySelectorAll('[data-detail-total]').forEach(input=>input.addEventListener('input',refreshDetailTotal));
@@ -315,10 +318,59 @@ async function confirmPurchaseFromDetail(p) {
     try{const data=await api('../api/purchases/purchases.php',{method:'PUT',body:JSON.stringify({purchase_id:p.purchase_id,action:'execute',items,register_id})});modal.remove();loadPurchases();loadMovements();notify(`Compra confirmada por ${money(data.data.total_cost)}`,'success');}catch(e){notify(e.message,'error');if(executeBtn)executeBtn.disabled=false;}
 }
 
+/**
+ * Un bloque del historial: ENTRADAS o SALIDAS.
+ *
+ * Van separados, cada uno con su tope de alto y su propio scroll. En una sola lista de
+ * cientos de renglones, una pérdida se pierde entre las compras y el usuario termina
+ * confundiendo lo que entró con lo que salió, que es justo lo que hay que evitar.
+ */
+function bloqueMovimientos(tipo, filas) {
+    const esSalida = tipo === 'salida';
+    const titulo = esSalida ? 'Salidas' : 'Entradas';
+    const icono = esSalida ? 'fa-arrow-up-long' : 'fa-arrow-down-long';
+    const cuerpo = filas.length
+        ? `<div class="movements-table-wrap hist-scroll">
+             <table class="movements-table">
+               <thead><tr><th>Fecha</th><th>Producto</th><th>Tipo</th><th>Cantidad</th><th>Stock</th><th>Detalle</th><th>Usuario</th></tr></thead>
+               <tbody>${filas.map(m => `<tr>
+                   <td data-label="Fecha" class="mov-fecha">${dateTextCorto(m.created_at)}</td>
+                   <td data-label="Producto" class="mov-product" title="${esc(m.product_name)}">${esc(m.product_name)}</td>
+                   <td data-label="Tipo"><span class="mov-type-badge" style="background:${MOVEMENT_TYPE_COLORS[m.movement_type]||'#6b7280'}">${esc(MOVEMENT_TYPE_LABELS[m.movement_type]||m.movement_type)}</span></td>
+                   <td data-label="Cantidad" class="movement-qty ${esSalida?'outgoing':'incoming'}">${esSalida?'-':'+'}${m.quantity}</td>
+                   <td data-label="Stock">${m.previous_stock} → ${m.new_stock}</td>
+                   <td data-label="Detalle" class="mov-notes" title="${esc(m.notes||'')}">${esc(m.notes||'—')}</td>
+                   <td data-label="Usuario" title="${esc(m.user_name)}">${esc(m.user_name)}</td>
+                 </tr>`).join('')}</tbody>
+             </table>
+           </div>`
+        : `<div class="empty-state">${esSalida ? 'Sin salidas registradas' : 'Sin entradas registradas'}</div>`;
+    return `<section class="hist-bloque hist-${tipo}">
+        <h4 class="hist-titulo"><i class="fas ${icono}"></i> ${titulo} <span class="hist-cuenta">${filas.length}</span></h4>
+        ${cuerpo}
+      </section>`;
+}
+
 async function loadMovements() {
-    const list=document.getElementById('movementsList');if(!list)return;list.innerHTML='<div class="empty-state"><i class="fas fa-spinner fa-spin"></i> Cargando movimientos…</div>';
-    const q=new URLSearchParams();const type=document.getElementById('movementTypeFilter')?.value,from=document.getElementById('movementDateFrom')?.value,to=document.getElementById('movementDateTo')?.value;if(type)q.set('type',type);if(from)q.set('date_from',from);if(to)q.set('date_to',to);
-    try{const data=await api(`../api/purchases/inventory_log.php?${q}`);const rows=data.data||[];list.innerHTML=rows.length?`<div class="movements-table-wrap"><table class="movements-table"><thead><tr><th>Fecha</th><th>Producto</th><th>Tipo</th><th>Cantidad</th><th>Stock</th><th>Detalle</th><th>Usuario</th></tr></thead><tbody>${rows.map(m=>{const outgoing=['exit','sale','loss'].includes(m.movement_type);return `<tr><td data-label="Fecha">${dateText(m.created_at)}</td><td data-label="Producto" class="mov-product">${esc(m.product_name)}</td><td data-label="Tipo"><span class="mov-type-badge" style="background:${MOVEMENT_TYPE_COLORS[m.movement_type]||'#6b7280'}">${esc(MOVEMENT_TYPE_LABELS[m.movement_type]||m.movement_type)}</span></td><td data-label="Cantidad" class="movement-qty ${outgoing?'outgoing':'incoming'}">${outgoing?'-':'+'}${m.quantity}</td><td data-label="Stock">${m.previous_stock} → ${m.new_stock}</td><td data-label="Detalle" class="mov-notes">${esc(m.notes||'—')}</td><td data-label="Usuario">${esc(m.user_name)}</td></tr>`}).join('')}</tbody></table></div>`:'<div class="empty-state">No hay movimientos registrados</div>';}catch(e){list.innerHTML=`<div class="empty-state">${esc(e.message)}</div>`;}
+    const list = document.getElementById('movementsList');
+    if (!list) return;
+    list.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i> Cargando movimientos…</div>';
+    const q = new URLSearchParams();
+    const type = document.getElementById('movementTypeFilter')?.value;
+    const from = document.getElementById('movementDateFrom')?.value;
+    const to = document.getElementById('movementDateTo')?.value;
+    if (type) q.set('type', type);
+    if (from) q.set('date_from', from);
+    if (to) q.set('date_to', to);
+    try {
+        const data = await api(`../api/purchases/inventory_log.php?${q}`);
+        const rows = data.data || [];
+        const esSalida = t => ['exit', 'sale', 'loss', 'transfer'].includes(t);
+        list.innerHTML = bloqueMovimientos('entrada', rows.filter(m => !esSalida(m.movement_type)))
+                       + bloqueMovimientos('salida', rows.filter(m => esSalida(m.movement_type)));
+    } catch (e) {
+        list.innerHTML = `<div class="empty-state">${esc(e.message)}</div>`;
+    }
 }
 
 /* Pérdidas desde el drawer existente */

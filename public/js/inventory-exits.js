@@ -333,7 +333,7 @@ async function openExitComposer() {
         const acciones = `<button type="button" class="btn-secondary" data-close-modal="exitComposerModal">Cancelar</button>
             <button type="button" class="btn-primary" id="saveExitBtn"><i class="fas fa-arrow-right-from-bracket"></i> Registrar salida</button>`;
 
-        const modal = modalFrame('exitComposerModal', '<i class="fas fa-box-open"></i> Nueva salida de inventario', body, acciones);
+        const modal = modalFrame('exitComposerModal', '<i class="fas fa-arrow-up-long"></i> Nueva salida', body, acciones);
         modal.querySelector('[data-close-modal]').addEventListener('click', () => modal.remove());
         ['exitCatalogSearch', 'exitCatalogType'].forEach(id => {
             modal.querySelector('#' + id).addEventListener(id === 'exitCatalogSearch' ? 'input' : 'change', renderExitCatalog);

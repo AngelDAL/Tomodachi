@@ -4063,21 +4063,9 @@
 .btn-add-product { background: var(--primary-color, #39c5bb); color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 6px; }
 .btn-add-product:hover { opacity: 0.9; }
 
-@media (max-width: 600px) {
-    .inv-tab { font-size: 0.8rem; padding: 8px 10px; gap: 4px; }
-    .purchase-detail-meta { display:flex; flex-direction:column; gap:2px; }
-    .execute-item-fields { flex-direction: column; align-items: stretch; }
-    .execute-field input { width: 100%; }
-    .detail-item-fields { grid-template-columns:1fr; }
-    .detail-item-read-grid { grid-template-columns:1fr 1fr; gap:6px; }
-    .detail-item-row { padding:10px; }
-
-    /* Movimientos: filtros apilados */
-    .movements-filters { flex-direction: column; gap: 8px; }
-    .movements-filters .filter-select,
-    .movements-filters .filter-date { width: 100%; max-width: 100%; }
-    .movements-filters .btn-secondary { width: 100%; justify-content: center; }
-
+/* El historial en tarjetas por debajo de 1024: la tabla de siete columnas no cabe sin
+   apretarse y no hay razón para leerla apretada en una tableta. */
+@media (max-width: 1023px) {
     /* Movimientos: convertir tabla a cards */
     .movements-table-wrap { overflow-x: visible; }
     .movements-table { width: 100%; border-collapse: separate; border-spacing: 0; }
@@ -4116,6 +4104,23 @@
     }
     .mov-product { white-space: normal; font-weight: 500; }
     .mov-notes { max-width: none; white-space: normal; }
+}
+
+@media (max-width: 600px) {
+    .inv-tab { font-size: 0.8rem; padding: 8px 10px; gap: 4px; }
+    .purchase-detail-meta { display:flex; flex-direction:column; gap:2px; }
+    .execute-item-fields { flex-direction: column; align-items: stretch; }
+    .execute-field input { width: 100%; }
+    .detail-item-fields { grid-template-columns:1fr; }
+    .detail-item-read-grid { grid-template-columns:1fr 1fr; gap:6px; }
+    .detail-item-row { padding:10px; }
+
+    /* Movimientos: filtros apilados */
+    .movements-filters { flex-direction: column; gap: 8px; }
+    .movements-filters .filter-select,
+    .movements-filters .filter-date { width: 100%; max-width: 100%; }
+    .movements-filters .btn-secondary { width: 100%; justify-content: center; }
+
 }
 /* Rediseño del flujo de compras: catálogo táctil y modal único */
 .purchase-modal-content { max-width: 1120px !important; width: min(1120px, calc(100vw - 24px)); max-height: 92vh; overflow-y: auto; }
@@ -4276,4 +4281,54 @@
   .purchases-header { flex-direction: column; align-items: stretch; gap: 8px; }
   .purchases-header h3 { font-size: 1.02rem; }
   .purchases-header .btn-add-product { width: 100%; justify-content: center; }
+}
+
+/* ============================================================
+   ENTRADAS Y SALIDAS — separadas a propósito
+   ------------------------------------------------------------
+   Lo que entra y lo que sale se parecen demasiado como para compartir
+   botón: cada sección tiene su icono, su color y su propio botón, y el
+   historial va partido en los mismos dos bloques con scroll propio.
+   Solo tokens del tema: claro y oscuro salen gratis.
+   ============================================================ */
+.seccion-nota { margin:0 0 12px; color:var(--text-muted); font-size:.85rem; }
+.seccion-entrada .purchases-header h3 i { color:var(--success-color); }
+.seccion-salida .purchases-header h3 i { color:var(--danger-color); }
+.seccion-entrada { border-left:3px solid var(--success-color); }
+.seccion-salida { border-left:3px solid var(--danger-color); }
+
+.hist-bloque + .hist-bloque { margin-top:16px; }
+.hist-titulo {
+  display:flex; align-items:center; gap:8px; margin:0 0 8px;
+  font-family:var(--font-heading,inherit); font-size:.95rem; color:var(--text-color);
+}
+.hist-entrada .hist-titulo i { color:var(--success-color); }
+.hist-salida .hist-titulo i { color:var(--danger-color); }
+.hist-cuenta {
+  margin-left:2px; padding:2px 9px; border-radius:var(--ds-radius-pill);
+  background:var(--bg-body); color:var(--text-muted); font-size:.78rem; font-weight:600;
+}
+/* El tope de alto con scroll: el historial crece para siempre y una lista de cientos de
+   renglones empuja la pantalla hasta hacer perder de vista de qué sección es cada cosa. */
+.hist-scroll { max-height:340px; overflow-y:auto; overscroll-behavior:contain; }
+.hist-scroll thead th { position:sticky; top:0; z-index:1; background:var(--bg-card); }
+@media (max-width: 768px) {
+  .hist-scroll { max-height:300px; }
+}
+/* La fecha del historial, en una línea: siete columnas no perdonan un renglón de más. */
+.mov-fecha { white-space:nowrap; }
+
+/* La tabla del historial REPARTE el ancho en vez de sacar su propia barra horizontal: dentro
+   de un bloque que ya se desplaza en vertical, dos barras se estorban. El texto largo se
+   recorta con puntos suspensivos y el completo vive en el title de la celda. */
+@media (min-width: 1024px) {
+  .hist-scroll .movements-table { width:100%; table-layout:fixed; }
+  .hist-scroll .movements-table th:nth-child(1), .hist-scroll .movements-table td:nth-child(1) { width:13%; }
+  .hist-scroll .movements-table th:nth-child(2), .hist-scroll .movements-table td:nth-child(2) { width:23%; }
+  .hist-scroll .movements-table th:nth-child(3), .hist-scroll .movements-table td:nth-child(3) { width:12%; }
+  .hist-scroll .movements-table th:nth-child(4), .hist-scroll .movements-table td:nth-child(4) { width:10%; }
+  .hist-scroll .movements-table th:nth-child(5), .hist-scroll .movements-table td:nth-child(5) { width:11%; }
+  .hist-scroll .movements-table th:nth-child(6), .hist-scroll .movements-table td:nth-child(6) { width:21%; }
+  .hist-scroll .movements-table th:nth-child(7), .hist-scroll .movements-table td:nth-child(7) { width:10%; }
+  .hist-scroll .movements-table td { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 }

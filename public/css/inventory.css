@@ -4343,7 +4343,24 @@
    Solo tokens del tema.
    ============================================================ */
 .ci-layout { display:grid; grid-template-columns:minmax(0,1.3fr) minmax(330px,1fr); gap:16px; align-items:start; }
-.ci-catalogo, .ci-lista { min-width:0; }
+.ci-catalogo, .ci-lista, .ci-detalles { min-width:0; }
+/* En escritorio el catálogo está siempre a la vista y las pestañas —sin la de Productos—
+   reparten la columna derecha entre los renglones y los detalles. */
+@media (min-width: 901px) {
+    .ci-layout > .ci-catalogo { grid-column:1; grid-row:1 / span 2; }
+    .ci-layout > .ci-lista, .ci-layout > .ci-detalles { grid-column:2; grid-row:1; }
+    .ci-layout > .ci-pane:not(.ci-pane-activo) { display:none; }
+    .ci-pestanas { display:flex; gap:6px; margin-bottom:10px; }
+    .ci-pestana[data-pane="catalogo"] { display:none; }
+    .ci-pestana {
+        flex:0 0 auto; min-height:38px; display:inline-flex; align-items:center; gap:8px;
+        padding:0 14px; border:1px solid var(--border-color); border-radius:var(--ds-radius-pill);
+        background:var(--bg-card); color:var(--text-muted); font-family:inherit;
+        font-size:.84rem; font-weight:600; cursor:pointer;
+    }
+    .ci-pestana.activa { border-color:var(--primary-color); color:var(--primary-color); background:color-mix(in srgb,var(--primary-color) 10%,var(--bg-card)); }
+    .ci-seleccion { max-height:46vh; }
+}
 
 /* ---- Buscador: la lupa dentro de la caja ---- */
 .ci-buscador { display:flex; gap:8px; align-items:stretch; margin-bottom:10px; }
@@ -4420,10 +4437,68 @@
     color:var(--primary-color); font-size:.82rem; font-weight:600;
 }
 
+/* ============================================================
+   LISTAS DE MOVIMIENTOS (detalle de una entrada y de una salida)
+   ------------------------------------------------------------
+   La misma piel que la lista del compositor: foto del producto, nombre y los
+   números en columnas de ancho parejo. Cada lista lleva su tope de alto y su
+   propio desplazamiento, para que lo de arriba —proveedor, motivo, estado— y
+   los botones de abajo no se vayan con el scroll. Nada de tablas: en el
+   teléfono obligaban a leer de reojo.
+   ============================================================ */
+.mov-lista, .purchase-detail-items {
+    display:flex; flex-direction:column; gap:8px;
+    max-height:46vh; min-height:220px; overflow-y:auto; overscroll-behavior:contain; padding:2px;
+}
+.mov-fila {
+    display:flex; flex-direction:column; gap:8px; padding:10px;
+    border:1px solid var(--border-color); border-radius:var(--ds-radius-md); background:var(--bg-card);
+}
+.mov-foto {
+    flex:0 0 auto; display:grid; place-items:center; width:44px; height:44px;
+    border-radius:var(--ds-radius-md); overflow:hidden; background:var(--bg-body); color:var(--text-muted);
+}
+.mov-foto img { max-width:100%; max-height:100%; object-fit:contain; }
+.mov-nums { display:flex; gap:8px; flex-wrap:wrap; }
+.mov-num {
+    flex:1 1 0; min-width:70px; display:flex; flex-direction:column; gap:2px;
+    padding:6px 8px; border-radius:var(--ds-radius-sm); background:var(--bg-body);
+}
+.mov-num-etiqueta { font-size:.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:.02em; }
+.mov-num strong { font-size:.9rem; color:var(--text-color); font-variant-numeric:tabular-nums; }
+
+/* La foto del producto también en el historial: la misma lectura en todas las listas. */
+.mov-producto { display:flex; align-items:center; gap:8px; min-width:0; }
+.mov-producto > span:last-child { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mov-producto .mov-foto { width:32px; height:32px; }
+
+/* ---- El resumen de lo administrativo, en la propia Lista ---- */
+.ci-resumen {
+    display:flex; align-items:center; gap:10px; width:100%; box-sizing:border-box;
+    min-height:44px; padding:9px 12px; border:1px dashed var(--border-color);
+    border-radius:var(--ds-radius-md); background:var(--bg-card); color:var(--text-muted);
+    font-family:inherit; font-size:.8rem; text-align:left; cursor:pointer;
+}
+.ci-resumen:hover { border-color:var(--primary-color); color:var(--text-color); }
+.ci-resumen > i { color:var(--primary-color); }
+.ci-resumen #ciResumenTexto { flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ci-resumen-ir { display:inline-flex; align-items:center; gap:6px; color:var(--primary-color); font-weight:600; }
+
 /* ---- La lista elegida ---- */
 .ci-lista {
     background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--ds-radius-lg);
     padding:14px; display:flex; flex-direction:column; gap:10px;
+}
+/* Detalles: lo administrativo en su propio panel (proveedor, notas, motivo, destino). */
+.ci-detalles {
+    background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--ds-radius-lg);
+    padding:14px; display:flex; flex-direction:column; gap:10px;
+}
+/* El pie —cuántos van y el presupuesto— vive fuera de los paneles: se ve siempre. */
+.ci-pie {
+    flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; gap:12px;
+    flex-wrap:wrap; padding:10px 12px; border-top:1px solid var(--border-color);
+    background:var(--bg-card); font-size:.82rem; color:var(--text-muted);
 }
 .ci-lista-cab { display:flex; align-items:center; justify-content:space-between; gap:10px; }
 .ci-lista-cab h3 { margin:0; font-family:var(--font-heading); font-size:1rem; color:var(--text-color); display:flex; align-items:center; gap:8px; }
@@ -4440,6 +4515,9 @@
     background:var(--bg-card); color:var(--text-color); font-family:inherit; font-size:.88rem;
 }
 .ci-ayuda { margin:0; font-size:.78rem; color:var(--text-muted); display:flex; align-items:center; gap:8px; }
+/* Precio × cantidad = subtotal: lo que se quiere leer de un vistazo en una entrada. */
+.ci-fila-precio { font-variant-numeric:tabular-nums; }
+.ci-fila-precio strong { color:var(--text-color); }
 .ci-seleccion { display:flex; flex-direction:column; gap:8px; max-height:34vh; overflow-y:auto; }
 .ci-vacio { text-align:center; color:var(--text-muted); font-size:.85rem; padding:18px 10px; }
 .ci-vacio i { font-size:1.3rem; color:var(--primary-color); display:block; margin-bottom:8px; }
@@ -4534,25 +4612,22 @@
         color:var(--text-muted); font-family:inherit; font-size:.86rem; font-weight:600; cursor:pointer;
     }
     .ci-pestana.activa { color:var(--primary-color); border-bottom-color:var(--primary-color); }
-    .ci-layout {
-        display:flex; flex-wrap:nowrap; gap:0; flex:1 1 auto; min-height:0;
-        /* `align-items:start` viene del escritorio y aquí sería un error: sin estirar, cada
-           panel crece con su contenido (el catálogo llegaba a 9.226 px) y su propio
-           desplazamiento no existe. Estirados, cada uno mide el alto disponible y scrollea. */
-        align-items:stretch;
-        overflow-x:auto; overflow-y:hidden; scroll-snap-type:x mandatory;
-        -webkit-overflow-scrolling:touch; scrollbar-width:none;
-    }
-    .ci-layout::-webkit-scrollbar { display:none; }
-    .ci-catalogo, .ci-lista {
-        flex:0 0 100%; width:100%; min-height:0; scroll-snap-align:start;
+    /* Los paneles se superponen: se ve uno y los demás quedan apagados. Cada uno se desplaza
+       por dentro (nada de desplazar el cuerpo entero, que dejaba la Lista a 12.000 px del
+       catálogo) y el paso de uno a otro lo maneja el gesto de la hoja de JavaScript. */
+    .ci-layout { position:relative; flex:1 1 auto; min-height:0; }
+    .ci-pane {
+        position:absolute; inset:0; visibility:hidden; pointer-events:none;
         overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch;
-        padding:12px;
+        padding:12px; transition:transform .2s ease;
     }
-    .ci-lista { border:0; border-radius:0; background:transparent; }
+    /* Se anima SOLO el deslizamiento: animar también la opacidad dejaba el panel a medio
+       aparecer (y en una captura se veía lavado). Entra y sale seco, pero se desliza. */
+    .ci-pane-activo { visibility:visible; pointer-events:auto; }
+    .ci-lista, .ci-detalles { border:0; border-radius:0; background:transparent; }
+    .ci-seleccion { max-height:none; }
     .ci-galeria, .ci-galeria.en-lista { max-height:none; overflow-y:visible; }
     .ci-galeria { grid-template-columns:repeat(auto-fill,minmax(132px,1fr)); }
-    .ci-seleccion { max-height:none; }
 }
 @media (max-width: 480px) {
     .ci-galeria { grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:8px; }

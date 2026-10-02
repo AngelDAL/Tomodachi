@@ -120,8 +120,11 @@ const CompositorInv = (() => {
 
     function fila(producto, cantidad) {
         const hay = Number(producto.available ?? producto.current_stock ?? 0);
+        const unitario = ultimoCosto(producto);
+        // En una entrada, lo que importa de un vistazo es precio × cantidad = subtotal; en una
+        // salida no hay precio (por diseño), así que se muestra la existencia y el aviso.
         const extra = est.modo === 'entrada'
-            ? `Último costo ${money(ultimoCosto(producto))}`
+            ? `<span class="ci-fila-precio">${money(unitario)} × ${numero(cantidad)} = <strong>${money(unitario * cantidad)}</strong></span>`
             : `Hay ${numero(hay)}${cantidad > hay + 0.0001 ? ' · pides más de lo que hay' : ''}`;
         return `<div class="ci-fila" data-id="${producto.product_id}">
             <span class="ci-fila-fondo" style="background-image:url('${esc(imagenDe(producto))}')" aria-hidden="true"></span>
@@ -157,7 +160,7 @@ const CompositorInv = (() => {
     function pintarSeleccion() {
         const caja = est.dom.seleccion;
         if (!est.sel.size) {
-            caja.innerHTML = `<div class="ci-vacio"><i class="fas fa-hand-pointer"></i><p>Toca un producto para agregarlo.<br>Aquí se van a ir acomodando.</p></div>`;
+            caja.innerHTML = `<div class="ci-vacio"><i class="fas fa-hand-pointer"></i><p>Toca un producto para agregarlo.<br>Aquí se van a ir acomodando, con su cantidad y su precio.</p></div>`;
         } else {
             caja.innerHTML = [...est.sel.values()].map(x => fila(x.producto, x.cantidad)).join('');
         }
@@ -192,6 +195,24 @@ const CompositorInv = (() => {
         }
     }
 
+    /**
+     * El renglón que resume lo administrativo en la Lista: proveedor, notas y motivo. Así el
+     * dato está a la vista sin abrir la pestaña, y el campo sigue viviendo en Detalles.
+     */
+    function actualizarResumenDetalles() {
+        const m = est && est.dom && est.dom.modal;
+        if (!m || !est.dom.resumenTexto) return;
+        const tieneProveedor = !!m.querySelector('#ciProveedor');
+        const proveedor = m.querySelector('#ciProveedor')?.value.trim() || '';
+        const notas = m.querySelector('#ciNotas')?.value.trim() || '';
+        const motivo = m.querySelector('.ci-motivo.activo')?.textContent.trim() || '';
+        const partes = [];
+        if (tieneProveedor) partes.push(proveedor || 'Sin proveedor');
+        if (notas) partes.push('con notas');
+        if (motivo && motivo !== 'Sin especificar') partes.push(motivo.toLowerCase());
+        est.dom.resumenTexto.textContent = partes.length ? partes.join(' · ') : 'Sin proveedor ni notas';
+    }
+
     function poner(id, cantidad) {
         const x = est.sel.get(id);
         if (!x) return;
@@ -203,6 +224,12 @@ const CompositorInv = (() => {
         // el usuario acaba de dar.
         const etiqueta = est.dom.galeria.querySelector(`.ci-card[data-id="${id}"] .ci-card-enlista`);
         if (etiqueta) etiqueta.innerHTML = `<i class="fas fa-check"></i> En lista${x.cantidad > 1 ? ` · ${numero(x.cantidad)}` : ''}`;
+        // Y el subtotal del renglón, también en el lugar.
+        const precio = est.dom.seleccion.querySelector(`.ci-fila[data-id="${id}"] .ci-fila-precio`);
+        if (precio && est.modo === 'entrada') {
+            const u = ultimoCosto(x.producto);
+            precio.innerHTML = `${money(u)} × ${numero(x.cantidad)} = <strong>${money(u * x.cantidad)}</strong>`;
+        }
         actualizarPie();
     }
 
@@ -371,6 +398,10 @@ const CompositorInv = (() => {
                 <textarea id="ciNotas" rows="2" maxlength="1000" placeholder="Opcional"></textarea></label>` : '',
         ].join('');
 
+        // Tres paneles —Productos, Lista y Detalles— para que la primera vista sea el
+        // producto con su cantidad y su precio, y lo administrativo (proveedor, notas,
+        // motivo, presupuesto) viva en su pestaña lateral. En el teléfono se pasa de uno a
+        // otro deslizando; las pestañas son la puerta de respaldo del gesto.
         const cuerpo = `<div class="ci-pestanas" id="ciPestanas" role="tablist">
                 <button type="button" class="ci-pestana activa" data-pane="catalogo" role="tab" aria-selected="true">
                     <i class="fas fa-th-large" aria-hidden="true"></i> Productos
@@ -378,9 +409,12 @@ const CompositorInv = (() => {
                 <button type="button" class="ci-pestana" data-pane="lista" role="tab" aria-selected="false">
                     <i class="fas fa-clipboard-list" aria-hidden="true"></i> <span id="ciPestanaLista">Lista</span>
                 </button>
+                <button type="button" class="ci-pestana" data-pane="detalles" role="tab" aria-selected="false">
+                    <i class="fas fa-receipt" aria-hidden="true"></i> Detalles
+                </button>
             </div>
             <div class="ci-layout" id="ciLayout">
-            <section class="ci-catalogo" id="ciCatalogo">
+            <section class="ci-catalogo ci-pane" id="ciCatalogo" data-pane="catalogo">
                 <div class="ci-buscador">
                     <span class="ci-caja">
                         <i class="fas fa-search" aria-hidden="true"></i>
@@ -418,19 +452,31 @@ const CompositorInv = (() => {
                 </div>
                 <div class="ci-galeria" id="ciGaleria"></div>
             </section>
-            <aside class="ci-lista" id="ciLista">
+            <aside class="ci-lista ci-pane" id="ciLista" data-pane="lista">
                 <div class="ci-lista-cab">
                     <h3><i class="fas ${o.icono}"></i> ${esc(o.textoLista)}</h3>
                     <button type="button" class="ci-icono" id="ciVaciar" title="Vaciar la lista" aria-label="Vaciar la lista"><i class="fas fa-trash"></i></button>
                 </div>
-                ${camposPropios}
+                <!-- Un renglón con lo administrativo a la vista: el campo vive en su pestaña,
+                     pero de un vistazo se sabe si hay proveedor y si hay notas. -->
+                <button type="button" class="ci-resumen" id="ciResumenDetalles">
+                    <i class="fas fa-receipt" aria-hidden="true"></i>
+                    <span id="ciResumenTexto">Sin proveedor ni notas</span>
+                    <span class="ci-resumen-ir">Ver detalles <i class="fas fa-chevron-right" aria-hidden="true"></i></span>
+                </button>
                 <p class="ci-ayuda"><i class="fas fa-hand-point-left"></i> Desliza un renglón a la izquierda para quitarlo.</p>
                 <div class="ci-seleccion" id="ciSeleccion"></div>
-                <div class="ci-pie">
-                    <span id="ciCuenta" aria-live="polite">Todavía no hay nada en la lista</span>
-                    ${o.campos.presupuesto ? `<span class="ci-pie-total">Presupuesto estimado <strong id="ciPresupuesto">$0.00</strong></span>` : ''}
-                </div>
             </aside>
+            <aside class="ci-detalles ci-pane" id="ciDetalles" data-pane="detalles">
+                <div class="ci-lista-cab">
+                    <h3><i class="fas fa-receipt"></i> Detalles de la ${esEntrada ? 'entrada' : 'salida'}</h3>
+                </div>
+                ${camposPropios}
+            </aside>
+            </div>
+            <div class="ci-pie">
+                <span id="ciCuenta" aria-live="polite">Todavía no hay nada en la lista</span>
+                ${o.campos.presupuesto ? `<span class="ci-pie-total">Presupuesto estimado <strong id="ciPresupuesto">$0.00</strong></span>` : ''}
             </div>`;
 
         const acciones = `<button type="button" class="btn-secondary" data-close-modal="${id}">Cancelar</button>
@@ -447,7 +493,10 @@ const CompositorInv = (() => {
         d.pestanas = modal.querySelector('#ciPestanas');
         d.pestanaLista = modal.querySelector('#ciPestanaLista');
         d.layout = modal.querySelector('#ciLayout');
+        d.panes = [...modal.querySelectorAll('.ci-pane')];
         d.lista = modal.querySelector('#ciLista');
+        d.resumenDetalles = modal.querySelector('#ciResumenDetalles');
+        d.resumenTexto = modal.querySelector('#ciResumenTexto');
         d.destinos = [];
         // En el teléfono el cuerpo del modal NO se desplaza: se desplaza cada panel, y entre
         // paneles se desliza. Con el cuerpo desplazándose, la lista quedaba a 12.000 px del
@@ -499,8 +548,19 @@ const CompositorInv = (() => {
         });
         modal.querySelector('.ci-vista-btn[data-vista="' + est.vista + '"]')?.click();
 
-        /* --- paneles del teléfono: productos y lista, con deslizamiento --- */
+        /* --- los tres paneles y el deslizamiento ---
+           El navegador trae el deslizamiento horizontal "de fábrica", pero aquí cada panel se
+           desplaza en VERTICAL por dentro y el toque empieza muchas veces sobre una tarjeta:
+           el navegador no decide bien entre los dos ejes y el gesto se pierde. Por eso se mide a
+           mano —se exige que el movimiento sea más horizontal que vertical y se decide al
+           soltar— y las pestañas quedan como la puerta de respaldo del gesto.
+
+           Dirección (pedida por Ángel): desde Productos, deslizar lleva a la Lista; desde la
+           Lista, deslizar a la IZQUIERDA regresa a Productos y a la derecha sigue a Detalles. */
         const esAngosto = () => window.matchMedia('(max-width: 900px)').matches;
+        const UMBRAL_PANEL = 45;
+        let paneActual = 'catalogo';
+
         const marcarPestana = (cual) => {
             d.pestanas?.querySelectorAll('.ci-pestana').forEach(x => {
                 const activa = x.dataset.pane === cual;
@@ -508,27 +568,81 @@ const CompositorInv = (() => {
                 x.setAttribute('aria-selected', activa ? 'true' : 'false');
             });
         };
-        function irAPane(cual) {
-            marcarPestana(cual);
-            if (esAngosto()) {
-                d.layout.scrollTo({ left: cual === 'lista' ? d.layout.clientWidth : 0, behavior: 'smooth' });
-            }
+        const panelDe = (cual) => d.layout?.querySelector(`.ci-pane[data-pane="${cual}"]`);
+
+        function mostrarPane(cual, direccion) {
+            paneActual = panelDe(cual) ? cual : 'catalogo';
+            marcarPestana(paneActual);
+            // En el teléfono se ve UN panel; en escritorio el catálogo siempre está y las
+            // pestañas reparten la columna derecha entre renglones y detalles.
+            const visibles = esAngosto() ? [paneActual] : ['catalogo', paneActual === 'catalogo' ? 'lista' : paneActual];
+            (d.panes || []).forEach(p => {
+                const visible = visibles.includes(p.dataset.pane);
+                const entra = visible && p.dataset.pane === paneActual && paneActual !== 'catalogo';
+                p.classList.toggle('ci-pane-activo', visible);
+                p.setAttribute('aria-hidden', visible ? 'false' : 'true');
+                if (entra && direccion) {
+                    // Entra desde el lado por el que entró el dedo: el gesto se siente propio.
+                    const desde = direccion > 0 ? '-100%' : '100%';
+                    p.style.transition = 'none';
+                    p.style.transform = `translateX(${desde})`;
+                    requestAnimationFrame(() => {
+                        p.style.transition = '';
+                        p.style.transform = '';
+                    });
+                }
+            });
+            if (esAngosto() && paneActual === 'detalles') actualizarResumenDetalles();
         }
+
         d.pestanas?.addEventListener('click', ev => {
             const b = ev.target.closest('[data-pane]');
-            if (b) irAPane(b.dataset.pane);
+            if (b) mostrarPane(b.dataset.pane, 0);
         });
-        // Deslizar es el gesto principal (como pasar al carrito en Punto de Venta) y las
-        // pestañas son la puerta de respaldo: un gesto no puede ser la única forma.
-        d.layout?.addEventListener('scroll', () => {
-            if (!esAngosto()) return;
-            marcarPestana(d.layout.scrollLeft > d.layout.clientWidth / 2 ? 'lista' : 'catalogo');
-        }, { passive: true });
-        // Si la ventana se ensancha (tableta girada, ventana agrandada), las dos columnas
-        // vuelven a estar a la vista y el deslizamiento deja de tener sentido.
-        window.addEventListener('resize', () => {
-            if (!esAngosto() && d.layout) { d.layout.scrollLeft = 0; marcarPestana('catalogo'); }
+        d.resumenDetalles?.addEventListener('click', () => mostrarPane('detalles', 1));
+
+        /* El gesto, medido a mano */
+        let gx0 = null, gy0 = null, gesto = false;
+        d.layout?.addEventListener('pointerdown', ev => {
+            if (!esAngosto() || ev.button) return;
+            // Los renglones tienen su propio deslizamiento (quitar) y los controles el suyo:
+            // si el toque empieza ahí, el gesto de paneles no se mete.
+            if (ev.target.closest('.ci-fila, input, textarea, select, button, a, label')) return;
+            gx0 = ev.clientX; gy0 = ev.clientY; gesto = false;
         });
+        d.layout?.addEventListener('pointermove', ev => {
+            if (gx0 === null) return;
+            const dx = ev.clientX - gx0, dy = ev.clientY - gy0;
+            if (!gesto) {
+                // Tiene que ser claramente horizontal; si va vertical, se suelta el gesto para
+                // no estorbar al desplazamiento del panel.
+                if (Math.abs(dx) < 14 || Math.abs(dx) < Math.abs(dy)) {
+                    if (Math.abs(dy) > 18) { gx0 = null; }
+                    return;
+                }
+                gesto = true;
+            }
+            const activo = panelDe(paneActual);
+            if (activo) { activo.style.transition = 'none'; activo.style.transform = `translateX(${dx}px)`; }
+            if (ev.cancelable) ev.preventDefault();
+        });
+        const soltarGesto = (ev) => {
+            if (gx0 === null) return;
+            const dx = (ev && typeof ev.clientX === 'number') ? ev.clientX - gx0 : 0;
+            const activo = panelDe(paneActual);
+            if (activo) { activo.style.transition = ''; activo.style.transform = ''; }
+            const movido = gesto && Math.abs(dx) > UMBRAL_PANEL;
+            gx0 = null; gy0 = null; gesto = false;
+            if (!movido) return;
+            if (paneActual === 'catalogo') mostrarPane('lista', dx);        // desde Productos: a la Lista
+            else if (paneActual === 'detalles') mostrarPane('lista', dx);   // desde Detalles: de vuelta a la Lista
+            else mostrarPane(dx < 0 ? 'catalogo' : 'detalles', dx);         // izquierda: Productos · derecha: Detalles
+        };
+        d.layout?.addEventListener('pointerup', soltarGesto);
+        d.layout?.addEventListener('pointercancel', soltarGesto);
+
+        // Al girar el teléfono o agrandar la ventana cambia lo que se ve: se reacomoda.
+        window.addEventListener('resize', () => mostrarPane(paneActual, 0));
 
         /* --- la tarjeta entera agrega y quita --- */
         d.galeria.addEventListener('click', ev => {
@@ -555,6 +669,12 @@ const CompositorInv = (() => {
             }, true);
         });
 
+        /* --- el resumen refleja lo que se escribe en Detalles --- */
+        ['#ciProveedor', '#ciNotas', '#ciMotivoNota'].forEach(sel => {
+            const campo = modal.querySelector(sel);
+            if (campo) campo.addEventListener('input', actualizarResumenDetalles);
+        });
+
         /* --- motivo (salida) --- */
         const motivos = modal.querySelector('#ciMotivos');
         if (motivos) {
@@ -568,6 +688,7 @@ const CompositorInv = (() => {
                 });
                 const caja = modal.querySelector('#ciDestino');
                 if (caja) caja.hidden = b.dataset.motivo !== 'transfer';
+                actualizarResumenDetalles();
             });
         }
 
@@ -615,7 +736,11 @@ const CompositorInv = (() => {
 
         pintarSeleccion();
         pintarCatalogo();
-        setTimeout(() => buscar.focus(), 80);
+        mostrarPane('catalogo', 0);
+        actualizarResumenDetalles();
+        // En el teléfono se abre en Productos y el foco del buscador levanta el teclado: se
+        // enfoca solo donde el teclado no estorba la primera impresión de la lista.
+        setTimeout(() => { if (esAngosto()) buscar.focus(); }, 80);
         return modal;
     }
 

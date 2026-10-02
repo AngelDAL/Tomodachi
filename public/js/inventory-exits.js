@@ -213,13 +213,17 @@ async function openExitDetail(id) {
     try {
         const data = await api(`../api/inventory/exits.php?exit_id=${id}`);
         const ex = data.data || {};
+        // La misma piel que la lista del compositor: foto, nombre y los números claros. Antes
+        // era una tabla de siete columnas que en el teléfono obligaba a leer de reojo.
         const filas = (ex.items || []).map(i => `
-            <tr>
-                <td>${esc(i.product_name)}</td>
-                <td class="exit-num">${exitNum(i.quantity)}</td>
-                <td class="exit-num">${exitNum(i.previous_stock)}</td>
-                <td class="exit-num">${exitNum(i.new_stock)}</td>
-            </tr>`).join('');
+            <div class="mov-fila">
+                <div class="detail-item-name">${fotoMov(i)}<strong>${esc(i.product_name)}</strong></div>
+                <div class="mov-nums">
+                    <span class="mov-num"><span class="mov-num-etiqueta">Salió</span><strong>${exitNum(i.quantity)}</strong></span>
+                    <span class="mov-num"><span class="mov-num-etiqueta">Había</span><strong>${exitNum(i.previous_stock)}</strong></span>
+                    <span class="mov-num"><span class="mov-num-etiqueta">Queda</span><strong>${exitNum(i.new_stock)}</strong></span>
+                </div>
+            </div>`).join('');
         const destino = ex.destination_store_name ? `Se traspasa a ${esc(ex.destination_store_name)}.`
             : (ex.destination_note ? `Sale a ${esc(ex.destination_note)}.` : '');
 
@@ -231,12 +235,7 @@ async function openExitDetail(id) {
             ${ex.reason_note ? `<p><strong>Motivo:</strong> ${esc(ex.reason_note)}</p>` : ''}
             ${destino ? `<p>${destino}</p>` : ''}
             ${ex.notes ? `<p><strong>Notas:</strong> ${esc(ex.notes)}</p>` : ''}
-            <div class="movements-table-wrap">
-                <table class="movements-table">
-                    <thead><tr><th>Producto</th><th class="exit-num">Salió</th><th class="exit-num">Había</th><th class="exit-num">Queda</th></tr></thead>
-                    <tbody>${filas}</tbody>
-                </table>
-            </div>
+            <div class="mov-lista">${filas}</div>
         </div>`;
         const acciones = `<button type="button" class="btn-secondary" data-close-modal="exitDetailModal">Cerrar</button>
             <button type="button" class="btn-danger" id="undoExitBtn"><i class="fas fa-rotate-left"></i> Deshacer</button>`;

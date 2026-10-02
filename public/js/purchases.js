@@ -17,6 +17,20 @@ const dateText = value => value ? new Date(String(value).replace(' ','T')).toLoc
 const dateTextCorto = value => value ? new Date(String(value).replace(' ','T')).toLocaleString('es-MX',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}) : '—';
 const notify = (message, type='info') => window.showNotification ? window.showNotification(message,type) : undefined;
 
+/**
+ * La miniatura del producto en un detalle.
+ *
+ * Las rutas se guardan con el prefijo `public/` y estas páginas viven dentro de `public/`:
+ * sin `getRelativeImagePath()` el navegador busca `public/public/...`, no encuentra nada y
+ * queda el hueco gris (el mismo defecto que tenían las tarjetas del compositor).
+ */
+function fotoMov(item) {
+    const cruda = item && item.image_path;
+    const limpia = typeof getRelativeImagePath === 'function' ? getRelativeImagePath(cruda) : cruda;
+    if (!limpia) return '<span class="mov-foto mov-foto-vacia" aria-hidden="true"><i class="fas fa-box"></i></span>';
+    return `<span class="mov-foto"><img src="${esc(limpia)}" alt="Foto de ${esc(item.product_name || 'producto')}" loading="lazy" decoding="async" onerror="this.parentElement.classList.add('mov-foto-vacia');this.remove()"></span>`;
+}
+
 function modalFrame(id, title, body, actions='') {
     document.getElementById(id)?.remove();
     document.body.insertAdjacentHTML('beforeend', `<div class="modal purchase-modal" id="${id}" style="display:flex" role="dialog" aria-modal="true"><div class="modal-content purchase-modal-content"><div class="modal-header"><h2>${title}</h2><button type="button" class="modal-close" data-close-modal="${id}" aria-label="Cerrar"><i class="fas fa-times"></i></button></div><div class="modal-body">${body}</div>${actions ? `<div class="modal-footer purchase-modal-footer">${actions}</div>` : ''}</div></div>`);
@@ -161,7 +175,9 @@ function panelAltaExpress(modal, alCrear) {
             <label class="ci-campo">Existencia inicial<input id="ciExStock" type="number" min="0" step="1" value="0" inputmode="numeric"></label>
         </div>
         <button type="button" class="btn-primary" id="ciExCrear"><i class="fas fa-plus"></i> Crear y agregar</button>`;
-    (modal.querySelector('.ci-lista') || modal.querySelector('.modal-body')).prepend(panel);
+    // El panel se abre donde el usuario está parado: en el catálogo (en el teléfono la lista
+    // es otro panel y el alta express aparecería fuera de la vista).
+    (modal.querySelector('.ci-catalogo') || modal.querySelector('.ci-lista') || modal.querySelector('.modal-body')).prepend(panel);
     panel.querySelector('#ciExpressCerrar').addEventListener('click', () => panel.remove());
     panel.querySelector('#ciExNombre').addEventListener('focus', ev => ev.target.select());
     panel.querySelector('#ciExCrear').addEventListener('click', async () => {
@@ -300,9 +316,20 @@ function renderPurchaseDetail(p) {
         const typeName=i.tracking_type==='component'?'Componente':'Producto final';
         const lastUnitCost=Number(i.last_unit_cost||0);
         if(isEditable){
-            return `<div class="detail-item-row editable" data-item-id="${i.item_id}"><div class="detail-item-header"><div class="detail-item-name"><i class="fas ${i.tracking_type==='component'?'fa-cubes':'fa-box'}"></i><strong>${esc(i.product_name)}</strong><small>${typeName}</small></div><button type="button" class="icon-button danger" data-remove-detail="${i.item_id}" aria-label="Quitar"><i class="fas fa-trash"></i></button></div><div class="detail-item-cost-ref"><small>Último costo: ${money(lastUnitCost)}/ud</small></div><div class="detail-item-fields"><label class="detail-field"><span class="detail-field-label">Cantidad recibida</span><input type="number" min="0.001" step="0.001" data-detail-qty="${i.item_id}" value="${i.planned_quantity}"></label><label class="detail-field"><span class="detail-field-label">Costo total real</span><input type="number" min="0" step="0.01" data-detail-total="${i.item_id}" value="${plannedTotal}"></label></div></div>`;
+            return `<div class="detail-item-row editable" data-item-id="${i.item_id}"><div class="detail-item-header"><div class="detail-item-name">${fotoMov(i)}<strong>${esc(i.product_name)}</strong><small>${typeName}</small></div><button type="button" class="icon-button danger" data-remove-detail="${i.item_id}" aria-label="Quitar"><i class="fas fa-trash"></i></button></div><div class="detail-item-cost-ref"><small>Último costo: ${money(lastUnitCost)}/ud</small></div><div class="detail-item-fields"><label class="detail-field"><span class="detail-field-label">Cantidad recibida</span><input type="number" min="0.001" step="0.001" data-detail-qty="${i.item_id}" value="${i.planned_quantity}"></label><label class="detail-field"><span class="detail-field-label">Costo total real</span><input type="number" min="0" step="0.01" data-detail-total="${i.item_id}" value="${plannedTotal}"></label></div></div>`;
         }
-        return `<div class="detail-item-row read-only" data-item-id="${i.item_id}"><div class="detail-item-header"><div class="detail-item-name"><i class="fas ${i.tracking_type==='component'?'fa-cubes':'fa-box'}"></i><strong>${esc(i.product_name)}</strong><small>${typeName}</small></div></div><div class="detail-item-read-grid"><span class="detail-read-item"><span class="detail-read-label">Recibido</span><strong>${i.actual_quantity??'—'}</strong></span><span class="detail-read-item"><span class="detail-read-label">Costo</span><strong>${money(i.total_cost)}</strong></span></div></div>`;
+        // De lectura: la misma piel que las demás listas —foto, nombre, cantidades y dinero—
+        // para que un detalle de entrada se lea igual que la lista del compositor.
+        return `<div class="detail-item-row read-only" data-item-id="${i.item_id}">
+            <div class="detail-item-header">
+                <div class="detail-item-name">${fotoMov(i)}<strong>${esc(i.product_name)}</strong><small>${typeName}</small></div>
+            </div>
+            <div class="mov-nums">
+                <span class="mov-num"><span class="mov-num-etiqueta">Pedido</span><strong>${i.planned_quantity ?? '—'}</strong></span>
+                <span class="mov-num"><span class="mov-num-etiqueta">Recibido</span><strong>${i.actual_quantity ?? '—'}</strong></span>
+                <span class="mov-num"><span class="mov-num-etiqueta">Costo</span><strong>${money(i.total_cost)}</strong></span>
+            </div>
+        </div>`;
     }).join('');
     const plannedGrandTotal=p.items.reduce((sum,i)=>sum+Number(i.planned_total_cost||((Number(i.unit_cost)||0)*Number(i.planned_quantity)||0)),0);
     const visibleTotal=p.status==='executed'?Number(p.total_cost||0):plannedGrandTotal;
@@ -355,7 +382,7 @@ function bloqueMovimientos(tipo, filas) {
                <thead><tr><th>Fecha</th><th>Producto</th><th>Tipo</th><th>Cantidad</th><th>Stock</th><th>Detalle</th><th>Usuario</th></tr></thead>
                <tbody>${filas.map(m => `<tr>
                    <td data-label="Fecha" class="mov-fecha">${dateTextCorto(m.created_at)}</td>
-                   <td data-label="Producto" class="mov-product" title="${esc(m.product_name)}">${esc(m.product_name)}</td>
+                   <td data-label="Producto" class="mov-product" title="${esc(m.product_name)}"><span class="mov-producto">${fotoMov({ image_path: m.image_path, product_name: m.product_name })}<span>${esc(m.product_name)}</span></span></td>
                    <td data-label="Tipo"><span class="mov-type-badge" style="background:${MOVEMENT_TYPE_COLORS[m.movement_type]||'#6b7280'}">${esc(MOVEMENT_TYPE_LABELS[m.movement_type]||m.movement_type)}</span></td>
                    <td data-label="Cantidad" class="movement-qty ${esSalida?'outgoing':'incoming'}">${esSalida?'-':'+'}${m.quantity}</td>
                    <td data-label="Stock">${m.previous_stock} → ${m.new_stock}</td>

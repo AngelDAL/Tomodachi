@@ -46,3 +46,4 @@ api/ai/config.php
 # Python cache
 __pycache__/
 *.pyc
+.worktrees/

@@ -44,6 +44,13 @@ const kdEstado = {
     conectado: false,
     sondeo: null,
     audio: null,
+    // Marca de impresión vista por comanda: lo que permite avisar de una TRANSICIÓN
+    // a "no salió" (y no de todas las que ya estaban en rojo al abrir el tablero).
+    impresion: {},
+    // ¿La impresión sale del servidor (cola ESC/POS) o sigue siendo la del navegador?
+    // Lo dice el propio tablero, para que apagar PRINT_QUEUE_ENABLED devuelva el
+    // comportamiento anterior también en la pantalla.
+    impresionOn: false,
     anulando: null,            // comanda que se está anulando
     estacionEditando: null,    // estación en el formulario
     estacionProductos: null,   // estación cuyo catálogo se está repartiendo
@@ -79,6 +86,22 @@ function kdEtiquetaCanal(canal) {
     return mapa[canal] || 'Pedido';
 }
 
+/**
+ * Cómo va el ticket de esta comanda en la cola del servidor.
+ *
+ * `printed_count` es un contador, no un estado: no distingue "salió 0 veces" de
+ * "falló 3 veces". Esta marca sí, y es lo que el mesero necesita ver.
+ *
+ * @returns {{clase: string, icono: string, texto: string}|null} null = sin cola
+ */
+function kdMarcaImpresion(c) {
+    const estado = c.print_status || 'none';
+    if (estado === 'queued')  return { clase: 'cola',  icono: 'fa-clock',                texto: 'En cola' };
+    if (estado === 'printed') return { clase: 'ok',    icono: 'fa-check',                 texto: 'Impresa' };
+    if (estado === 'failed')  return { clase: 'fallo', icono: 'fa-triangle-exclamation', texto: 'No salió' };
+    return null;
+}
+
 /** El tono de aviso. Se arma al vuelo: no hay archivo de audio que se pueda no cargar. */
 function kdTono() {
     try {
@@ -103,6 +126,41 @@ function kdTono() {
         });
     } catch (e) {
         // Sin audio se sigue trabajando: el aviso visual queda.
+    }
+}
+
+/**
+ * El tono de ALARMA: un ticket de cocina que no salió.
+ *
+ * Es distinto del aviso de comanda nueva (dos notas ascendentes, agradable): tres
+ * golpes graves y rápidos. Un pedido nuevo es una buena noticia que hay que atender;
+ * un ticket perdido es un error que hay que ver. Suena aunque el aviso de comandas
+ * nuevas esté apagado: silenciar el aviso de "entró un pedido" no es silenciar el de
+ * "la cocina no se enteró".
+ */
+function kdTonoFallo() {
+    try {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return;
+        if (!kdEstado.audio) kdEstado.audio = new Ctx();
+        const ctx = kdEstado.audio;
+        if (ctx.state === 'suspended') ctx.resume();
+        const t = ctx.currentTime;
+        [0, 0.18, 0.36].forEach(function (desfase) {
+            const osc = ctx.createOscillator();
+            const gan = ctx.createGain();
+            osc.type = 'square';
+            osc.frequency.value = 320;
+            gan.gain.setValueAtTime(0.0001, t + desfase);
+            gan.gain.exponentialRampToValueAtTime(0.32, t + desfase + 0.02);
+            gan.gain.exponentialRampToValueAtTime(0.0001, t + desfase + 0.14);
+            osc.connect(gan);
+            gan.connect(ctx.destination);
+            osc.start(t + desfase);
+            osc.stop(t + desfase + 0.16);
+        });
+    } catch (e) {
+        // Sin audio queda la marca roja: el aviso visual no depende del sonido.
     }
 }
 
@@ -285,6 +343,9 @@ async function kdCargar(silencioso) {
         kdEstado.estaciones = (datos && datos.estaciones) || [];
         kdEstado.sinEstacion = (datos && datos.sin_estacion) || 0;
         kdEstado.conteos = (datos && datos.conteos) || {};
+        // Si el servidor tiene la cola apagada, la pantalla vuelve al camino viejo
+        // (ventana + window.print()). Así el rollback es una constante en un archivo.
+        kdEstado.impresionOn = !!(datos && datos.impresion && datos.impresion.enabled);
         kdPintar();
     } catch (e) {
         if (!silencioso) tpAviso(tpMensajeDeError(e), 'error');
@@ -325,6 +386,27 @@ function kdPintar() {
         if (nuevas > 0 && kdEstado.sonido) kdTono();
     }
     kdEstado.conocidas = idsAhora;
+
+    // La impresión se vigila aparte de las comandas nuevas: lo que importa en una
+    // cocina no es que aparezca una tarjeta, sino que su ticket PASE a "no salió".
+    // Solo transiciones (no todo lo que ya estaba en rojo al abrir el tablero) para
+    // que la alarma no suene en bucle en cada refresco.
+    let fallosNuevos = 0;
+    kdEstado.comandas.forEach(function (c) {
+        const id = c.comanda_id;
+        const estado = c.print_status || 'none';
+        const previo = kdEstado.impresion[id];
+        if (!primeras && previo !== undefined && previo !== estado && estado === 'failed') {
+            fallosNuevos++;
+        }
+        kdEstado.impresion[id] = estado;
+    });
+    if (fallosNuevos > 0) {
+        kdTonoFallo();
+        tpAviso(fallosNuevos === 1
+            ? 'Un ticket no salió por la impresora: revisa la comanda marcada en rojo'
+            : fallosNuevos + ' tickets no salieron por la impresora', 'error');
+    }
 
     ['sent', 'preparing', 'ready'].forEach(function (estado) {
         const cont = kd$('kdLista' + estado.charAt(0).toUpperCase() + estado.slice(1));
@@ -416,6 +498,16 @@ function kdDetalleHTML(c) {
         ['Personas', c.personas ? tpEsc(c.personas) : '<span class="kd-detalle-muted">—</span>'],
     ];
 
+    // Cómo salió el ticket en la impresora de red, con el motivo cuando NO salió.
+    const impDetalle = kdMarcaImpresion(c);
+    if (impDetalle) {
+        campos.push(['Impresión',
+            '<span class="kd-impresion ' + impDetalle.clase + '"><i class="fas ' + impDetalle.icono + '"></i> ' + tpEsc(impDetalle.texto) + '</span>' +
+            (c.print_last_error ? ' <span class="kd-detalle-muted">' + tpEsc(c.print_last_error) + '</span>' : '') +
+            (c.print_attempts ? ' <span class="kd-detalle-muted">(' + c.print_attempts + ' intento(s))</span>' : '')
+        ]);
+    }
+
     const ent = c.entrega || {};
     if (ent.nombre || ent.telefono || ent.direccion) {
         const filas = [];
@@ -504,6 +596,11 @@ function kdCardHTML(c) {
         '</li>';
     }).join('');
 
+    // Cómo va el ticket en la impresora de red (si el servidor tiene la cola encendida).
+    const imp = kdMarcaImpresion(c);
+    const puedeReintentar = kdEstado.impresionOn && c.print_status === 'failed';
+    const motivoFallo = c.print_last_error ? tpEsc(c.print_last_error) : '';
+
     // El avance es UN botón que dice el siguiente paso: no hay que elegir nada.
     const avance = {
         sent: { accion: 'start', texto: 'Empezar', icono: 'fa-fire-burner' },
@@ -524,7 +621,9 @@ function kdCardHTML(c) {
                 '<button type="button" class="kd-card-menu-btn" data-kd-cardmenu="' + c.comanda_id + '" aria-haspopup="true" aria-expanded="false" title="Opciones de la comanda"><i class="fas fa-ellipsis-v"></i></button>' +
                 '<div class="tp-menu-config kd-card-acciones hidden" data-kd-acciones="' + c.comanda_id + '">' +
                     '<button type="button" data-kd-detalle="' + c.comanda_id + '" title="Ver el detalle completo de la comanda"><i class="fas fa-file-lines"></i> Ver detalle</button>' +
-                    '<button type="button" data-kd-imprimir="' + c.comanda_id + '" title="Imprimir el ticket (el navegador pedirá confirmación)"><i class="fas fa-print"></i> Imprimir</button>' +
+                    (kdEstado.impresionOn
+                        ? '<button type="button" data-kd-reimprimir="' + c.comanda_id + '" title="Volver a mandar el ticket a la impresora de red"><i class="fas fa-print"></i> Reimprimir</button>'
+                        : '<button type="button" data-kd-imprimir="' + c.comanda_id + '" title="Imprimir el ticket (el navegador pedirá confirmación)"><i class="fas fa-print"></i> Imprimir</button>') +
                     '<button type="button" data-kd-anular="' + c.comanda_id + '" title="Anular la comanda"><i class="fas fa-ban"></i> Anular</button>' +
                 '</div>' +
             '</div>' +
@@ -535,6 +634,17 @@ function kdCardHTML(c) {
         '</div>' +
         '<ul class="kd-items">' + items + '</ul>' +
         '<div class="kd-pie">' +
+            (imp
+                ? '<span class="kd-impresion ' + imp.clase + '" title="' +
+                    (imp.texto + (motivoFallo ? ': ' + motivoFallo : '') +
+                     (c.print_attempts ? ' · ' + c.print_attempts + ' intento(s)' : '')) + '">' +
+                    '<i class="fas ' + imp.icono + '"></i> ' + tpEsc(imp.texto) +
+                    (imp.clase === 'fallo' && motivoFallo ? ' <em>(' + motivoFallo + ')</em>' : '') +
+                  '</span>'
+                : '') +
+            (puedeReintentar
+                ? '<button type="button" class="kd-btn kd-btn-reintentar" data-kd-reimprimir="' + c.comanda_id + '" title="Volver a mandar el ticket a la impresora de red"><i class="fas fa-rotate-right"></i> Reintentar</button>'
+                : '') +
             (avance
                 ? '<button type="button" class="kd-btn primario" data-kd-avanzar="' + avance.accion + '" data-kd-comanda="' + c.comanda_id + '">' +
                     '<i class="fas ' + avance.icono + '"></i> ' + avance.texto + '</button>'
@@ -694,6 +804,28 @@ async function kdImprimir(comandaId) {
     }
 }
 
+/**
+ * Reencola el ticket en la impresora de RED (el camino del servidor).
+ *
+ * No imprime nada desde el navegador: deja el trabajo en la cola y el worker de la
+ * terminal del servidor lo escribe en el 9100. Es lo que hace el botón "Reintentar"
+ * cuando la marca dice que el ticket no salió.
+ */
+async function kdReimprimir(comandaId) {
+    try {
+        await tpPeticion(KD_API, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'reimprimir', comanda_id: Number(comandaId) }),
+        });
+        tpAviso('Ticket enviado a la impresora', 'success');
+    } catch (e) {
+        // El servidor responde 409 con el motivo cuando no hay a dónde imprimir
+        // (sin salida configurada o cola apagada): se muestra tal cual.
+        tpAviso(tpMensajeDeError(e), 'error');
+    }
+    await kdCargar(true);
+}
+
 // ============================================================
 // Estaciones: UN modal que cambia de contenido
 // ============================================================
@@ -740,7 +872,12 @@ function kdPintarEstaciones() {
         const salidas = (e.salidas || []).length
             ? e.salidas.map(function (s) {
                 return '<span class="kd-salida"><i class="fas ' + (s.kind === 'print' ? 'fa-print' : 'fa-desktop') + '"></i> ' +
-                    (s.kind === 'print' ? 'Impresora' : 'Pantalla') + (s.target ? ': ' + tpEsc(s.target) : '') + '</span>';
+                    (s.kind === 'print' ? 'Impresora' : 'Pantalla') +
+                    (s.kind === 'print' && s.host
+                        ? ': ' + tpEsc(s.host) + ' (' + tpEsc(String(s.paper_width || '80')) + ' mm' + (s.has_drawer ? ' · cajón' : '') + ')'
+                        : (s.target ? ': ' + tpEsc(s.target) : '')) +
+                    (s.kind === 'print' && !s.host ? ' <em>· sin dirección de red</em>' : '') +
+                    '</span>';
             }).join('')
             : '<span class="kd-salida sin"><i class="fas fa-ban"></i> Sin salida</span>';
 
@@ -810,6 +947,10 @@ function kdFormEstacion(estacion) {
         '<div class="tp-campo" id="kdEstDestinoImpresoraW" style="' + (tieneImpresora ? '' : 'display:none') + '">' +
             '<label for="kdEstDestinoImpresora">Nombre de la impresora (opcional)</label>' +
             '<input type="text" id="kdEstDestinoImpresora" maxlength="120" placeholder="Impresora de cocina" autocomplete="off" value="' + tpEsc(destinoImpresora) + '">' +
+            // La verdad incómoda, dicha donde se configura (y no prometida en falso):
+            // el puerto 9100 no devuelve confirmación de impresión física.
+            '<p class="kd-est-meta">La dirección de red de la impresora todavía no se captura aquí: pendiente la revisión de seguridad. ' +
+                'Un ticket "impreso" significa que los datos salieron del servidor; que haya papel en la cocina no se puede saber desde la red.</p>' +
         '</div>';
 
     kd$('kdEstPie').innerHTML =
@@ -1154,6 +1295,11 @@ document.addEventListener('DOMContentLoaded', function () {
             const imprimir = ev.target.closest('[data-kd-imprimir]');
             if (imprimir) {
                 kdImprimir(imprimir.getAttribute('data-kd-imprimir'));
+                return;
+            }
+            const reimprimir = ev.target.closest('[data-kd-reimprimir]');
+            if (reimprimir) {
+                kdReimprimir(reimprimir.getAttribute('data-kd-reimprimir'));
                 return;
             }
             const anular = ev.target.closest('[data-kd-anular]');

@@ -262,6 +262,50 @@
         }
         #companyForm .settings-hint:last-child { margin-bottom: 2px; }
 
+        /* ===== Bloque CoDi: campo de secreto, su pista y el aviso persistente =====
+           El secreto del webhook es lo que mantiene viva la confirmación de pagos
+           (fail-closed, TAB-25-X1): sin él no se confirma ningún pago. El aviso NO
+           es un toast: vive dentro del bloque y se vuelve a ver al volver a la
+           pantalla. Usa los tokens de estado del sistema y nunca comunica solo con
+           color (icono + texto). */
+        #companyForm .codi-field {
+            width: 100%;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-input);
+            color: var(--text-color);
+            font-size: 1rem;
+        }
+        #companyForm .codi-field:focus-visible {
+            outline: 2px solid var(--primary-color);
+            outline-offset: 1px;
+            border-color: var(--primary-color);
+        }
+        #companyForm .codi-hint {
+            display: block;
+            margin: 4px 0 0;
+            font-size: 0.82rem;
+            line-height: 1.4;
+            color: var(--text-light);
+        }
+        #companyForm .settings-alert {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin: 2px 0 12px;
+            padding: 10px 12px;
+            border: 1px solid color-mix(in srgb, var(--warning-ink) 40%, transparent);
+            border-radius: 10px;
+            background: color-mix(in srgb, var(--warning-color) 14%, var(--bg-card));
+            color: var(--warning-ink);
+            font-size: 0.85rem;
+            line-height: 1.45;
+        }
+        #companyForm .settings-alert[hidden] { display: none; }
+        #companyForm .settings-alert i { flex: 0 0 auto; margin-top: 1px; }
+        #companyForm .settings-alert strong { font-weight: 600; }
+
         /* Botones de modo/tema del editor → píldora con foco de marca */
         .theme-mode-btn, .theme-tab-btn {
             border-radius: var(--ds-radius-pill, 100px) !important;
@@ -530,6 +574,17 @@
                                     <div class="form-group" style="margin-bottom: 10px;">
                                         <label style="font-size: 0.85rem; margin-bottom: 4px;">Endpoint del servidor</label>
                                         <input type="text" id="codiEndpoint" value="https://api.bite-size.mx" style="width:100%; padding:8px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-input); color: var(--text-color);">
+                                    </div>
+                                    <div class="form-group" style="margin-bottom: 10px;">
+                                        <label for="codiWebhookSecret" style="font-size: 0.85rem; margin-bottom: 4px;">Secreto de firma del webhook</label>
+                                        <input type="password" id="codiWebhookSecret" class="codi-field" autocomplete="new-password" aria-describedby="codiWebhookSecretHint" placeholder="Copialo del panel de tu proveedor de CoDi">
+                                        <small id="codiWebhookSecretHint" class="codi-hint"></small>
+                                    </div>
+                                    <!-- Aviso persistente (no toast): se ve al volver a la pantalla.
+                                         Lo enciende/apaga el estado real del backend, nunca el optimismo. -->
+                                    <div id="codiWebhookWarning" class="settings-alert" role="status" hidden>
+                                        <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
+                                        <span id="codiWebhookWarningText"></span>
                                     </div>
                                     <p class="settings-hint" style="margin-left: 0;">Registrate gratis en <a href="https://docs.bite-size.mx/enrollment" target="_blank" style="color: var(--primary-color);">bite-size.mx/enrollment</a> para obtener tu API key.</p>
                                 </div>

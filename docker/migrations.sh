@@ -38,8 +38,13 @@ MIGRATIONS_TABLE="${MIGRATIONS_TABLE:-schema_migrations}"
 MIGRATIONS_MAX_ATTEMPTS="${MIGRATION_MAX_ATTEMPTS:-3}"
 # Recorte del error guardado: suficiente para diagnosticar, no una copia del dump.
 MIGRATIONS_ERROR_MAX_CHARS="${MIGRATIONS_ERROR_MAX_CHARS:-2000}"
-# 1 si la tabla de control tiene la columna `status` (lo resuelve migrations_ensure_columns).
-MIGRATIONS_HAS_STATUS="${MIGRATIONS_HAS_STATUS:-0}"
+# 1 si la tabla de control tiene la columna `status`, 0 si no. VACÍO = nadie lo
+# resolvió todavía (`migrations_ensure_columns` lo fija en el arranque); en ese caso
+# lo resuelve `migrations_resolve_status_flag` la primera vez que hace falta.
+# A propósito NO se asume "sin estado": asumirlo re-ejecuta migraciones ya
+# registradas y guarda como `applied` una que falló — el comportamiento que TAB-39
+# elimina (H3 del veredicto de TAB-47).
+MIGRATIONS_HAS_STATUS="${MIGRATIONS_HAS_STATUS:-}"
 # Estado por versión, cacheado en una sola consulta: "version|status|attempts" por línea.
 MIGRATIONS_ROWS=""
 
@@ -54,6 +59,28 @@ migrations_column_exists() {
   local table="$1" column="$2" n
   n=$(migrations_mysql -N -e "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = '${DB_NAME}' AND table_name = '${table}' AND column_name = '${column}';" 2>/dev/null || echo "0")
   [ "${n:-0}" != "0" ]
+}
+
+# ¿Existe el índice? (misma guarda portable que para las columnas)
+migrations_index_exists() {
+  local table="$1" index="$2" n
+  n=$(migrations_mysql -N -e "SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = '${DB_NAME}' AND table_name = '${table}' AND index_name = '${index}';" 2>/dev/null || echo "0")
+  [ "${n:-0}" != "0" ]
+}
+
+# Resuelve MIGRATIONS_HAS_STATUS si nadie lo hizo antes. Lo fija
+# `migrations_ensure_columns` en el arranque, pero quien sourcee este archivo y
+# llame directo a la fase (un rig, un mantenimiento) no pasó por ahí: sin esto,
+# 0 = "no hay estados" y todo se clasificaría con el camino viejo.
+migrations_resolve_status_flag() {
+  if [ -n "${MIGRATIONS_HAS_STATUS:-}" ]; then
+    return 0
+  fi
+  if migrations_column_exists "${MIGRATIONS_TABLE}" "status"; then
+    MIGRATIONS_HAS_STATUS=1
+  else
+    MIGRATIONS_HAS_STATUS=0
+  fi
 }
 
 # Tabla de control, ya con la forma nueva. Idempotente: si existe, no la toca.
@@ -85,11 +112,22 @@ migrations_ensure_columns() {
   if ! migrations_column_exists "$table" "last_attempt_at"; then
     migrations_mysql -e "ALTER TABLE \`${table}\` ADD COLUMN last_attempt_at DATETIME NULL;" || true
   fi
+  # El MISMO índice que crea la migración versionada 048 (`idx_schema_migrations_status`),
+  # y aquí por una razón concreta: la 048 NO se ejecuta en una instalación nueva (las
+  # versionadas se registran como `baseline` sin ejecutarse, `migrations_register_baseline`),
+  # así que sin esto las instalaciones nuevas se quedaban sin el índice y las que
+  # actualizan sí lo tenían: dos esquemas distintos para el mismo `schema.sql`
+  # (riesgo 1 del veredicto de TAB-47). Idempotente: si ya está, no se toca.
+  if ! migrations_index_exists "${table}" "idx_schema_migrations_status"; then
+    migrations_mysql -e "ALTER TABLE \`${table}\` ADD KEY \`idx_schema_migrations_status\` (\`status\`);" \
+      || echo "[Tomodachi] AVISO: no se pudo añadir el índice idx_schema_migrations_status; el arranque continúa." >&2
+  fi
   MIGRATIONS_HAS_STATUS=1
 }
 
 # Estado + intentos de cada versión, en UNA consulta (la usan los [skip]).
 migrations_load_rows() {
+  migrations_resolve_status_flag
   if [ "${MIGRATIONS_HAS_STATUS}" = "1" ]; then
     MIGRATIONS_ROWS=$(migrations_mysql -N -B -e "SELECT CONCAT(version, '|', status, '|', attempts) FROM \`${MIGRATIONS_TABLE}\`;" 2>/dev/null || true)
   else
@@ -115,13 +153,20 @@ migrations_lookup() {
 }
 
 # Texto de error listo para meter en un literal SQL de una línea.
-# El cliente `mysql` imprime el enunciado y el resultado entre líneas de guiones:
-# se quitan para que el texto EMPIECE por el enunciado que falló y el `ERROR …`
-# quede dentro de lo primero que se lee (LEFT(error_text,80) en el diagnóstico).
+# El cliente `mysql` ECOA el enunciado que falló antes del `ERROR …` y separa las
+# partes con líneas de guiones. Si se guarda todo, con sentencias largas el enunciado
+# se come los primeros caracteres y `LEFT(error_text,80)` (esta puerta, el
+# diagnóstico) y `LEFT(error_text,200)` (`docker/schema_status.sh`) muestran la
+# sentencia y NINGÚN mensaje de error: el operador no ve la causa (H2 del veredicto
+# de TAB-47). Por eso se conserva la(s) línea(s) del propio error (`ERROR …`) y solo
+# si no hay ninguna se cae al texto completo limpio.
 migrations_error_text() {
-  printf '%s' "$1" \
-    | tr -d '\r' \
-    | sed '/^[[:space:]]*-\{3,\}[[:space:]]*$/d' \
+  local raw="$1" err
+  err=$(printf '%s\n' "$raw" | tr -d '\r' | grep -E '^[[:space:]]*ERROR' || true)
+  if [ -z "$err" ]; then
+    err=$(printf '%s' "$raw" | tr -d '\r' | sed '/^[[:space:]]*-\{3,\}[[:space:]]*$/d')
+  fi
+  printf '%s' "$err" \
     | tr '\n' ' ' \
     | sed -e 's/[[:space:]]\{1,\}/ /g' -e 's/^ //' -e 's/ $//' \
     -e 's/\\/\\\\/g' -e "s/'/''/g" \
@@ -132,6 +177,7 @@ migrations_error_text() {
 # Se registran como `baseline` para poder distinguirlo de "aplicada".
 migrations_register_baseline() {
   local dir="${1:-$MIGRATIONS_DIR}" f mig
+  migrations_resolve_status_flag
   if [ "${MIGRATIONS_HAS_STATUS}" = "1" ]; then
     {
       for f in "${dir}"/*.sql; do
@@ -216,6 +262,7 @@ migrations_apply_pending() {
 # Registra el desenlace. `attempts` se incrementa; `error_text` se guarda solo en fallo.
 migrations_record_result() {
   local mig="$1" status="$2" err="$3" escaped
+  migrations_resolve_status_flag
   if [ "${MIGRATIONS_HAS_STATUS}" != "1" ]; then
     migrations_mysql -e "INSERT INTO \`${MIGRATIONS_TABLE}\` (version) VALUES ('${mig}') ON DUPLICATE KEY UPDATE version = \`${MIGRATIONS_TABLE}\`.version;"
     return $?

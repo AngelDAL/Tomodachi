@@ -13,7 +13,10 @@
  *   POST {action:'ready',   comanda_id}   sent/prep -> ready
  *   POST {action:'served',  comanda_id}   hasta ready -> served
  *   POST {action:'cancel',  comanda_id, reason}  Anula la comanda con motivo
- *   POST {action:'print',   comanda_id}   Deja rastro de que salió por impresora
+ *   POST {action:'print',   comanda_id}   Deja rastro de que salió por la impresora
+ *                                          DEL NAVEGADOR (camino viejo)
+ *   POST {action:'reimprimir', comanda_id}  Reencola el ticket en la impresora de red
+ *                                          (el botón "Reintentar" del tablero)
  *
  * Permisos: operar la preparación es trabajo de PISO (el mismo que abre una cuenta y
  * anota), así que basta ser personal autenticado con scope `write`. No se exige un rol
@@ -121,6 +124,21 @@ function handlePost($comandas, $apiAuth, $auth) {
 
         case 'print':
             Response::success($comandas->marcarImpreso($comanda_id, $store_id), 'Impresión registrada');
+
+        case 'reimprimir':
+            // Mismo permiso que el resto del tablero: es trabajo de piso. Reencola el
+            // ticket en la impresora de red; el worker lo toma en su siguiente vuelta.
+            $r = $comandas->reimprimir($comanda_id, $store_id);
+            if ((int)$r['jobs'] === 0) {
+                // No es un fallo del servidor: es que no hay a dónde imprimir (o la
+                // cola está apagada). Se dice tal cual, sin fingir que se reimprimió.
+                Response::error($r['motivo'] ?: 'No hay una impresora configurada para esta comanda', 409);
+            }
+            Response::success([
+                'comanda_id' => $comanda_id,
+                'jobs'       => (int)$r['jobs'],
+                'comanda'    => $comandas->obtener($comanda_id, $store_id),
+            ], 'Ticket enviado a la impresora');
 
         case 'cancel':
             $motivo = trim((string)($data['reason'] ?? ''));

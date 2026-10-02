@@ -29,6 +29,13 @@
 #   Además: reintento acotado a MIGRATION_MAX_ATTEMPTS, `docker/schema_status.sh`,
 #   el caso `not_ready` (migración pendiente) y la tabla de control nueva.
 #
+# Guardarraíles de los hallazgos del veredicto de TAB-47 (secciones 7 y 8, y 0.a-bis):
+#   H2  `error_text` empieza por el `ERROR …` del cliente también cuando la sentencia
+#       es larga (el cliente la ecoa antes del error y se comía el diagnóstico).
+#   H3  la clasificación no depende de que el llamador haya corrido
+#       `migrations_ensure_columns`: sin eso, una que FALLA quedaba como `applied`.
+#   R1  el índice de `status` lo crean las DOS cohortes (arranque y 048).
+#
 # LO QUE ESTA PUERTA NO PUEDE PROBAR (hace falta Docker, lo verifica QA en la
 # instancia desechable): que la imagen arranque (`docker compose up`), el
 # HEALTHCHECK de `docker inspect`, y el `exec supervisord` del final.
@@ -44,8 +51,17 @@ set -u
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SCR="${1:-$(mktemp -d)}"
-DB="tomodachi_pos_tab39"
-DB048="tomodachi_pos_tab39_048"
+# Nombres de base POR CORRIDA: el rig de MariaDB es compartido (varios agentes a la
+# vez) y con nombres fijos dos corridas de esta puerta se pisan — una DROP/CREATE
+# mientras la otra mide. Se veía como fallidas de migraciones reales (filas
+# `Duplicate column name`) y como un [retry] en la PRIMERA corrida: era la BD de otro
+# run. Es la misma clase de fallo que el puerto fijo de `php -S` (más abajo).
+RUN="$$"
+DB="tomodachi_pos_tab39_${RUN}"
+DB048="tomodachi_pos_tab39_048_${RUN}"
+# Base aparte para el camino del ARRANQUE (tabla de control + columnas): así la
+# aserción del índice de la 048 (sección 5) sigue midiendo la 048 y no el arranque.
+DB_FRESCA="tomodachi_pos_tab39_fresca_${RUN}"
 
 MARIADB_BIN="${MARIADB_BIN:?falta MARIADB_BIN (directorio con el cliente `mysql` de MariaDB 10.11)}"
 MARIADB_HOST="${MARIADB_HOST:-127.0.0.1}"
@@ -100,7 +116,7 @@ echo
 # ---------------------------------------------------------------------------
 # Preparación: bases desechables + copia del directorio de migraciones del repo
 # ---------------------------------------------------------------------------
-$MYSQL -e "DROP DATABASE IF EXISTS \`${DB}\`; CREATE DATABASE \`${DB}\`; DROP DATABASE IF EXISTS \`${DB048}\`; CREATE DATABASE \`${DB048}\`;" \
+$MYSQL -e "DROP DATABASE IF EXISTS \`${DB}\`; CREATE DATABASE \`${DB}\`; DROP DATABASE IF EXISTS \`${DB048}\`; CREATE DATABASE \`${DB048}\`; DROP DATABASE IF EXISTS \`${DB_FRESCA}\`; CREATE DATABASE \`${DB_FRESCA}\`;" \
   || { echo "no se pudo crear la base; ¿está mariadbd corriendo?" >&2; exit 2; }
 cp "$REPO"/database/migrations/*.sql "$MIGRATIONS_DIR/"
 N_VERSIONADAS=$(ls -1 "$MIGRATIONS_DIR"/*.sql | wc -l)
@@ -125,6 +141,23 @@ comprobar "base nueva: status/error_text/attempts/last_attempt_at presentes" "4"
   "$(q "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='$DB048' AND table_name='schema_migrations' AND column_name IN ('status','error_text','attempts','last_attempt_at');" "$DB048")"
 comprobar "base nueva: el default de status es 'applied'" "'applied'" \
   "$(q "SELECT COLUMN_DEFAULT FROM information_schema.columns WHERE table_schema='$DB048' AND table_name='schema_migrations' AND column_name='status';" "$DB048")"
+
+# 0.a-bis El índice que crea la 048 (`idx_schema_migrations_status`) también lo crea el
+# ARRANQUE. La 048 NO se ejecuta en una instalación nueva (las versionadas se registran
+# como `baseline` sin ejecutarse), así que si el índice solo viviera en la 048 las
+# instalaciones nuevas se quedarían sin él y las que actualizan sí lo tendrían: dos
+# esquemas para el mismo `schema.sql` (riesgo 1 del veredicto de TAB-47).
+( DB_NAME="$DB_FRESCA" migrations_ensure_control_table >/dev/null; DB_NAME="$DB_FRESCA" migrations_ensure_columns >/dev/null )
+comprobar "base nueva: el arranque deja el índice idx_schema_migrations_status" "1" \
+  "$(q "SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema='$DB_FRESCA' AND table_name='schema_migrations' AND index_name='idx_schema_migrations_status';" "$DB_FRESCA")"
+if ( DB_NAME="$DB_FRESCA" migrations_ensure_columns >/dev/null 2>"$SCR/fresca_repetir.err" ); then
+  ok "base nueva: repetir el arranque sobre la tabla ya preparada no falla"
+else
+  mal "base nueva: repetir el arranque falló (ver $SCR/fresca_repetir.err)"
+fi
+comprobar "base nueva: sigue habiendo UN índice (idempotente)" "1" \
+  "$(q "SELECT COUNT(DISTINCT index_name) FROM information_schema.statistics WHERE table_schema='$DB_FRESCA' AND index_name='idx_schema_migrations_status';" "$DB_FRESCA")"
+no_contiene "base nueva: sin 'Duplicate key name' al repetir" "$(cat "$SCR/fresca_repetir.err" 2>/dev/null)" "Duplicate"
 
 # 0.b Instalación existente en la base principal.
 if ! $MYSQL "$DB" < "$SCHEMA_SQL" 2>"$SCR/schema.import.err"; then
@@ -380,6 +413,64 @@ q "UPDATE schema_migrations SET status='applied', error_text=NULL WHERE version=
 status_run schema_status_ok.txt
 comprobar "schema_status: exit 0 al día" "0" "$STATUS_RC"
 contiene "schema_status: resumen sin fallidas" "$STATUS_OUT" "0 fallida(s)"
+
+# ---------------------------------------------------------------------------
+# 7. H2 (veredicto de TAB-47): el diagnóstico empieza por el `ERROR …` también con
+#    sentencia larga. El cliente `mysql` ECOA el enunciado antes del error, así que
+#    con sentencias largas `LEFT(error_text,80)` mostraba la sentencia y NINGÚN
+#    mensaje de error: el operador no veía la causa.
+# ---------------------------------------------------------------------------
+echo
+echo "--- 7. H2: error_text con una sentencia larga ---"
+{
+  printf -- "-- 996 — de prueba: sentencia LARGA con error de sintaxis (H2).\n"
+  printf "SELECT '%s\n" "$(printf 'a%.0s' $(seq 1 240))"
+} > "$MIGRATIONS_DIR/996_larga_falla.sql"
+SALIDA_H2=$(migrations_apply_pending "$MIGRATIONS_DIR" 2>&1); RC_H2=$?
+printf '%s\n' "$SALIDA_H2" > "$SCR/run_h2.txt"
+comprobar "H2: la sentencia larga falla y se registra como 'failed'" "failed" \
+  "$(q "SELECT status FROM schema_migrations WHERE version='996_larga_falla.sql';")"
+comprobar "H2: la fase de migraciones no aborta el arranque" "0" "$RC_H2"
+LARGO_POS=$(q "SELECT LOCATE('ERROR', error_text) FROM schema_migrations WHERE version='996_larga_falla.sql';")
+if [ "${LARGO_POS:-0}" -ge 1 ] && [ "${LARGO_POS:-0}" -le 80 ]; then
+  ok "H2: el 'ERROR' cae dentro de LEFT(error_text,80) (posición ${LARGO_POS})"
+else
+  mal "H2: el 'ERROR' queda fuera del diagnóstico (posición [${LARGO_POS:-?}])"
+fi
+LARGO_TXT=$(q "SELECT LEFT(error_text,80) FROM schema_migrations WHERE version='996_larga_falla.sql';")
+contiene "H2: el diagnóstico trae el código de error del cliente" "$LARGO_TXT" "ERROR 1064"
+no_contiene "H2: ya no arrastra el enunciado ecoado" "$LARGO_TXT" "SELECT 'aaa"
+LARGO_200=$(q "SELECT LEFT(error_text,200) FROM schema_migrations WHERE version='996_larga_falla.sql';")
+contiene "H2: la vista del operador (LEFT 200) también lo ve" "$LARGO_200" "ERROR 1064"
+q "DELETE FROM schema_migrations WHERE version='996_larga_falla.sql';" >/dev/null
+rm -f "$MIGRATIONS_DIR/996_larga_falla.sql"
+
+# ---------------------------------------------------------------------------
+# 8. H3 (veredicto de TAB-47): clasificar NO puede depender de que el llamador haya
+#    corrido `migrations_ensure_columns`. Si el flag se asume "sin estado", la fase
+#    re-ejecuta lo ya registrado y guarda como `applied` una migración que FALLÓ: el
+#    comportamiento viejo que TAB-39 elimina. Aquí se llama la fase sin ese paso.
+# ---------------------------------------------------------------------------
+echo
+echo "--- 8. H3: la fase sin resolver el flag de estado ---"
+cat > "$MIGRATIONS_DIR/995_h3_falla.sql" <<'SQL'
+-- 995 — de prueba: falla a propósito, sin pasar por ensure_columns (H3).
+ALTER TABLE tampoco_existe_h3 ADD COLUMN nope INT;
+SQL
+SALIDA_H3=$( ( unset MIGRATIONS_HAS_STATUS; migrations_apply_pending "$MIGRATIONS_DIR" ) 2>&1 )
+printf '%s\n' "$SALIDA_H3" > "$SCR/run_h3.txt"
+comprobar "H3: una fallida se registra como 'failed' aunque nadie resolvió el flag" "failed" \
+  "$(q "SELECT status FROM schema_migrations WHERE version='995_h3_falla.sql';")"
+contiene "H3: y su error se guarda" \
+  "$(q "SELECT LEFT(error_text,80) FROM schema_migrations WHERE version='995_h3_falla.sql';")" "ERROR"
+contiene "H3: lo ya registrado sigue en [skip] (no se re-ejecuta todo)" "$SALIDA_H3" \
+  "[skip] 048_schema_migrations_status.sql (baseline)"
+no_contiene "H3: la 048 no se vuelve a ejecutar" "$SALIDA_H3" "[ok] 048_schema_migrations_status.sql"
+q "DELETE FROM schema_migrations WHERE version='995_h3_falla.sql';" >/dev/null
+rm -f "$MIGRATIONS_DIR/995_h3_falla.sql"
+ready ready_hallazgos_final
+comprobar "H2/H3: estado de reposo → 200" "200" "$READY_CODE"
+comprobar "H2/H3: sin fallidas al final" "0" "$(jw "$SCR/ready_hallazgos_final.json" '.checks.migrations_failed.failed')"
 
 # ---------------------------------------------------------------------------
 # Cierre

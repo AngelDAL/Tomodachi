@@ -119,9 +119,38 @@ class ComandaService {
             $upd->execute(array_merge([$comanda_id, $station_id], $ids));
 
             $creadas[] = $comanda_id;
+
+            // La cola de impresión se alimenta AQUÍ, en la misma transacción que crea
+            // la comanda. Si el INSERT del job falla, falla el `send` completo y el
+            // mesero lo ve al instante: preferimos eso a una comanda enviada sin
+            // trabajo de impresión (el ticket perdido en silencio es el modo de falla
+            // que hay que evitar). No toca el camino del dinero: la comanda no es la
+            // venta. Si la estación no tiene salida `print` con ruta, no hace nada.
+            $this->encolarImpresion($comanda_id, $store_id);
         }
 
         return $this->varias($creadas, $store_id);
+    }
+
+    /**
+     * Encola el ticket de una comanda recién creada (una fila por salida de impresión).
+     *
+     * @return array|null null si la cola está apagada o la comanda no se pudo leer
+     */
+    private function encolarImpresion($comanda_id, $store_id) {
+        if (defined('PRINT_QUEUE_ENABLED') && !PRINT_QUEUE_ENABLED) {
+            // Interruptor de retroceso: comportamiento de antes (impresión del navegador).
+            return null;
+        }
+        require_once __DIR__ . '/EscPos.class.php';
+        require_once __DIR__ . '/PrintQueue.class.php';
+
+        $comanda = $this->obtener((int)$comanda_id, (int)$store_id);
+        if (!$comanda) {
+            return null;
+        }
+        $queue = new PrintQueue($this->db);
+        return $queue->encolarComanda($comanda, (int)$store_id);
     }
 
     /**
@@ -194,6 +223,7 @@ class ComandaService {
         // Los minutos y la fecha salen de la BASE (ver la nota de zonas horarias arriba).
         $sql = "SELECT c.comanda_id, c.session_id, c.channel, c.station_id, c.status,
                        c.number, c.business_date, c.notes, c.printed_count,
+                       c.print_status, c.print_attempts, c.print_last_error, c.print_failed_at,
                        c.created_by_type, c.sent_at, c.ready_at, c.served_at,
                        c.cancelled_at, c.cancel_reason,
                        c.delivery_name, c.delivery_phone, c.delivery_address, c.delivery_fee,
@@ -248,6 +278,13 @@ TIMESTAMPDIFF(MINUTE, COALESCE(c.sent_at, c.created_at), NOW()) AS minutos,
             'estaciones'  => $this->estaciones($store_id, true),
             'sin_estacion' => $this->contarSinEstacion($store_id),
             'conteos'     => $conteos,
+            // La pantalla necesita saber si la impresión sale del SERVIDOR (cola
+            // ESC/POS) o sigue siendo la del navegador: con la cola apagada
+            // (PRINT_QUEUE_ENABLED=false) el botón vuelve a ser "Imprimir" con
+            // window.print(). El rollback es una constante, también en la UI.
+            'impresion'   => [
+                'enabled' => defined('PRINT_QUEUE_ENABLED') ? (bool)PRINT_QUEUE_ENABLED : false,
+            ],
         ];
     }
 
@@ -271,6 +308,7 @@ TIMESTAMPDIFF(MINUTE, COALESCE(c.sent_at, c.created_at), NOW()) AS minutos,
         $stmt = $this->conn->prepare(
             "SELECT c.comanda_id, c.session_id, c.channel, c.station_id, c.status,
                     c.number, c.business_date, c.notes, c.printed_count,
+                    c.print_status, c.print_attempts, c.print_last_error, c.print_failed_at,
                     c.created_by_type, c.sent_at, c.ready_at, c.served_at,
                     c.cancelled_at, c.cancel_reason,
                     c.delivery_name, c.delivery_phone, c.delivery_address, c.delivery_fee,
@@ -350,6 +388,7 @@ TIMESTAMPDIFF(MINUTE, COALESCE(c.sent_at, c.created_at), NOW()) AS minutos,
         $stmt = $this->conn->prepare(
             "SELECT c.comanda_id, c.session_id, c.channel, c.station_id, c.status,
                     c.number, c.business_date, c.notes, c.printed_count,
+                    c.print_status, c.print_attempts, c.print_last_error, c.print_failed_at,
                     c.created_by_type, c.sent_at, c.ready_at, c.served_at,
                     c.cancelled_at, c.cancel_reason,
                     c.delivery_name, c.delivery_phone, c.delivery_address, c.delivery_fee,
@@ -403,6 +442,18 @@ TIMESTAMPDIFF(MINUTE, COALESCE(c.sent_at, c.created_at), NOW()) AS minutos,
             'notes'        => $f['notes'],
             'notas_lineas' => $notas,
             'printed_count' => (int)$f['printed_count'],
+            // La marca de impresión del servidor (TAB-22): con esto el tablero puede
+            // pintar "En cola" / "Impresa" / "No salió" + motivo, en vez de un contador
+            // que no distingue "salió 0 veces" de "falló 3 veces".
+            'print_status'     => $f['print_status'] ?? 'none',
+            'print_attempts'   => (int)($f['print_attempts'] ?? 0),
+            'print_last_error' => $f['print_last_error'] ?? null,
+            'print_failed_at'  => $f['print_failed_at'] ?? null,
+            // La hora del ticket, en la hora LOCAL del negocio. `sent_at` es un
+            // instante en UTC que pone la base; aquí solo se le cambia el reloj, no se
+            // calcula ninguna diferencia (las diferencias sí van en SQL: minutos,
+            // segundos y vencimientos, ver la nota de zonas horarias del encabezado).
+            'hora_local'   => self::horaLocal($f['sent_at'] ?? null),
             'created_by_type' => $f['created_by_type'],
             'sent_at'      => $f['sent_at'],
             'ready_at'     => $f['ready_at'],
@@ -554,11 +605,16 @@ TIMESTAMPDIFF(MINUTE, COALESCE(c.sent_at, c.created_at), NOW()) AS minutos,
     }
 
     /**
-     * Marca que la comanda salió por la impresora.
+     * Marca que la comanda salió por la impresora DEL NAVEGADOR.
      *
-     * La impresión es del NAVEGADOR (thermal-print.js) y el navegador pide confirmación
-     * salvo que se abra en modo kiosco. Por eso la pantalla es la vía principal y la
-     * impresora es una salida más. Aquí solo se deja el rastro de cuántas veces salió.
+     * Se queda tal cual para el camino viejo (una terminal sin impresora de red,
+     * con la cola apagada o con el ticket impreso desde la pantalla). El camino
+     * nuevo NO pasa por aquí: `scripts/print-worker.php` incrementa `printed_count`
+     * y pone `print_status='printed'` en el mismo UPDATE que cierra el job.
+     *
+     * Ojo con lo que este contador significa: es el rastro de una INTENCIÓN. El
+     * navegador pide confirmación salvo que se abra en modo kiosco, así que un
+     * `printed_count` que sube aquí solo dice "el mesero aceptó el diálogo".
      */
     public function marcarImpreso($comanda_id, $store_id) {
         $comanda = $this->filaComanda((int)$comanda_id, (int)$store_id);
@@ -571,6 +627,39 @@ TIMESTAMPDIFF(MINUTE, COALESCE(c.sent_at, c.created_at), NOW()) AS minutos,
         )->execute([':cid' => (int)$comanda_id, ':store_id' => (int)$store_id]);
 
         return $this->obtener((int)$comanda_id, (int)$store_id);
+    }
+
+    /**
+     * Reimprime la comanda: pone su trabajo de vuelta en la cola del servidor.
+     *
+     * Es lo que hace el botón "Reintentar" del tablero cuando la marca dice que el
+     * ticket NO salió. No imprime nada por sí misma: deja el job `pending` y el
+     * worker lo toma en su siguiente vuelta (idioma del proyecto: nadie escribe
+     * bytes desde una petición HTTP del navegador).
+     *
+     * @return array ['jobs' => int, 'motivo' => string|null]
+     */
+    public function reimprimir($comanda_id, $store_id) {
+        require_once __DIR__ . '/EscPos.class.php';
+        require_once __DIR__ . '/PrintQueue.class.php';
+
+        $comanda = $this->filaComanda((int)$comanda_id, (int)$store_id);
+        if (!$comanda) {
+            throw new Exception('La comanda no existe', 404);
+        }
+
+        $queue = new PrintQueue($this->db);
+        $r = $queue->reimprimir($comanda_id, $store_id);
+
+        // El aviso al tablero es para que las OTRAS terminales sepan que se reintentó.
+        try {
+            $this->avisar((int)$store_id, $comanda['station_id'] !== null ? (int)$comanda['station_id'] : null,
+                          'comanda_reimpresion', (int)$comanda_id);
+        } catch (Throwable $e) {
+            // Best-effort: que no salga el aviso no invalida el reintento encolado.
+        }
+
+        return $r;
     }
 
     // =========================================================
@@ -605,8 +694,9 @@ TIMESTAMPDIFF(MINUTE, COALESCE(c.sent_at, c.created_at), NOW()) AS minutos,
         $marcadores = implode(',', array_fill(0, count($ids), '?'));
 
         // Salidas: cómo sale cada comanda de esta estación (pantalla, impresora... o nada).
+        // Las columnas se nombran una por una: añadir una a la tabla no rompe esta lectura.
         $stmt = $this->conn->prepare(
-            "SELECT output_id, station_id, kind, target, is_active
+            "SELECT output_id, station_id, kind, transport, target, host, paper_width, `charset`, has_drawer, is_active
                FROM station_outputs
               WHERE station_id IN ($marcadores)
               ORDER BY output_id ASC"
@@ -615,10 +705,15 @@ TIMESTAMPDIFF(MINUTE, COALESCE(c.sent_at, c.created_at), NOW()) AS minutos,
         $salidas = [];
         foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $s) {
             $salidas[(int)$s['station_id']][] = [
-                'output_id' => (int)$s['output_id'],
-                'kind'      => $s['kind'],
-                'target'    => $s['target'],
-                'is_active' => (int)$s['is_active'] === 1,
+                'output_id'   => (int)$s['output_id'],
+                'kind'        => $s['kind'],
+                'transport'   => $s['transport'],
+                'target'      => $s['target'],
+                'host'        => $s['host'],
+                'paper_width' => $s['paper_width'],
+                'charset'     => $s['charset'],
+                'has_drawer'  => (int)$s['has_drawer'] === 1,
+                'is_active'   => (int)$s['is_active'] === 1,
             ];
         }
 
@@ -782,8 +877,20 @@ TIMESTAMPDIFF(MINUTE, COALESCE(c.sent_at, c.created_at), NOW()) AS minutos,
         return ['station_id' => $station_id];
     }
 
-    /** Reemplaza las salidas de una estación (pantalla / impresora / ninguna). */
+    /**
+     * Reemplaza las salidas de una estación (pantalla / impresora / ninguna).
+     *
+     * En una salida `print`, `host` es la RUTA (a dónde se conecta el worker) y
+     * `target` es la etiqueta humana. El host se valida AQUÍ, en el borde y en el
+     * momento en que alguien lo escribe: es el único punto donde un error se puede
+     * explicar y corregir. Un host inválido no se guarda (422 con motivo), así que la
+     * cola nunca se encuentra un destino prohibido que ella no pueda explicar. El
+     * worker vuelve a validar antes de conectar de todos modos (defensa en fondo).
+     */
     private function reemplazarSalidas($station_id, array $salidas) {
+        require_once __DIR__ . '/EscPos.class.php';
+        require_once __DIR__ . '/PrintQueue.class.php';
+
         $this->conn->prepare("DELETE FROM station_outputs WHERE station_id = :sid")
                  ->execute([':sid' => (int)$station_id]);
 
@@ -799,10 +906,47 @@ TIMESTAMPDIFF(MINUTE, COALESCE(c.sent_at, c.created_at), NOW()) AS minutos,
             if ($target !== '' && function_exists('mb_substr')) {
                 $target = mb_substr($target, 0, 120);
             }
+
+            $host = null;
+            $transport = 'none';
+            $paper_width = '80';
+            $charset = 'cp850';
+            $has_drawer = 0;
+
+            if ($kind === 'print') {
+                $host = trim((string)($s['host'] ?? ''));
+                if ($host !== '') {
+                    $motivo = PrintQueue::motivoHostInvalido($host);
+                    if ($motivo !== null) {
+                        // 422 explícito: es un dato del formulario, no un fallo del
+                        // servidor. El endpoint ya traduce el código a la respuesta.
+                        throw new InvalidArgumentException('Impresora: ' . $motivo, 422);
+                    }
+                    $transport = 'net9100';
+                } else {
+                    $host = null;
+                }
+                $paper_width = ((string)($s['paper_width'] ?? '80') === '58') ? '58' : '80';
+                // `charset` es palabra reservada en el SQL de MariaDB dentro de comillas
+                // dobles, así que se lee del request como `charset` y se escribe entre
+                // acentos graves.
+                $charset = (strtolower((string)($s['charset'] ?? 'cp850')) === 'cp437') ? 'cp437' : 'cp850';
+                $has_drawer = !empty($s['has_drawer']) ? 1 : 0;
+            }
+
             $this->conn->prepare(
-                "INSERT INTO station_outputs (station_id, kind, target, is_active)
-                 VALUES (:sid, :kind, :target, 1)"
-            )->execute([':sid' => (int)$station_id, ':kind' => $kind, ':target' => $target !== '' ? $target : null]);
+                "INSERT INTO station_outputs (station_id, kind, transport, target, host, paper_width, `charset`, has_drawer, is_active)
+                 VALUES (:sid, :kind, :transport, :target, :host, :paper_width, :charset, :has_drawer, 1)"
+            )->execute([
+                ':sid'         => (int)$station_id,
+                ':kind'        => $kind,
+                ':transport'   => $transport,
+                ':target'      => $target !== '' ? $target : null,
+                ':host'        => $host,
+                ':paper_width' => $paper_width,
+                ':charset'     => $charset,
+                ':has_drawer'  => $has_drawer,
+            ]);
         }
     }
 
@@ -926,6 +1070,29 @@ TIMESTAMPDIFF(MINUTE, COALESCE(c.sent_at, c.created_at), NOW()) AS minutos,
     private function fechaDeNegocio() {
         $fecha = date('Y-m-d');
         return $fecha;
+    }
+
+    /**
+     * Un instante UTC de la base, en la hora local del negocio y en formato de ticket.
+     *
+     * NO es un cálculo de tiempo (no hay ninguna resta): es cambiarle el reloj a un
+     * valor absoluto para poder imprimirlo. La regla de "los tiempos se calculan en
+     * SQL" sigue intacta donde importa —minutos, segundos, vencimientos—, porque ahí
+     * sí se compara un valor contra otro.
+     */
+    private static function horaLocal($sent_at) {
+        $sent_at = trim((string)$sent_at);
+        if ($sent_at === '' || $sent_at === '0000-00-00 00:00:00') {
+            return null;
+        }
+        try {
+            $dt = new DateTime($sent_at, new DateTimeZone('UTC'));
+            $dt->setTimezone(new DateTimeZone(date_default_timezone_get()));
+            return $dt->format('H:i');
+        } catch (Throwable $e) {
+            // Una fecha rara no puede tumbar el tablero ni el ticket.
+            return null;
+        }
     }
 
     /** La fila cruda de una cuenta. */

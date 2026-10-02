@@ -994,6 +994,19 @@
 
         const urlParams = new URLSearchParams(window.location.search);
         const SESSION_UUID = urlParams.get('cart');
+        // Credencial de lectura del carrito (TAB-25-X3): la UUID sola ya no abre el carrito.
+        // El token firmado lo pone el POS en el enlace; si no viene, este display sólo puede
+        // leer por la sesión del navegador (mismo equipo) o no leerá nada.
+        const CART_TOKEN = urlParams.get('token') || '';
+        const CART_EXP = urlParams.get('exp') || '';
+
+        function cartSyncUrl() {
+            let url = '../api/sales/cart_sync.php?session=' + encodeURIComponent(SESSION_UUID);
+            if (CART_TOKEN && CART_EXP) {
+                url += '&exp=' + encodeURIComponent(CART_EXP) + '&token=' + encodeURIComponent(CART_TOKEN);
+            }
+            return url;
+        }
 
         // Elementos del DOM
         const productsList = document.getElementById('productsList');
@@ -1084,7 +1097,7 @@
 
         async function pollOnce() {
             try {
-                const url = '../api/sales/cart_sync.php?session=' + SESSION_UUID + '&_=' + Date.now();
+                const url = cartSyncUrl() + '&_=' + Date.now();
                 const res = await fetch(url);
                 const json = await res.json();
                 if (json.success && json.data) {
@@ -1157,7 +1170,13 @@
         function getDisplayUrl() {
             // Compatible con subcarpeta local (/Tomodachi/public) y dominio propio (raíz /public)
             const base = window.location.origin + window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1) + 'customer-display.html';
-            return SESSION_UUID ? base + '?cart=' + SESSION_UUID : base;
+            if (!SESSION_UUID) return base;
+            // El token viaja también aquí: si no, el enlace que muestra el QR no podría leer.
+            let url = base + '?cart=' + encodeURIComponent(SESSION_UUID);
+            if (CART_TOKEN && CART_EXP) {
+                url += '&exp=' + encodeURIComponent(CART_EXP) + '&token=' + encodeURIComponent(CART_TOKEN);
+            }
+            return url;
         }
 
         function closeDisplayActions() {

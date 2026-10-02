@@ -627,6 +627,7 @@ function bindEvents() {
                 if (json.success && json.data && json.data.session) {
                     displaySessionUUID = json.data.session;
                     try { localStorage.setItem('tomodachi_display_session', displaySessionUUID); } catch (_) {}
+                    saveDisplayCartToken(json.data.cart_token);
                     startSyncInterval();
                     showNotification('Enlace generado. El display se actualiza automáticamente', 'success');
                 }
@@ -636,13 +637,22 @@ function bindEvents() {
                     return;
                 }
 
-                // Generar URL con el UUID de sesión
+                // Generar URL con el UUID de sesión y el token firmado del carrito.
                 // Compatible con subcarpeta local (/Tomodachi/public) y dominio propio (raíz /public)
                 const baseUrl = window.location.origin + window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1) + 'customer-display.html';
-                const url = baseUrl + '?cart=' + displaySessionUUID;
+                // Sin token (instalación sin WS_SECRET) el enlace sólo funciona en ESTE
+                // navegador, que lleva la sesión: se avisa en vez de fingir que sirve en otra tablet.
+                const cartToken = getDisplayCartToken();
+                let url = baseUrl + '?cart=' + encodeURIComponent(displaySessionUUID);
+                if (cartToken) {
+                    url += '&exp=' + encodeURIComponent(cartToken.exp) + '&token=' + encodeURIComponent(cartToken.token);
+                }
+                const avisoCopia = cartToken
+                    ? 'Enlace copiado al portapapeles'
+                    : 'Enlace copiado (sin token: sólo funciona en este navegador)';
 
                 navigator.clipboard.writeText(url).then(() => {
-                    showNotification('Enlace copiado al portapapeles', 'success');
+                    showNotification(avisoCopia, cartToken ? 'success' : 'warning');
                 }).catch(() => {
                     const textarea = document.createElement('textarea');
                     textarea.value = url;
@@ -650,7 +660,7 @@ function bindEvents() {
                     textarea.select();
                     document.execCommand('copy');
                     document.body.removeChild(textarea);
-                    showNotification('Enlace copiado al portapapeles', 'success');
+                    showNotification(avisoCopia, cartToken ? 'success' : 'warning');
                 });
             } catch (e) {
                 console.error('Error al crear sesión:', e);
@@ -4526,6 +4536,25 @@ let displaySessionUUID = null;
 let customerDisplaySocket = null;
 let customerDisplayWsReconnectTimer = null;
 
+// Token de LECTURA del carrito del display (TAB-25-X3). La UUID sola ya no abre el carrito:
+// el POST autenticado de cart_sync.php devuelve `cart_token` y el enlace del display lo lleva
+// en la URL (`&exp=&token=`). Se guarda junto a la UUID para poder reconstruir el enlace.
+const DISPLAY_CART_TOKEN_KEY = 'tomodachi_display_cart_token';
+
+function saveDisplayCartToken(cartToken) {
+  if (!cartToken || !cartToken.token || !cartToken.exp) return;
+  try { localStorage.setItem(DISPLAY_CART_TOKEN_KEY, JSON.stringify(cartToken)); } catch (_) {}
+}
+
+function getDisplayCartToken() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(DISPLAY_CART_TOKEN_KEY) || 'null');
+    // Un token caducado no sirve: mejor no prometer que el display de otra tablet va a leer.
+    if (saved && saved.token && Number(saved.exp) > Math.floor(Date.now() / 1000)) return saved;
+  } catch (_) {}
+  return null;
+}
+
 // Restaurar UUID de sesión guardado
 try {
   const saved = localStorage.getItem('tomodachi_display_session');
@@ -4766,6 +4795,16 @@ function sendCartToCustomerDisplay() {
         storeInfo: data.storeInfo,
         activeTab: data.activeTab
       })
+    }).then(res => res.json()).then(json => {
+      // El POST renueva el token de lectura del carrito; se guarda para que el enlace del
+      // display siga llevando un token vigente. Si el servidor devolvió otra UUID (la que
+      // teníamos era de otra tienda), se adopta la nueva.
+      if (!json || !json.success || !json.data) return;
+      if (json.data.session && json.data.session !== displaySessionUUID) {
+        displaySessionUUID = json.data.session;
+        try { localStorage.setItem('tomodachi_display_session', displaySessionUUID); } catch (_) {}
+      }
+      saveDisplayCartToken(json.data.cart_token);
     }).catch(err => console.warn('cart_sync error:', err));
   }
 }

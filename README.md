@@ -109,6 +109,14 @@ Una migración que falla **no** bloquea el arranque, pero deja de ser invisible:
 con `bash docker/schema_status.sh` (lista versiones, estado, intentos, cuándo fue
 el último intento y el error).
 
+Si una migración **agota** esos intentos deja de reintentarse (y el arranque lo
+dice: `[skip] … (fallida, N/3 intentos: ya no se reintenta)`), así que el sistema
+se queda en `degraded` hasta que alguien la re-arme. Para eso: corrige el SQL y
+vuelve a armarla con
+`UPDATE schema_migrations SET attempts = 0 WHERE version = '<archivo>.sql';`
+(o borrando su fila) y reinicia el contenedor. `MIGRATION_MAX_ATTEMPTS` sube el
+tope si quieres más reintentos automáticos.
+
 ## Agentes de IA e integraciones
 
 Tomodachi expone una **API REST completa** para que la consumas desde otras

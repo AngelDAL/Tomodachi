@@ -211,6 +211,10 @@ async function loadCompanySettings() {
                 if (codi.api_key) document.getElementById('codiApiKey').value = codi.api_key;
                 if (codi.endpoint) document.getElementById('codiEndpoint').value = codi.endpoint;
             }
+            // El secreto del webhook no viaja en settings.codi (ahí quedaría en
+            // claro dentro de stores.settings y volvería en el GET): su estado se
+            // consulta al endpoint de CoDi, que es la única fuente de verdad.
+            loadCodiSecretState();
             // Pedidos desde el QR: la verificación de presencia y cuánto viven los números.
             if (store.settings && store.settings.dining) {
                 const dining = store.settings.dining;
@@ -734,7 +738,17 @@ document.getElementById('companyForm').addEventListener('submit', async (e) => {
         });
         const result = await res.json();
         if (result.success) {
-            showNotification('Configuración guardada', 'success');
+            // El secreto del webhook de CoDi va aparte: no viaja en
+            // settings.codi (quedaría en claro en stores.settings y volvería en
+            // el GET) y se envía al endpoint que ya lo escribe con COALESCE.
+            const codiSecret = await saveCodiWebhookSecret();
+            if (!codiSecret.attempted) {
+                showNotification('Configuración guardada', 'success');
+            } else if (codiSecret.ok) {
+                showNotification('Configuración y secreto de webhook guardados', 'success');
+            } else {
+                showNotification('Se guardó la configuración, pero el secreto del webhook de CoDi NO: ' + codiSecret.message, 'error');
+            }
             // Aplicar en vivo el tema guardado (modo actual) y refrescar caché
             if (window.__activeThemeConfig) {
                 window.__activeThemeConfig = themeConfig;
@@ -1214,9 +1228,126 @@ document.addEventListener('DOMContentLoaded', () => {
     if (codiToggle && codiGroup) {
         codiToggle.addEventListener('change', () => {
             codiGroup.style.display = codiToggle.checked ? 'block' : 'none';
+            // El aviso del secreto depende de si CoDi está encendido: al
+            // encenderlo sin secreto, el aviso aparece en el momento.
+            renderCodiSecretState();
         });
     }
 });
+
+// ==========================================
+// CoDi: secreto del webhook (fail-closed de TAB-25-X1)
+// ==========================================
+// Sin secreto configurado, el webhook de CoDi no confirma ningún pago. La única
+// fuente de verdad del estado es el backend (`api/codi/configure.php`, GET, solo
+// admin): lo que no diga el backend no se dibuja. El valor recibido se enmascara
+// (mismo criterio que `api/stripe/config.php`) y NUNCA se copia a un input ni se
+// pinta en la pantalla.
+let codiSecretState = 'unknown';  // 'configured' | 'empty' | 'unknown'
+let codiSecretMask = null;        // máscara, solo si el backend la da o la envía cruda
+
+function codiMask(value) {
+    if (!value) return null;
+    return value.substr(0, 7) + '****' + value.substr(-4);
+}
+
+function codiWarningVisible() {
+    // Con CoDi apagado no hay webhooks que procesar, así que el aviso no aplica;
+    // con CoDi encendido y sin secreto, los pagos no se confirman por webhook.
+    const toggle = document.getElementById('codiEnabled');
+    return !!(toggle && toggle.checked) && codiSecretState !== 'configured';
+}
+
+function renderCodiSecretState() {
+    const hint = document.getElementById('codiWebhookSecretHint');
+    const warning = document.getElementById('codiWebhookWarning');
+    const warningText = document.getElementById('codiWebhookWarningText');
+
+    if (hint) {
+        if (codiSecretState === 'configured') {
+            hint.textContent = codiSecretMask
+                ? 'Guardada: ' + codiSecretMask + ' — deja el campo vacío para conservarla.'
+                : 'Hay un secreto guardado — deja el campo vacío para conservarlo.';
+        } else if (codiSecretState === 'empty') {
+            hint.textContent = 'Todavía no hay ningún secreto guardado.';
+        } else {
+            hint.textContent = 'No se pudo comprobar si hay un secreto guardado.';
+        }
+    }
+
+    if (!warning || !warningText) return;
+    if (!codiWarningVisible()) {
+        warning.hidden = true;
+        return;
+    }
+    warningText.innerHTML = (codiSecretState === 'unknown')
+        ? '<strong>No pudimos comprobar el secreto del webhook.</strong> Vuelve a cargar esta pantalla: si no hay secreto configurado, los pagos de CoDi no se confirmarán solos.'
+        : '<strong>Los webhooks de CoDi no se procesarán.</strong> Sin el secreto de firma, la confirmación automática de pagos queda apagada. Cópialo del panel de tu proveedor de CoDi y guárdalo aquí.';
+    warning.hidden = false;
+}
+
+async function loadCodiSecretState() {
+    try {
+        const res = await fetch('../api/codi/configure.php', { credentials: 'include' });
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data || !data.success) {
+            // Sin respuesta del backend no se afirma nada: ni "hay" ni "no hay".
+            codiSecretState = 'unknown';
+            codiSecretMask = null;
+        } else {
+            const cfg = data.data || {};
+            // `has_webhook_secret` / `webhook_secret_masked` son la forma que ya
+            // usa Stripe; si el backend todavía solo manda el valor crudo, se usa
+            // su presencia (y su máscara) sin inventar nada.
+            const has = (typeof cfg.has_webhook_secret === 'boolean')
+                ? cfg.has_webhook_secret
+                : !!cfg.webhook_secret;
+            codiSecretState = has ? 'configured' : 'empty';
+            codiSecretMask = cfg.webhook_secret_masked
+                || (cfg.webhook_secret ? codiMask(cfg.webhook_secret) : null);
+        }
+    } catch (e) {
+        codiSecretState = 'unknown';
+        codiSecretMask = null;
+    }
+    renderCodiSecretState();
+}
+
+async function saveCodiWebhookSecret() {
+    const input = document.getElementById('codiWebhookSecret');
+    if (!input) return { attempted: false, ok: true, message: '' };
+    const secret = input.value.trim();
+    if (!secret) return { attempted: false, ok: true, message: '' };  // vacío = conservar
+
+    try {
+        const res = await fetch('../api/codi/configure.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+                enabled: document.getElementById('codiEnabled').checked,
+                environment: document.getElementById('codiEnvironment').value,
+                webhook_secret: secret
+            })
+        });
+        const result = await res.json().catch(() => null);
+        if (res.ok && result && result.success) {
+            input.value = '';  // el secreto no se queda pegado en el DOM
+            await loadCodiSecretState();  // estado real, leído del backend
+            return { attempted: true, ok: true, message: '' };
+        }
+        // El guardado falló: el estado se re-lee igual (no se oculta el aviso).
+        await loadCodiSecretState();
+        return {
+            attempted: true,
+            ok: false,
+            message: (result && result.message) || ('el servidor respondió ' + res.status)
+        };
+    } catch (e) {
+        await loadCodiSecretState();
+        return { attempted: true, ok: false, message: 'error de conexión' };
+    }
+}
 
 // ==========================================
 // Stripe: toggle settings visibility

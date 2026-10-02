@@ -1075,7 +1075,12 @@ CREATE TABLE station_outputs (
     output_id INT AUTO_INCREMENT PRIMARY KEY,
     station_id INT NOT NULL,
     kind ENUM('screen','print') NOT NULL,
+    transport ENUM('net9100','none') NOT NULL DEFAULT 'net9100' COMMENT 'Cómo se entrega: TCP crudo al 9100 o nada',
     target VARCHAR(120) NULL COMMENT 'Nombre del dispositivo o impresora, libre',
+    host VARCHAR(60) NULL COMMENT 'IPv4 privada de la impresora (la ruta; target es la etiqueta)',
+    paper_width ENUM('58','80') NOT NULL DEFAULT '80' COMMENT 'Ancho de papel: decide el ancho de línea',
+    `charset` ENUM('cp437','cp850') NOT NULL DEFAULT 'cp850' COMMENT 'Tabla de códigos de la térmica (cp850 trae acentos)',
+    has_drawer TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'El cajón de dinero cuelga de ESTA impresora',
     is_active TINYINT(1) NOT NULL DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_output_station (station_id, is_active),
@@ -1100,6 +1105,10 @@ CREATE TABLE comandas (
     created_by_id INT NULL,
     notes VARCHAR(255) NULL,
     printed_count INT NOT NULL DEFAULT 0,
+    print_status ENUM('none','queued','printed','failed') NOT NULL DEFAULT 'none' COMMENT 'Cómo va su ticket en la cola del servidor',
+    print_attempts TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'Intentos del último job de impresión',
+    print_last_error VARCHAR(255) NULL COMMENT 'El motivo real del último fallo de impresión',
+    print_failed_at DATETIME NULL COMMENT 'Cuándo se agotaron los intentos (NULL = nunca)',
     sent_at DATETIME NULL,
     ready_at DATETIME NULL,
     served_at DATETIME NULL,
@@ -1122,6 +1131,34 @@ CREATE TABLE comandas (
     FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE,
     FOREIGN KEY (session_id) REFERENCES dining_sessions(session_id) ON DELETE CASCADE,
     FOREIGN KEY (station_id) REFERENCES stations(station_id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: print_jobs
+-- La cola de impresión del servidor. Una fila por (comanda, salida) con el payload
+-- ESC/POS YA renderizado: el worker (scripts/print-worker.php) solo reclama, escribe
+-- bytes por TCP al 9100 y marca el desenlace. Es lo que convierte "el navegador
+-- mostrará un diálogo" en un ticket que sale de verdad, con reintento y con marca
+-- visible cuando no salió. Detalle de la decisión en database/migrations/049_cola_impresion.sql.
+CREATE TABLE print_jobs (
+    job_id INT AUTO_INCREMENT PRIMARY KEY,
+    store_id INT NOT NULL,
+    comanda_id INT NULL COMMENT 'NULL en un job que no nace de comanda',
+    output_id INT NULL COMMENT 'La salida concreta (station_outputs)',
+    kind ENUM('comanda','ticket','corte') NOT NULL DEFAULT 'comanda',
+    payload MEDIUMTEXT NOT NULL COMMENT 'Bytes ESC/POS YA renderizados',
+    status ENUM('pending','sending','done','failed') NOT NULL DEFAULT 'pending',
+    attempts TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    last_error VARCHAR(255) NULL,
+    next_attempt_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    claimed_at DATETIME NULL COMMENT 'Lease: evita dos workers con el mismo ticket',
+    claimed_by VARCHAR(64) NULL,
+    done_at DATETIME NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_job_comanda_output (comanda_id, output_id),
+    INDEX idx_job_cola (status, next_attempt_at),
+    FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE,
+    FOREIGN KEY (comanda_id) REFERENCES comandas(comanda_id) ON DELETE CASCADE,
+    FOREIGN KEY (output_id) REFERENCES station_outputs(output_id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabla: check_service_points

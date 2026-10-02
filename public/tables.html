@@ -995,6 +995,25 @@
         .kd-btn.primario { background: var(--primary-color); border-color: var(--primary-color); color: var(--text-on-primary, #fff); }
         .kd-btn.primario:hover { color: var(--text-on-primary, #fff); opacity: .93; }
         .kd-btn:disabled { opacity: .5; cursor: not-allowed; }
+        /* Reintentar es la acción cuando el ticket NO salió: se pinta como alerta. */
+        .kd-btn.kd-btn-reintentar { border-color: var(--danger-color); color: var(--danger-color); }
+        .kd-btn.kd-btn-reintentar:hover { background: var(--danger-color); color: #fff; }
+
+        /* La marca de impresión del servidor (TAB-22). Tres estados, tres colores:
+           verde "Impresa", ámbar "En cola" y rojo "No salió" — este último con el
+           motivo real, porque un ticket perdido en silencio es el peor desenlace. */
+        .kd-impresion {
+            display: inline-flex; align-items: center; gap: 6px; margin-right: auto;
+            font-size: .76rem; padding: 4px 10px; border-radius: var(--ds-radius-pill);
+            background: color-mix(in srgb, var(--text-muted) 14%, transparent); color: var(--text-muted);
+        }
+        .kd-impresion.cola { background: color-mix(in srgb, #f59e0b 18%, transparent); color: #b45309; }
+        .kd-impresion.ok { background: color-mix(in srgb, var(--success-color) 16%, transparent); color: var(--success-color); }
+        .kd-impresion.fallo {
+            background: color-mix(in srgb, var(--danger-color) 16%, transparent); color: var(--danger-color);
+            font-weight: 700;
+        }
+        .kd-impresion em { font-style: normal; font-weight: 400; }
 
         /* La comanda recién llegada avisa: parpadeo + borde encendido */
         .kd-card.nueva { animation: kdEntra .6s ease-out 4; border-color: var(--primary-color); }

@@ -126,3 +126,47 @@ define('HEALTH_MIN_FREE_MB', (int)($envHealthMinFreeMb !== false && $envHealthMi
 // Token opcional para que un monitor EXTERNO pueda pedir el detalle de los
 // checks (header X-Health-Token). Vacío = el detalle solo se expone a loopback.
 define('HEALTH_TOKEN', getenv('HEALTH_TOKEN') ?: '');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Cola de impresión ESC/POS (TAB-22)
+// ─────────────────────────────────────────────────────────────────────────────
+// Interruptor de retroceso. En `false` el sistema se comporta EXACTAMENTE como
+// antes de esta función: la comanda se manda igual, no se crea ningún job y la
+// impresión sigue siendo la del navegador (ventana + window.print()). No hace
+// falta migración inversa: las columnas añadidas son aditivas y se ignoran.
+$envPrintQueue = getenv('PRINT_QUEUE_ENABLED');
+define('PRINT_QUEUE_ENABLED', $envPrintQueue === false || $envPrintQueue === ''
+    ? true
+    : in_array(strtolower($envPrintQueue), ['1', 'true', 'yes', 'on'], true));
+
+// Puerto ÚNICO del transporte. No hay columna `port` a propósito: un campo de
+// usuario que decide a qué puerto del servidor se conecta es superficie SSRF, y
+// 9100 (RAW/JetDirect) es el del protocolo. Se inyecta por entorno para poder
+// medir en el banco sin pelear con una impresora real.
+define('PRINT_PORT', (int)(getenv('PRINT_PORT') ?: 9100));
+
+// Timeout de conexión/escritura, en segundos. Corto a propósito: el worker no
+// puede quedarse colgado contra una IP que traga la conexión y no responde.
+define('PRINT_CONNECT_TIMEOUT', (int)(getenv('PRINT_CONNECT_TIMEOUT') ?: 2));
+
+// Intentos totales por job ANTES de darlo por fallido (4 = el inicial + 3
+// reintentos con backoff 10/30/120 s, ver PRINT_BACKOFF_SECONDS).
+define('PRINT_MAX_ATTEMPTS', (int)(getenv('PRINT_MAX_ATTEMPTS') ?: 4));
+
+// Backoff entre intentos, en segundos. Al agotar la lista se repite el último.
+define('PRINT_BACKOFF_SECONDS', getenv('PRINT_BACKOFF_SECONDS') ?: '10,30,120');
+
+// Lease: un job en 'sending' cuyo `claimed_at` es más viejo que esto vuelve a
+// 'pending' en el siguiente tick (worker muerto a media impresión). Se compara
+// en SQL contra NOW(), nunca contra un valor calculado en PHP.
+define('PRINT_LEASE_SECONDS', (int)(getenv('PRINT_LEASE_SECONDS') ?: 90));
+
+// Loops de espera del worker cuando no hay trabajo, en segundos.
+define('PRINT_WORKER_IDLE_SLEEP', (int)(getenv('PRINT_WORKER_IDLE_SLEEP') ?: 2));
+
+// Excepción de banco: permite apuntar a 127.0.0.1, que NO es RFC1918. En falso
+// (default, y lo que corre en el contenedor) el worker solo acepta IPv4 de rango
+// privado; el banco de pruebas lo enciende para escuchar en loopback.
+$envPrintLoopback = getenv('PRINT_ALLOW_LOOPBACK');
+define('PRINT_ALLOW_LOOPBACK', $envPrintLoopback !== false && $envPrintLoopback !== ''
+    && in_array(strtolower($envPrintLoopback), ['1', 'true', 'yes', 'on'], true));

@@ -6,7 +6,7 @@ css/cart_responsive.css	12	93e389961bcab19a1d2a402808f95422
 css/dashboard.css	4	7db3bc104f9e0c845350b21748808cec
 css/design-system.css	8	562206364130d50720fbc825cf93547e
 css/fonts.css	4	35e58fb00cdd00a6d2260d26dc38d3d0
-css/inventory.css	27	862d60fb74f2f76b8fc26ea04139d6f1
+css/inventory.css	30	1b17bb6ccb3bc117bf38455efb6eb7a7
 css/landing.css	4	5c70436f4f0c59a13476cbc3062587b4
 css/login.css	12	07632a90a320c3381d1b73e65fa29ebf
 css/main.css	22	c56b6bd66ea417bc5b0cdfdff80e6040
@@ -20,7 +20,7 @@ css/variables.css	6	121f6dc3caf9e57ee6af96f4db718ffd
 js/app.js	12	1fd1d24ce2db5b0ce2bf34038d3b768b
 js/cobro.js	2	c01638082a57f1bc9d4ba847e920761b
 js/comandas.js	4	ab84e73c653e427d3f8f3f28e0f156ec
-js/compositor-inventario.js	1	38b5024b58468a02388eb650f19363d7
+js/compositor-inventario.js	4	969bb3d0c363494859b225813eea9207
 js/dashboard.js	3	200245e5ecfc4f29165cffa70760314e
 js/design-system.js	7	a6d47b4914401e512f34f7e692a94b56
 js/inventory-exits.js	2	6370f69254e433bdde41c37fba3a5c0e

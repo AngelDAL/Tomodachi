@@ -4400,14 +4400,25 @@
 .ci-card-nombre { font-size:.86rem; line-height:1.2; color:var(--text-color); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .ci-card-meta { font-size:.74rem; color:var(--text-muted); }
 .ci-card-hay.bajo { color:var(--danger-color); font-weight:700; }
-.ci-card-accion {
-    display:inline-flex; align-items:center; justify-content:center; gap:6px;
-    min-height:40px; padding:8px 10px; border-radius:var(--ds-radius-pill); cursor:pointer;
-    border:1px solid var(--primary-color); background:transparent; color:var(--primary-color);
-    font-family:inherit; font-size:.82rem; font-weight:600;
+/* La tarjeta ENTERA agrega y quita (Ángel, 2-oct): se fue el botón «Agregar» y en su
+   lugar va la palomita con el texto «En lista», que también desmarca al tocarla. El
+   estado se ve desde lejos: borde y fondo teñidos, foto con palomita y etiqueta. */
+.ci-card { cursor:pointer; position:relative; }
+.ci-card:hover { border-color:color-mix(in srgb,var(--primary-color) 45%,var(--border-color)); }
+.ci-card:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
+.ci-card.elegida { background:color-mix(in srgb,var(--primary-color) 7%,var(--bg-card)); }
+.ci-card-palomita {
+    position:absolute; top:6px; right:6px; display:grid; place-items:center;
+    width:26px; height:26px; border-radius:var(--ds-radius-pill);
+    background:var(--primary-color); color:var(--white); font-size:.72rem;
+    box-shadow:var(--ds-shadow-sm);
 }
-.ci-card-accion.puesta { background:color-mix(in srgb,var(--primary-color) 14%,var(--bg-card)); }
-.ci-card-accion:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
+.ci-card-enlista {
+    display:inline-flex; align-items:center; justify-content:center; gap:6px;
+    min-height:34px; padding:6px 10px; border-radius:var(--ds-radius-pill);
+    background:color-mix(in srgb,var(--primary-color) 14%,var(--bg-card));
+    color:var(--primary-color); font-size:.82rem; font-weight:600;
+}
 
 /* ---- La lista elegida ---- */
 .ci-lista {
@@ -4501,13 +4512,47 @@
 .ci-express-intro { margin:0; font-size:.8rem; color:var(--text-muted); }
 .ci-express-campos { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:8px; }
 
+/* ---- Pestañas de los paneles: solo tienen sentido cuando hay que deslizar ---- */
+.ci-pestanas { display:none; }
+
 /* ---- Tableta y teléfono: una sola columna, catálogo primero ---- */
 @media (max-width: 900px) {
-    .ci-layout { grid-template-columns:1fr; }
-    .ci-galeria, .ci-galeria.en-lista { max-height:none; }
+    /* El cuerpo del modal deja de desplazarse: se desplaza cada PANEL, y entre paneles se
+       desliza (como pasar al carrito en Punto de Venta). Antes, con el cuerpo desplazándose,
+       la lista quedaba 12.000 px más abajo que el catálogo —medido a 390 px con 140
+       productos— y el dedo nunca llegaba. */
+    body .modal-body.ci-body {
+        display:flex; flex-direction:column; overflow:hidden; padding:0;
+    }
+    .ci-pestanas {
+        display:flex; gap:6px; flex:0 0 auto; padding:10px 12px 0;
+        border-bottom:1px solid var(--border-color);
+    }
+    .ci-pestana {
+        flex:1 1 0; min-height:42px; display:inline-flex; align-items:center; justify-content:center;
+        gap:8px; border:0; border-bottom:3px solid transparent; background:transparent;
+        color:var(--text-muted); font-family:inherit; font-size:.86rem; font-weight:600; cursor:pointer;
+    }
+    .ci-pestana.activa { color:var(--primary-color); border-bottom-color:var(--primary-color); }
+    .ci-layout {
+        display:flex; flex-wrap:nowrap; gap:0; flex:1 1 auto; min-height:0;
+        /* `align-items:start` viene del escritorio y aquí sería un error: sin estirar, cada
+           panel crece con su contenido (el catálogo llegaba a 9.226 px) y su propio
+           desplazamiento no existe. Estirados, cada uno mide el alto disponible y scrollea. */
+        align-items:stretch;
+        overflow-x:auto; overflow-y:hidden; scroll-snap-type:x mandatory;
+        -webkit-overflow-scrolling:touch; scrollbar-width:none;
+    }
+    .ci-layout::-webkit-scrollbar { display:none; }
+    .ci-catalogo, .ci-lista {
+        flex:0 0 100%; width:100%; min-height:0; scroll-snap-align:start;
+        overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch;
+        padding:12px;
+    }
+    .ci-lista { border:0; border-radius:0; background:transparent; }
+    .ci-galeria, .ci-galeria.en-lista { max-height:none; overflow-y:visible; }
     .ci-galeria { grid-template-columns:repeat(auto-fill,minmax(132px,1fr)); }
     .ci-seleccion { max-height:none; }
-    .ci-lista { padding:12px; }
 }
 @media (max-width: 480px) {
     .ci-galeria { grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:8px; }

@@ -4317,6 +4317,10 @@
 .opt-btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 8px;
     min-height: 46px; padding: 8px 10px; cursor: pointer; text-align: center;
+    /* La etiqueta de un botón no se parte: «Sin descuento» cabía justo y se partía en dos
+       renglones. Con dos columnas siempre hay ancho de sobra (en el teléfono y en el modal
+       de escritorio, que mide lo mismo). */
+    white-space: nowrap;
     border: 1px solid var(--border-color); border-radius: var(--ds-radius-md);
     background: var(--bg-card); color: var(--text-color);
     font-family: inherit; font-size: .84rem; font-weight: 600;
@@ -4363,9 +4367,8 @@
 .opt-resumen span { font-size: .84rem; color: var(--text-muted); }
 .opt-resumen strong { font-family: var(--font-heading); font-size: 1.3rem; color: var(--primary-color); font-variant-numeric: tabular-nums; }
 
-@media (min-width: 560px) {
-    .opt-toggle { grid-template-columns: repeat(4, minmax(0,1fr)); }
-}
+/* (Sin regla de cuatro columnas: el modal mide lo mismo en cualquier pantalla, así que cuatro
+   botones obligaban a partir «Sin descuento». Dos columnas siempre.) */
 
 /* Los dos botones del pie, cómodos con el pulgar y siempre a la vista */
 @media (max-width: 768px) {

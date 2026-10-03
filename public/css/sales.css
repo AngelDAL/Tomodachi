@@ -4286,3 +4286,98 @@
         z-index: 2;
     }
 }
+
+
+/* ============================================================
+   AJUSTE DE PRECIO DE UNA LÍNEA (el modal que sale al tocar el precio)
+   ------------------------------------------------------------
+   Antes: un `select` de 18 px de alto, campos con el aspecto de fábrica del
+   navegador y textos sueltos — nada de la identidad de la casa. Ahora el tipo
+   de ajuste se elige con BOTONES (se acierta al primer toque y se ve el estado
+   sin abrir nada), los campos miden 46 px de alto y 16 px de letra (por debajo
+   de eso iOS hace zoom al enfocar) y cada bloque es una tarjeta con los tokens
+   del tema. El `select` original sigue en el documento, oculto: es el que leen
+   las funciones del carrito.
+   ============================================================ */
+.opt-select-oculto { display: none; }
+
+.opt-precio {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+    padding: 12px 14px; border-radius: var(--ds-radius-md);
+    background: var(--bg-body); border: 1px solid var(--border-color);
+}
+.opt-precio-etiqueta { font-size: .82rem; color: var(--text-muted); }
+.opt-precio-valor { font-family: var(--font-heading); font-size: 1.15rem; color: var(--text-color); font-variant-numeric: tabular-nums; }
+
+.opt-bloque { display: flex; flex-direction: column; gap: 8px; }
+.opt-bloque + .opt-bloque, .opt-precio + .opt-bloque { margin-top: 14px; }
+.opt-etiqueta { font-size: .82rem; font-weight: 600; color: var(--text-muted); }
+
+.opt-toggle { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
+.opt-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    min-height: 46px; padding: 8px 10px; cursor: pointer; text-align: center;
+    border: 1px solid var(--border-color); border-radius: var(--ds-radius-md);
+    background: var(--bg-card); color: var(--text-color);
+    font-family: inherit; font-size: .84rem; font-weight: 600;
+}
+.opt-btn:hover { border-color: color-mix(in srgb, var(--primary-color) 45%, var(--border-color)); }
+.opt-btn.activo {
+    border-color: var(--primary-color); color: var(--primary-color);
+    background: color-mix(in srgb, var(--primary-color) 12%, var(--bg-card));
+}
+.opt-btn:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+
+/* Un solo control con su prefijo ($) o su sufijo (%) adentro */
+.opt-campo {
+    display: flex; align-items: stretch; overflow: hidden;
+    border: 1px solid var(--border-color); border-radius: var(--ds-radius-md); background: var(--bg-card);
+}
+.opt-campo:focus-within { border-color: var(--primary-color); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 18%, transparent); }
+.opt-prefijo, .opt-sufijo {
+    display: grid; place-items: center; min-width: 44px;
+    background: var(--bg-body); color: var(--text-muted); font-weight: 700;
+}
+.opt-prefijo { border-right: 1px solid var(--border-color); }
+.opt-sufijo { border-left: 1px solid var(--border-color); }
+.opt-input {
+    flex: 1 1 auto; min-width: 0; min-height: 46px; padding: 10px 12px;
+    border: 0; background: transparent; color: var(--text-color);
+    font-family: inherit; font-size: 1rem; font-variant-numeric: tabular-nums;
+}
+.opt-input:focus { outline: none; }
+
+.opt-nxn { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
+.opt-nxn-item { display: flex; flex-direction: column; gap: 6px; font-size: .82rem; color: var(--text-muted); }
+.opt-nxn-item .opt-input { border: 1px solid var(--border-color); border-radius: var(--ds-radius-md); background: var(--bg-card); }
+.opt-nxn-item .opt-input:focus { border-color: var(--primary-color); }
+
+.opt-ayuda { margin: 0; display: flex; align-items: center; gap: 8px; font-size: .78rem; color: var(--text-muted); }
+
+.opt-resumen {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+    margin-top: 16px; padding: 14px; border-radius: var(--ds-radius-md);
+    background: color-mix(in srgb, var(--primary-color) 10%, var(--bg-card));
+    border: 1px solid color-mix(in srgb, var(--primary-color) 35%, var(--border-color));
+}
+.opt-resumen span { font-size: .84rem; color: var(--text-muted); }
+.opt-resumen strong { font-family: var(--font-heading); font-size: 1.3rem; color: var(--primary-color); font-variant-numeric: tabular-nums; }
+
+@media (min-width: 560px) {
+    .opt-toggle { grid-template-columns: repeat(4, minmax(0,1fr)); }
+}
+
+/* Los dos botones del pie, cómodos con el pulgar y siempre a la vista */
+@media (max-width: 768px) {
+    #itemOptionsModal .modal-footer { display: flex; gap: 10px; }
+    #itemOptionsModal .modal-footer > button {
+        flex: 1 1 0; min-height: 48px; justify-content: center;
+        /* Sin esto, «Aplicar cambios» se parte en dos renglones a 390 px: el texto de un botón
+           no debe partirse nunca (se recorta el aire, no las palabras). */
+        white-space: nowrap; gap: 8px; padding: 10px 12px; font-size: .86rem;
+    }
+}
+
+/* `hidden` tiene que ganarle a mis reglas de display (el mismo tropiezo que en el compositor
+   de inventario: cualquier `display` de autor le gana al atributo). */
+.opt-ajuste.hidden { display: none; }

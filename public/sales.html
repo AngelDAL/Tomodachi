@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="css/sidebar-modern.css?v=6">
     <link rel="stylesheet" href="css/mobile-nav.css?v=5">
     <link rel="stylesheet" href="css/dashboard.css?v=4">
-    <link rel="stylesheet" href="css/sales.css?v=47">
+    <link rel="stylesheet" href="css/sales.css?v=49">
     <link rel="stylesheet" href="css/scanner_overlay.css?v=10">
     <link rel="stylesheet" href="css/bulk_sales.css?v=4">
     <link rel="stylesheet" href="css/cart_responsive.css?v=12">
@@ -400,13 +400,24 @@
                 <button class="modal-close" id="closeItemModalBtn"><i class="fas fa-times"></i></button>
             </div>
             <div class="modal-body">
-                <div class="current-price-info">
-                    <p>Precio Original: <span id="modalOriginalPrice">$0.00</span></p>
+                <div class="opt-precio">
+                    <span class="opt-precio-etiqueta">Precio original</span>
+                    <strong id="modalOriginalPrice" class="opt-precio-valor">$0.00</strong>
                 </div>
 
-                <div class="discount-type-selector">
-                    <label>Tipo de Ajuste:</label>
-                    <select id="discountTypeSelect">
+                <!-- El tipo de ajuste son BOTONES, no un select: en el teléfono se acierta al
+                     primer toque y se ve el estado sin abrir nada (mismo patrón que los motivos
+                     de una salida de inventario). El `select` sigue en el documento, oculto,
+                     porque es el que leen las funciones del carrito. -->
+                <div class="opt-bloque">
+                    <span class="opt-etiqueta" id="optTipoEtiqueta">Tipo de ajuste</span>
+                    <div class="opt-toggle" role="group" aria-labelledby="optTipoEtiqueta">
+                        <button type="button" class="opt-btn activo" data-tipo="none" aria-pressed="true"><i class="fas fa-ban" aria-hidden="true"></i> Sin descuento</button>
+                        <button type="button" class="opt-btn" data-tipo="percent" aria-pressed="false"><i class="fas fa-percent" aria-hidden="true"></i> Porcentaje</button>
+                        <button type="button" class="opt-btn" data-tipo="fixed" aria-pressed="false"><i class="fas fa-dollar-sign" aria-hidden="true"></i> Monto fijo</button>
+                        <button type="button" class="opt-btn" data-tipo="nxn" aria-pressed="false"><i class="fas fa-layer-group" aria-hidden="true"></i> N x N</button>
+                    </div>
+                    <select id="discountTypeSelect" class="opt-select-oculto" tabindex="-1" aria-hidden="true">
                         <option value="none">Sin descuento</option>
                         <option value="percent">Porcentaje (%)</option>
                         <option value="fixed">Descuento Fijo ($)</option>
@@ -415,43 +426,43 @@
                 </div>
 
                 <!-- Opciones dinámicas -->
-                <div id="opt-percent" class="discount-option hidden">
-                    <label>Porcentaje de descuento:</label>
-                    <div class="input-group">
-                        <input type="number" id="discPercentInput" min="0" max="100" placeholder="Ej: 10">
-                        <span>%</span>
+                <div id="opt-percent" class="opt-bloque opt-ajuste hidden">
+                    <label class="opt-etiqueta" for="discPercentInput">Porcentaje de descuento</label>
+                    <div class="opt-campo">
+                        <input type="text" inputmode="decimal" autocomplete="off" id="discPercentInput" placeholder="Ej: 10" class="opt-input">
+                        <span class="opt-sufijo">%</span>
                     </div>
                 </div>
 
-                <div id="opt-fixed" class="discount-option hidden">
-                    <label>Monto a descontar:</label>
-                    <div class="input-group">
-                        <span>$</span>
-                        <input type="number" id="discFixedInput" min="0" step="0.01" placeholder="0.00">
+                <div id="opt-fixed" class="opt-bloque opt-ajuste hidden">
+                    <label class="opt-etiqueta" for="discFixedInput">Monto a descontar</label>
+                    <div class="opt-campo">
+                        <span class="opt-prefijo">$</span>
+                        <input type="text" inputmode="decimal" autocomplete="off" id="discFixedInput" placeholder="0.00" class="opt-input">
                     </div>
                 </div>
 
-                <div id="opt-nxn" class="discount-option hidden">
-                    <label>Configuración NxN:</label>
-                    <div class="nxn-group">
-                        <div class="nxn-item">
-                            <small>Lleva</small>
-                            <input type="number" id="nxnBuyInput" min="1" placeholder="Ej: 2">
-                        </div>
-                        <div class="nxn-item">
-                            <small>Paga</small>
-                            <input type="number" id="nxnPayInput" min="0" placeholder="Ej: 1">
-                        </div>
+                <div id="opt-nxn" class="opt-bloque opt-ajuste hidden">
+                    <span class="opt-etiqueta">Configuración N x N</span>
+                    <div class="opt-nxn">
+                        <label class="opt-nxn-item">Lleva
+                            <input type="text" inputmode="numeric" autocomplete="off" id="nxnBuyInput" placeholder="Ej: 2" class="opt-input">
+                        </label>
+                        <label class="opt-nxn-item">Paga
+                            <input type="text" inputmode="numeric" autocomplete="off" id="nxnPayInput" placeholder="Ej: 1" class="opt-input">
+                        </label>
                     </div>
-                    <p class="hint-text">Ejemplo: 2x1 (Lleva 2, Paga 1)</p>
+                    <p class="opt-ayuda"><i class="fas fa-circle-info" aria-hidden="true"></i> Ejemplo: 2x1 (lleva 2, paga 1)</p>
                 </div>
 
-                <div class="final-price-preview">
-                    <p>Nuevo Precio Unitario: <strong id="modalNewPrice">$0.00</strong></p>
+                <div class="opt-resumen">
+                    <span>Nuevo precio unitario</span>
+                    <strong id="modalNewPrice">$0.00</strong>
                 </div>
             </div>
             <div class="modal-footer">
-                <button id="saveItemOptionsBtn" class="btn-primary">Aplicar Cambios</button>
+                <button type="button" class="btn-secondary" id="cancelItemOptionsBtn">Cancelar</button>
+                <button type="button" id="saveItemOptionsBtn" class="btn-primary"><i class="fas fa-check" aria-hidden="true"></i> Aplicar cambios</button>
             </div>
         </div>
     </div>
@@ -607,7 +618,7 @@
     <script src="js/stock-rule.js?v=1"></script>
     <script src="https://js.stripe.com/v3/"></script>
     <script src="js/stripe-pos.js?v=1"></script>
-    <script src="js/sales.js?v=46"></script>
+    <script src="js/sales.js?v=47"></script>
     <script>
         // En la app nativa: mantener la pantalla encendida mientras se vende
         document.addEventListener('tomodachi-native-ready', () => {

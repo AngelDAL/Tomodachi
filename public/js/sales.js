@@ -27,6 +27,7 @@ let cartToggle, cartPanel, closeCartBtn, productGallery, cartHandleBtn, panelTot
 
 // Modal elements
 let itemOptionsModal, closeItemModalBtn, saveItemOptionsBtn;
+let cancelItemOptionsBtn, optToggle;
 let modalProductName, modalOriginalPrice, modalNewPrice;
 let discountTypeSelect, discPercentInput, discFixedInput, nxnBuyInput, nxnPayInput;
 let optPercent, optFixed, optNxn;
@@ -261,6 +262,8 @@ function initPOS() {
   itemOptionsModal = document.getElementById('itemOptionsModal');
   closeItemModalBtn = document.getElementById('closeItemModalBtn');
   saveItemOptionsBtn = document.getElementById('saveItemOptionsBtn');
+  cancelItemOptionsBtn = document.getElementById('cancelItemOptionsBtn');
+  optToggle = document.getElementById('optToggle') || document.querySelector('#itemOptionsModal .opt-toggle');
   modalProductName = document.getElementById('modalProductName');
   modalOriginalPrice = document.getElementById('modalOriginalPrice');
   modalNewPrice = document.getElementById('modalNewPrice');
@@ -721,6 +724,25 @@ function bindEvents() {
   // Modal events
   if (closeItemModalBtn) closeItemModalBtn.addEventListener('click', closeItemOptions);
   if (saveItemOptionsBtn) saveItemOptionsBtn.addEventListener('click', saveItemOptions);
+  if (cancelItemOptionsBtn) cancelItemOptionsBtn.addEventListener('click', closeItemOptions);
+  // El tipo de ajuste se elige con botones; el `select` oculto es el que lee el carrito.
+  optToggle?.addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-tipo]');
+    if (!b || !discountTypeSelect) return;
+    discountTypeSelect.value = b.dataset.tipo;
+    onDiscountTypeChange();
+  });
+  // Un campo de dinero no admite letras: se descartan al escribir (igual que en inventario).
+  [discPercentInput, discFixedInput, nxnBuyInput, nxnPayInput].forEach((el, i) => {
+    if (!el) return;
+    el.addEventListener('input', () => {
+      const soloEnteros = (i >= 2);   // NxN son unidades completas
+      const limpio = soloEnteros
+        ? el.value.replace(/[^0-9]/g, '')
+        : el.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+      if (limpio !== el.value) el.value = limpio;
+    });
+  });
   if (discountTypeSelect) discountTypeSelect.addEventListener('change', onDiscountTypeChange);
 
   // Live preview events
@@ -1916,6 +1938,14 @@ function onDiscountTypeChange() {
   if (type === 'percent' && optPercent) optPercent.classList.remove('hidden');
   if (type === 'fixed' && optFixed) optFixed.classList.remove('hidden');
   if (type === 'nxn' && optNxn) optNxn.classList.remove('hidden');
+
+  // Los botones muestran cuál está elegido; esto se llama al abrir y al cambiar, así que
+  // siempre quedan en sync con el `select`.
+  optToggle?.querySelectorAll('[data-tipo]').forEach(b => {
+    const activo = b.dataset.tipo === type;
+    b.classList.toggle('activo', activo);
+    b.setAttribute('aria-pressed', activo ? 'true' : 'false');
+  });
 
   updateModalPreview();
 }

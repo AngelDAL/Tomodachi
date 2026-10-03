@@ -13,7 +13,7 @@ css/main.css	22	c56b6bd66ea417bc5b0cdfdff80e6040
 css/mobile-nav.css	5	cd112fc5358a29e7240bfd7cb33f2bcf
 css/promotions-v2.css	1	73295de67e4dbe5f89e7e4eb19e8e37f
 css/promotions.css	6	10abda9b5e089e80a667c17fc945d7e7
-css/sales.css	47	b721d7ea623fd4fb0d944a292bc85794
+css/sales.css	49	b79148545b709c92bc67f8b01728089e
 css/scanner_overlay.css	10	ddec787393fac0826aa9a65008753ccc
 css/sidebar-modern.css	6	fa87435b6b0664ddeb4d90b71e8bfc04
 css/variables.css	6	121f6dc3caf9e57ee6af96f4db718ffd
@@ -30,7 +30,7 @@ js/promotion-client-rules.js	1	43d1b0dc3b3aacfbef6afde115df655d
 js/promotions-v2.js	2	685ed10b0d03cee6df18d1e6908aa8d9
 js/promotions.js	5	3f6b93d5652920d75ff8b5f5ef2a5c1d
 js/purchases.js	16	7ac2a18ced1bcc6972646958c6d717a7
-js/sales.js	46	fe5facc76de868034d3775f7c633c144
+js/sales.js	47	3c1b580d706952de3a19b4f01ba9a3fe
 js/scanner.js	4	828bfb406a22a54d12d54517a37faece
 js/sidebar-loader.js	13	d7bd4144a7a76b248ea7dd147f97b6cd
 js/stock-rule.js	1	5818188ed9718de696abeffe9d55909f

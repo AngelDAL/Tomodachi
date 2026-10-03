@@ -1,6 +1,9 @@
 
 /* Promociones v2: dialog ample and a vertically scrollable workflow. */
-#promoModal .modal-content { width:min(1240px, calc(100vw - 32px)); max-width:1240px; height:min(88vh, 900px); }
+/* El contenido pedía `min(1240px, 100vw - 32px)` —1240 px a 1280— pero su diálogo está topado
+   en 92vw (1178): el modal se salía 11 px de la pantalla por la derecha. El ancho se mide
+   contra su contenedor, no contra la ventana: así el contenido nunca desborda a su diálogo. */
+#promoModal .modal-content { width:min(1240px, 100%); max-width:1240px; height:min(88vh, 900px); }
 #promoModal .modal-split-body { grid-template-columns:minmax(390px, .78fr) minmax(0, 1.22fr); min-height:0; }
 #promoModal .modal-form-side, #promoModal .modal-grid-side { min-height:0; }
 .promo-help { margin:0 0 14px; padding:10px 12px; border-left:3px solid var(--info-color); border-radius:var(--ds-radius-md); background:var(--bg-light); color:var(--text-medium); font-size:.84rem; line-height:1.45; }

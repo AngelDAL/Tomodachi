@@ -208,9 +208,12 @@ body.modal-open { overflow: hidden; }
 }
 .modal-header h3 { margin: 0; font-size: 1.2rem; color: var(--text-color); }
 
+/* La primera columna era fija en 400px y, con la de la derecha, el contenido crecía más que su
+   diálogo: el modal se salía 11 px de la pantalla a 1280. Con `minmax` la columna del formulario
+   se encoge antes de desbordar y el catálogo se queda con lo que sobra. */
 .modal-split-body {
     display: grid;
-    grid-template-columns: 400px 1fr;
+    grid-template-columns: minmax(320px, 400px) minmax(0, 1fr);
     height: 100%;
     overflow: hidden;
 }
@@ -230,11 +233,30 @@ body.modal-open { overflow: hidden; }
     overflow: hidden;
 }
 
+/* ============================================================
+   ENCABEZADO DEL CATÁLOGO
+   ------------------------------------------------------------
+   Antes: título + herramientas + buscador en UNA fila con `space-between`. La caja
+   `.target-tools` medía 110 px para un select Y un botón (se encimaban) y el buscador
+   llevaba un `width: 60%` puesto a mano. Ahora es una columna: el título, el buscador a
+   lo ancho —con la lupa DENTRO del campo, como en Punto de Venta— y las herramientas en
+   su renglón, con su aire.
+   ============================================================ */
 .grid-header {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
 }
+.grid-header-cab {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+}
+.grid-header-cab label { font-weight: 600; font-size: .9rem; color: var(--text-color); }
+.grid-header-cuenta { font-size: .78rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.grid-header .input-icon-wrapper { width: 100%; }
+.target-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.target-tools > select { flex: 1 1 160px; min-width: 0; }
+.target-tools > .btn { flex: 0 0 auto; white-space: nowrap; min-height: 42px; }
 
 .products-grid-container {
     flex: 1;
@@ -1307,3 +1329,86 @@ body.modal-open { overflow: hidden; }
     object-fit: cover;
     display: block;
 }
+
+
+/* ============================================================
+   LOS DOS PANELES DEL MODAL EN EL TELÉFONO (Promoción · Productos)
+   ------------------------------------------------------------
+   El modal nació como dos columnas fijas de `400px 1fr`: en un teléfono no cabe
+   ni de lejos. En pantalla angosta se convierte en DOS PANELES que se deslizan
+   —el mismo gesto que pasar al carrito en Punto de Venta— con las pestañas como
+   puerta de respaldo: un gesto no puede ser la única forma de llegar.
+   Cada panel se desplaza por su cuenta y el pie con Cancelar y Guardar se queda
+   a la vista.
+   ============================================================ */
+.promo-pestanas {
+    display: none;
+    gap: 6px;
+    padding: 10px 12px 0;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-card);
+}
+.promo-pestana {
+    flex: 1 1 0; min-height: 44px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    border: 0; border-bottom: 3px solid transparent; background: transparent;
+    color: var(--text-muted); font-family: inherit; font-size: .88rem; font-weight: 600;
+    cursor: pointer;
+}
+.promo-pestana:hover { color: var(--text-color); }
+.promo-pestana.activa { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+.promo-pestana:focus-visible { outline: 2px solid var(--primary-color); outline-offset: -2px; }
+
+@media (max-width: 900px) {
+    .promo-pestanas { display: flex; }
+
+    /* El cuerpo del modal es el marco; los dos lados se superponen */
+    body .client-dialog#promoModal .modal-split-body {
+        display: block;
+        position: relative;
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: hidden;
+    }
+    body .client-dialog#promoModal .modal-form-side,
+    body .client-dialog#promoModal .modal-grid-side {
+        position: absolute; inset: 0;
+        width: auto;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding: 14px;
+        border-right: 0;
+        background: var(--bg-card);
+        transition: transform .2s ease;
+        /* Apagados por defecto: el que manda es el que tiene la clase */
+        visibility: hidden;
+        pointer-events: none;
+    }
+    body .client-dialog#promoModal .modal-form-side.promo-pane-activa,
+    body .client-dialog#promoModal .modal-grid-side.promo-pane-activa {
+        visibility: visible;
+        pointer-events: auto;
+    }
+    /* En el teléfono el pie del modal se queda abajo y a la vista */
+    body .client-dialog#promoModal .modal-footer {
+        position: sticky; bottom: 0; z-index: 2;
+        display: flex; gap: 10px;
+        background: var(--bg-card);
+        border-top: 1px solid var(--border-color);
+    }
+    body .client-dialog#promoModal .modal-footer > button {
+        flex: 1 1 0; min-height: 48px; justify-content: center;
+        /* La etiqueta de un botón no se parte («Guardar Promoción» salía en dos renglones). */
+        white-space: nowrap; gap: 8px; padding: 10px 12px; font-size: .86rem;
+    }
+}
+
+/* El contenido medía MÁS que su propio diálogo: con `width: 100%` y relleno, en caja de
+   contenido el relleno se suma al ancho, así que el modal se salía de la pantalla (11 px a
+   1280). En caja de borde, el contenido mide exactamente lo que su diálogo. */
+body .client-dialog#promoModal .modal-content { box-sizing: border-box; }
+
+/* Las pestañas del drawer de promociones (el camino del teléfono) comparten el mismo aire y
+   la misma señal de cuál está puesta. */
+#promoDrawerTabs .drawer-tab { min-height: 46px; }
+#promoDrawerTabs .drawer-tab.active { border-bottom: 3px solid var(--primary-color); }

@@ -11,8 +11,8 @@
     <link rel="stylesheet" href="css/sidebar-modern.css?v=6">
     <link rel="stylesheet" href="css/mobile-nav.css?v=5">
     <link rel="stylesheet" href="css/dashboard.css?v=5">
-    <link rel="stylesheet" href="css/promotions.css?v=6">
-    <link rel="stylesheet" href="css/promotions-v2.css?v=1">
+    <link rel="stylesheet" href="css/promotions.css?v=10">
+    <link rel="stylesheet" href="css/promotions-v2.css?v=2">
     <script src="js/theme-init.js?v=3"></script>
     <link rel="icon" type="image/svg+xml" href="assets/app-icons/tomodachi-favicon.svg">
     <link rel="manifest" href="manifest.json">
@@ -59,9 +59,19 @@
                 <h3 id="promoModalTitle">Nueva Promoción</h3>
                 <button class="modal-close" id="closePromoModalBtn"><i class="fas fa-times"></i></button>
             </div>
-            <div class="modal-split-body">
-                <!-- Lado Izquierdo: Formulario -->
-                <div class="modal-form-side">
+            <!-- En el teléfono los dos lados son DOS PANELES que se deslizan (Promoción y
+                 Productos); en escritorio siguen siendo las dos columnas de siempre. -->
+            <div class="promo-pestanas" id="promoPestanas" role="tablist">
+                <button type="button" class="promo-pestana activa" data-pane="form" role="tab" aria-selected="true">
+                    <i class="fas fa-tags" aria-hidden="true"></i> Promoción
+                </button>
+                <button type="button" class="promo-pestana" data-pane="grid" role="tab" aria-selected="false">
+                    <i class="fas fa-box-open" aria-hidden="true"></i> <span id="promoPestanaProductos">Productos</span>
+                </button>
+            </div>
+            <div class="modal-split-body" id="promoSplit">
+                <!-- Left side: Form -->
+                <div class="modal-form-side" data-pane="form">
                     <form id="promoForm">
                         <div class="form-group">
                             <label>Nombre de la Promoción</label>
@@ -151,16 +161,23 @@
                 </div>
 
                 <!-- Lado Derecho: Grid de Productos -->
-                <div class="modal-grid-side">
+                <div class="modal-grid-side" data-pane="grid">
+                    <!-- Título, buscador y herramientas, cada uno con su renglón y su aire.
+                         Antes iban los tres en UNA fila con `space-between` y la caja de
+                         herramientas medía 110 px para un select Y un botón: se encimaban. -->
                     <div class="grid-header">
-                        <label>Catálogo de Productos</label>
-                        <div class="target-tools">
-                            <select id="promoTagSelect" class="form-control" aria-label="Agregar etiqueta"><option value="">Agregar etiqueta…</option></select>
-                            <button type="button" id="newPromoTagBtn" class="btn btn-secondary">Nueva etiqueta</button>
+                        <div class="grid-header-cab">
+                            <label for="productGridSearch">Catálogo de Productos</label>
+                            <span class="grid-header-cuenta" id="promoCatalogoCuenta"></span>
                         </div>
-                        <div class="input-icon-wrapper" style="width: 60%;">
-                             <i class="fas fa-search"></i>
-                            <input type="text" id="productGridSearch" placeholder="Buscar producto..." class="form-control">
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-search" aria-hidden="true"></i>
+                            <input type="text" id="productGridSearch" placeholder="Buscar producto..." class="form-control" aria-label="Buscar productos">
+                        </div>
+                        <div class="target-tools">
+                            <label class="sr-only" for="promoTagSelect">Filtrar por etiqueta</label>
+                            <select id="promoTagSelect" class="form-control" aria-label="Agregar etiqueta"><option value="">Agregar etiqueta…</option></select>
+                            <button type="button" id="newPromoTagBtn" class="btn btn-secondary"><i class="fas fa-plus" aria-hidden="true"></i> Nueva etiqueta</button>
                         </div>
                     </div>
                     <!-- Indicador visual para bundles -->
@@ -349,10 +366,10 @@
                     </div>
                     <div class="tab-panel" id="dtab2">
                         <div class="drawer-scroll">
-                            <div class="grid-header" style="padding:0 0 10px;">
-                                <div class="input-icon-wrapper" style="width:100%;">
-                                    <i class="fas fa-search"></i>
-                                    <input type="text" id="drawerProductSearch" placeholder="Buscar producto..." class="form-control">
+                            <div class="grid-header">
+                                <div class="input-icon-wrapper">
+                                    <i class="fas fa-search" aria-hidden="true"></i>
+                                    <input type="text" id="drawerProductSearch" placeholder="Buscar producto..." class="form-control" aria-label="Buscar productos">
                                 </div>
                             </div>
                             <div id="drawerProductsGrid" class="products-grid-container" style="flex:1; overflow-y:auto;"></div>
@@ -376,7 +393,7 @@
 
     <script src="js/sidebar-loader.js?v=13"></script>
     <script src="js/app.js?v=12"></script>
-    <script src="js/promotions.js?v=5"></script>
+    <script src="js/promotions.js?v=6"></script>
     <script src="js/promotions-v2.js?v=2"></script>
     <script src="js/promotions-app.js"></script>
     <script>

@@ -1308,3 +1308,138 @@ window.openPromoModal = function(promoId, isReadOnly) {
         origOpen(promoId, isReadOnly);
     }
 };
+
+
+/* ============================================================
+   EL MODAL DE PROMOCIÓN EN EL TELÉFONO: DOS PANELES QUE SE DESLIZAN
+   ------------------------------------------------------------
+   En pantalla angosta el modal deja de ser dos columnas (400px + 1fr, que en un
+   teléfono no caben) y pasa a ser DOS PANELES: «Promoción» (el formulario) y
+   «Productos» (el catálogo). Se pasa de uno a otro deslizando —el mismo gesto que
+   pasar al carrito en Punto de Venta— y las pestañas son la puerta de respaldo,
+   porque un gesto no puede ser la única forma de llegar.
+   Cada panel se desplaza por su cuenta y el pie con Cancelar y Guardar se queda a
+   la vista. En escritorio no cambia nada: las dos columnas de siempre.
+   ============================================================ */
+(function () {
+    const equipar = () => {
+        const modal = document.getElementById('promoModal');
+        const pestanas = document.getElementById('promoPestanas');
+        const split = document.getElementById('promoSplit');
+        if (!modal || !pestanas || !split) return;
+
+        const paneles = [...split.querySelectorAll('[data-pane]')];
+        const esAngosto = () => window.matchMedia('(max-width: 900px)').matches;
+        const UMBRAL = 45;
+        let actual = 'form';
+
+        const marcarPestana = (cual) => {
+            pestanas.querySelectorAll('.promo-pestana').forEach(b => {
+                const activa = b.dataset.pane === cual;
+                b.classList.toggle('activa', activa);
+                b.setAttribute('aria-selected', activa ? 'true' : 'false');
+            });
+        };
+
+        const mostrar = (cual, direccion) => {
+            actual = paneles.some(p => p.dataset.pane === cual) ? cual : 'form';
+            marcarPestana(actual);
+            paneles.forEach(p => {
+                const visible = !esAngosto() || p.dataset.pane === actual;
+                p.classList.toggle('promo-pane-activa', visible);
+                p.setAttribute('aria-hidden', visible ? 'false' : 'true');
+                if (esAngosto() && visible && direccion) {
+                    // Entra desde el lado por el que entró el dedo: el gesto se siente propio.
+                    const desde = direccion > 0 ? '-100%' : '100%';
+                    p.style.transition = 'none';
+                    p.style.transform = `translateX(${desde})`;
+                    requestAnimationFrame(() => { p.style.transition = ''; p.style.transform = ''; });
+                }
+            });
+        };
+        window.__promoMostrarPane = mostrar;
+
+        pestanas.addEventListener('click', (ev) => {
+            const b = ev.target.closest('[data-pane]');
+            if (b) mostrar(b.dataset.pane, 0);
+        });
+
+        /* El gesto, medido a mano: tiene que ser claramente horizontal y se decide al soltar. */
+        let x0 = null, y0 = null, arrastrando = false;
+        split.addEventListener('pointerdown', (ev) => {
+            if (!esAngosto() || ev.button) return;
+            // Las tarjetas de producto y los campos tienen lo suyo: ahí el gesto no se mete.
+            if (ev.target.closest('.product-item-card, input, select, textarea, button, a, label')) return;
+            x0 = ev.clientX; y0 = ev.clientY; arrastrando = false;
+        });
+        split.addEventListener('pointermove', (ev) => {
+            if (x0 === null) return;
+            const dx = ev.clientX - x0, dy = ev.clientY - y0;
+            if (!arrastrando) {
+                if (Math.abs(dx) < 14 || Math.abs(dx) < Math.abs(dy)) {
+                    if (Math.abs(dy) > 18) x0 = null;      // va en vertical: que se desplace el panel
+                    return;
+                }
+                arrastrando = true;
+            }
+            const panel = paneles.find(p => p.dataset.pane === actual);
+            if (panel) { panel.style.transition = 'none'; panel.style.transform = `translateX(${dx}px)`; }
+            if (ev.cancelable) ev.preventDefault();
+        });
+        const soltar = (ev) => {
+            if (x0 === null) return;
+            const dx = (ev && typeof ev.clientX === 'number') ? ev.clientX - x0 : 0;
+            const panel = paneles.find(p => p.dataset.pane === actual);
+            if (panel) { panel.style.transition = ''; panel.style.transform = ''; }
+            const movido = arrastrando && Math.abs(dx) > UMBRAL;
+            x0 = null; y0 = null; arrastrando = false;
+            if (movido) mostrar(actual === 'form' ? 'grid' : 'form', dx);
+        };
+        split.addEventListener('pointerup', soltar);
+        split.addEventListener('pointercancel', soltar);
+
+        // Al girar el teléfono o agrandar la ventana vuelven las dos columnas.
+        window.addEventListener('resize', () => mostrar(actual, 0));
+
+        // El conteo: la pestaña de Productos lleva cuántos van elegidos y el encabezado cuántos
+        // se están viendo (para saber qué hizo el buscador).
+        const pestanaProductos = document.getElementById('promoPestanaProductos');
+        const cuentaCatalogo = document.getElementById('promoCatalogoCuenta');
+        const espejo = (destino, calcular) => {
+            const nodo = destino === 'pestana' ? pestanaProductos : cuentaCatalogo;
+            if (!nodo) return;
+            let pendiente = null;
+            const pintar = () => { pendiente = null; nodo.textContent = calcular(); };
+            const programar = () => { if (pendiente) return; pendiente = requestAnimationFrame(pintar); };
+            const objetivo = nodo === pestanaProductos ? document.getElementById('selectedCountNum') : document.getElementById('productsGrid');
+            if (!objetivo) return;
+            new MutationObserver(programar).observe(objetivo, { childList: true, subtree: true, characterData: true });
+            programar();
+        };
+        espejo('pestana', () => {
+            const n = Number(document.getElementById('selectedCountNum')?.textContent) || 0;
+            return n ? `Productos · ${n}` : 'Productos';
+        });
+        espejo('encabezado', () => {
+            const n = document.querySelectorAll('#productsGrid .product-item-card').length;
+            return n === 1 ? '1 producto' : `${n} productos`;
+        });
+
+        mostrar('form', 0);
+    };
+
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', equipar);
+    else equipar();
+
+    // Al abrir el modal se arranca en la pestaña del formulario.
+    const original = window.openPromoModal;
+    if (typeof original === 'function' && !original.__conPestanas) {
+        const conPestanas = function (...args) {
+            const r = original.apply(this, args);
+            try { if (window.__promoMostrarPane) window.__promoMostrarPane('form', 0); } catch (e) {}
+            return r;
+        };
+        conPestanas.__conPestanas = true;
+        window.openPromoModal = conPestanas;
+    }
+})();

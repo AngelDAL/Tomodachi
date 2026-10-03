@@ -4375,7 +4375,10 @@
    bloque (los dos botones pegados a la izquierda) y el modal no tenía margen declarado. */
 @media (min-width: 769px) {
     #itemOptionsModal.modal-overlay { padding: 48px 32px; }
-    #itemOptionsModal .modal-content { padding: 28px; }
+    /* Un poco más de aire arriba y SOLO arriba: el modal queda algo más abajo sin dejar de estar
+       centrado (el margen entra en el cálculo del centrado, así que baja la mitad). Se hace con
+       margen y no moviendo la caja para que un modal alto siga cabiendo entero. */
+    #itemOptionsModal .modal-content { padding: 28px; margin-top: 64px; }
     #itemOptionsModal .modal-footer {
         display: flex; align-items: center; justify-content: space-between; gap: 12px;
         padding-top: 4px;

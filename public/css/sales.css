@@ -4370,6 +4370,19 @@
 /* (Sin regla de cuatro columnas: el modal mide lo mismo en cualquier pantalla, así que cuatro
    botones obligaban a partir «Sin descuento». Dos columnas siempre.) */
 
+/* En escritorio sobra pantalla: más aire alrededor del modal, y el pie con la mancuerna de
+   siempre —Cancelar a la izquierda, la acción principal a la derecha—. Antes el pie era un
+   bloque (los dos botones pegados a la izquierda) y el modal no tenía margen declarado. */
+@media (min-width: 769px) {
+    #itemOptionsModal.modal-overlay { padding: 48px 32px; }
+    #itemOptionsModal .modal-content { padding: 28px; }
+    #itemOptionsModal .modal-footer {
+        display: flex; align-items: center; justify-content: space-between; gap: 12px;
+        padding-top: 4px;
+    }
+    #itemOptionsModal .modal-footer > button { min-width: 168px; justify-content: center; }
+}
+
 /* Los dos botones del pie, cómodos con el pulgar y siempre a la vista */
 @media (max-width: 768px) {
     #itemOptionsModal .modal-footer { display: flex; gap: 10px; }

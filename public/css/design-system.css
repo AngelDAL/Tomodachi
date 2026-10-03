@@ -368,3 +368,53 @@ input[type="checkbox"], input[type="radio"], label, select, .form-select,
 .input-wrap { position: relative; width: 100%; display: flex; align-items: center; }
 .input-wrap > i { position: absolute; left: 14px; color: var(--text-muted); font-size: 0.9rem; pointer-events: none; }
 .input-wrap .ds-input.with-icon { padding-left: 42px; }
+
+/* ================================================================
+   SWITCH — el interruptor de encendido/apagado
+   ================================================================
+   Sube aquí desde design-system.html (donde vivía suelto) porque el
+   catálogo manda: lo que existe se reutiliza desde el CSS compartido,
+   no se re-declara en cada página. Uso:
+     <label class="switch"><input type="checkbox" checked><span class="track"></span> Etiqueta</label>
+   Sin texto visible también vale (poner aria-label en el input).
+   ================================================================ */
+.switch {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    font-family: var(--font-heading);
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--text-color);
+    cursor: pointer;
+}
+.switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+.switch .track {
+    width: 52px;
+    height: 30px;
+    border-radius: 100px;
+    background: var(--border-color);
+    position: relative;
+    flex-shrink: 0;
+    transition: background var(--dur, 0.22s ease);
+}
+.switch .track::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--dur, 0.22s ease);
+}
+.switch input:checked + .track { background: var(--primary-color); }
+.switch input:checked + .track::after { transform: translateX(22px); }
+.switch input:focus-visible + .track { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+/* Compacto: para listas densas (la lista de un menú con muchos productos). */
+.switch.compacto .track { width: 42px; height: 24px; }
+.switch.compacto .track::after { top: 2px; left: 2px; width: 20px; height: 20px; }
+.switch.compacto input:checked + .track::after { transform: translateX(18px); }

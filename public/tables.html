@@ -8,10 +8,10 @@
     <link rel="stylesheet" href="css/fonts.css?v=4">
     <link rel="stylesheet" href="lib/fontawesome/css/all.min.css?v=4">
     <link rel="stylesheet" href="css/main.css?v=22">
-    <link rel="stylesheet" href="css/design-system.css?v=8">
+    <link rel="stylesheet" href="css/design-system.css?v=9">
     <link rel="stylesheet" href="css/sidebar-modern.css?v=6">
     <link rel="stylesheet" href="css/mobile-nav.css?v=5">
-    <link rel="stylesheet" href="css/dashboard.css?v=4">
+    <link rel="stylesheet" href="css/dashboard.css?v=5">
     <style>
         /* ============================================================
            Puntos de servicio — el mapa del salón.
@@ -547,26 +547,92 @@
         .tp-modal-compacto { max-width: 460px; width: 94vw; }
 
         /* ============================================================
-           La CARTA: la lista de cartas de la tienda y el "qué se ve".
+           La CARTA: la lista de cartas (fichas) y el "qué se ve".
+           El interruptor es el .switch del catálogo (design-system.css).
            ============================================================ */
-        .cta-productos { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
-        .cta-producto {
-            display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+        /* La ficha se LEE: nombre, modo (insignia) y cuatro datos. Sin fila de botones. */
+        .cta-ficha { gap: 12px; }
+        .cta-ficha-cab { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+        .cta-ficha-titulo { min-width: 0; }
+        .cta-ficha-desc {
+            color: var(--text-muted); font-size: .8rem; margin: 3px 0 0; overflow: hidden;
+            text-overflow: ellipsis; white-space: nowrap; max-width: 34ch;
+        }
+        /* El MODO es lo que decide si el cliente puede pedir: se distingue del estado. */
+        .cta-modo {
+            flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+            font-family: var(--font-heading); font-size: .74rem; font-weight: 600;
+            padding: 5px 11px; border-radius: var(--ds-radius-pill);
+            background: color-mix(in srgb, var(--primary-color) 14%, transparent); color: var(--primary-color);
+        }
+        .cta-modo[data-modo="menu_only"] { background: color-mix(in srgb, var(--text-muted) 16%, transparent); color: var(--text-medium); }
+        .cta-modo[data-modo="order_and_pay"] { background: color-mix(in srgb, var(--success-color) 16%, transparent); color: var(--success-color); }
+        .cta-ficha-datos { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; font-size: .84rem; color: var(--text-medium); }
+        .cta-ficha-datos > span { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+        .cta-ficha-datos em { font-style: normal; color: var(--text-muted); }
+        /* El estado, un punto de color; la palabra va corta y el detalle al tooltip. */
+        .cta-estado-punto { font-size: .78rem; }
+        .cta-estado-punto::before {
+            content: ""; width: 8px; height: 8px; border-radius: 50%;
+            background: var(--text-muted); flex: 0 0 auto;
+        }
+        .cta-estado-punto.vivo::before { background: var(--success-color); }
+        .cta-ficha-acciones { align-items: center; }
+        .cta-menu-wrap { position: relative; margin-left: auto; }
+
+        /* "Qué se ve": resumen pegado arriba y categorías plegables. */
+        .cta-productos { display: flex; flex-direction: column; gap: 14px; }
+        .cta-resumen {
+            position: sticky; top: 0; z-index: 5;
+            display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;
+            padding: 10px 14px; background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: var(--ds-radius-md); box-shadow: var(--ds-shadow-sm);
+        }
+        .cta-resumen p { margin: 0; font-size: .88rem; color: var(--text-medium); }
+        .cta-resumen-acciones { display: flex; flex-wrap: wrap; gap: 8px; }
+        .cta-resumen-acciones .tp-btn { flex: 0 0 auto; }
+        .cta-grupo {
             background: var(--bg-card); border: 1px solid var(--border-color);
-            border-radius: var(--ds-radius-md);
+            border-radius: var(--ds-radius-md); overflow: hidden;
         }
-        .cta-producto.oculto { opacity: .55; }
-        .cta-producto-info { flex: 1 1 auto; min-width: 0; }
-        .cta-producto-nombre { font-size: .92rem; color: var(--text-color); }
-        .cta-producto-meta { font-size: .76rem; color: var(--text-muted); }
-        /* El interruptor de "se ve / no se ve": un botón, nunca un checkbox del navegador. */
-        .cta-interruptor {
-            flex: 0 0 auto; min-width: 74px; min-height: 38px; padding: 6px 12px;
-            border: 1px solid var(--border-color); border-radius: var(--ds-radius-pill);
-            background: var(--bg-body); color: var(--text-medium); cursor: pointer;
-            font-family: var(--font-heading); font-size: .8rem;
+        .cta-grupo-cab { display: flex; align-items: center; gap: 6px; padding: 5px 8px 5px 4px; background: var(--bg-light, #f5f7f9); }
+        .cta-grupo-plegar {
+            flex: 1 1 auto; display: flex; align-items: center; gap: 10px; min-height: 44px;
+            padding: 6px 8px; border: 0; border-radius: var(--ds-radius-sm); background: transparent;
+            font: inherit; color: var(--text-color); text-align: left; cursor: pointer;
         }
-        .cta-interruptor.activo { background: var(--primary-color); border-color: var(--primary-color); color: #fff; }
+        .cta-grupo-plegar:hover { background: var(--bg-body); }
+        .cta-grupo-plegar i { color: var(--text-muted); width: 12px; font-size: .8rem; }
+        .cta-grupo-nombre { font-family: var(--font-heading); font-weight: 600; }
+        .cta-grupo-cuenta { color: var(--text-muted); font-size: .8rem; }
+        /* Listas largas: alto máximo y scroll (así no se pierde el resumen de arriba). */
+        .cta-grupo-cuerpo { display: flex; flex-direction: column; max-height: 420px; overflow: auto; }
+        .cta-fila { display: flex; align-items: center; gap: 12px; padding: 7px 14px 7px 16px; border-top: 1px solid var(--border-lighter, #eee); }
+        .cta-fila.oculto { background: color-mix(in srgb, var(--text-muted) 8%, transparent); }
+        .cta-fila-info { flex: 1 1 auto; min-width: 0; display: flex; align-items: baseline; gap: 4px 10px; flex-wrap: wrap; }
+        .cta-fila-nombre { color: var(--text-color); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+        .cta-fila-precio { color: var(--text-medium); font-size: .86rem; font-variant-numeric: tabular-nums; }
+        .cta-fila-agotado { font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: var(--danger-color); }
+        .cta-fila .switch { flex: 0 0 auto; }
+
+        /* Estado vacío: los tres modos se ENSEÑAN, no se explican en un párrafo. */
+        .cta-leyenda { display: grid; gap: 10px; max-width: 640px; margin: 18px auto 0; text-align: left; }
+        .cta-leyenda-item {
+            display: flex; gap: 12px; align-items: flex-start;
+            padding: 12px 14px; background: var(--bg-body); border-radius: var(--ds-radius-md);
+        }
+        .cta-leyenda-item i { color: var(--primary-color); font-size: 1.05rem; margin-top: 2px; }
+        .cta-leyenda-item strong { display: block; font-family: var(--font-heading); font-size: .92rem; color: var(--text-color); }
+        .cta-leyenda-item span { font-size: .82rem; color: var(--text-muted); }
+
+        @media (max-width: 640px) {
+            .cta-ficha-desc { max-width: 100%; white-space: normal; }
+            .cta-resumen { position: static; }
+            .cta-resumen-acciones { width: 100%; }
+            .cta-resumen-acciones .tp-btn { flex: 1 1 45%; justify-content: center; }
+            .cta-grupo-cuerpo { max-height: none; }
+            .cta-menu-wrap { margin-left: 0; }
+        }
         .tp-chips { display: flex; flex-wrap: wrap; gap: 8px; }
         .tp-chips .tp-chip {
             cursor: pointer; font-family: var(--font-heading);
@@ -1572,7 +1638,7 @@
                         <div class="tp-header">
                             <div>
                                 <h1 class="tp-titulo">Carta</h1>
-                                <p class="tp-sub">Es lo que el cliente ve al escanear el QR. El modo decide si solo mira (Consulta), si pide y paga al final (Cuenta abierta) o si paga por adelantado (Pago inmediato).</p>
+                                <p class="tp-sub">Lo que el cliente ve al escanear el QR de un punto. El modo decide qué puede hacer con ella.</p>
                             </div>
                             <div class="tp-botones">
                                 <button type="button" class="tp-btn primario" id="ctaBtnNueva"><i class="fas fa-plus"></i> Nueva carta</button>
@@ -1944,7 +2010,7 @@
     <script src="js/sidebar-loader.js?v=13"></script>
     <script src="js/app.js?v=12"></script>
     <script src="js/ws-realtime.js?v=1"></script>
-    <script src="js/tables.js?v=10"></script>
+    <script src="js/tables.js?v=11"></script>
     <script src="js/cobro.js?v=2"></script>
     <script src="js/comandas.js?v=4"></script>
     <script src="lib/animejs/anime.min.js"></script>

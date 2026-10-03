@@ -1673,10 +1673,25 @@ document.addEventListener('DOMContentLoaded', async function () {
     });
 
     // ── La CARTA ───────────────────────────────────────────────────────────────
-    // Lista de cartas: tres acciones visibles y el resto en los botones de icono.
+    // La ficha se LEE y se entra: una acción primaria, una secundaria y el resto en el
+    // menú de tres puntos (regla 16: menos botones, más intención).
     document.getElementById('ctaCartas').addEventListener('click', function (ev) {
+        // El menú de tres puntos de una ficha: alterna y cierra los demás.
+        const btnMenu = ev.target.closest('[data-menu-carta]');
+        if (btnMenu) {
+            const id = btnMenu.getAttribute('data-menu-carta');
+            const panel = document.querySelector('#ctaCartas [data-menu-panel="' + id + '"]');
+            const estabaAbierto = panel && !panel.classList.contains('hidden');
+            ctaCerrarMenus();
+            if (panel && !estabaAbierto) {
+                panel.classList.remove('hidden');
+                btnMenu.setAttribute('aria-expanded', 'true');
+            }
+            return;
+        }
         const b = ev.target.closest('[data-carta-accion]');
         if (!b) return;
+        ctaCerrarMenus();
         const id = Number(b.getAttribute('data-carta'));
         const accion = b.getAttribute('data-carta-accion');
         const c = ctaPorId(id);
@@ -1691,6 +1706,10 @@ document.addEventListener('DOMContentLoaded', async function () {
             if (navigator.clipboard) navigator.clipboard.writeText(c.url_publica).then(function () { tpAviso('Enlace copiado', 'success'); });
             else tpAviso(c.url_publica, 'info');
         }
+    });
+    // Un clic fuera cierra cualquier menú de ficha abierto.
+    document.addEventListener('click', function (ev) {
+        if (!ev.target.closest('#ctaCartas [data-menu-carta]')) ctaCerrarMenus();
     });
 
     document.getElementById('ctaBtnNueva').addEventListener('click', ctaNueva);
@@ -1714,9 +1733,42 @@ document.addEventListener('DOMContentLoaded', async function () {
         ctaEstado.busqueda = this.value.trim();
         ctaPintarProductos();
     });
+    // "Qué se ve": la lista va por CATEGORÍAS, con el interruptor como control real
+    // (checkbox) y acciones de bloque. Cada categoría se puede plegar.
+    document.getElementById('ctaProductos').addEventListener('change', function (ev) {
+        const inp = ev.target.closest('[data-producto-carta]');
+        if (!inp) return;
+        const id = Number(inp.getAttribute('data-producto-carta'));
+        ctaFijarProductos([id], !inp.checked, inp.checked ? 'Vuelve a salir en la carta' : 'Oculto en la carta del cliente');
+    });
     document.getElementById('ctaProductos').addEventListener('click', function (ev) {
-        const b = ev.target.closest('[data-producto-carta]');
-        if (b) ctaAlternarProducto(b.getAttribute('data-producto-carta'));
+        const plegar = ev.target.closest('[data-plegar]');
+        if (plegar) {
+            const nombre = plegar.getAttribute('data-plegar');
+            ctaEstado.plegadas[nombre] = !ctaEstado.plegadas[nombre];
+            ctaPintarProductos();
+            return;
+        }
+        const bloque = ev.target.closest('[data-cta-bloque]');
+        if (bloque) {
+            const ocultar = bloque.getAttribute('data-cta-bloque') === 'todo-no';
+            const ids = ctaEstado.productos
+                .filter(function (p) { return ocultar ? !ctaEstaOculto(p.product_id) : ctaEstaOculto(p.product_id); })
+                .map(function (p) { return p.product_id; });
+            if (!ids.length) { tpAviso(ocultar ? 'Ya están todos ocultos' : 'Ya se ven todos', 'info'); return; }
+            return ctaFijarProductos(ids, ocultar, ocultar ? 'Se ocultaron ' + ids.length + ' productos' : 'Se muestran ' + ids.length + ' productos');
+        }
+        const cat = ev.target.closest('[data-cat-bloque]');
+        if (cat) {
+            const nombre = cat.getAttribute('data-cat-bloque');
+            const grupo = ctaAgrupados().find(function (g) { return g.nombre === nombre; });
+            if (!grupo) return;
+            const visibles = grupo.productos.filter(function (p) { return !ctaEstaOculto(p.product_id); });
+            const ocultar = visibles.length > 0;
+            const ids = (ocultar ? visibles : grupo.productos).map(function (p) { return p.product_id; });
+            if (!ids.length) return;
+            return ctaFijarProductos(ids, ocultar, (ocultar ? 'Ocultos ' : 'Se ven ') + ids.length + ' de «' + nombre + '»');
+        }
     });
 
     // La carta del punto (chips del modal del punto)
@@ -2476,6 +2528,17 @@ const CTA_AYUDA_MODO = {
     open_tab: 'El cliente pide desde su teléfono y se cobra al final. El personal abre el punto (mesa, habitación, estación) y la cuenta vive ahí.',
     order_and_pay: 'El cliente paga por adelantado desde su teléfono. Sirve de kiosko: sin personal de por medio.',
 };
+/** El modo, en una línea: es lo que decide si el cliente puede pedir o solo mirar. */
+const CTA_LEYENDA_MODO = {
+    menu_only: 'El cliente mira la carta; el personal anota y cobra.',
+    open_tab: 'El cliente pide desde su teléfono; se cobra al final.',
+    order_and_pay: 'El cliente paga por adelantado, sin personal de por medio.',
+};
+/** El icono de cada modo, tomado del propio catálogo de modos (una sola fuente). */
+function ctaIconoModo(mode) {
+    const m = CTA_MODOS.find(function (x) { return x.id === mode; });
+    return (m && m.icono) || 'book-open';
+}
 
 const ctaEstado = {
     cartas: [],
@@ -2483,6 +2546,7 @@ const ctaEstado = {
     carta: null,       // la carta abierta en "qué se ve"
     items: [],         // sus menu_items: lo que ordena, destaca y OCULTA
     busqueda: '',
+    plegadas: {},      // categorías cerradas en "qué se ve" (se recuerda mientras dure la pantalla)
     modo: 'open_tab',
     opciones: { activa: 1, notas: 1, promos: 1 },
     editando: null,    // carta que se está editando (null = nueva)
@@ -2527,10 +2591,12 @@ function ctaPintar() {
     const cont = document.getElementById('ctaCartas');
     if (!cont) return;
     if (!ctaEstado.cartas.length) {
+        // Estado vacío que ENSEÑA: los tres modos con su icono, no un párrafo.
         cont.innerHTML = '<div class="tp-vacio"><i class="fas fa-book-open"></i>' +
             '<h3>Todavía no hay ninguna carta</h3>' +
-            '<p>La carta es lo que el cliente ve al escanear el QR de un punto. Elige si puede pedir desde su teléfono o solo mirar.</p>' +
-            '<p style="margin-top:14px"><button type="button" class="tp-btn primario" id="ctaVacioNueva"><i class="fas fa-plus"></i> Crear la primera</button></p></div>';
+            '<p>La carta es lo que el cliente ve al escanear el QR de un punto. Se hace una vez y la usan todos los puntos que quieras.</p>' +
+            ctaLeyendaModos() +
+            '<p style="margin-top:16px"><button type="button" class="tp-btn primario" id="ctaVacioNueva"><i class="fas fa-plus"></i> Crear la primera</button></p></div>';
         const b = document.getElementById('ctaVacioNueva');
         if (b) b.addEventListener('click', ctaNueva);
         return;
@@ -2538,7 +2604,28 @@ function ctaPintar() {
     cont.innerHTML = '<div class="tp-grid">' + ctaEstado.cartas.map(ctaTarjeta).join('') + '</div>';
 }
 
-/** La ficha de una carta en la lista: se lee y se entra. Tres acciones y un menú, no más. */
+/** Los tres modos explicados de un vistazo: qué puede hacer el cliente con esta carta. */
+function ctaLeyendaModos() {
+    return '<div class="cta-leyenda">' + CTA_MODOS.map(function (m) {
+        return '<div class="cta-leyenda-item">' +
+            '<i class="fas fa-' + m.icono + '"></i>' +
+            '<div><strong>' + tpEsc(m.texto) + '</strong>' +
+            '<span>' + tpEsc(CTA_LEYENDA_MODO[m.id] || '') + '</span></div>' +
+        '</div>';
+    }).join('') + '</div>';
+}
+
+/** Cierra todos los menús de tres puntos de las fichas. */
+function ctaCerrarMenus() {
+    document.querySelectorAll('#ctaCartas [data-menu-panel]').forEach(function (p) { p.classList.add('hidden'); });
+    document.querySelectorAll('#ctaCartas [data-menu-carta]').forEach(function (b) { b.setAttribute('aria-expanded', 'false'); });
+}
+
+/**
+ * La ficha de una carta en la lista: se LEE (nombre, modo, estado, cuántos productos y qué
+ * puntos la usan) y se entra. Una acción primaria, una secundaria y el resto en el menú de
+ * tres puntos. El estado es un punto de color con tooltip, no un párrafo (regla 16).
+ */
 function ctaTarjeta(c) {
     const activa = Number(c.is_active) === 1;
     const modo = CTA_ETIQUETA_MODO[c.mode] || c.mode;
@@ -2546,33 +2633,47 @@ function ctaTarjeta(c) {
         return Number((p.carta || {}).menu_id || 0) === Number(c.menu_id);
     }).map(function (p) { return p.label; });
     // La "carta de la tienda" es la primera activa: es la que abren los puntos que no eligen.
-    const esDeTienda = activa && ctaEstado.cartas.filter(function (x) { return Number(x.is_active) === 1; })[0]
-        && Number(ctaEstado.cartas.filter(function (x) { return Number(x.is_active) === 1; })[0].menu_id) === Number(c.menu_id);
+    const primeraActiva = ctaEstado.cartas.filter(function (x) { return Number(x.is_active) === 1; })[0];
+    const esDeTienda = activa && primeraActiva && Number(primeraActiva.menu_id) === Number(c.menu_id);
 
-    const insignias = [];
-    insignias.push('<span class="tp-estado' + (activa ? '' : ' apagado') + '">' + (activa ? 'Activa' : 'Desactivada') + '</span>');
-    insignias.push('<span class="tp-estado' + (ctaAdmitePedido(c.mode) ? '' : ' apagado') + '">' + tpEsc(modo) + '</span>');
-    if (esDeTienda) insignias.push('<span class="tp-estado apagado">La de la tienda</span>');
+    // Los puntos, en chips: dos y "+N" con el resto en el tooltip. Una lista de siete mesas
+    // derramada en tres renglones no dice nada.
+    const visibles = puntos.slice(0, 2);
+    const resto = puntos.length - visibles.length;
+    const puntosHtml = puntos.length
+        ? visibles.map(tpEsc).join(' · ') + (resto > 0 ? ' <em title="' + tpEsc(puntos.join(', ')) + '">+' + resto + '</em>' : '')
+        : 'Ningún punto la eligió';
 
-    return '<div class="tp-card' + (activa ? '' : ' apagado') + '">' +
-        '<div class="tp-card-top">' +
-            '<div><h3 class="tp-nombre">' + tpEsc(c.name) + '</h3>' +
-            (c.description ? '<p class="tp-zona">' + tpEsc(c.description) + '</p>' : '') + '</div>' +
-            '<div class="tp-card-insignias">' + insignias.join('') + '</div>' +
+    return '<div class="tp-card cta-ficha' + (activa ? '' : ' apagado') + '">' +
+        '<div class="cta-ficha-cab">' +
+            '<div class="cta-ficha-titulo">' +
+                '<h3 class="tp-nombre">' + tpEsc(c.name) + '</h3>' +
+                (c.description ? '<p class="cta-ficha-desc" title="' + tpEsc(c.description) + '">' + tpEsc(c.description) + '</p>' : '') +
+            '</div>' +
+            '<span class="cta-modo" data-modo="' + tpEsc(c.mode) + '">' +
+                '<i class="fas fa-' + ctaIconoModo(c.mode) + '"></i> ' + tpEsc(modo) + '</span>' +
         '</div>' +
-        '<div class="tp-datos">' +
+        '<div class="cta-ficha-datos">' +
+            '<span class="cta-estado-punto ' + (activa ? 'vivo' : 'muerto') + '" title="' +
+                (activa ? 'Activa: su enlace y su QR funcionan' : 'Desactivada: su QR no lleva a ninguna parte') + '">' +
+                (activa ? 'Activa' : 'Desactivada') + '</span>' +
             '<span><i class="fas fa-utensils"></i> ' + ctaEstado.productos.length + ' productos</span>' +
-            '<span><i class="fas fa-chair"></i> ' +
-                (puntos.length ? tpEsc(puntos.join(', ')) : 'ningún punto la eligió') + '</span>' +
+            '<span><i class="fas fa-chair"></i> ' + puntosHtml + '</span>' +
+            (esDeTienda ? '<span title="Es la que abren los puntos que no eligen carta"><i class="fas fa-store"></i> La de la tienda</span>' : '') +
         '</div>' +
-        '<div class="tp-acciones">' +
+        '<div class="tp-acciones cta-ficha-acciones">' +
             '<button type="button" class="tp-btn primario" data-carta-accion="abrir" data-carta="' + c.menu_id + '"><i class="fas fa-up-right-from-square"></i> Abrir la carta</button>' +
-            '<button type="button" class="tp-btn" data-carta-accion="qr" data-carta="' + c.menu_id + '"><i class="fas fa-qrcode"></i> Ver el QR</button>' +
             '<button type="button" class="tp-btn" data-carta-accion="productos" data-carta="' + c.menu_id + '"><i class="fas fa-list-check"></i> Qué se ve</button>' +
-            '<button type="button" class="tp-btn tp-icono" data-carta-accion="editar" data-carta="' + c.menu_id + '" title="Editar la carta"><i class="fas fa-pen"></i></button>' +
-            '<button type="button" class="tp-btn tp-icono" data-carta-accion="enlace" data-carta="' + c.menu_id + '" title="Copiar el enlace público"><i class="fas fa-link"></i></button>' +
-            '<button type="button" class="tp-btn tp-icono' + (activa ? ' peligro' : '') + '" data-carta-accion="' + (activa ? 'desactivar' : 'activar') + '" data-carta="' + c.menu_id + '" title="' + (activa ? 'Desactivar' : 'Activar') + '"><i class="fas fa-' + (activa ? 'eye-slash' : 'eye') + '"></i></button>' +
-            '<button type="button" class="tp-btn tp-icono peligro" data-carta-accion="eliminar" data-carta="' + c.menu_id + '" title="Eliminar la carta"><i class="fas fa-trash"></i></button>' +
+            '<span class="cta-menu-wrap">' +
+                '<button type="button" class="tp-btn tp-icono" data-menu-carta="' + c.menu_id + '" aria-haspopup="true" aria-expanded="false" title="Más opciones de la carta"><i class="fas fa-ellipsis"></i></button>' +
+                '<div class="tp-menu-config hidden" data-menu-panel="' + c.menu_id + '">' +
+                    '<button type="button" data-carta-accion="editar" data-carta="' + c.menu_id + '"><i class="fas fa-pen"></i> Editar la carta</button>' +
+                    '<button type="button" data-carta-accion="qr" data-carta="' + c.menu_id + '"><i class="fas fa-qrcode"></i> Ver el QR</button>' +
+                    '<button type="button" data-carta-accion="enlace" data-carta="' + c.menu_id + '"><i class="fas fa-link"></i> Copiar el enlace</button>' +
+                    '<button type="button" data-carta-accion="' + (activa ? 'desactivar' : 'activar') + '" data-carta="' + c.menu_id + '"><i class="fas fa-' + (activa ? 'eye-slash' : 'eye') + '"></i> ' + (activa ? 'Desactivar' : 'Activar') + '</button>' +
+                    '<button type="button" class="peligro" data-carta-accion="eliminar" data-carta="' + c.menu_id + '"><i class="fas fa-trash"></i> Eliminar la carta</button>' +
+                '</div>' +
+            '</span>' +
         '</div>' +
         '</div>';
 }
@@ -2731,50 +2832,102 @@ function ctaEstaOculto(productId) {
     });
 }
 
-function ctaPintarProductos() {
-    const cont = document.getElementById('ctaProductos');
+/** Los productos que pasan el buscador, agrupados por categoría (y sin grupos vacíos). */
+function ctaAgrupados() {
     const q = ctaEstado.busqueda.toLowerCase();
-    const lista = ctaEstado.productos.filter(function (p) {
-        if (q && String(p.product_name).toLowerCase().indexOf(q) === -1) return false;
-        return true;
+    const grupos = [];
+    const indice = {};
+    ctaEstado.productos.forEach(function (p) {
+        if (q && String(p.product_name).toLowerCase().indexOf(q) === -1) return;
+        const nombre = p.category_name || 'Sin categoría';
+        if (!indice[nombre]) { indice[nombre] = { nombre: nombre, productos: [] }; grupos.push(indice[nombre]); }
+        indice[nombre].productos.push(p);
     });
-    if (!lista.length) {
-        cont.innerHTML = '<div class="tp-vacio-mini">Nada que coincida.</div>';
-        return;
-    }
-    const ocultos = lista.filter(function (p) { return ctaEstaOculto(p.product_id); }).length;
-    cont.innerHTML = '<p class="tp-aviso" style="grid-column:1/-1">Se ven ' + (lista.length - ocultos) + ' de ' + lista.length +
-        ' productos. Lo que ocultes aquí deja de salir en la carta del cliente, pero sigue vendiéndose en el punto de venta.</p>' +
-        lista.map(function (p) {
-            const oculto = ctaEstaOculto(p.product_id);
-            return '<div class="cta-producto' + (oculto ? ' oculto' : '') + '">' +
-                '<div class="cta-producto-info">' +
-                    '<div class="cta-producto-nombre">' + tpEsc(p.product_name) + '</div>' +
-                    '<div class="cta-producto-meta">' + tpEsc(p.category_name || 'Sin categoría') + ' · ' + tpDinero(p.price) +
-                        (Number(p.current_stock) <= 0 && p.tracking_type && p.tracking_type !== 'none' ? ' · agotado' : '') + '</div>' +
-                '</div>' +
-                '<button type="button" class="cta-interruptor' + (oculto ? '' : ' activo') + '" data-producto-carta="' + p.product_id + '">' +
-                    (oculto ? 'No se ve' : 'Se ve') + '</button>' +
-                '</div>';
-        }).join('');
+    return grupos;
 }
 
 /**
- * Oculta/muestra UN producto en la carta abierta.
+ * "Qué se ve": la lista va por CATEGORÍAS, con el resumen pegado arriba y el interruptor como
+ * control real (no una pastilla encendida). Lo que se oculta aquí deja de salir en la carta del
+ * cliente, pero sigue vendiéndose en el punto de venta.
+ */
+function ctaPintarProductos() {
+    const cont = document.getElementById('ctaProductos');
+    if (!cont) return;
+    const grupos = ctaAgrupados();
+    const total = ctaEstado.productos.length;
+    const visibles = ctaEstado.productos.filter(function (p) { return !ctaEstaOculto(p.product_id); }).length;
+
+    if (!grupos.length) {
+        cont.innerHTML = '<div class="tp-vacio-mini">Ningún producto coincide con la búsqueda.</div>';
+        return;
+    }
+    cont.innerHTML =
+        '<div class="cta-resumen">' +
+            '<p><strong>' + visibles + ' de ' + total + '</strong> productos se ven en la carta' +
+                (ctaEstado.busqueda ? ' · buscando «' + tpEsc(ctaEstado.busqueda) + '»' : '') + '</p>' +
+            '<div class="cta-resumen-acciones">' +
+                '<button type="button" class="tp-btn" data-cta-bloque="todo-si"><i class="fas fa-eye"></i> Mostrar todo</button>' +
+                '<button type="button" class="tp-btn" data-cta-bloque="todo-no"><i class="fas fa-eye-slash"></i> Ocultar todo</button>' +
+            '</div>' +
+        '</div>' +
+        grupos.map(ctaGrupo).join('');
+}
+
+/** Una categoría con su cuenta y su interruptor de bloque. */
+function ctaGrupo(g) {
+    const ocultos = g.productos.filter(function (p) { return ctaEstaOculto(p.product_id); }).length;
+    const plegada = !!ctaEstado.plegadas[g.nombre];
+    const todosOcultos = ocultos === g.productos.length;
+    return '<section class="cta-grupo">' +
+        '<header class="cta-grupo-cab">' +
+            '<button type="button" class="cta-grupo-plegar" data-plegar="' + tpEsc(g.nombre) + '" aria-expanded="' + (plegada ? 'false' : 'true') + '">' +
+                '<i class="fas fa-chevron-' + (plegada ? 'right' : 'down') + '"></i>' +
+                '<span class="cta-grupo-nombre">' + tpEsc(g.nombre) + '</span>' +
+                '<span class="cta-grupo-cuenta">' + g.productos.length +
+                    (ocultos ? ' · ' + ocultos + ' oculto' + (ocultos > 1 ? 's' : '') : '') + '</span>' +
+            '</button>' +
+            '<button type="button" class="tp-btn tp-icono" data-cat-bloque="' + tpEsc(g.nombre) + '" title="' +
+                (todosOcultos ? 'Mostrar toda la categoría' : 'Ocultar toda la categoría') + '">' +
+                '<i class="fas fa-' + (todosOcultos ? 'eye' : 'eye-slash') + '"></i></button>' +
+        '</header>' +
+        '<div class="cta-grupo-cuerpo' + (plegada ? ' hidden' : '') + '">' +
+            g.productos.map(ctaFila).join('') +
+        '</div></section>';
+}
+
+/** Una fila: el producto a la izquierda, el interruptor a la derecha. */
+function ctaFila(p) {
+    const oculto = ctaEstaOculto(p.product_id);
+    const agotado = Number(p.current_stock) <= 0 && p.tracking_type && p.tracking_type !== 'none';
+    return '<div class="cta-fila' + (oculto ? ' oculto' : '') + '">' +
+        '<div class="cta-fila-info">' +
+            '<span class="cta-fila-nombre">' + tpEsc(p.product_name) + '</span>' +
+            '<span class="cta-fila-precio">' + tpDinero(p.price) + '</span>' +
+            (agotado ? '<span class="cta-fila-agotado">agotado</span>' : '') +
+        '</div>' +
+        '<label class="switch compacto" title="' + (oculto ? 'No se ve en la carta' : 'Se ve en la carta') + '">' +
+            '<input type="checkbox" data-producto-carta="' + p.product_id + '"' + (oculto ? '' : ' checked') +
+                ' aria-label="' + (oculto ? 'Mostrar' : 'Ocultar') + ' ' + tpEsc(p.product_name) + ' en la carta">' +
+            '<span class="track"></span>' +
+        '</label></div>';
+}
+
+/**
+ * Oculta/muestra productos en la carta abierta: uno, una categoría entera o todos.
  *
  * Se manda la lista COMPLETA de ajustes (la API reemplaza los menu_items del menú), pero se
  * conservan los renglones que no son de producto (categorías, etiquetas): si no, un ajuste
  * hecho antes se perdería al tocar un interruptor.
  */
-async function ctaAlternarProducto(productId) {
-    if (!ctaEstado.carta) return;
-    const id = Number(productId);
-    const oculto = ctaEstaOculto(id);
-    const conservar = ctaEstado.items.filter(function (it) {
-        return !(it.kind === 'product' && Number(it.product_id) === id);
+async function ctaFijarProductos(ids, ocultar, mensaje) {
+    if (!ctaEstado.carta || !ids.length) return;
+    const set = {};
+    ids.forEach(function (id) { set[Number(id)] = true; });
+    const nuevo = ctaEstado.items.filter(function (it) {
+        return !(it.kind === 'product' && set[Number(it.product_id)]);
     });
-    const nuevo = conservar.slice();
-    if (!oculto) nuevo.push({ kind: 'product', product_id: id, is_hidden: 1 });
+    if (ocultar) ids.forEach(function (id) { nuevo.push({ kind: 'product', product_id: Number(id), is_hidden: 1 }); });
     try {
         const d = await tpPeticion(TP_API_MENUS, {
             method: 'PUT',
@@ -2783,9 +2936,10 @@ async function ctaAlternarProducto(productId) {
         ctaEstado.carta = d;
         ctaEstado.items = Array.isArray(d.items) ? d.items.slice() : nuevo;
         ctaPintarProductos();
-        tpAviso(oculto ? 'Vuelve a salir en la carta' : 'Oculto en la carta del cliente', 'success');
+        if (mensaje) tpAviso(mensaje, 'success');
     } catch (e) {
         tpAviso(tpMensajeDeError(e), 'error');
+        ctaPintarProductos();   // se repinta con el estado REAL: el interruptor nunca miente
     }
 }
 

@@ -99,46 +99,125 @@
     width: 100%;
 }
 
-/* Report Cards Grid */
+/* Report Cards Grid — agrupadas por para qué sirven, con los pasos de uso a la vista.
+   El objetivo: quien entra por primera vez entiende qué hacer sin leer una guía. */
 .report-cards-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 20px;
-    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    margin-top: 22px;
 }
+
+.report-grupo-titulo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 10px;
+    font-family: var(--font-heading);
+    font-size: .82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--text-medium);
+}
+
+.report-grupo-titulo i { color: var(--primary-color); }
+
+.report-grupo-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px;
+}
+
+/* Los tres pasos: un vistazo y ya se sabe usar la pantalla. */
+.reports-sub {
+    color: var(--text-muted);
+    font-size: .92rem;
+    margin: 5px 0 0;
+    max-width: 72ch;
+}
+
+.reports-pasos {
+    list-style: none;
+    margin: 16px 0 0;
+    padding: 14px 16px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--ds-radius-lg);
+    box-shadow: var(--ds-shadow-sm);
+}
+
+.reports-pasos li { display: flex; align-items: flex-start; gap: 10px; }
+
+.reports-pasos .paso-num {
+    flex: 0 0 auto;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in srgb, var(--primary-color) 15%, transparent);
+    color: var(--primary-color);
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: .82rem;
+}
+
+.reports-pasos strong {
+    display: block;
+    font-family: var(--font-heading);
+    font-size: .9rem;
+    color: var(--text-color);
+}
+
+.reports-pasos span { font-size: .8rem; color: var(--text-muted); }
 
 .report-card {
     background: var(--bg-card);
-    border-radius: 10px;
-    padding: 25px;
-    text-align: center;
+    border-radius: var(--ds-radius-md);
+    padding: 18px;
+    text-align: left;
     cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    border: 1px solid transparent;
+    transition: all 0.25s ease;
+    box-shadow: var(--ds-shadow-sm);
+    border: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 6px;
     height: 100%;
+    min-height: 128px;
 }
 
 .report-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+    transform: translateY(-3px);
+    box-shadow: var(--ds-shadow-md);
     border-color: var(--primary-color);
 }
 
 .report-card-icon {
-    font-size: 2.5rem;
+    font-size: 1.6rem;
     color: var(--primary-color);
-    margin-bottom: 15px;
+    margin-bottom: 4px;
 }
 
 .report-card-title {
+    font-family: var(--font-heading);
     font-weight: 600;
     color: var(--text-color);
-    font-size: 1.1rem;
+    font-size: 1rem;
+}
+
+/* Una línea que dice para qué sirve: es lo que lo hace autoexplicativo. */
+.report-card-desc {
+    font-size: .82rem;
+    color: var(--text-muted);
+    line-height: 1.35;
 }
 
 .report-selection-container {

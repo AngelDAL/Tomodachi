@@ -11,10 +11,10 @@
     <!-- FontAwesome -->
     <link rel="stylesheet" href="lib/fontawesome/css/all.min.css?v=4">
     <link rel="stylesheet" href="css/main.css?v=22">
-    <link rel="stylesheet" href="css/design-system.css?v=8">
+    <link rel="stylesheet" href="css/design-system.css?v=9">
     <link rel="stylesheet" href="css/sidebar-modern.css?v=6">
     <link rel="stylesheet" href="css/mobile-nav.css?v=5">
-    <link rel="stylesheet" href="css/dashboard.css?v=4">
+    <link rel="stylesheet" href="css/dashboard.css?v=5">
     <script src="js/theme-init.js?v=3"></script>
     <link rel="icon" type="image/svg+xml" href="assets/app-icons/tomodachi-favicon.svg">
     <link rel="manifest" href="manifest.json">
@@ -42,43 +42,78 @@
             <div class="dashboard-content">
                 <div class="reports-container">
                     <div class="reports-header">
-                        <h2>Generador de Reportes</h2>
+                        <div>
+                            <h2>Reportes</h2>
+                            <p class="reports-sub">Mira cómo va el negocio y saca la información para imprimir o compartir con tu contador.</p>
+                        </div>
                     </div>
 
-                    <!-- Grid de Tarjetas de Reportes -->
+                    <!-- Cómo funciona: se entiende sin guía -->
+                    <ol class="reports-pasos">
+                        <li><span class="paso-num">1</span><div><strong>Elige el reporte</strong><span>Qué querés ver.</span></div></li>
+                        <li><span class="paso-num">2</span><div><strong>Pon el rango de fechas</strong><span>Solo los de ventas lo piden.</span></div></li>
+                        <li><span class="paso-num">3</span><div><strong>Genera y exporta</strong><span>Excel, PDF o impresión.</span></div></li>
+                    </ol>
+
+                    <!-- Tarjetas de reportes, agrupadas por para qué sirven -->
                     <div class="report-cards-grid" id="reportCardsGrid">
-                        <div class="report-card" onclick="selectReport('sales', 'Historial de Ventas', 'fa-chart-line')">
-                            <div class="report-card-icon"><i class="fas fa-chart-line"></i></div>
-                            <div class="report-card-title">Historial de Ventas</div>
-                        </div>
-                        <div class="report-card" onclick="selectReport('inventory', 'Valoración de Inventario', 'fa-boxes')">
-                            <div class="report-card-icon"><i class="fas fa-boxes"></i></div>
-                            <div class="report-card-title">Valoración de Inventario</div>
-                        </div>
-                        <div class="report-card" onclick="selectReport('top_products', 'Productos Más Vendidos', 'fa-trophy')">
-                            <div class="report-card-icon"><i class="fas fa-trophy"></i></div>
-                            <div class="report-card-title">Productos Más Vendidos</div>
-                        </div>
-                        <div class="report-card" onclick="selectReport('inventory_movements', 'Movimientos de Inventario', 'fa-dolly')">
-                            <div class="report-card-icon"><i class="fas fa-dolly"></i></div>
-                            <div class="report-card-title">Movimientos de Inventario</div>
-                        </div>
-                        <div class="report-card" onclick="selectReport('cash_registers', 'Historial de Cajas', 'fa-cash-register')">
-                            <div class="report-card-icon"><i class="fas fa-cash-register"></i></div>
-                            <div class="report-card-title">Historial de Cajas</div>
-                        </div>
-                        <div class="report-card" onclick="selectReport('cash_movements', 'Movimientos de Efectivo', 'fa-money-bill-wave')">
-                            <div class="report-card-icon"><i class="fas fa-money-bill-wave"></i></div>
-                            <div class="report-card-title">Movimientos de Efectivo</div>
-                        </div>
-                        <div class="report-card" onclick="selectReport('qr_labels', 'Impresión de Etiquetas QR', 'fa-qrcode')">
-                            <div class="report-card-icon"><i class="fas fa-qrcode"></i></div>
-                            <div class="report-card-title">Etiquetas QR</div>
-                        </div>
-                        <div class="report-card" onclick="selectReport('close_z', 'Cierre Z / Auditoría', 'fa-receipt')">
-                            <div class="report-card-icon"><i class="fas fa-receipt"></i></div>
-                            <div class="report-card-title">Cierre Z / Auditoría</div>
-                        </div>
+                        <section class="report-grupo">
+                            <h3 class="report-grupo-titulo"><i class="fas fa-chart-line"></i> Ventas y caja</h3>
+                            <div class="report-grupo-cards">
+                                <div class="report-card" onclick="selectReport('sales', 'Historial de Ventas', 'fa-chart-line')">
+                                    <div class="report-card-icon"><i class="fas fa-chart-line"></i></div>
+                                    <div class="report-card-title">Historial de Ventas</div>
+                                    <div class="report-card-desc">Qué se vendió, cuándo y con qué se pagó.</div>
+                                </div>
+                                <div class="report-card" onclick="selectReport('top_products', 'Productos Más Vendidos', 'fa-trophy')">
+                                    <div class="report-card-icon"><i class="fas fa-trophy"></i></div>
+                                    <div class="report-card-title">Productos Más Vendidos</div>
+                                    <div class="report-card-desc">Lo que más sale, ordenado por cantidad.</div>
+                                </div>
+                                <div class="report-card" onclick="selectReport('cash_registers', 'Historial de Cajas', 'fa-cash-register')">
+                                    <div class="report-card-icon"><i class="fas fa-cash-register"></i></div>
+                                    <div class="report-card-title">Historial de Cajas</div>
+                                    <div class="report-card-desc">Cómo cerró cada turno de caja.</div>
+                                </div>
+                                <div class="report-card" onclick="selectReport('cash_movements', 'Movimientos de Efectivo', 'fa-money-bill-wave')">
+                                    <div class="report-card-icon"><i class="fas fa-money-bill-wave"></i></div>
+                                    <div class="report-card-title">Movimientos de Efectivo</div>
+                                    <div class="report-card-desc">Entradas y retiros de efectivo, uno por uno.</div>
+                                </div>
+                                <div class="report-card" onclick="selectReport('close_z', 'Cierre Z / Auditoría', 'fa-receipt')">
+                                    <div class="report-card-icon"><i class="fas fa-receipt"></i></div>
+                                    <div class="report-card-title">Cierre Z / Auditoría</div>
+                                    <div class="report-card-desc">El corte del día: totales, impuestos y ventas.</div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="report-grupo">
+                            <h3 class="report-grupo-titulo"><i class="fas fa-boxes"></i> Productos y existencias</h3>
+                            <div class="report-grupo-cards">
+                                <div class="report-card" onclick="selectReport('inventory', 'Valoración de Inventario', 'fa-boxes')">
+                                    <div class="report-card-icon"><i class="fas fa-boxes"></i></div>
+                                    <div class="report-card-title">Valoración de Inventario</div>
+                                    <div class="report-card-desc">Cuánto vale lo que tienes en existencia.</div>
+                                </div>
+                                <div class="report-card" onclick="selectReport('inventory_movements', 'Movimientos de Inventario', 'fa-dolly')">
+                                    <div class="report-card-icon"><i class="fas fa-dolly"></i></div>
+                                    <div class="report-card-title">Movimientos de Inventario</div>
+                                    <div class="report-card-desc">Entradas, salidas y ajustes de existencias.</div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="report-grupo">
+                            <h3 class="report-grupo-titulo"><i class="fas fa-qrcode"></i> Etiquetas y códigos</h3>
+                            <div class="report-grupo-cards">
+                                <div class="report-card" onclick="selectReport('qr_labels', 'Impresión de Etiquetas QR', 'fa-qrcode')">
+                                    <div class="report-card-icon"><i class="fas fa-qrcode"></i></div>
+                                    <div class="report-card-title">Etiquetas QR</div>
+                                    <div class="report-card-desc">Arma una hoja de etiquetas para tus productos e imprímela.</div>
+                                </div>
+                            </div>
+                        </section>
                     </div>
 
                     <!-- Contenedor de Selección y Filtros (Oculto inicialmente) -->
@@ -128,7 +163,7 @@
                         </button>
                     </div>
 
-                    <div class="report-results" id="reportResults">
+                    <div class="report-results" id="reportResults" style="display:none;">
                         <div class="empty-state">
                             <i class="fas fa-chart-pie"></i>
                             <p>Seleccione un tipo de reporte y genere los resultados</p>
@@ -253,7 +288,9 @@
             document.getElementById('endDateGroup').style.display = showDates ? 'block' : 'none';
             
             // Clear previous results
-            document.getElementById('reportResults').innerHTML = '<div class="empty-state"><i class="fas fa-chart-pie"></i><p>Presione "Generar Reporte" para ver los resultados</p></div>';
+            const resultados = document.getElementById('reportResults');
+            resultados.innerHTML = '<div class="empty-state"><i class="fas fa-chart-pie"></i><p>Presione "Generar Reporte" para ver los resultados</p></div>';
+            resultados.style.display = 'block';   // la caja solo aparece cuando hay un reporte elegido
             document.getElementById('exportButtons').style.display = 'none';
 
             // Auto-generate for inventory (no dates needed)
@@ -270,7 +307,9 @@
         function showReportGrid() {
             document.getElementById('reportCardsGrid').style.display = 'grid';
             document.getElementById('reportSelectionContainer').style.display = 'none';
-            document.getElementById('reportResults').innerHTML = '';
+            const resultados = document.getElementById('reportResults');
+            resultados.innerHTML = '';
+            resultados.style.display = 'none';
             document.getElementById('exportButtons').style.display = 'none';
             currentReportData = null;
         }
@@ -1553,6 +1592,23 @@
             }
         }
 
+        /**
+         * Imprime las etiquetas QR.
+         *
+         * POR QUÉ NO SE USA `window.open` (el fallo que reportó el dueño: "la primera vez sí,
+         * la segunda ya no"):
+         *   1. La ventana se abría ~1 s DESPUÉS del clic (un setTimeout). Los bloqueadores de
+         *      ventanas emergentes solo dejan pasar la que nace dentro del gesto del usuario, así
+         *      que la segunda vez devolvían `null`, `printWindow.document` reventaba y no se
+         *      imprimía nada — en silencio y sin dejar rastro.
+         *   2. Los QR se generaban y se leían 500 ms después, a ciegas: si un canvas no estaba
+         *      listo, la etiqueta salía sin imagen. Una carrera.
+         *   3. Las etiquetas generadas se quedaban en el documento para siempre.
+         *
+         * Ahora: los QR se dibujan de forma SÍNCRONA (el canvas ya está listo al volver del
+         * constructor, así que se lee su dataURL en el acto), se imprime con un iframe oculto
+         * —que ningún bloqueador detiene— y la zona de impresión se limpia al terminar.
+         */
         function printQRLabels() {
             if (qrLabelList.length === 0) {
                 showNotification('Agregue productos a la lista primero.', 'warning');
@@ -1560,66 +1616,56 @@
             }
 
             const printArea = document.getElementById('printArea');
+            if (!printArea) return;
             printArea.innerHTML = '';
-            
-            const printContainer = document.createElement('div');
-            printContainer.style.width = '100%';
-            printContainer.style.display = 'flex';
-            printContainer.style.flexWrap = 'wrap';
-            printContainer.style.gap = '0';
-            
-            qrLabelList.forEach(item => {
-                // Generamos el QR con alta resolución interna
-                const qrResolution = 256; 
 
+            const printContainer = document.createElement('div');
+            printContainer.style.cssText = 'width:100%; display:flex; flex-wrap:wrap; gap:0;';
+
+            let generadas = 0, fallidas = 0;
+
+            qrLabelList.forEach(item => {
                 for (let i = 0; i < item.quantity; i++) {
                     const label = document.createElement('div');
                     label.className = 'qr-label';
-                    
-                    // Dimensiones exactas dadas por el usuario
-                    label.style.width = `${item.sizeCm}cm`;
-                    label.style.height = `${item.sizeCm}cm`;
-                    
-                    // Layout Flexbox para ocupar todo el espacio
-                    label.style.display = 'flex';
-                    label.style.flexDirection = 'column';
-                    label.style.alignItems = 'center';
-                    label.style.justifyContent = 'center';
-                    label.style.boxSizing = 'border-box';
-                    label.style.padding = '2px';
-                    label.style.border = '1px dotted var(--border-color)'; // Guía de corte
-                    label.style.pageBreakInside = 'avoid';
-                    label.style.overflow = 'hidden';
-                    label.style.margin = '0'; // Sin margen externo para aprovechar hoja
+                    label.style.cssText = `width:${item.sizeCm}cm; height:${item.sizeCm}cm; display:flex;
+                        flex-direction:column; align-items:center; justify-content:center; box-sizing:border-box;
+                        padding:2px; border:1px dotted var(--border-color); page-break-inside:avoid;
+                        overflow:hidden; margin:0;`;
 
-                    // Contenedor QR - Ocupa el espacio disponible
                     const qrDiv = document.createElement('div');
                     qrDiv.className = 'qr-code-container';
-                    qrDiv.style.flex = '1';
-                    qrDiv.style.width = '100%';
-                    qrDiv.style.display = 'flex';
-                    qrDiv.style.alignItems = 'center';
-                    qrDiv.style.justifyContent = 'center';
-                    qrDiv.style.overflow = 'hidden';
-                    qrDiv.style.minHeight = '0'; // Importante para flexbox anidado
-                    
-                    new QRCode(qrDiv, {
-                        text: item.code,
-                        width: qrResolution,
-                        height: qrResolution,
-                        correctLevel : QRCode.CorrectLevel.H
-                    });
+                    qrDiv.style.cssText = 'flex:1; width:100%; display:flex; align-items:center; justify-content:center; overflow:hidden; min-height:0;';
 
-                    // Contenedor Texto - Fijo abajo
+                    // Dibujo SÍNCRONO: la librería pinta el canvas en el constructor, así que
+                    // aquí ya se puede leer. Nada de "esperar 500 ms a ver si ya está".
+                    try {
+                        new QRCode(qrDiv, {
+                            text: item.code,
+                            width: 256,
+                            height: 256,
+                            correctLevel: QRCode.CorrectLevel.H
+                        });
+                        const canvas = qrDiv.querySelector('canvas');
+                        const origen = canvas ? canvas.toDataURL('image/png') : (qrDiv.querySelector('img') || {}).src;
+                        while (qrDiv.firstChild) qrDiv.removeChild(qrDiv.firstChild);
+                        if (origen) {
+                            const img = document.createElement('img');
+                            img.src = origen;
+                            img.alt = item.code;
+                            img.style.cssText = 'width:100%; height:100%; object-fit:contain; display:block;';
+                            qrDiv.appendChild(img);
+                            generadas++;
+                        } else {
+                            fallidas++;
+                        }
+                    } catch (e) {
+                        fallidas++;
+                        console.error('No se pudo generar el QR de', item.code, e);
+                    }
+
                     const textDiv = document.createElement('div');
-                    textDiv.style.textAlign = 'center';
-                    textDiv.style.fontSize = '8px'; // Letra pequeña
-                    textDiv.style.width = '100%';
-                    textDiv.style.whiteSpace = 'nowrap';
-                    textDiv.style.overflow = 'hidden';
-                    textDiv.style.textOverflow = 'ellipsis';
-                    textDiv.style.marginTop = '1px';
-                    textDiv.style.flexShrink = '0'; // No encoger el texto
+                    textDiv.style.cssText = 'text-align:center; font-size:8px; width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px; flex-shrink:0;';
                     textDiv.innerText = item.product.product_name;
 
                     label.appendChild(qrDiv);
@@ -1630,62 +1676,75 @@
 
             printArea.appendChild(printContainer);
 
-            // Esperar a que se generen los QR
-            setTimeout(() => {
-                // Limpiar duplicados (canvas + img) que genera la librería qrcode.js
-                const qrContainers = printContainer.querySelectorAll('.qr-code-container');
-                
-                qrContainers.forEach(container => {
-                    const canvas = container.querySelector('canvas');
-                    // Si hay canvas, creamos una imagen limpia desde él y borramos todo lo demás
-                    if (canvas) {
-                        const img = document.createElement('img');
-                        img.src = canvas.toDataURL();
-                        img.style.width = '100%';
-                        img.style.height = '100%';
-                        img.style.objectFit = 'contain';
-                        img.style.display = 'block';
-                        
-                        container.innerHTML = ''; // Borra canvas y posible img oculta duplicada
-                        container.appendChild(img);
-                    } else {
-                        // Si no hay canvas, buscamos la imagen generada
-                        const img = container.querySelector('img');
-                        if (img) {
-                            img.style.width = '100%';
-                            img.style.height = '100%';
-                            img.style.objectFit = 'contain';
-                            img.style.display = 'block';
-                        }
+            if (fallidas) showNotification(fallidas + ' etiqueta(s) sin QR: revisa el código del producto', 'warning');
+
+            const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Imprimir Etiquetas QR</title><style>' +
+                'body { margin:0; padding:10px; font-family:sans-serif; }' +
+                '.qr-label { float:left; box-sizing:border-box; page-break-inside:avoid; }' +
+                '@media print { @page { margin:0.5cm; } .qr-label { border:1px dotted #ccc; } }' +
+                '</style></head><body>' + printContainer.innerHTML + '</body></html>';
+
+            // La limpieza solo borra SU propia generación: si el operador ya volvió a generar
+            // dentro de la ventana de limpieza, lo nuevo no se toca (pasó al probar).
+            imprimirSinVentanaEmergente(html, () => { if (printArea.firstChild === printContainer) printArea.innerHTML = ''; });
+        }
+
+        /**
+         * Imprime HTML con un iframe oculto del propio documento.
+         *
+         * Es la única forma fiable desde el navegador: `window.open` depende del gesto del usuario
+         * y del bloqueador de emergentes; un iframe del mismo documento no. Espera a que las
+         * imágenes (los QR van como dataURL) estén decodificadas antes de mandar a imprimir: sin
+         * eso salen cajas en blanco.
+         */
+        function imprimirSinVentanaEmergente(html, alTerminar) {
+            const marco = document.createElement('iframe');
+            marco.setAttribute('aria-hidden', 'true');
+            marco.style.cssText = 'position:fixed; right:0; bottom:0; width:0; height:0; border:0; visibility:hidden;';
+            document.body.appendChild(marco);
+
+            const limpiar = () => {
+                setTimeout(() => {
+                    if (marco.parentNode) marco.parentNode.removeChild(marco);
+                    if (typeof alTerminar === 'function') alTerminar();
+                }, 1200);
+            };
+
+            try {
+                const doc = marco.contentWindow.document;
+                doc.open();
+                doc.write(html);
+                doc.close();
+
+                const lanzar = () => {
+                    try {
+                        marco.contentWindow.focus();
+                        marco.contentWindow.print();
+                    } catch (e) {
+                        console.error('No se pudo abrir el diálogo de impresión', e);
+                        showNotification('El navegador no dejó abrir la impresión. Usa Ctrl+P.', 'error');
+                    } finally {
+                        limpiar();
+                    }
+                };
+
+                const imgs = Array.prototype.slice.call(doc.images || []);
+                if (!imgs.length) { setTimeout(lanzar, 150); return; }
+
+                let pendientes = imgs.length;
+                const unaLista = () => { if (--pendientes <= 0) setTimeout(lanzar, 80); };
+                imgs.forEach(img => {
+                    if (img.complete) unaLista();
+                    else {
+                        img.addEventListener('load', unaLista, { once: true });
+                        img.addEventListener('error', unaLista, { once: true });
                     }
                 });
-                
-                const printWindow = window.open('', '', 'height=600,width=800');
-                printWindow.document.write('<html><head><title>Imprimir Etiquetas QR</title>');
-                printWindow.document.write('<style>');
-                printWindow.document.write(`
-                    body { margin: 0; padding: 10px; font-family: sans-serif; }
-                    .qr-label { 
-                        float: left;
-                        box-sizing: border-box;
-                        page-break-inside: avoid;
-                    }
-                    @media print {
-                        @page { margin: 0.5cm; }
-                        .qr-label { 
-                            border: 1px dotted var(--border-color); 
-                        }
-                    }
-                `);
-                printWindow.document.write('</style></head><body>');
-                printWindow.document.write(printContainer.innerHTML);
-                printWindow.document.write('</body></html>');
-                printWindow.document.close();
-                printWindow.focus();
-                setTimeout(() => {
-                    printWindow.print();
-                }, 500);
-            }, 500);
+            } catch (e) {
+                console.error('No se pudo preparar la impresión', e);
+                showNotification('No se pudo preparar la impresión', 'error');
+                limpiar();
+            }
         }
 
         /* ============================================================

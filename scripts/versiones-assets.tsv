@@ -4,7 +4,7 @@
 css/bulk_sales.css	4	0c6f3294f5ee1bf1e36f6cf59eaa90c8
 css/cart_responsive.css	12	93e389961bcab19a1d2a402808f95422
 css/dashboard.css	4	7db3bc104f9e0c845350b21748808cec
-css/design-system.css	8	562206364130d50720fbc825cf93547e
+css/design-system.css	9	07eb82a28af10e8ab7e4f2148c293f6f
 css/fonts.css	4	35e58fb00cdd00a6d2260d26dc38d3d0
 css/inventory.css	38	1ef098b7041e10192170d6452a34cda3
 css/landing.css	4	5c70436f4f0c59a13476cbc3062587b4
@@ -35,7 +35,7 @@ js/scanner.js	4	828bfb406a22a54d12d54517a37faece
 js/sidebar-loader.js	13	d7bd4144a7a76b248ea7dd147f97b6cd
 js/stock-rule.js	1	5818188ed9718de696abeffe9d55909f
 js/stripe-pos.js	1	a261c0664235a63f2da8b4ae3c1194c7
-js/tables.js	10	5a1f87bc2671e64d6920ca09185e032b
+js/tables.js	11	ad25b20b4d38c780841cfdac2a3fdd4a
 js/theme-init.js	3	f19a5338c4808273acba84e0f21aa214
 js/tour.js	4	45da073236616c3069a0bf1977d34178
 js/ws-realtime.js	1	461256bedbddbc69af5bcd627e5241d7

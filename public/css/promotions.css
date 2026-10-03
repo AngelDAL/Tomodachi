@@ -1408,7 +1408,36 @@ body.modal-open { overflow: hidden; }
    1280). En caja de borde, el contenido mide exactamente lo que su diálogo. */
 body .client-dialog#promoModal .modal-content { box-sizing: border-box; }
 
-/* Las pestañas del drawer de promociones (el camino del teléfono) comparten el mismo aire y
-   la misma señal de cuál está puesta. */
-#promoDrawerTabs .drawer-tab { min-height: 46px; }
+/* ---- Las pestañas del drawer (el camino del teléfono) ----
+   Mostraban SOLO el icono: el colapso de etiquetas se calculó cuando el drawer estaba oculto
+   (ancho 0) y ya no se recalculó. Dos pestañas con su nombre son un control más claro que dos
+   iconos, así que aquí se fuerzan las etiquetas (el texto sigue en el DOM para el lector de
+   pantalla, solo se le quita el recorte). */
+#promoDrawerTabs .drawer-tab {
+    flex: 1 1 0; min-height: 48px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    white-space: nowrap;
+}
 #promoDrawerTabs .drawer-tab.active { border-bottom: 3px solid var(--primary-color); }
+#promoDrawerTabs .drawer-tab > span {
+    /* El `display: none` viene de la regla de móvil de este mismo archivo (el patrón de
+       «pestañas solo con icono»), así que hay que devolverle su lugar explícitamente. */
+    display: inline !important;
+    position: static !important;
+    clip-path: none !important;
+    width: auto !important; height: auto !important;
+    overflow: visible !important;
+    pointer-events: none;          /* el toque es del botón, no de la etiqueta */
+}
+
+/* Dos campos en un renglón se aprietan: en el modal de escritorio los rótulos «Tipo de
+   Descuento» y «Valor del Descuento» se tocaban, y en el teléfono el select salía recortado
+   («Porce…»). Con `flex-wrap` y un mínimo por campo, cada uno se va a su renglón cuando no cabe. */
+#promoModal .form-row { display: flex; gap: 10px; flex-wrap: wrap; }
+#promoModal .form-row > .form-group { flex: 1 1 150px; min-width: 0; }
+
+/* En el teléfono, cada uno con su renglón. */
+@media (max-width: 600px) {
+    #promoDrawer .form-row { flex-wrap: wrap; }
+    #promoDrawer .form-row > .form-group { flex: 1 1 100%; min-width: 0; }
+}

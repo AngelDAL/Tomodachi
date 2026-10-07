@@ -216,7 +216,9 @@ class CounterService {
         // "Activos" = lo que aún no se entrega ni se cancela (pendiente o listo).
         $filtro = $soloActivos ? "AND o.status IN ('pending','ready')" : '';
         $stmt = $this->conn->prepare(
-            "SELECT o.*, TIMESTAMPDIFF(MINUTE, o.created_at, NOW()) AS minutos
+            "SELECT o.*, TIMESTAMPDIFF(MINUTE, o.created_at, NOW()) AS minutos,
+                    TIMESTAMPDIFF(SECOND, o.created_at, NOW()) AS esperando_seg,
+                    TIMESTAMPDIFF(SECOND, o.created_at, COALESCE(o.notified_at, o.completed_at, NOW())) AS espera_total_seg
                FROM counter_orders o
               WHERE o.store_id = :sid AND o.business_date = :fecha $filtro
               ORDER BY (o.status IN ('pending','ready')) DESC, o.created_at ASC"
@@ -232,7 +234,9 @@ class CounterService {
 
     public function obtener($counter_order_id, $store_id) {
         $stmt = $this->conn->prepare(
-            "SELECT o.*, TIMESTAMPDIFF(MINUTE, o.created_at, NOW()) AS minutos
+            "SELECT o.*, TIMESTAMPDIFF(MINUTE, o.created_at, NOW()) AS minutos,
+                    TIMESTAMPDIFF(SECOND, o.created_at, NOW()) AS esperando_seg,
+                    TIMESTAMPDIFF(SECOND, o.created_at, COALESCE(o.notified_at, o.completed_at, NOW())) AS espera_total_seg
                FROM counter_orders o
               WHERE o.counter_order_id = :id AND o.store_id = :sid"
         );
@@ -246,7 +250,9 @@ class CounterService {
         $token = trim((string)$token);
         if ($token === '') return null;
         $stmt = $this->conn->prepare(
-            "SELECT o.*, TIMESTAMPDIFF(MINUTE, o.created_at, NOW()) AS minutos
+            "SELECT o.*, TIMESTAMPDIFF(MINUTE, o.created_at, NOW()) AS minutos,
+                    TIMESTAMPDIFF(SECOND, o.created_at, NOW()) AS esperando_seg,
+                    TIMESTAMPDIFF(SECOND, o.created_at, COALESCE(o.notified_at, o.completed_at, NOW())) AS espera_total_seg
                FROM counter_orders o WHERE o.tracking_token = :token"
         );
         $stmt->execute([':token' => $token]);
@@ -568,15 +574,33 @@ class CounterService {
             $presente = $seg <= self::PRESENCIA_SEGUNDOS;
         }
 
+        // Los pedidos anteriores a la migración 052 no traen subtotal/descuento guardados. Si
+        // vienen en cero pero sí hay artículos, se calculan de sus importes: si no, la tarjeta
+        // y la página del cliente mostrarían un total de $0.00 en falso.
+        $subtotal = (float)$f['subtotal'];
+        $descuento = (float)$f['discount'];
+        if ($subtotal <= 0 && $items) {
+            $subtotal = 0.0;
+            foreach ($items as $it) {
+                $subtotal += (float)$it['line_total'];
+            }
+            $descuento = 0.0;
+        }
+
         $pedido = [
             'counter_order_id' => (int)$f['counter_order_id'],
             'number'           => (int)$f['number'],
             'customer_name'    => $f['customer_name'],
             'status'           => $f['status'],
             'notes'            => $f['notes'],
-            'subtotal'         => (float)$f['subtotal'],
-            'discount'         => (float)$f['discount'],
-            'total'            => round((float)$f['subtotal'] - (float)$f['discount'], 2),
+            'subtotal'         => $subtotal,
+            'discount'         => $descuento,
+            'total'            => round($subtotal - $descuento, 2),
+            // Segundos, no fechas: el navegador del cliente puede estar en otra zona horaria
+            // y `created_at` viene en la hora local de la tienda, así que restarlo contra su
+            // reloj daba un tiempo de espera en cero.
+            'esperando_seg'     => max(0, (int)($f['esperando_seg'] ?? 0)),
+            'espera_total_seg'  => max(0, (int)($f['espera_total_seg'] ?? 0)),
             'payment_status'   => $f['payment_status'],
             'paid_amount'      => (float)$f['paid_amount'],
             'cancel_reason'    => $f['cancel_reason'],

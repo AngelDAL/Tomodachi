@@ -164,7 +164,8 @@
         var vapidPublica = '';
         var socket = null;
         var relojTimer = null;
-        var creadoMs = null;
+        var relojBaseSeg = 0;
+        var relojBaseMs = 0;
 
         var $ = function (id) { return document.getElementById(id); };
         function dinero(n) { return '$' + (Number(n) || 0).toFixed(2); }
@@ -199,18 +200,27 @@
         }
 
         // ---- Reloj de espera ------------------------------------------------------
+        // Los segundos los manda el SERVIDOR (`esperando_seg`). No se resta la fecha de
+        // creación contra el reloj del equipo: viene en la hora local de la tienda y el
+        // teléfono del cliente puede estar en otra zona, y el reloj se quedaba en 00:00.
+        function pintarReloj() {
+            var seg = relojBaseSeg + Math.floor((Date.now() - relojBaseMs) / 1000);
+            var m = Math.floor(seg / 60), s = seg % 60;
+            $('reloj').textContent = pad2(m) + ':' + pad2(s);
+        }
+
         function arrancarReloj() {
             if (relojTimer) clearInterval(relojTimer);
-            if (!creadoMs) { $('reloj').classList.add('hidden'); return; }
-            var pintar = function () {
-                if (!pedido || pedido.status !== 'pending') { $('reloj').classList.add('hidden'); return; }
-                var seg = Math.max(0, Math.floor((Date.now() - creadoMs) / 1000));
-                var m = Math.floor(seg / 60), s = seg % 60;
-                $('reloj').textContent = pad2(m) + ':' + pad2(s);
-                $('reloj').classList.remove('hidden');
-            };
-            pintar();
-            relojTimer = setInterval(pintar, 1000);
+            relojBaseSeg = Number(pedido.esperando_seg) || 0;
+            relojBaseMs = Date.now();
+            $('reloj').classList.remove('hidden');
+            pintarReloj();
+            relojTimer = setInterval(pintarReloj, 1000);
+        }
+
+        function pararReloj() {
+            if (relojTimer) clearInterval(relojTimer);
+            relojTimer = null;
         }
 
         function pintar() {
@@ -225,13 +235,18 @@
             $('estadoTexto').textContent = e[0];
             $('estadoSub').textContent = e[3];
 
-            // Tiempo: en preparación -> reloj en vivo; listo/entregado -> la hora.
+            // Tiempo: en preparación -> reloj en vivo; listo -> cuánto esperó en total.
             if (pedido.status === 'pending') {
-                if (pedido.created_at) creadoMs = new Date(String(pedido.created_at).replace(' ', 'T')).getTime();
                 arrancarReloj();
             } else {
-                if (relojTimer) clearInterval(relojTimer);
-                $('reloj').classList.add('hidden');
+                pararReloj();
+                if (pedido.status === 'ready') {
+                    var t = Number(pedido.espera_total_seg) || 0;
+                    $('reloj').textContent = t >= 60 ? ('Esperó ' + Math.round(t / 60) + ' min') : ('Esperó ' + t + ' s');
+                    $('reloj').classList.remove('hidden');
+                } else {
+                    $('reloj').classList.add('hidden');
+                }
             }
 
             $('articulos').innerHTML = (pedido.items || []).map(function (it) {

@@ -112,6 +112,7 @@ if [ "$(echo "$TRACK" | jq_ data.order.status)" = "ready" ]; then ok "el cliente
 if echo "$TRACK" | grep -q "tracking_token"; then mal "el seguimiento expone el token"; else ok "el seguimiento NO expone el token"; fi
 if echo "$TRACK" | grep -q "store_id"; then mal "el seguimiento expone la tienda"; else ok "el seguimiento NO expone la tienda"; fi
 if [ -n "$(echo "$TRACK" | jq_ data.order.subtotal)" ] && [ -n "$(echo "$TRACK" | jq_ data.order.discount)" ]; then ok "el seguimiento trae subtotal y descuento"; else mal "track sin importes"; fi
+if [ -n "$(echo "$TRACK" | jq_ data.order.esperando_seg)" ]; then ok "el seguimiento trae los segundos de espera (reloj del cliente sin depender de su zona horaria)"; else mal "track sin esperando_seg"; fi
 if echo "$TRACK" | grep -q "tema"; then ok "el seguimiento trae los colores del negocio"; else mal "track sin tema"; fi
 if echo "$TRACK" | grep -q "vapid_public_key"; then ok "el seguimiento trae la llave pública de avisos"; else mal "track sin vapid_public_key"; fi
 

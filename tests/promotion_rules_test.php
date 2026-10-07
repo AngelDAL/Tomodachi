@@ -34,6 +34,37 @@ expectSame(2, PromotionRules::completeBundles($cart, $targets), 'bundle 2+3+1 ca
 $cart[20] = 5;
 expectSame(1, PromotionRules::completeBundles($cart, $targets), 'bundle is limited by the target that lacks its requested quantity');
 
+// Reparto del PAQUETE: las unidades sobrantes se cobran a precio original.
+// Defecto corregido el 7-oct-2026: 3 almendras de $45 con paquete "2 x $30" se cobraban
+// a $30 (el servidor metía la línea completa al paquete) en vez de a $75.
+$simple = function ($qty, $bundlePrice) {
+    return PromotionRules::bundleAllocation([[0]], [2], [0 => ['quantity' => $qty, 'original_price' => 45]], $bundlePrice);
+};
+$cobrado = function ($plan, $qty, $original) {
+    $enPaquete = $plan['units'][0] ?? 0;
+    return round(($plan['revenue'][0] ?? 0) + ($qty - $enPaquete) * $original, 2);
+};
+expectSame(0, $simple(1, 30)['bundles'], 'sin las dos piezas no hay paquete');
+expectSame(45.0, $cobrado($simple(1, 30), 1, 45), 'una pieza se cobra a precio original');
+expectSame(30.0, $cobrado($simple(2, 30), 2, 45), 'dos piezas son el paquete de $30');
+expectSame(75.0, $cobrado($simple(3, 30), 3, 45), 'la tercera pieza se paga aparte: 30 + 45');
+expectSame(60.0, $cobrado($simple(4, 30), 4, 45), 'cuatro piezas son dos paquetes');
+expectSame(105.0, $cobrado($simple(5, 30), 5, 45), 'cinco piezas son dos paquetes + una suelta');
+expectSame(0, PromotionRules::bundleAllocation([[0]], [2], [0 => ['quantity' => 3, 'original_price' => 45]], 200)['bundles'],
+    'un paquete más caro que la suma de sus partes no se aplica');
+// Un mismo producto en dos objetivos no aporta unidades por duplicado.
+expectSame(0, PromotionRules::bundleAllocation([[0], [0]], [2, 2], [0 => ['quantity' => 3, 'original_price' => 45]], 30)['bundles'],
+    'tres piezas no alcanzan para dos objetivos que piden dos cada uno');
+expectSame(1, PromotionRules::bundleAllocation([[0], [0]], [2, 2], [0 => ['quantity' => 4, 'original_price' => 45]], 30)['bundles'],
+    'cuatro piezas sí alcanzan para dos objetivos de dos');
+
+// Dos objetivos con sus propias cantidades: el paquete se reparte entre las líneas.
+$plan = PromotionRules::bundleAllocation([[0], [1]], [2, 1],
+    [0 => ['quantity' => 3, 'original_price' => 20], 1 => ['quantity' => 2, 'original_price' => 15]], 45);
+expectSame(1, $plan['bundles'], '2 refrescos + 1 papas arman un paquete');
+$totalDosLineas = round(($plan['revenue'][0] + (3 - $plan['units'][0]) * 20) + ($plan['revenue'][1] + (2 - $plan['units'][1]) * 15), 2);
+expectSame(80.0, $totalDosLineas, 'paquete de $45 + 1 refresco ($20) + 1 papas ($15) = $80');
+
 if ($failures > 0) {
     exit(1);
 }

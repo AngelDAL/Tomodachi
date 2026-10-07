@@ -26,11 +26,11 @@ js/design-system.js	7	a6d47b4914401e512f34f7e692a94b56
 js/inventory-exits.js	3	3a250de195d9e66c8412377bb611fe77
 js/inventory.js	21	ff6c352ce8d2b5f505f31efc190fe9b4
 js/profile.js	5	bb6c414aa5f7ca4976761d1a84235828
-js/promotion-client-rules.js	1	43d1b0dc3b3aacfbef6afde115df655d
+js/promotion-client-rules.js	2	f525b40be81b26d1d735dc3c4122f50c
 js/promotions-v2.js	2	685ed10b0d03cee6df18d1e6908aa8d9
 js/promotions.js	6	bef366591e374f4e4cfde6b767284727
 js/purchases.js	16	7ac2a18ced1bcc6972646958c6d717a7
-js/sales.js	47	3c1b580d706952de3a19b4f01ba9a3fe
+js/sales.js	48	bbff9d000a0a8388c957ca0664dc5c37
 js/scanner.js	4	828bfb406a22a54d12d54517a37faece
 js/sidebar-loader.js	13	d7bd4144a7a76b248ea7dd147f97b6cd
 js/stock-rule.js	1	5818188ed9718de696abeffe9d55909f

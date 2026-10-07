@@ -330,78 +330,63 @@ class Pricing {
 
     /**
      * Bundle STRICT SET: requiere que estén presentes TODOS los targets.
-     * Cada set completo cuesta bundle_price; el descuento por set se reparte
-     * proporcionalmente al precio original de cada línea target.
+     * Cada set completo cuesta bundle_price y solo las unidades que forman parte de
+     * los sets llevan descuento; las sobrantes se cobran a precio original.
+     *
+     * El reparto (cuántas unidades y cuánto dinero por línea) lo decide
+     * PromotionRules::bundleAllocation(), la misma regla que usa el carrito del POS.
      */
     private function applyBundle(&$lines, $promo) {
         $targets = $promo['targets'];
         if (!$targets) return;
 
-        // Each target carries its own required quantity (e.g. 2 sodas + 3 chips).
+        // Cada objetivo lleva su propia cantidad requerida (p. ej. 2 refrescos + 3 papas).
+        $available = [];
+        foreach ($lines as $key => $line) {
+            $available[$key] = [
+                'quantity' => (float)$line['quantity'],
+                'original_price' => (float)$line['original_price'],
+            ];
+        }
+
         $coverage = [];
-        $potential = PHP_INT_MAX;
+        $requirements = [];
         foreach ($targets as $i => $t) {
-            $matches = array_filter($lines, function ($l) use ($t) {
-                if ($t['product_id'] !== null && (int)$l['product_id'] === $t['product_id']) return true;
-                if ($t['category_id'] !== null && $l['category_id'] !== null && (int)$l['category_id'] === $t['category_id']) return true;
-                if ($t['tag_id'] !== null && in_array((int)$t['tag_id'], $l['tag_ids'] ?? [], true)) return true;
-                return false;
-            });
-            $qtyForTarget = array_sum(array_column($matches, 'quantity'));
-            $required = max(1, (int)($t['required_quantity'] ?? 1));
-            if ($qtyForTarget < $required) { $potential = 0; break; }
-            $potential = min($potential, (int)floor($qtyForTarget / $required));
-            $coverage[$i] = $matches;
-        }
-
-        if ($potential <= 0 || $potential === PHP_INT_MAX) return;
-        $numBundles = $potential;
-
-        $bundlePrice = (float)$promo['discount_value'];
-        $totalBundleCost = $numBundles * $bundlePrice;
-
-        // Suma de precios originales de las líneas que participan (por target)
-        $originalSum = 0.0;
-        $seen = [];
-        foreach ($coverage as $i => $matches) {
-            foreach ($matches as $line) {
-                $key = $line['product_id'];
-                if (isset($seen[$key])) continue;
-                $seen[$key] = true;
-                $originalSum += $line['original_price'] * $line['quantity'];
+            $keys = [];
+            foreach ($lines as $key => $line) {
+                if ($t['product_id'] !== null && (int)$line['product_id'] === $t['product_id']) { $keys[] = $key; continue; }
+                if ($t['category_id'] !== null && $line['category_id'] !== null && (int)$line['category_id'] === $t['category_id']) { $keys[] = $key; continue; }
+                if ($t['tag_id'] !== null && in_array((int)$t['tag_id'], $line['tag_ids'] ?? [], true)) { $keys[] = $key; }
             }
+            // Falta un objetivo completo: el paquete no se puede armar.
+            if (!$keys) return;
+            $coverage[$i] = $keys;
+            $requirements[$i] = max(1, (int)($t['required_quantity'] ?? 1));
         }
-        if ($originalSum <= 0) return;
 
-        // Repartir el ahorro proporcionalmente. Cada línea se toca una vez aunque
-        // coincida con más de un objetivo (producto/categoría/etiqueta).
-        $savings = max(0.0, $originalSum - $totalBundleCost);
-        $appliedKeys = [];
-        foreach ($coverage as $i => $matches) {
-            foreach ($matches as $line) {
-                $key = $line['product_id'];
-                if (isset($appliedKeys[$key]) || !isset($lines[$key])) continue;
-                $appliedKeys[$key] = true;
-                $share = $line['original_price'] * $line['quantity'] / $originalSum;
-                $lineDiscount = $savings * $share / $line['quantity'];
-                $newPrice = $line['original_price'] - $lineDiscount;
-                if ($newPrice < 0) $newPrice = 0;
-                if ($newPrice < $lines[$key]['unit_price']) {
-                    $lines[$key]['unit_price'] = round($newPrice, 2);
-                    $lines[$key]['discount'] = round($lineDiscount, 2);
-                    $lines[$key]['promotion_id'] = (int)$promo['promotion_id'];
-                    $lines[$key]['promotion_name'] = $promo['name'];
-                }
+        $plan = PromotionRules::bundleAllocation($coverage, $requirements, $available, (float)$promo['discount_value']);
+        if ((int)$plan['bundles'] <= 0) return;
+
+        foreach ($plan['units'] as $key => $unitsEnPaquete) {
+            if (!isset($lines[$key])) continue;
+            $line = &$lines[$key];
+            $quantity = (float)$line['quantity'];
+            if ($quantity <= 0) { unset($line); continue; }
+
+            // Sobrantes a precio original + lo que aportan las unidades del paquete.
+            $sobrantes = $quantity - $unitsEnPaquete;
+            $importeLinea = (float)$plan['revenue'][$key] + $sobrantes * (float)$line['original_price'];
+            $newPrice = round($importeLinea / $quantity, 2);
+            if ($newPrice < 0) $newPrice = 0;
+
+            // Nunca subir el precio de una línea: si otra promoción ya la dejó más barata, se respeta.
+            if ($newPrice <= (float)$line['unit_price'] + 0.0001) {
+                $line['unit_price'] = $newPrice;
+                $line['discount'] = round((float)$line['original_price'] - $newPrice, 2);
+                $line['promotion_id'] = (int)$promo['promotion_id'];
+                $line['promotion_name'] = $promo['name'];
             }
-        }
-        // Keep the advertised fixed price exact after per-unit cent rounding.
-        $appliedTotal = 0.0;
-        foreach (array_keys($appliedKeys) as $key) $appliedTotal += $lines[$key]['quantity'] * $lines[$key]['unit_price'];
-        $roundingDelta = round($totalBundleCost - $appliedTotal, 2);
-        if ($roundingDelta != 0.0 && $appliedKeys) {
-            $lastKey = array_key_last($appliedKeys);
-            $lines[$lastKey]['unit_price'] = round(max(0, $lines[$lastKey]['unit_price'] + $roundingDelta / $lines[$lastKey]['quantity']), 2);
-            $lines[$lastKey]['discount'] = round($lines[$lastKey]['original_price'] - $lines[$lastKey]['unit_price'], 2);
+            unset($line);
         }
     }
 }

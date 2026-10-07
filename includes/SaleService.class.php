@@ -248,6 +248,8 @@ class SaleService {
                 'product_id'     => $line['product_id'],
                 'quantity'       => $line['quantity'],
                 'price'          => $line['unit_price'],
+                // Precio de LISTA, solo para desglosar el detalle (subtotal - descuento = total).
+                'original_price' => isset($line['original_price']) ? (float)$line['original_price'] : (float)$line['unit_price'],
                 'unit_cost'      => $line['unit_cost'],
                 'discount'       => $line['discount'],
                 'promotion_id'   => $line['promotion_id'],
@@ -306,11 +308,19 @@ class SaleService {
                     // presentaciones. Servicio: consume sus componentes si tiene composición (no-op si es puro).
                     $this->bom->consumeForSale($this->db, $store_id, $user_id, $sale_id, $p['product_id'], $p['quantity'], $lotOverrides, $allowNegativeStock);
                 }
-                $lineSubtotal = $p['quantity'] * $p['price'];
-                $lineDiscount = round($p['quantity'] * $p['discount'], 2);
+                // Detalle consistente: subtotal = precio de LISTA, descuento = lo que se
+                // rebajó y total = lo COBRADO (subtotal - descuento = total). Antes el
+                // subtotal ya venía descontado y el descuento se restaba otra vez: una
+                // línea con promoción quedaba con total negativo y los reportes que suman
+                // sale_details.total (Top productos, Top categoría, estadísticas de la
+                // promoción) contaban de menos.
+                $lineSubtotal = round($p['quantity'] * $p['original_price'], 2);
+                $lineTotal = round($p['quantity'] * $p['price'], 2);
+                $lineDiscount = round($lineSubtotal - $lineTotal, 2);
+                if ($lineDiscount < 0) { $lineSubtotal = $lineTotal; $lineDiscount = 0.0; }
                 $this->db->insert(
                     'INSERT INTO sale_details (sale_id, product_id, quantity, unit_price, unit_cost, subtotal, discount, promotion_id, total) VALUES (?,?,?,?,?,?,?,?,?)',
-                    [$sale_id, $p['product_id'], $p['quantity'], $p['price'], $p['unit_cost'], $lineSubtotal, $lineDiscount, $p['promotion_id'], $lineSubtotal - $lineDiscount]
+                    [$sale_id, $p['product_id'], $p['quantity'], $p['price'], $p['unit_cost'], $lineSubtotal, $lineDiscount, $p['promotion_id'], $lineTotal]
                 );
             }
 

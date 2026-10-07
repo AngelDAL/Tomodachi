@@ -5014,122 +5014,68 @@ function applyBulkDiscount(promo) {
 }
 
 function applyBundleDiscount(promo) {
-    const requiredTargets = promo.targets; 
+    const requiredTargets = promo.targets;
     if (!requiredTargets || requiredTargets.length === 0) return;
 
-    // Lógica STRICT SET (Conjunto Completo):
-    // El bundle solo aplica si están presentes TODOS los items definidos en los targets.
-    // Asumimos que se requiere 1 unidad de cada target para formar 1 bundle.
-    
-    // 1. Calcular cuántos "Sets" completos podemos formar
-    let potentialBundles = Number.MAX_SAFE_INTEGER;
-    
-    // Mapa para saber qué items del carrito cumplen qué target
-    // target_index -> [ { item_ref, qty_available } ]
-    let usageMap = [];
-
-    // Verificación de cobertura de targets
-    for (let i = 0; i < requiredTargets.length; i++) {
-        let t = requiredTargets[i];
-        
-        // Encontrar items en el carrito que coincidan con este target
-        let matches = CART.filter(item => {
-            if (t.product_id && item.product_id == t.product_id) return true;
-            if (t.category_id && item.category_id == t.category_id) return true;
-            return false;
-        });
-        
-        let totalQtyForTarget = matches.reduce((sum, item) => sum + item.quantity, 0);
-        
-        if (totalQtyForTarget === 0) {
-            potentialBundles = 0; // Faltan componentes del bundle
-            break;
-        }
-        
-        potentialBundles = Math.min(potentialBundles, Math.floor(totalQtyForTarget / (parseInt(t.required_quantity, 10) || 1)));
-        usageMap[i] = matches; 
-    }
-
-    let numBundles = potentialBundles;
-    
-    // Si no se puede formar ningún paquete completo, salir
-    if (numBundles === 0 || numBundles === Number.MAX_SAFE_INTEGER) return;
-
-    // 2. Calcular costos
-    let bundlePrice = parseFloat(promo.discount_value);
-    let totalBundleCost = numBundles * bundlePrice;
-
-    // 3. Identificar las unidades físicas que participan en los bundles
-    // Para calcular el precio original de esas unidades y determinar el ratio de descuento.
-    let participatingUnits = []; // { item: ref, qty: number, originalAmount: number }
-
-    for (let i = 0; i < requiredTargets.length; i++) {
-        let matches = usageMap[i]; // Items del carrito que sirven para este target
-        let countNeeded = numBundles * (parseInt(requiredTargets[i].required_quantity, 10) || 1); // cantidad por target
-
-        // Ordenamos por precio para maximizar el descuento (o estandarizar).
-        // En este caso, tomamos simplemente las disponibles.
-        for (let item of matches) {
-            if (countNeeded <= 0) break;
-            
-            let taking = Math.min(item.quantity, countNeeded);
-            
-            participatingUnits.push({
-                item: item,
-                qty: taking,
-                originalAmount: taking * item.original_price
-            });
-            
-            countNeeded -= taking;
-        }
-    }
-
-    // 4. Calcular Ratio de Descuento
-    let totalOriginalPrice = participatingUnits.reduce((sum, u) => sum + u.originalAmount, 0);
-    // Evitar target > original protecciones si el usuario quiere bundle fijo.
-    // Simplemente distribuimos el precio del bundle entre los items.
-    let ratio = totalOriginalPrice > 0 ? totalBundleCost / totalOriginalPrice : 1;
-
-    // 5. Aplicar precios al Carrito (Weighted Average)
-    // Un item puede tener 5 unidades, pero solo 2 son parte de bundles. 
-    // Precio Final = ((2 * PrecioDescuento) + (3 * PrecioOriginal)) / 5
-    
-    // Agrupar impacto por item
-    let itemImpact = new Map(); // item -> { bundledQty: 0, bundledRevenue: 0 }
-
-    participatingUnits.forEach(u => {
-        if (!itemImpact.has(u.item)) {
-            itemImpact.set(u.item, { bundledQty: 0, bundledRevenue: 0 });
-        }
-        let info = itemImpact.get(u.item);
-        info.bundledQty += u.qty;
-        info.bundledRevenue += (u.originalAmount * ratio);
+    // Cada línea del carrito se identifica por su posición: dos líneas del mismo
+    // producto (notas distintas) son líneas distintas.
+    const lineKeys = CART.map((item, idx) => idx);
+    const available = {};
+    lineKeys.forEach(idx => {
+        const item = CART[idx];
+        available[idx] = {
+            quantity: Number(item.quantity) || 0,
+            original_price: Number(item.original_price) || 0
+        };
     });
 
-    itemImpact.forEach((info, item) => {
-        if (item.manual_edit) return;
+    // Objetivo -> líneas que lo cumplen. Si falta uno, no hay paquete que armar.
+    const coverage = [];
+    const requirements = [];
+    for (const t of requiredTargets) {
+        const matches = lineKeys.filter(idx => {
+            const item = CART[idx];
+            if (t.product_id && item.product_id == t.product_id) return true;
+            if (t.category_id && item.category_id == t.category_id) return true;
+            if (t.tag_id && Array.isArray(item.tag_ids) && item.tag_ids.includes(Number(t.tag_id))) return true;
+            return false;
+        });
+        if (matches.length === 0) return;
+        coverage.push(matches);
+        requirements.push(Math.max(1, parseInt(t.required_quantity, 10) || 1));
+    }
 
-        let remainingQty = item.quantity - info.bundledQty;
-        // El resto se cobra a precio original (u original_price puede ya tener desc. simple? 
-        // Asumimos prioridad bundle > simple. applyPromotions resetea a original_price siempre al inicio).
-        let remainingRevenue = remainingQty * item.original_price;
-        
-        let totalRevenue = info.bundledRevenue + remainingRevenue;
-        let avgPrice = totalRevenue / item.quantity;
-        
-        // Aplicar
+    // Cuántas unidades del paquete y cuánto dinero aportan por línea. Las unidades
+    // SOBRANTES se pagan a precio original: el paquete no se come la línea completa.
+    const plan = bundleAllocation(coverage, requirements, available, promo.discount_value);
+    if (!plan.bundles) return;
+
+    Object.keys(plan.units).forEach(key => {
+        const item = CART[key];
+        if (!item) return;
+        const qty = Number(item.quantity) || 0;
+        if (qty <= 0) return;
+
+        const inBundleQty = plan.units[key];
+        const outBundleQty = qty - inBundleQty;
+        const lineTotal = plan.revenue[key] + outBundleQty * (Number(item.original_price) || 0);
+        const avgPrice = roundMoney(lineTotal / qty);
+
+        if (item.manual_edit) return; // precio forzado a mano: se respeta tal cual
+
         item.unit_price = avgPrice;
-        item.subtotal = totalRevenue;
-        item.promo_applied = `${promo.name} (${numBundles} packs)`;
+        item.promo_applied = `${promo.name} (${plan.bundles} ${plan.bundles === 1 ? 'paquete' : 'paquetes'})`;
 
-        // Guardar metadatos para visualización agrupada
+        // Metadatos para la vista agrupada (pantalla del cliente): el importe del
+        // paquete y el de las sobrantes siempre suman lo que se cobra por la línea.
+        const inBundleAmount = roundMoney(plan.revenue[key]);
         item.bundle_data = {
             name: promo.name,
-            count: numBundles,
-            in_bundle_qty: info.bundledQty,
-            in_bundle_subtotal: info.bundledRevenue,
-            out_bundle_qty: remainingQty, 
-            out_bundle_subtotal: remainingRevenue
+            count: plan.bundles,
+            in_bundle_qty: inBundleQty,
+            in_bundle_subtotal: inBundleAmount,
+            out_bundle_qty: outBundleQty,
+            out_bundle_subtotal: roundMoney(qty * avgPrice - inBundleAmount)
         };
     });
 }

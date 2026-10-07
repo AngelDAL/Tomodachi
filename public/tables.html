@@ -1436,7 +1436,7 @@
 
         /* Modal de alta: catálogo arriba, pedido abajo */
         .ct-modal { max-width: 880px !important; width: min(880px, calc(100vw - 24px)); }
-        .ct-modal-body { display: flex; flex-direction: column; gap: 14px; }
+        .ct-modal-body { display: flex; flex-direction: column; gap: 14px; overflow-y: auto; max-height: calc(94vh - 130px); }
         .ct-picker { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
         .ct-productos { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; max-height: 300px; overflow-y: auto; }
         .ct-seleccion-wrap { border-top: 1px solid var(--border-lighter, #eee); padding-top: 12px; }

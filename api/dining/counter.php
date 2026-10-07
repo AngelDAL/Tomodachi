@@ -47,6 +47,16 @@ try {
             }
             Response::success($pedido);
         }
+        // Para el LECTOR DE QR de la caja: se busca por el token que trae el código del
+        // cliente. Se acepta el token suelto o la URL completa del seguimiento.
+        $token = trim((string)($_GET['token'] ?? ''));
+        if ($token !== '') {
+            $pedido = $counter->obtenerPorToken(limpiarToken($token), $store_id);
+            if (!$pedido) {
+                Response::notFound('Ese código no es de un pedido de esta tienda');
+            }
+            Response::success($pedido);
+        }
         Response::success($counter->listar($store_id, empty($_GET['historico'])));
     } elseif ($method === 'POST') {
         $data = json_decode(file_get_contents('php://input'), true);
@@ -115,6 +125,21 @@ try {
         $codigo = 500;
     }
     Response::error('No se pudo procesar el pedido: ' . $e->getMessage(), $codigo);
+}
+
+/** Acepta el token suelto o la URL completa del seguimiento y devuelve solo el token. */
+function limpiarToken($valor) {
+    $valor = trim((string)$valor);
+    if (strpos($valor, 't=') !== false) {
+        $q = parse_url($valor, PHP_URL_QUERY);
+        if ($q) {
+            parse_str($q, $params);
+            if (!empty($params['t'])) {
+                return trim((string)$params['t']);
+            }
+        }
+    }
+    return $valor;
 }
 
 /** Actor autenticado con su tienda y el scope pedido. */

@@ -245,6 +245,28 @@ class CounterService {
         return $f ? $this->armar($f) : null;
     }
 
+    /**
+     * Pedido por su token de seguimiento, para el PERSONAL: lo usa el lector de QR de la caja.
+     * A diferencia de `track()`, este sí devuelve el token y los datos de gestión, porque quien
+     * pregunta ya está autenticado en la tienda.
+     */
+    public function obtenerPorToken($token, $store_id) {
+        $token = trim((string)$token);
+        if ($token === '') {
+            return null;
+        }
+        $stmt = $this->conn->prepare(
+            "SELECT o.*, TIMESTAMPDIFF(MINUTE, o.created_at, NOW()) AS minutos,
+                    TIMESTAMPDIFF(SECOND, o.created_at, NOW()) AS esperando_seg,
+                    TIMESTAMPDIFF(SECOND, o.created_at, COALESCE(o.notified_at, o.completed_at, NOW())) AS espera_total_seg
+               FROM counter_orders o
+              WHERE o.tracking_token = :token AND o.store_id = :sid"
+        );
+        $stmt->execute([':token' => $token, ':sid' => (int)$store_id]);
+        $f = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $f ? $this->armar($f) : null;
+    }
+
     /** Seguimiento público por token: no expone tienda ni el token. */
     public function track($token) {
         $token = trim((string)$token);
@@ -579,11 +601,12 @@ class CounterService {
     private function armar(array $f, $publico = false) {
         $id = (int)$f['counter_order_id'];
         $stmt = $this->conn->prepare(
-            "SELECT item_id, product_id, product_name, quantity, unit_price, discount,
-                    promotion_name, notes, line_total
-               FROM counter_order_items
-              WHERE counter_order_id = :id
-              ORDER BY item_id ASC"
+            "SELECT i.item_id, i.product_id, i.product_name, i.quantity, i.unit_price, i.discount,
+                    i.promotion_name, i.notes, i.line_total, p.image_path
+               FROM counter_order_items i
+               LEFT JOIN products p ON p.product_id = i.product_id
+              WHERE i.counter_order_id = :id
+              ORDER BY i.item_id ASC"
         );
         $stmt->execute([':id' => $id]);
         $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -592,6 +615,12 @@ class CounterService {
             $it['unit_price'] = (float)$it['unit_price'];
             $it['discount']   = (float)$it['discount'];
             $it['line_total'] = (float)$it['line_total'];
+            // OJO: en la tabla, `discount` es el descuento de TODA la línea (por unidad × cantidad),
+            // no el de una unidad. Para mostrar "antes $X, ahora $Y" hay que repartirlo entre la
+            // cantidad; sumarlo tal cual al precio daba un "antes" inflado.
+            $cant = $it['quantity'] > 0 ? $it['quantity'] : 1;
+            $it['original_unit_price'] = round($it['unit_price'] + ($it['discount'] / $cant), 2);
+            $it['line_discount_total'] = $it['discount'];
         }
         unset($it);
 

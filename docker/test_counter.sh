@@ -90,6 +90,18 @@ NIT=$(echo "$CREA" | python3 -c "import json,sys; d=json.load(sys.stdin); print(
 if [ -n "$OID" ] && [ -n "$TOKEN" ] && [ "$EST" = "pending" ]; then ok "crea un pedido con folio, token y estado pendiente"; else mal "crear pedido ($CREA)"; fi
 if [ "$NIT" = "2" ]; then ok "registra los dos artículos"; else mal "artículos ($NIT)"; fi
 if [ "$(mismo "$TOTAL" 75)" = "si" ]; then ok "guarda el total con la promoción (75)"; else mal "total guardado ($TOTAL)"; fi
+# Coherencia de los precios de la línea: precio de lista × cantidad = cobrado + descuento.
+# (En la tabla `discount` es el de TODA la línea; confundirlo inflaba el "precio de antes".)
+COH=$(api "$BASE/api/dining/counter.php?orden=$OID" | python3 -c "
+import json,sys
+o=(json.load(sys.stdin).get('data') or {})
+malos=[]
+for it in (o.get('items') or []):
+    lista = float(it['original_unit_price'])*float(it['quantity'])
+    real  = float(it['line_total']) + float(it['line_discount_total'])
+    if abs(lista-real) > 0.01: malos.append(it['product_name'])
+print('ok' if not malos else 'mal:'+','.join(malos))" 2>/dev/null)
+if [ "$COH" = "ok" ]; then ok "el precio de antes cuadra con el cobrado más el descuento"; else mal "precios incoherentes ($COH)"; fi
 if [ "$(echo "$CREA" | jq_ data.payment_status)" = "unpaid" ]; then ok "nace como 'por cobrar'"; else mal "estado de pago inicial"; fi
 
 # 3. Listado del personal
@@ -147,7 +159,16 @@ SUS_INVALIDA=$(codigo -X POST "$BASE/api/counter/presence.php" -H 'Content-Type:
   -d "{\"subscribe\":true,\"token\":\"$TOKEN\",\"endpoint\":\"https://ejemplo.test/x\",\"p256dh\":\"corto\",\"auth\":\"$AUTH\"}")
 if [ "$SUS_INVALIDA" = "422" ]; then ok "rechaza una suscripción mal formada (422)"; else mal "suscripción inválida ($SUS_INVALIDA)"; fi
 
-# 9. Entregar (ya avisado) y ver el histórico
+# 9. Buscar por token: lo que usa el LECTOR DE QR de la caja
+LEC=$(api "$BASE/api/dining/counter.php?token=$TOKEN")
+if [ "$(echo "$LEC" | jq_ data.counter_order_id)" = "$OID" ]; then ok "el lector encuentra el pedido por su token"; else mal "lector por token ($LEC)"; fi
+if echo "$LEC" | grep -q '"tracking_token"'; then ok "el lector (personal) sí recibe el token del pedido"; else mal "lector sin token"; fi
+LEC_URL=$(api "$BASE/api/dining/counter.php?token=$(python3 -c "import urllib.parse;print(urllib.parse.quote('https://pos.ejemplo/public/seguimiento.html?t=$TOKEN', safe=''))")")
+if [ "$(echo "$LEC_URL" | jq_ data.counter_order_id)" = "$OID" ]; then ok "el lector acepta el enlace completo del QR"; else mal "lector con enlace ($LEC_URL)"; fi
+LEC_MALO=$(codigo -b "$CJ" "$BASE/api/dining/counter.php?token=00000000-0000-4000-8000-000000000000")
+if [ "$LEC_MALO" = "404" ]; then ok "un código desconocido responde 404"; else mal "lector con token inventado ($LEC_MALO)"; fi
+
+# 10. Entregar (ya avisado) y ver el histórico
 ENT=$(api -X POST "$BASE/api/dining/counter.php" -H 'Content-Type: application/json' \
   -d "{\"action\":\"status\",\"counter_order_id\":$OID,\"status\":\"completed\"}")
 if [ "$(echo "$ENT" | jq_ data.status)" = "completed" ]; then ok "entrega el pedido ya avisado"; else mal "entregar ($ENT)"; fi

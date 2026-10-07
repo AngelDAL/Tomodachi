@@ -111,30 +111,37 @@ function ctPagoHtml(p) {
         '"></i> ' + etiqueta + extra + '</span>';
 }
 
-function ctPresenciaHtml(p) {
+/**
+ * Estado del cliente en un ICONO, para no llenar la tarjeta de texto: el color lo dice de un
+ * vistazo y el `title` lo explica al pasar el ratón (o al mantener pulsado en tableta).
+ */
+function ctEstadoCliente(p) {
     const push = (p.push_dispositivos || 0) > 0;
+    if (p.cliente_presente && push) {
+        return { clase: 'ct-cli-ok', icono: 'fa-mobile-screen', texto: 'El cliente está viendo su pedido y recibirá el aviso en su teléfono' };
+    }
     if (p.cliente_presente) {
-        return '<span class="ct-presencia"><i class="fas fa-mobile-screen"></i> ' +
-            (push ? 'Cliente conectado · aviso por push' : 'El cliente está viendo') +
-            (p.notify_granted ? ' · avisos activados' : '') + '</span>';
+        return { clase: 'ct-cli-ok', icono: 'fa-mobile-screen', texto: 'El cliente está viendo su pedido ahora mismo' };
     }
     if (push) {
-        return '<span class="ct-presencia"><i class="fas fa-paper-plane"></i> Aviso por push disponible</span>';
+        return { clase: 'ct-cli-push', icono: 'fa-paper-plane', texto: 'El cliente activó los avisos: se le puede notificar al teléfono' };
     }
     if (p.notified_at) {
-        return '<span class="ct-presencia apagada"><i class="fas fa-bell"></i> Avisado (sin acuse del cliente)</span>';
+        return { clase: 'ct-cli-aviso', icono: 'fa-bell', texto: 'Ya se le avisó, pero no ha abierto su enlace' };
     }
-    return '<span class="ct-presencia apagada"><i class="fas fa-mobile-screen"></i> Sin abrir el enlace</span>';
+    return { clase: 'ct-cli-apagado', icono: 'fa-mobile-screen', texto: 'El cliente no ha abierto su enlace todavía' };
 }
 
-/** Tarjeta de la cajera. */
-function ctTarjeta(p) {
-    const acti = p.status === 'pending' || p.status === 'ready';
-    const est = CT_ETIQUETA[p.status] || ['—', ''];
-    const mins = acti ? '<i class="fas fa-clock"></i> ' + p.minutos + ' min' : '';
-
-    const articulos = (p.items || []).map(function (it) {
-        return '<div class="ct-linea">' +
+/** Artículos con su miniatura, para reconocerlos de un vistazo. */
+function ctArticulosHtml(p, conImagen) {
+    return (p.items || []).map(function (it) {
+        const img = (typeof getRelativeImagePath === 'function') ? getRelativeImagePath(it.image_path) : null;
+        const miniatura = conImagen
+            ? '<span class="ct-linea-img">' + (img
+                ? '<img src="' + tpEsc(img) + '" loading="lazy" decoding="async" alt="" onerror="this.parentNode.innerHTML=\'<i class=&quot;fas fa-utensils&quot;></i>\';">'
+                : '<i class="fas fa-utensils"></i>') + '</span>'
+            : '';
+        return '<div class="ct-linea">' + miniatura +
             '<span class="ct-cant">' + tpCantidad(it.quantity) + '×</span>' +
             '<span class="ct-nombre">' + tpEsc(it.product_name) +
                 (it.promotion_name ? '<span class="ct-promo-tag"><i class="fas fa-tags"></i> ' + tpEsc(it.promotion_name) + '</span>' : '') +
@@ -142,35 +149,37 @@ function ctTarjeta(p) {
             '<span class="ct-importe">' + tpDinero(it.line_total) + '</span>' +
             '</div>';
     }).join('');
+}
 
-    let acciones = '';
-    // El aviso sale por push si el cliente ya lo autorizó; si no, igual se avisa
-    // (la página del cliente se actualiza sola) — pero el botón lo dice claro.
-    const puedePush = (p.push_dispositivos || 0) > 0;
-    const txtAviso = puedePush ? 'Notificar por push' : 'Avisar que está listo';
-    const icoAviso = puedePush ? 'fa-paper-plane' : 'fa-bell';
-    if (p.status === 'pending') {
-        acciones =
-            '<button type="button" class="tp-btn primario" data-ct-avisar="' + p.counter_order_id + '"><i class="fas ' + icoAviso + '"></i> ' + txtAviso + '</button>' +
-            '<button type="button" class="tp-btn" data-ct-pago="' + p.counter_order_id + '"><i class="fas fa-money-bill"></i> Pago</button>' +
-            '<button type="button" class="tp-btn" data-ct-enlace="' + p.counter_order_id + '"><i class="fas fa-qrcode"></i> QR</button>' +
-            '<button type="button" class="tp-btn peligro" data-ct-cancelar="' + p.counter_order_id + '"><i class="fas fa-ban"></i> Cancelar</button>';
-    } else if (p.status === 'ready') {
-        acciones =
-            '<button type="button" class="tp-btn primario" data-ct-entregar="' + p.counter_order_id + '"><i class="fas fa-hand-holding-heart"></i> Entregar</button>' +
-            '<button type="button" class="tp-btn" data-ct-avisar="' + p.counter_order_id + '"><i class="fas ' + icoAviso + '"></i> ' + txtAviso + '</button>' +
-            '<button type="button" class="tp-btn" data-ct-pago="' + p.counter_order_id + '"><i class="fas fa-money-bill"></i> Pago</button>' +
-            '<button type="button" class="tp-btn" data-ct-enlace="' + p.counter_order_id + '"><i class="fas fa-qrcode"></i> QR</button>' +
-            '<button type="button" class="tp-btn peligro" data-ct-cancelar="' + p.counter_order_id + '"><i class="fas fa-ban"></i> Cancelar</button>';
-    } else {
-        acciones = '<button type="button" class="tp-btn" data-ct-enlace="' + p.counter_order_id + '"><i class="fas fa-qrcode"></i> QR</button>';
-    }
+/**
+ * Tarjeta del mostrador: compacta, con miniaturas, y con UN solo botón a la vista
+ * (Entregar). Todo lo demás vive detrás del menú de tres puntos, para no estorbar.
+ */
+function ctTarjeta(p) {
+    const acti = p.status === 'pending' || p.status === 'ready';
+    const est = CT_ETIQUETA[p.status] || ['—', ''];
+    const cli = ctEstadoCliente(p);
+    const id = p.counter_order_id;
 
-    const descuento = p.discount > 0
-        ? '<div class="ct-linea-descuento"><i class="fas fa-tags"></i> Descuento por promoción <strong>-' + tpDinero(p.discount) + '</strong></div>'
-        : '';
+    const opciones = acti
+        ? '<button type="button" data-ct-avisar="' + id + '"><i class="fas fa-bell"></i> Notificar al cliente</button>' +
+          '<button type="button" data-ct-regenerar="' + id + '"><i class="fas fa-qrcode"></i> Volver a generar el QR</button>' +
+          '<button type="button" data-ct-pago="' + id + '"><i class="fas fa-money-bill"></i> Generar pago</button>' +
+          '<button type="button" class="peligro" data-ct-cancelar="' + id + '"><i class="fas fa-ban"></i> Cancelar orden</button>'
+        : '<button type="button" data-ct-regenerar="' + id + '"><i class="fas fa-qrcode"></i> Volver a generar el QR</button>';
 
-    return '<div class="ct-pedido ' + p.status + '" data-ct="' + p.counter_order_id + '">' +
+    const pie = acti
+        ? '<div class="ct-pie">' +
+              '<div class="ct-pie-info">' +
+                  '<span class="ct-total">' + tpDinero(p.total) + '</span>' +
+                  '<span class="ct-min"><i class="fas fa-clock"></i> ' + p.minutos + ' min</span>' +
+              '</div>' +
+              '<button type="button" class="tp-btn primario ct-entregar" data-ct-entregar="' + id + '">' +
+                  '<i class="fas fa-hand-holding-heart"></i> Entregar</button>' +
+          '</div>'
+        : '<div class="ct-pie"><span class="ct-total">' + tpDinero(p.total) + '</span></div>';
+
+    return '<div class="ct-pedido ' + p.status + '" data-ct="' + id + '">' +
         '<div class="ct-cab">' +
             '<div class="ct-identidad">' +
                 '<span class="ct-folio">#' + p.number + '</span>' +
@@ -179,38 +188,29 @@ function ctTarjeta(p) {
             '<div class="ct-meta">' +
                 '<span class="ct-estado ' + est[1] + '">' + est[0] + '</span>' +
                 ctPagoHtml(p) +
-                '<span class="ct-min">' + mins + '</span>' +
+                '<span class="ct-cliente ' + cli.clase + '" title="' + tpEsc(cli.texto) + '" aria-label="' + tpEsc(cli.texto) + '">' +
+                    '<i class="fas ' + cli.icono + '"></i></span>' +
+                '<button type="button" class="ct-kebab" data-ct-kebab="' + id + '" aria-label="Más opciones" title="Más opciones">' +
+                    '<i class="fas fa-ellipsis-vertical"></i></button>' +
             '</div>' +
         '</div>' +
-        '<div class="ct-articulos">' + articulos + '</div>' +
-        descuento +
+        '<div class="ct-articulos">' + ctArticulosHtml(p, true) + '</div>' +
+        (p.discount > 0 ? '<div class="ct-linea-descuento"><i class="fas fa-tags"></i> Promoción <strong>-' + tpDinero(p.discount) + '</strong></div>' : '') +
         (p.notes ? '<div class="ct-nota-pedido"><i class="fas fa-pen"></i> ' + tpEsc(p.notes) + '</div>' : '') +
-        '<div class="ct-pie">' +
-            '<div class="ct-pie-info">' +
-                '<span class="ct-total">Total <strong>' + tpDinero(p.total) + '</strong></span>' +
-                ctPresenciaHtml(p) +
-            '</div>' +
-            '<span class="ct-acciones">' + acciones + '</span>' +
-        '</div>' +
+        pie +
+        '<div class="ct-menu hidden" data-ct-menu="' + id + '">' + opciones + '</div>' +
         '</div>';
 }
 
-/** Tarjeta de la cocina (solo lectura): grande, sin botones. */
+/** Tarjeta de la cocina (solo lectura): grande, sin botones, con miniatura para reconocer. */
 function ctTarjetaCocina(p) {
-    const articulos = (p.items || []).map(function (it) {
-        return '<div class="ct-linea">' +
-            '<span class="ct-cant">' + tpCantidad(it.quantity) + '×</span>' +
-            '<span class="ct-nombre">' + tpEsc(it.product_name) +
-                (it.notes ? '<span class="ct-nota"> — ' + tpEsc(it.notes) + '</span>' : '') + '</span>' +
-            '</div>';
-    }).join('');
     const listo = p.status === 'ready';
     return '<div class="ct-cocina-card' + (listo ? ' listo' : '') + '">' +
         '<div class="ct-cocina-cab"><span class="ct-folio">#' + p.number + '</span>' +
         '<span class="ct-nombre-cliente">' + tpEsc(p.customer_name || 'Sin nombre') + '</span>' +
         (listo ? '<span class="ct-cocina-listo"><i class="fas fa-bell"></i> LISTO</span>' : '') +
         '<span class="ct-min"><i class="fas fa-clock"></i> ' + p.minutos + ' min</span></div>' +
-        '<div class="ct-articulos">' + articulos + '</div>' +
+        '<div class="ct-articulos">' + ctArticulosHtml(p, true) + '</div>' +
         (p.notes ? '<div class="ct-nota-pedido">' + tpEsc(p.notes) + '</div>' : '') +
         '</div>';
 }
@@ -422,14 +422,29 @@ async function ctAvisar(id) {
     }
 }
 
+/**
+ * Entregar: UN solo clic. Si el pedido aún no se había avisado, se avisa y se entrega en el
+ * mismo paso — venta express: el cliente está enfrente y ya se llevó el producto, así que el
+ * cajero no llena nada más (y el cliente igual recibe su aviso).
+ */
 async function ctEntregar(id) {
+    const p = ctEstado.pedidos.find(function (x) { return Number(x.counter_order_id) === Number(id); });
+    const venia = p ? p.status : 'ready';
     try {
+        if (venia === 'pending') {
+            await tpPeticion(CT_API, { method: 'POST', body: JSON.stringify({ action: 'notify', counter_order_id: id }) });
+        }
         await tpPeticion(CT_API, { method: 'POST', body: JSON.stringify({ action: 'status', counter_order_id: id, status: 'completed' }) });
-        tpAviso('Pedido entregado', 'success');
+        tpAviso(venia === 'pending' ? 'Venta express: avisado y entregado' : 'Pedido entregado', 'success');
         await ctCargar(true);
     } catch (e) {
         tpAviso(tpMensajeDeError(e), 'error');
     }
+}
+
+/** Cierra todos los menús de tres puntos. */
+function ctCerrarMenus() {
+    document.querySelectorAll('[data-ct-menu]').forEach(function (m) { m.classList.add('hidden'); });
 }
 
 function ctCancelar(id) {
@@ -546,6 +561,165 @@ function ctMostrarEnlace(pedido) {
 }
 
 // ============================================================
+// Lector de QR: para recibir el pedido en el mostrador con el código del cliente
+// ============================================================
+
+var ctLector = null;        // instancia de Html5Qrcode mientras la cámara está abierta
+var ctCodigoLeido = false;  // evita procesar el mismo código muchas veces por segundo
+
+/** La librería del lector solo se descarga al abrir el lector (no pesa en el resto del POS). */
+function ctCargarLector() {
+    if (typeof Html5Qrcode === 'function') return Promise.resolve();
+    return new Promise(function (res, rej) {
+        const s = document.createElement('script');
+        s.src = 'lib/html5-qrcode/html5-qrcode.min.js';
+        s.onload = function () { res(); };
+        s.onerror = function () { rej(new Error('No se pudo cargar el lector de códigos')); };
+        document.head.appendChild(s);
+    });
+}
+
+function ctAbrirEscaner() {
+    ctCodigoLeido = false;
+    const res = document.getElementById('ctEscanerResultado');
+    if (res) { res.classList.add('hidden'); res.innerHTML = ''; }
+    const pista = document.getElementById('ctEscanerPista');
+    if (pista) {
+        pista.innerHTML = '<i class="fas fa-qrcode"></i> Apunta la cámara al código del cliente.';
+        pista.classList.remove('hidden');
+    }
+    tpAbrirModal('ctModalEscaner');
+    ctCargarLector().then(ctArrancarCamara).catch(function (e) {
+        const p = document.getElementById('ctEscanerPista');
+        if (p) p.innerHTML = '<i class="fas fa-triangle-exclamation"></i> ' + tpEsc((e && e.message) || 'No se pudo abrir la cámara') + '. Puedes escribir el código abajo.';
+    });
+}
+
+function ctArrancarCamara() {
+    if (typeof Html5Qrcode !== 'function') return Promise.resolve();
+    if (!ctLector) ctLector = new Html5Qrcode('ctLector', { verbose: false });
+    const config = {
+        fps: 10,
+        qrbox: function (w, h) {
+            let b = Math.floor(Math.min(w, h) * 0.72);
+            if (b < 140) b = Math.max(120, Math.min(w, h) - 20);
+            return { width: b, height: b };
+        },
+        rememberLastUsedCamera: true
+    };
+    return ctLector.start({ facingMode: 'environment' }, config, ctLeerCodigo, function () { /* cada frame fallido es normal */ })
+        .catch(function (e) {
+            const p = document.getElementById('ctEscanerPista');
+            if (p) p.innerHTML = '<i class="fas fa-triangle-exclamation"></i> No se pudo abrir la cámara. Escribe el código o el enlace abajo.';
+            throw new Error('No se pudo abrir la cámara. Revisa los permisos.');
+        });
+}
+
+function ctDetenerCamara() {
+    if (!ctLector) return;
+    const l = ctLector;
+    ctLector = null;
+    try {
+        l.stop().then(function () { return l.clear(); }).catch(function () { /* ya estaba parada */ });
+    } catch (e) { /* nada que hacer */ }
+}
+
+function ctCerrarEscaner() {
+    ctDetenerCamara();
+    tpCerrarModal('ctModalEscaner');
+}
+
+/** Del código leído saca el token: sirve el enlace completo o el identificador suelto. */
+function ctTokenDeCodigo(texto) {
+    const t = String(texto || '').trim();
+    if (!t) return '';
+    const m = t.match(/[?&]t=([^&\s]+)/);
+    if (m) return decodeURIComponent(m[1]);
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(t)) return t;
+    return '';
+}
+
+/** Pitido corto al leer, para no tener que mirar la pantalla. */
+function ctPitar() {
+    try {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        const ctx = ctEstado.audio || (ctEstado.audio = new AC());
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'sine'; o.frequency.value = 1320;
+        g.gain.setValueAtTime(0.0001, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.16, ctx.currentTime + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.16);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(); o.stop(ctx.currentTime + 0.18);
+    } catch (e) { /* sin sonido se sigue igual */ }
+    try { if (navigator.vibrate) navigator.vibrate(90); } catch (e) {}
+}
+
+async function ctLeerCodigo(texto) {
+    if (ctCodigoLeido) return;
+    const token = ctTokenDeCodigo(texto);
+    const pista = document.getElementById('ctEscanerPista');
+    if (!token) {
+        if (pista) pista.innerHTML = '<i class="fas fa-circle-question"></i> Ese código no es de un pedido. Prueba con el QR del cliente.';
+        return;
+    }
+    ctCodigoLeido = true;
+    ctPitar();
+    try {
+        const p = await tpPeticion(CT_API + '?token=' + encodeURIComponent(token));
+        ctMostrarLeido(p);
+    } catch (e) {
+        ctCodigoLeido = false;
+        if (pista) pista.innerHTML = '<i class="fas fa-triangle-exclamation"></i> ' + tpEsc(tpMensajeDeError(e));
+    }
+}
+
+/** Enseña de qué pedido es el código y deja entregarlo ahí mismo. */
+function ctMostrarLeido(p) {
+    const pista = document.getElementById('ctEscanerPista');
+    if (pista) pista.classList.add('hidden');
+    const caja = document.getElementById('ctEscanerResultado');
+    if (!caja) return;
+    const est = CT_ETIQUETA[p.status] || ['—', ''];
+    const cerrado = p.status === 'completed' || p.status === 'cancelled';
+
+    caja.innerHTML =
+        '<div class="ct-esc-pedido ' + p.status + '">' +
+            '<div class="ct-esc-cab">' +
+                '<span class="ct-folio">#' + p.number + '</span>' +
+                '<span class="ct-nombre-cliente">' + tpEsc(p.customer_name || 'Sin nombre') + '</span>' +
+                '<span class="ct-estado ' + est[1] + '">' + est[0] + '</span>' +
+            '</div>' +
+            '<div class="ct-articulos">' + ctArticulosHtml(p, true) + '</div>' +
+            '<div class="ct-esc-pie">' +
+                '<span class="ct-total">' + tpDinero(p.total) + '</span>' +
+                ctPagoHtml(p) +
+            '</div>' +
+        '</div>' +
+        '<div class="ct-esc-acciones">' +
+            (cerrado
+                ? '<span class="ct-esc-ya"><i class="fas fa-circle-info"></i> Este pedido ya está ' + (p.status === 'completed' ? 'entregado' : 'cancelado') + '.</span>'
+                : '<button type="button" class="tp-btn primario" id="ctEscEntregar"><i class="fas fa-hand-holding-heart"></i> Entregar este pedido</button>') +
+            '<button type="button" class="tp-btn" id="ctEscSeguir"><i class="fas fa-camera"></i> Escanear otro</button>' +
+        '</div>';
+    caja.classList.remove('hidden');
+
+    const seguir = document.getElementById('ctEscSeguir');
+    if (seguir) seguir.addEventListener('click', function () {
+        ctCodigoLeido = false;
+        caja.classList.add('hidden');
+        if (pista) pista.classList.remove('hidden');
+    });
+    const entregar = document.getElementById('ctEscEntregar');
+    if (entregar) entregar.addEventListener('click', async function () {
+        entregar.disabled = true;
+        await ctEntregar(p.counter_order_id);
+        ctCerrarEscaner();
+    });
+}
+
+// ============================================================
 // Modo cocina (solo lectura)
 // ============================================================
 function ctPonerCocina(on) {
@@ -596,16 +770,30 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const lista = document.getElementById('ctLista');
     if (lista) lista.addEventListener('click', function (ev) {
+        // El menú de tres puntos se abre y se cierra aquí mismo.
+        const kebab = ev.target.closest('[data-ct-kebab]');
+        if (kebab) {
+            ev.stopPropagation();
+            const menu = document.querySelector('[data-ct-menu="' + kebab.getAttribute('data-ct-kebab') + '"]');
+            const abierto = menu && !menu.classList.contains('hidden');
+            ctCerrarMenus();
+            if (menu && !abierto) menu.classList.remove('hidden');
+            return;
+        }
         const avisar = ev.target.closest('[data-ct-avisar]');
-        if (avisar) { avisar.disabled = true; ctAvisar(avisar.getAttribute('data-ct-avisar')); return; }
+        if (avisar) { ctCerrarMenus(); avisar.disabled = true; ctAvisar(avisar.getAttribute('data-ct-avisar')); return; }
         const entregar = ev.target.closest('[data-ct-entregar]');
         if (entregar) { ctEntregar(entregar.getAttribute('data-ct-entregar')); return; }
+        const regenerar = ev.target.closest('[data-ct-regenerar]');
+        if (regenerar) { ctCerrarMenus(); ctAbrirEnlace(regenerar.getAttribute('data-ct-regenerar')); return; }
         const cancelar = ev.target.closest('[data-ct-cancelar]');
-        if (cancelar) { ctCancelar(cancelar.getAttribute('data-ct-cancelar')); return; }
+        if (cancelar) { ctCerrarMenus(); ctCancelar(cancelar.getAttribute('data-ct-cancelar')); return; }
         const pago = ev.target.closest('[data-ct-pago]');
-        if (pago) { ctAbrirPago(pago.getAttribute('data-ct-pago')); return; }
-        const enlace = ev.target.closest('[data-ct-enlace]');
-        if (enlace) ctAbrirEnlace(enlace.getAttribute('data-ct-enlace'));
+        if (pago) { ctCerrarMenus(); ctAbrirPago(pago.getAttribute('data-ct-pago')); return; }
+    });
+    // Un clic en cualquier otro lado cierra los menús abiertos.
+    document.addEventListener('click', function (ev) {
+        if (!ev.target.closest('[data-ct-menu]')) ctCerrarMenus();
     });
 
     // Modal de pago: el cobro completo se confirma dentro del mismo modal.
@@ -620,6 +808,28 @@ document.addEventListener('DOMContentLoaded', function () {
     if (pagoSi) pagoSi.addEventListener('click', function () { ctGuardarPago('paid'); });
     const pagoNo = document.getElementById('ctPagoNo');
     if (pagoNo) pagoNo.addEventListener('click', ctPagoVolver);
+
+    // ── Lector de QR ──
+    const btnEscaner = document.getElementById('ctBtnEscaner');
+    if (btnEscaner) btnEscaner.addEventListener('click', ctAbrirEscaner);
+    const menuEscaner = document.getElementById('ctMenuEscaner');
+    if (menuEscaner) menuEscaner.addEventListener('click', function () { ctCerrarMenus(); ctAbrirEscaner(); });
+    // Cualquier cierre del modal (Cerrar, la X, Esc) apaga la cámara.
+    document.querySelectorAll('[data-cerrar="ctModalEscaner"]').forEach(function (b) {
+        b.addEventListener('click', ctDetenerCamara);
+    });
+    const buscarCodigo = document.getElementById('ctCodigoBuscar');
+    if (buscarCodigo) buscarCodigo.addEventListener('click', function () {
+        const campo = document.getElementById('ctCodigoManual');
+        const valor = campo ? campo.value.trim() : '';
+        if (!valor) { tpAviso('Escribe o pega el código del pedido', 'error'); return; }
+        ctCodigoLeido = false;
+        ctLeerCodigo(valor);
+    });
+    const campoCodigo = document.getElementById('ctCodigoManual');
+    if (campoCodigo) campoCodigo.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter') { ev.preventDefault(); if (buscarCodigo) buscarCodigo.click(); }
+    });
 
     // Menú de tres puntos
     const menuBtn = document.getElementById('ctMenuBtn');

@@ -519,8 +519,9 @@
         }
         .tp-linea-quitar:hover { background: #FDECEA; }
 
-        /* Selector de panel: solo se necesita en móvil */
-        .tp-cuenta-tabs { display: none; }
+        /* Selector de panel de la cuenta: en escritorio se ven pedido y menú a la vez (y las pestañas
+           dan la puerta de respaldo a "Activar"); en el teléfono alternan a pantalla completa. */
+        .tp-cuenta-tabs { display: flex; flex: 0 0 auto; border-bottom: 1px solid var(--border-lighter, #eee); }
         .tp-tab {
             flex: 1 1 0;
             padding: 12px 10px;

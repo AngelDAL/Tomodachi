@@ -387,7 +387,31 @@
         }
         .wallpaper-label strong { color: var(--primary-color); }
         .wallpaper-size-group { display: flex; gap: 8px; flex-wrap: wrap; }
-        .wallpaper-size-group .theme-mode-btn { flex: 1; min-width: 120px; }
+        /* Clase propia: prestarse la de las pastillas de MODO hacía que el
+           guardado leyera el ajuste del fondo como si fuera el modo de tema. */
+        .wallpaper-size-btn {
+            flex: 1;
+            min-width: 120px;
+            padding: 8px 14px;
+            border-radius: var(--ds-radius-pill, 100px);
+            border: 1px solid var(--border-color);
+            background: transparent;
+            color: inherit;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all .25s cubic-bezier(.4,0,.2,1);
+        }
+        .wallpaper-size-btn:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 16%, transparent);
+        }
+        .wallpaper-size-btn.active {
+            background: var(--primary-color) !important;
+            border-color: var(--primary-color) !important;
+            color: #fff !important;
+        }
         .wallpaper-hint {
             margin: 8px 0 0;
             font-size: 0.78rem;
@@ -1126,8 +1150,8 @@
                                         <div class="wallpaper-field">
                                             <span class="wallpaper-label">Ajuste de la imagen</span>
                                             <div class="wallpaper-size-group" id="wallpaperSizeGroup">
-                                                <button type="button" class="theme-mode-btn active" data-wallpaper-size="cover"><i class="fas fa-crop-simple"></i> Cubrir</button>
-                                                <button type="button" class="theme-mode-btn" data-wallpaper-size="fill"><i class="fas fa-up-right-and-down-left-from-center"></i> Rellenar</button>
+                                                <button type="button" class="wallpaper-size-btn active" data-wallpaper-size="cover"><i class="fas fa-crop-simple"></i> Cubrir</button>
+                                                <button type="button" class="wallpaper-size-btn" data-wallpaper-size="fill"><i class="fas fa-up-right-and-down-left-from-center"></i> Rellenar</button>
                                             </div>
                                             <p class="wallpaper-hint">
                                                 Cubrir llena la pantalla y recorta lo que sobra; rellenar estira la imagen completa.
@@ -1379,7 +1403,7 @@
 
     <script src="js/sidebar-loader.js?v=13"></script>
     <script src="js/app.js?v=12"></script>
-    <script src="js/profile.js?v=6"></script>
+    <script src="js/profile.js?v=7"></script>
     <script src="lib/animejs/anime.min.js"></script>
     <script src="js/design-system.js?v=7"></script>
 </body>

@@ -827,7 +827,10 @@ document.getElementById('companyForm').addEventListener('submit', async (e) => {
     const themeConfigDark = collectThemeConfig(true);
 
     // Modo de tema (light/dark/auto)
-    const activeModeBtn = document.querySelector('.theme-mode-btn.active');
+    // [data-mode]: solo las pastillas del MODO. Buscar por clase a secas ya dio un
+    // susto: las pastillas del papel tapiz comparten forma y el guardado guardó
+    // "sin modo" (el tema de la tienda volvía a claro en otros equipos).
+    const activeModeBtn = document.querySelector('.theme-mode-btn[data-mode].active');
     const themeMode = activeModeBtn ? activeModeBtn.getAttribute('data-mode') : (window.ThemeSystem ? window.ThemeSystem.getMode() : 'auto');
     if (themeMode) {
         themeConfig.theme_mode = themeMode;
@@ -1548,7 +1551,7 @@ function updateThemeModeLabel(text) {
 }
 
 function updateThemeModeButtons(mode) {
-    document.querySelectorAll('.theme-mode-btn').forEach(btn => {
+    document.querySelectorAll('.theme-mode-btn[data-mode]').forEach(btn => {
         const active = btn.getAttribute('data-mode') === mode;
         btn.classList.toggle('active', active);
         btn.style.background = active ? 'var(--primary-color)' : 'transparent';
@@ -1558,7 +1561,7 @@ function updateThemeModeButtons(mode) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    const modeBtns = document.querySelectorAll('.theme-mode-btn');
+    const modeBtns = document.querySelectorAll('.theme-mode-btn[data-mode]');
     if (!modeBtns.length) return;
 
     // Aplicar en vivo al elegir modo (sin guardar aún — el submit lo persiste)

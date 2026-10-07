@@ -215,6 +215,20 @@ probar('todas las vistas de la app cargan theme-init.js (el fondo va con el tema
     });
 });
 
+probar('las pastillas del papel tapiz NO usan la clase del modo de tema', () => {
+    // Regresión real (7-oct-2026): al prestarse la clase `theme-mode-btn`, el guardado
+    // leía el ajuste del fondo como si fuera el modo de tema y la tienda perdía su
+    // "oscuro" guardado. Cada grupo de pastillas usa SU clase.
+    const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'profile.html'), 'utf8');
+    const bloque = html.slice(html.indexOf('wallpaperSizeGroup'), html.indexOf('wallpaperSizeGroup') + 900);
+    assert.ok(/wallpaper-size-btn/.test(bloque), 'el grupo de ajuste debe usar su propia clase');
+    assert.ok(!/theme-mode-btn/.test(bloque), 'no puede reutilizar la clase del modo de tema');
+
+    const js = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'profile.js'), 'utf8');
+    assert.ok(/\.theme-mode-btn\[data-mode\]\.active/.test(js),
+        'el modo activo se busca por [data-mode] y no por la clase suelta');
+});
+
 probar('el papel tapiz no se imprime (reportes en blanco)', () => {
     const css = fs.readFileSync(path.join(__dirname, '..', 'public', 'css', 'main.css'), 'utf8');
     assert.ok(/@media print[\s\S]*html\.has-wallpaper body::before,\s*html\.has-wallpaper body::after\s*\{\s*display: none !important;/.test(css),

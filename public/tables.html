@@ -1485,7 +1485,6 @@
         .ct-entregar { min-width: 132px; justify-content: center; }
 
         /* Lector de QR */
-        .ct-modal-esc { max-width: 520px !important; width: min(520px, calc(100vw - 24px)); height: auto; }
         .ct-lector { width: 100%; border-radius: var(--ds-radius-md); overflow: hidden; background: #000; min-height: 190px; display: flex; align-items: center; justify-content: center; }
         .ct-lector video { width: 100% !important; height: auto !important; display: block; }
         .ct-esc-pista { margin: 0; font-size: .85rem; color: var(--text-muted); text-align: center; }
@@ -1544,6 +1543,9 @@
         /* QR: marco blanco y esquinas redondeadas, SIN enlace a la vista.
            Alto automático: es un modal chico y no tiene por qué llenar la pantalla. */
         .ct-modal-qr { max-width: 420px !important; width: min(420px, calc(100vw - 24px)); height: auto; }
+        /* El lector también es un modal chico. Va DESPUÉS de `.ct-modal`: las dos reglas
+           llevan `!important` y la misma especificidad, así que gana la última declarada. */
+        .ct-modal-esc { max-width: 520px !important; width: min(520px, calc(100vw - 24px)); height: auto; }
         .ct-enlace-body { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
         .ct-enlace-folio { font-family: var(--font-heading); font-weight: 800; font-size: 1.3rem; color: var(--text-color); margin: 0; }
         .ct-enlace-nombre { font-size: .9rem; color: var(--text-muted); margin: 0; }

@@ -60,7 +60,9 @@ function cargarThemeInit() {
             setItem: (k, v) => { memoria[k] = String(v); },
             removeItem: (k) => { delete memoria[k]; },
         },
-        document: { documentElement: root, addEventListener: () => {}, readyState: 'complete' },
+        document: { documentElement: root, addEventListener: () => {}, readyState: 'complete',
+                    baseURI: 'https://tomodachi.tabtap.dev/public/profile.html' },
+        URL,
         requestAnimationFrame: (fn) => fn(),
         matchMedia: () => ({ matches: false }),
         addEventListener: () => {},
@@ -140,7 +142,10 @@ probar('aplica el fondo: clase, imagen, opacidad y ajuste', () => {
         wallpaper_size: 'fill',
     }, false, null);
     assert.ok(clases.has('has-wallpaper'), 'debe marcar <html> con has-wallpaper');
-    assert.strictEqual(estilos['--wallpaper-image'], 'url("assets/images/wallpapers/fondo.jpg")');
+    // ABSOLUTA a propósito: dentro de main.css un url() relativo se resuelve
+    // contra /public/css/ y el fondo daba 404.
+    assert.strictEqual(estilos['--wallpaper-image'],
+        'url("https://tomodachi.tabtap.dev/public/assets/images/wallpapers/fondo.jpg")');
     assert.strictEqual(estilos['--wallpaper-opacity'], '0.4');
     assert.strictEqual(atributos['data-wallpaper-size'], 'fill');
 });
@@ -165,7 +170,8 @@ probar('una config SIN la clave no toca el fondo que ya estaba', () => {
     utils.applyWallpaper({ wallpaper_url: 'assets/images/wallpapers/fondo.jpg', wallpaper_opacity: 25 }, false, null);
     utils.applyWallpaper({ primary_color: '#39C5BB' }, false, null);   // config parcial (p. ej. sugerir oscuro)
     assert.ok(clases.has('has-wallpaper'), 'un config parcial no debe borrar el fondo');
-    assert.strictEqual(estilos['--wallpaper-image'], 'url("assets/images/wallpapers/fondo.jpg")');
+    assert.strictEqual(estilos['--wallpaper-image'],
+        'url("https://tomodachi.tabtap.dev/public/assets/images/wallpapers/fondo.jpg")');
 });
 
 probar('una ruta inválida no se pinta (se trata como sin fondo)', () => {
@@ -175,13 +181,20 @@ probar('una ruta inválida no se pinta (se trata como sin fondo)', () => {
     assert.strictEqual(estilos['--wallpaper-image'], undefined);
 });
 
+probar('la ruta se aplica absoluta (dentro de main.css un url() relativo se resuelve contra el CSS)', () => {
+    assert.strictEqual(utils.absolutizeWallpaperUrl('assets/images/wallpapers/fondo.jpg'),
+        'https://tomodachi.tabtap.dev/public/assets/images/wallpapers/fondo.jpg');
+    assert.strictEqual(utils.absolutizeWallpaperUrl(''), '');
+});
+
 probar('en modo oscuro manda el papel tapiz del tema oscuro si lo define', () => {
     utils.applyWallpaper(
         { wallpaper_url: 'assets/images/wallpapers/claro.jpg', wallpaper_opacity: 20 },
         true,
         { wallpaper_url: 'assets/images/wallpapers/oscuro.jpg', wallpaper_opacity: 60 }
     );
-    assert.strictEqual(estilos['--wallpaper-image'], 'url("assets/images/wallpapers/oscuro.jpg")');
+    assert.strictEqual(estilos['--wallpaper-image'],
+        'url("https://tomodachi.tabtap.dev/public/assets/images/wallpapers/oscuro.jpg")');
     assert.strictEqual(estilos['--wallpaper-opacity'], '0.6');
 });
 

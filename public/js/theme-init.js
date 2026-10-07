@@ -270,6 +270,21 @@
     }
 
     /**
+     * La ruta se guarda relativa (portable entre instalaciones) pero se aplica
+     * ABSOLUTA: la variable se consume dentro de una regla de `main.css`, y ahí
+     * un `url()` relativo se resuelve contra la hoja de estilos
+     * (`/public/css/assets/...` → 404), no contra la página.
+     */
+    function absolutizeWallpaperUrl(url) {
+        if (!url) return '';
+        try {
+            return new URL(url, document.baseURI).href;
+        } catch (e) {
+            return url;
+        }
+    }
+
+    /**
      * Aplica (o quita) el papel tapiz.
      *   - url ausente en la config recibida → no se toca lo que ya esté puesto
      *     (hay llamadores que pasan configs parciales, p. ej. la sugerencia de
@@ -296,13 +311,13 @@
         const rawOpacity = active.wallpaper_opacity !== undefined ? active.wallpaper_opacity : base.wallpaper_opacity;
         const rawSize = active.wallpaper_size !== undefined ? active.wallpaper_size : base.wallpaper_size;
 
-        root.style.setProperty('--wallpaper-image', 'url("' + url + '")');
+        root.style.setProperty('--wallpaper-image', 'url("' + absolutizeWallpaperUrl(url) + '")');
         root.style.setProperty('--wallpaper-opacity', String(normalizeWallpaperOpacity(rawOpacity)));
         root.setAttribute('data-wallpaper-size', normalizeWallpaperSize(rawSize));
         root.classList.add('has-wallpaper');
     }
 
-    window.ThemeColorUtils = { hexToRgb, mix, rgbaOf, luminance, contrastText, brandVariants, darkSurfaces, apply, applySurfaces, clearDerived, applyWallpaper, normalizeWallpaperUrl, normalizeWallpaperOpacity, normalizeWallpaperSize, DARK_CONFIG_VERSION: 2 };
+    window.ThemeColorUtils = { hexToRgb, mix, rgbaOf, luminance, contrastText, brandVariants, darkSurfaces, apply, applySurfaces, clearDerived, applyWallpaper, normalizeWallpaperUrl, normalizeWallpaperOpacity, normalizeWallpaperSize, absolutizeWallpaperUrl, DARK_CONFIG_VERSION: 2 };
 
     // Versión del modo oscuro. Los temas oscuros guardados por el usuario
     // (localStorage 'pos_theme_config_dark' / stores.theme_config_dark) que NO

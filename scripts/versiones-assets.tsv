@@ -36,6 +36,6 @@ js/sidebar-loader.js	13	d7bd4144a7a76b248ea7dd147f97b6cd
 js/stock-rule.js	1	5818188ed9718de696abeffe9d55909f
 js/stripe-pos.js	1	a261c0664235a63f2da8b4ae3c1194c7
 js/tables.js	11	ad25b20b4d38c780841cfdac2a3fdd4a
-js/theme-init.js	4	189c7e05bf3750fda8133f610dfd615a
+js/theme-init.js	5	84c4823f7e3077d695902be1c728089c
 js/tour.js	4	45da073236616c3069a0bf1977d34178
 js/ws-realtime.js	1	461256bedbddbc69af5bcd627e5241d7

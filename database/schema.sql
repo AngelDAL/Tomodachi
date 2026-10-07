@@ -1144,12 +1144,19 @@ CREATE TABLE counter_orders (
     number INT NOT NULL COMMENT 'Folio del día, por tienda',
     customer_name VARCHAR(80) NULL COMMENT 'A nombre de quién va el pedido',
     tracking_token CHAR(36) NOT NULL COMMENT 'UUID v4: llave del enlace de seguimiento y canal WS del cliente',
-    status ENUM('pending','completed','cancelled') NOT NULL DEFAULT 'pending',
+    status ENUM('pending','ready','completed','cancelled') NOT NULL DEFAULT 'pending',
     notes VARCHAR(255) NULL,
+    subtotal DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    discount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    payment_status ENUM('unpaid','partial','paid') NOT NULL DEFAULT 'unpaid',
+    paid_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     cancel_reason VARCHAR(255) NULL,
     created_by INT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     completed_at DATETIME NULL,
+    notified_at DATETIME NULL,
+    customer_seen_at DATETIME NULL COMMENT 'Última señal del enlace del cliente (¿está viendo?)',
+    notify_granted TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'El cliente activó avisos en su dispositivo',
     cancelled_at DATETIME NULL,
     UNIQUE KEY uk_counter_folio (store_id, business_date, number),
     UNIQUE KEY uk_counter_token (tracking_token),
@@ -1160,7 +1167,8 @@ CREATE TABLE counter_orders (
 
 -- Tabla: counter_order_items
 -- Lo pedido en un pedido de mostrador. Guarda el nombre y el precio al momento para que el
--- pedido no cambie si el producto se renombra o cambia de precio después.
+-- pedido no cambie si el producto se renombra o cambia de precio después. El descuento por
+-- promoción se guarda por línea para que el ahorro sea visible.
 CREATE TABLE counter_order_items (
     item_id INT AUTO_INCREMENT PRIMARY KEY,
     counter_order_id INT NOT NULL,
@@ -1168,12 +1176,30 @@ CREATE TABLE counter_order_items (
     product_name VARCHAR(150) NOT NULL COMMENT 'Guardado al momento: si el producto cambia, el pedido no',
     quantity DECIMAL(12,3) NOT NULL DEFAULT 1,
     unit_price DECIMAL(10,2) NOT NULL,
+    discount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    promotion_name VARCHAR(120) NULL,
     notes VARCHAR(255) NULL,
     line_total DECIMAL(10,2) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_coitem_order (counter_order_id),
     FOREIGN KEY (counter_order_id) REFERENCES counter_orders(counter_order_id) ON DELETE CASCADE,
     FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: counter_push_subscriptions
+-- Suscripciones push del CLIENTE de un pedido de mostrador (no son de un usuario del sistema):
+-- el token del pedido es la llave. `push_subscriptions` exige user_id y no sirve aquí.
+CREATE TABLE counter_push_subscriptions (
+    sub_id INT AUTO_INCREMENT PRIMARY KEY,
+    counter_order_id INT NOT NULL,
+    endpoint VARCHAR(500) NOT NULL,
+    p256dh VARCHAR(300) NOT NULL,
+    auth VARCHAR(200) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_seen TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_counter_endpoint (endpoint(255)),
+    INDEX idx_counter_sub (counter_order_id),
+    FOREIGN KEY (counter_order_id) REFERENCES counter_orders(counter_order_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabla: print_jobs

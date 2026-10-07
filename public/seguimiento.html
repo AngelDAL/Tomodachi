@@ -3,105 +3,152 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#39C5BB">
     <title>Mi pedido - Tomodachi</title>
     <link rel="stylesheet" href="css/fonts.css?v=4">
     <link rel="stylesheet" href="lib/fontawesome/css/all.min.css?v=4">
     <link rel="stylesheet" href="css/variables.css?v=6">
     <link rel="stylesheet" href="css/design-system.css?v=10">
     <style>
-        :root { color-scheme: light dark; }
+        /* Los colores del NEGOCIO llegan por JS y se aplican como variables; estos son el respaldo. */
+        :root {
+            color-scheme: light dark;
+            --cta-primary: var(--primary-color, #39C5BB);
+            --cta-primary-2: var(--secondary-color, #61C2E8);
+            --cta-bg: var(--bg-light, #f4f7f6);
+            --cta-card: var(--bg-card, #ffffff);
+            --cta-text: var(--text-color, #1a1a2e);
+            --cta-muted: var(--text-muted, #667);
+            --cta-border: var(--border-color, #e3e8ec);
+        }
         .hidden { display: none !important; }
         * { box-sizing: border-box; }
         body {
             margin: 0;
-            font-family: var(--font-body, system-ui, sans-serif);
-            background: var(--bg-color, var(--bg-light, #f4f7f6));
-            color: var(--text-color, #1a1a2e);
+            font-family: var(--font-body, system-ui, -apple-system, sans-serif);
+            background: var(--cta-bg);
+            color: var(--cta-text);
             min-height: 100vh;
             display: flex;
-            align-items: flex-start;
             justify-content: center;
-            padding: 20px 14px;
+            padding: 18px 14px 40px;
         }
         .wrap { width: 100%; max-width: 520px; display: flex; flex-direction: column; gap: 14px; }
         .card {
-            background: var(--bg-card, #fff);
-            border: 1px solid var(--border-color, #e3e8ec);
-            border-radius: 16px;
-            padding: 20px;
-            box-shadow: 0 8px 24px color-mix(in srgb, var(--dark-color, #0c2b29) 8%, transparent);
-        }
-        .marca { display: flex; align-items: center; gap: 8px; color: var(--text-muted, #667); font-size: .85rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; }
-        .marca i { color: var(--primary-color, #39C5BB); }
-        .estado {
-            margin-top: 14px;
-            border-radius: 14px;
+            background: var(--cta-card);
+            border: 1px solid var(--cta-border);
+            border-radius: 18px;
             padding: 18px;
-            text-align: center;
-            color: var(--text-on-primary, #fff);
         }
-        .estado i { font-size: 2rem; display: block; margin-bottom: 6px; }
-        .estado h1 { margin: 0; font-size: 1.5rem; font-family: var(--font-heading, sans-serif); }
-        .estado .hora { margin-top: 6px; font-size: .85rem; opacity: .92; }
-        .estado-pending { background: linear-gradient(135deg, var(--warning-color, #B45309), #D97706); }
-        .estado-completed { background: linear-gradient(135deg, var(--success-color, #2E7D32), #43A047); }
-        .estado-cancelled { background: linear-gradient(135deg, var(--danger-color, #D32F2F), #E53935); }
-        .cab { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 4px; }
-        .folio { font-family: var(--font-heading); font-weight: 800; font-size: 1.3rem; }
-        .nombre { color: var(--text-muted); font-size: .95rem; }
-        .linea { display: flex; gap: 10px; align-items: baseline; padding: 8px 0; border-bottom: 1px solid var(--border-lighter, #eef2f4); }
+        .marca { display: flex; align-items: center; gap: 8px; color: var(--cta-muted); font-size: .8rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+        .marca i { color: var(--cta-primary); }
+
+        /* Estado: la franja con el color de la casa */
+        .estado {
+            margin-top: 12px;
+            border-radius: 16px;
+            padding: 20px 16px;
+            text-align: center;
+            color: #fff;
+            background: linear-gradient(135deg, var(--cta-primary), var(--cta-primary-2));
+        }
+        .estado i { font-size: 2.1rem; display: block; margin-bottom: 8px; }
+        .estado h1 { margin: 0; font-size: 1.55rem; font-family: var(--font-heading, inherit); line-height: 1.15; }
+        .estado .sub { margin-top: 8px; font-size: .95rem; opacity: .95; }
+        .estado .reloj { margin-top: 10px; font-size: 1.7rem; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: .04em; }
+        .estado.estado-ready { background: linear-gradient(135deg, var(--cta-success, #2E7D32), #43A047); }
+        .estado.estado-completed { background: linear-gradient(135deg, var(--cta-success, #2E7D32), #43A047); }
+        .estado.estado-cancelled { background: linear-gradient(135deg, var(--cta-danger, #D32F2F), #E53935); }
+
+        .cab { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 6px; }
+        .folio { font-family: var(--font-heading, inherit); font-weight: 800; font-size: 1.35rem; }
+        .nombre { color: var(--cta-muted); font-size: .95rem; }
+        .linea { display: flex; gap: 10px; align-items: baseline; padding: 9px 0; border-bottom: 1px solid var(--cta-border); }
         .linea:last-child { border-bottom: 0; }
-        .cant { font-weight: 800; color: var(--primary-darker, #1F8A82); font-variant-numeric: tabular-nums; min-width: 30px; }
+        .cant { font-weight: 800; color: var(--cta-primary); font-variant-numeric: tabular-nums; min-width: 30px; }
         .prod { flex: 1; min-width: 0; }
-        .nota { color: var(--warning-color, #B45309); font-size: .82rem; }
-        .total { display: flex; justify-content: space-between; font-weight: 800; font-size: 1.2rem; margin-top: 10px; }
+        .nota { color: var(--cta-muted); font-size: .82rem; }
+        .promo { color: var(--cta-success, #2E7D32); font-size: .78rem; }
+        .importe { font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+        .totales { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--cta-border); }
+        .tlinea { display: flex; justify-content: space-between; gap: 10px; color: var(--cta-muted); font-size: .92rem; padding: 2px 0; }
+        .tlinea.total { margin-top: 6px; color: var(--cta-text); font-weight: 800; font-size: 1.05rem; align-items: baseline; }
+        .tlinea.total span:last-child { font-size: 1.35rem; font-variant-numeric: tabular-nums; }
+        .tlinea.desc { color: var(--cta-success, #2E7D32); }
+
+        /* Pago */
+        .pago { display: flex; align-items: center; gap: 12px; }
+        .pago-icono { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex: 0 0 auto; }
+        .pago-txt strong { display: block; font-size: 1rem; }
+        .pago-txt span { color: var(--cta-muted); font-size: .88rem; }
+        .pago-unpaid .pago-icono { background: color-mix(in srgb, var(--cta-muted) 16%, transparent); color: var(--cta-muted); }
+        .pago-partial .pago-icono { background: color-mix(in srgb, var(--cta-warning, #B45309) 18%, transparent); color: var(--cta-warning, #B45309); }
+        .pago-paid .pago-icono { background: color-mix(in srgb, var(--cta-success, #2E7D32) 18%, transparent); color: var(--cta-success, #2E7D32); }
+
         .qr-box { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
-        .qr-box p { margin: 0; font-size: .85rem; color: var(--text-muted); }
+        .qr-box p { margin: 0; font-size: .86rem; color: var(--cta-muted); }
+        .qr-marco { background: #fff; padding: 16px; border-radius: 16px; box-shadow: 0 4px 16px rgba(0,0,0,.10); display: inline-flex; }
         #qr { display: flex; justify-content: center; }
+        #qr img, #qr canvas { display: block; border-radius: 8px; }
+
         .botones { display: flex; gap: 10px; flex-wrap: wrap; }
         button {
-            flex: 1; min-width: 150px;
-            border: 0; border-radius: 12px; cursor: pointer;
-            padding: 13px 16px; font-size: .95rem; font-weight: 700; font-family: inherit;
+            flex: 1; min-width: 160px;
+            border: 0; border-radius: 14px; cursor: pointer;
+            padding: 14px 16px; font-size: .95rem; font-weight: 800; font-family: inherit;
             display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-            background: var(--primary-color, #39C5BB); color: var(--text-on-primary, #fff);
+            background: var(--cta-primary); color: #fff;
         }
-        button.secundario { background: var(--bg-card, #fff); color: var(--text-color); border: 1px solid var(--border-color); }
-        .aviso { font-size: .82rem; color: var(--text-muted); text-align: center; }
-        .aviso a { color: var(--primary-darker, #1F8A82); word-break: break-all; }
-        .conexion { font-size: .75rem; color: var(--text-muted); text-align: center; }
+        button.secundario { background: var(--cta-card); color: var(--cta-text); border: 1px solid var(--cta-border); }
+        button.activo { background: var(--cta-success, #2E7D32); }
+        .aviso { font-size: .82rem; color: var(--cta-muted); text-align: center; }
+        .conexion { font-size: .75rem; color: var(--cta-muted); text-align: center; }
+        @media (max-width: 380px) { button { min-width: 0; } }
     </style>
     <script src="lib/qrcodejs/qrcode.min.js"></script>
 </head>
 <body>
     <div class="wrap">
-        <div class="marca"><i class="fas fa-utensils"></i> <span>Tomodachi · Mi pedido</span></div>
+        <div class="marca"><i class="fas fa-utensils"></i> <span id="marcaTexto">Mi pedido</span></div>
 
-        <div class="card" id="cardEstado">
+        <div class="card">
             <div class="cab">
                 <span class="folio" id="folio">Pedido</span>
                 <span class="nombre" id="nombre"></span>
             </div>
-            <div class="estado estado-pending" id="estado">
+            <div class="estado" id="estado">
                 <i class="fas fa-fire-burner" id="estadoIcono"></i>
                 <h1 id="estadoTexto">En preparación</h1>
-                <div class="hora" id="estadoHora"></div>
+                <div class="sub" id="estadoSub"></div>
+                <div class="reloj hidden" id="reloj">00:00</div>
             </div>
         </div>
 
         <div class="card" id="cardArticulos">
             <div id="articulos"></div>
-            <div class="total"><span>Total</span><span id="total">$0.00</span></div>
+            <div class="totales" id="totales">
+                <div class="tlinea" id="lineaSubtotal"><span>Subtotal</span><span id="subtotal">$0.00</span></div>
+                <div class="tlinea desc hidden" id="lineaDescuento"><span id="descuentoNombre">Descuento</span><span id="descuento">-$0.00</span></div>
+                <div class="tlinea total"><span>Total</span><span id="total">$0.00</span></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="pago pago-unpaid" id="pago">
+                <div class="pago-icono"><i class="fas fa-clock" id="pagoIcono"></i></div>
+                <div class="pago-txt"><strong id="pagoTitulo">Pago al recoger</strong><span id="pagoDetalle"></span></div>
+            </div>
         </div>
 
         <div class="card qr-box">
             <div class="marca"><i class="fas fa-qrcode"></i> <span>Mi código de recogida</span></div>
-            <div id="qr"></div>
+            <div class="qr-marco"><div id="qr"></div></div>
             <p>Muestra este código al llegar para recoger tu pedido.</p>
         </div>
 
         <div class="botones">
-            <button type="button" id="btnNotif"><i class="fas fa-bell"></i> <span>Activar avisos</span></button>
+            <button type="button" id="btnNotif"><i class="fas fa-bell"></i> <span id="btnNotifTexto">Avisarme cuando esté listo</span></button>
             <button type="button" class="secundario" id="btnCopiar"><i class="fas fa-link"></i> Copiar enlace</button>
         </div>
         <div class="conexion" id="conexion"></div>
@@ -114,51 +161,150 @@
         var params = new URLSearchParams(window.location.search);
         var token = (params.get('t') || '').trim();
         var pedido = null;
+        var vapidPublica = '';
         var socket = null;
-        var sondeo = null;
+        var relojTimer = null;
+        var creadoMs = null;
 
         var $ = function (id) { return document.getElementById(id); };
         function dinero(n) { return '$' + (Number(n) || 0).toFixed(2); }
         function esc(v) { return String(v === null || v === undefined ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+        function pad2(n) { return (n < 10 ? '0' : '') + n; }
 
-        var ETIQUETA = { pending: ['En preparación', 'fa-fire-burner', 'estado-pending'], completed: ['Listo para recoger', 'fa-check', 'estado-completed'], cancelled: ['Cancelado', 'fa-ban', 'estado-cancelled'] };
+        var ETIQUETA = {
+            pending:   ['En preparación', 'fa-fire-burner', 'estado-pending', 'Estamos preparando tu pedido'],
+            ready:     ['¡Listo para recoger!', 'fa-bell', 'estado-ready', 'Pasa al mostrador por tu pedido'],
+            completed: ['Entregado', 'fa-circle-check', 'estado-completed', 'Gracias por tu compra'],
+            cancelled: ['Cancelado', 'fa-ban', 'estado-cancelled', 'El pedido fue cancelado']
+        };
+
+        // ---- Colores del negocio (dinámicos) -------------------------------------
+        function aplicarTema(tema) {
+            if (!tema) return;
+            var oscuro = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            var cfg = (oscuro && tema.dark) ? tema.dark : (tema.light || tema.dark);
+            if (!cfg) return;
+            var r = document.documentElement.style;
+            if (cfg.primary_color)   r.setProperty('--cta-primary', cfg.primary_color);
+            if (cfg.secondary_color) r.setProperty('--cta-primary-2', cfg.secondary_color);
+            if (cfg.success_color)   r.setProperty('--cta-success', cfg.success_color);
+            if (cfg.danger_color)    r.setProperty('--cta-danger', cfg.danger_color);
+            if (cfg.warning_color)   r.setProperty('--cta-warning', cfg.warning_color);
+            if (cfg.bg_body)         r.setProperty('--cta-bg', cfg.bg_body);
+            if (cfg.bg_card)         r.setProperty('--cta-card', cfg.bg_card);
+            if (cfg.text_color)      r.setProperty('--cta-text', cfg.text_color);
+            if (cfg.border_color)    r.setProperty('--cta-border', cfg.border_color);
+            var meta = document.querySelector('meta[name="theme-color"]');
+            if (meta && cfg.primary_color) meta.setAttribute('content', cfg.primary_color);
+        }
+
+        // ---- Reloj de espera ------------------------------------------------------
+        function arrancarReloj() {
+            if (relojTimer) clearInterval(relojTimer);
+            if (!creadoMs) { $('reloj').classList.add('hidden'); return; }
+            var pintar = function () {
+                if (!pedido || pedido.status !== 'pending') { $('reloj').classList.add('hidden'); return; }
+                var seg = Math.max(0, Math.floor((Date.now() - creadoMs) / 1000));
+                var m = Math.floor(seg / 60), s = seg % 60;
+                $('reloj').textContent = pad2(m) + ':' + pad2(s);
+                $('reloj').classList.remove('hidden');
+            };
+            pintar();
+            relojTimer = setInterval(pintar, 1000);
+        }
 
         function pintar() {
             if (!pedido) return;
             $('folio').textContent = 'Pedido #' + pedido.number;
             $('nombre').textContent = pedido.customer_name ? 'A nombre de ' + pedido.customer_name : '';
+            if (pedido.tema) aplicarTema(pedido.tema);
 
             var e = ETIQUETA[pedido.status] || ETIQUETA.pending;
-            var est = $('estado');
-            est.className = 'estado ' + e[2];
+            $('estado').className = 'estado ' + e[2];
             $('estadoIcono').className = 'fas ' + e[1];
             $('estadoTexto').textContent = e[0];
-            $('estadoHora').textContent = pedido.status === 'pending'
-                ? (pedido.minutos > 0 ? 'Hace ' + pedido.minutos + ' min' : 'Recién registrado')
-                : '';
+            $('estadoSub').textContent = e[3];
+
+            // Tiempo: en preparación -> reloj en vivo; listo/entregado -> la hora.
+            if (pedido.status === 'pending') {
+                if (pedido.created_at) creadoMs = new Date(String(pedido.created_at).replace(' ', 'T')).getTime();
+                arrancarReloj();
+            } else {
+                if (relojTimer) clearInterval(relojTimer);
+                $('reloj').classList.add('hidden');
+            }
 
             $('articulos').innerHTML = (pedido.items || []).map(function (it) {
-                return '<div class="linea"><span class="cant">' + (Number(it.quantity)||0) + '×</span>' +
+                return '<div class="linea"><span class="cant">' + (Number(it.quantity) || 0) + '×</span>' +
                     '<span class="prod">' + esc(it.product_name) +
-                        (it.notes ? '<div class="nota">' + esc(it.notes) + '</div>' : '') + '</span></div>';
+                        (it.promotion_name ? '<div class="promo"><i class="fas fa-tags"></i> ' + esc(it.promotion_name) + '</div>' : '') +
+                        (it.notes ? '<div class="nota">' + esc(it.notes) + '</div>' : '') + '</span>' +
+                    '<span class="importe">' + dinero(it.line_total) + '</span></div>';
             }).join('');
+
+            $('subtotal').textContent = dinero(pedido.subtotal);
             $('total').textContent = dinero(pedido.total);
+            var hayDesc = Number(pedido.discount) > 0;
+            $('lineaDescuento').classList.toggle('hidden', !hayDesc);
+            if (hayDesc) $('descuento').textContent = '-' + dinero(pedido.discount);
+
+            pintarPago();
+        }
+
+        function pintarPago() {
+            var est = pedido.payment_status || 'unpaid';
+            var caja = $('pago');
+            caja.className = 'pago pago-' + est;
+            var total = Number(pedido.total) || 0;
+            var pagado = Number(pedido.paid_amount) || 0;
+            if (est === 'paid') {
+                $('pagoIcono').className = 'fas fa-circle-check';
+                $('pagoTitulo').textContent = 'Pagado';
+                $('pagoDetalle').textContent = 'Ya está cubierto: ' + dinero(total) + '. Solo pasa por tu pedido.';
+            } else if (est === 'partial') {
+                $('pagoIcono').className = 'fas fa-coins';
+                $('pagoTitulo').textContent = 'Con adelanto de ' + dinero(pagado);
+                $('pagoDetalle').textContent = 'Falta pagar ' + dinero(Math.max(0, total - pagado)) + ' al recoger.';
+            } else {
+                $('pagoIcono').className = 'fas fa-clock';
+                $('pagoTitulo').textContent = 'Pago al recoger';
+                $('pagoDetalle').textContent = 'Lleva ' + dinero(total) + ' cuando pases por tu pedido.';
+            }
         }
 
         function dibujarQr() {
             var c = $('qr');
             c.innerHTML = '';
             if (typeof QRCode === 'function') {
-                new QRCode(c, { text: window.location.href, width: 180, height: 180, correctLevel: QRCode.CorrectLevel.M });
+                new QRCode(c, { text: window.location.href, width: 180, height: 180, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
             }
         }
 
-        function notificar(texto) {
+        var swReg = null;   // registro del service worker del cliente (scope /public/counter/)
+
+        function notificar(texto, cuerpo) {
             try {
-                if (('Notification' in window) && Notification.permission === 'granted') {
-                    new Notification(texto, { body: 'Tu pedido en Tomodachi', icon: '/public/assets/images/default-logo.png' });
+                if (!('Notification' in window) || Notification.permission !== 'granted') return;
+                var opciones = { body: cuerpo, icon: '/public/assets/images/default-logo.png', tag: 'tomodachi-pedido' };
+                if (swReg && swReg.showNotification) {
+                    swReg.showNotification(texto, opciones);
+                } else {
+                    new Notification(texto, opciones);
                 }
-            } catch (e) { /* sin permisos, se sigue sin notificar */ }
+            } catch (e) { /* sin permisos se sigue sin notificar */ }
+        }
+
+        // ---- Presencia: el local sabe que estás viendo tu pedido ------------------
+        function enviarPresencia(notifyGranted) {
+            if (!token) return;
+            var cuerpo = { token: token };
+            if (notifyGranted === true || notifyGranted === false) cuerpo.notify_granted = notifyGranted;
+            fetch('../api/counter/presence.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(cuerpo),
+                keepalive: true
+            }).catch(function () {});
         }
 
         async function cargar(silencioso) {
@@ -168,10 +314,11 @@
                 if (!r.ok || !d.success) throw new Error((d && d.message) || 'No se pudo leer el pedido');
                 var anterior = pedido ? pedido.status : null;
                 pedido = d.data.order;
+                vapidPublica = d.data.vapid_public_key || '';
                 pintar();
                 if (anterior && anterior !== pedido.status && pedido.status !== 'pending') {
                     var e = ETIQUETA[pedido.status];
-                    notificar(e ? e[0] : 'Tu pedido cambió');
+                    if (e) notificar(e[0], e[3]);
                 }
                 $('avisoError').classList.add('hidden');
             } catch (err) {
@@ -197,37 +344,96 @@
             socket.onerror = function () {};
         }
 
-        function iniciarSondeo() {
-            if (sondeo) return;
-            sondeo = setInterval(function () { if (!socket || socket.readyState !== 1) cargar(true); }, 20000);
+        // ---- Avisos push ----------------------------------------------------------
+        function b64urlABytes(base64) {
+            var padding = '='.repeat((4 - base64.length % 4) % 4);
+            var b64 = (base64 + padding).replace(/-/g, '+').replace(/_/g, '/');
+            var raw = atob(b64);
+            var bytes = new Uint8Array(raw.length);
+            for (var i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+            return bytes;
         }
 
-        $('btnNotif').addEventListener('click', function () {
-            if (!('Notification' in window)) { $('btnNotif').querySelector('span').textContent = 'Avisos no soportados'; return; }
-            Notification.requestPermission().then(function (permiso) {
-                if (permiso === 'granted') {
-                    $('btnNotif').querySelector('span').textContent = 'Avisos activados';
-                    notificar('Avisos activados: te diremos cuando esté listo.');
-                } else {
-                    $('btnNotif').querySelector('span').textContent = 'Avisos desactivados';
+        async function activarAvisos() {
+            if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+                $('btnNotifTexto').textContent = 'Tu navegador no soporta avisos';
+                return;
+            }
+            var permiso = await Notification.requestPermission();
+            if (permiso !== 'granted') {
+                $('btnNotifTexto').textContent = 'Avisos bloqueados';
+                enviarPresencia(false);
+                return;
+            }
+            enviarPresencia(true);
+            marcarBotonAvisos();
+            notificar('Avisos activados', 'Te avisaremos cuando tu pedido esté listo.');
+
+            // Suscripción push (para que el aviso llegue aunque el enlace esté cerrado).
+            if (!vapidPublica || !('PushManager' in window)) return;
+            try {
+                var reg = await navigator.serviceWorker.register('counter/sw.js', { scope: 'counter/' });
+                swReg = reg;
+                // No sirve serviceWorker.ready: este SW tiene su propio scope (/public/counter/)
+                // y no controla esta página. Se espera a su activación directamente.
+                if (!reg.active) {
+                    var w = reg.installing || reg.waiting;
+                    if (w) {
+                        await new Promise(function (res) {
+                            w.addEventListener('statechange', function () { if (w.state === 'activated') res(); });
+                            setTimeout(res, 4000);
+                        });
+                    }
                 }
-            });
-        });
+                var sub = await reg.pushManager.getSubscription();
+                if (!sub) {
+                    sub = await reg.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: b64urlABytes(vapidPublica)
+                    });
+                }
+                var j = sub.toJSON();
+                await fetch('../api/counter/presence.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ subscribe: true, token: token, endpoint: j.endpoint, p256dh: j.keys && j.keys.p256dh, auth: j.keys && j.keys.auth })
+                });
+            } catch (e) { /* si el push falla, los avisos en vivo siguen */ }
+        }
+
+        function marcarBotonAvisos() {
+            var b = $('btnNotif');
+            b.classList.add('activo');
+            $('btnNotifTexto').textContent = 'Avisos activados';
+            b.querySelector('i').className = 'fas fa-bell';
+        }
+
+        $('btnNotif').addEventListener('click', activarAvisos);
 
         $('btnCopiar').addEventListener('click', function () {
             if (navigator.clipboard) navigator.clipboard.writeText(window.location.href);
             else { var t = document.createElement('input'); t.value = window.location.href; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); }
-            var old = this.innerHTML; this.innerHTML = '<i class="fas fa-check"></i> Copiado'; setTimeout(function () { document.getElementById('btnCopiar').innerHTML = old; }, 1500);
+            var old = this.innerHTML; this.innerHTML = '<i class="fas fa-check"></i> Copiado';
+            var self = this;
+            setTimeout(function () { self.innerHTML = old; }, 1500);
         });
+
+        // Señal de vida cada 20 s y al volver a la pestaña (para que el local sepa que sigues ahí).
+        setInterval(function () { if (!document.hidden) enviarPresencia(); }, 20000);
+        document.addEventListener('visibilitychange', function () { if (!document.hidden) { enviarPresencia(); cargar(true); } });
 
         if (!token) {
             $('avisoError').textContent = 'Falta el identificador del pedido en el enlace.';
             $('avisoError').classList.remove('hidden');
         } else {
             dibujarQr();
-            cargar(false);
+            cargar(false).then(function () {
+                enviarPresencia(('Notification' in window) && Notification.permission === 'granted');
+                if (('Notification' in window) && Notification.permission === 'granted') marcarBotonAvisos();
+            });
             conectarWS();
-            iniciarSondeo();
+            // Respaldo: si el WebSocket no conecta, se pone al día cada 20 s.
+            setInterval(function () { if (!socket || socket.readyState !== 1) cargar(true); }, 20000);
         }
     })();
     </script>

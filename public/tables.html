@@ -1406,19 +1406,18 @@
             padding: 14px 16px;
             margin-bottom: 12px;
         }
-        .ct-pedido.pendiente { border-left: 4px solid var(--primary-color); }
-        .ct-pedido.completado { border-left: 4px solid var(--success-color, #2E7D32); opacity: .85; }
-        .ct-pedido.cancelado { border-left: 4px solid var(--danger-color, #D32F2F); opacity: .7; }
+        .ct-pedido.pending { border-left: 4px solid var(--primary-color); }
+        .ct-pedido.ready { border-left: 4px solid var(--warning-color, #B45309); }
+        .ct-pedido.completed { border-left: 4px solid var(--success-color, #2E7D32); opacity: .85; }
+        .ct-pedido.cancelled { border-left: 4px solid var(--danger-color, #D32F2F); opacity: .7; }
         .ct-cab { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
         .ct-identidad { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
         .ct-folio { font-family: var(--font-heading); font-weight: 800; font-size: 1.05rem; color: var(--text-color); }
         .ct-nombre-cliente { font-weight: 600; color: var(--text-color); overflow-wrap: anywhere; }
         .ct-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
-        .ct-estado {
-            font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
-            padding: 3px 9px; border-radius: var(--ds-radius-pill); white-space: nowrap;
-        }
+        .ct-estado { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 3px 9px; border-radius: var(--ds-radius-pill); white-space: nowrap; }
         .ct-estado-pending { background: color-mix(in srgb, var(--primary-color) 16%, transparent); color: var(--primary-darker, #1F8A82); }
+        .ct-estado-ready { background: color-mix(in srgb, var(--warning-color, #B45309) 18%, transparent); color: var(--warning-color, #B45309); }
         .ct-estado-completed { background: color-mix(in srgb, var(--success-color, #2E7D32) 16%, transparent); color: var(--success-color, #2E7D32); }
         .ct-estado-cancelled { background: color-mix(in srgb, var(--danger-color, #D32F2F) 14%, transparent); color: var(--danger-color, #D32F2F); }
         .ct-min { font-size: .78rem; color: var(--text-muted); white-space: nowrap; }
@@ -1427,53 +1426,98 @@
         .ct-cant { font-weight: 800; color: var(--primary-darker, #1F8A82); font-variant-numeric: tabular-nums; min-width: 30px; }
         .ct-nombre { flex: 1; min-width: 0; }
         .ct-nota { color: var(--warning-color, #B45309); font-size: .82rem; }
+        .ct-promo-tag { display: inline-block; margin-left: 6px; font-size: .72rem; color: var(--success-color, #2E7D32); background: color-mix(in srgb, var(--success-color, #2E7D32) 12%, transparent); border-radius: var(--ds-radius-pill); padding: 1px 8px; }
         .ct-importe { font-weight: 700; white-space: nowrap; color: var(--text-color); font-variant-numeric: tabular-nums; }
+        .ct-linea-descuento { margin-top: 8px; font-size: .82rem; color: var(--success-color, #2E7D32); }
         .ct-nota-pedido { margin-top: 8px; font-size: .82rem; color: var(--text-muted); font-style: italic; }
-        .ct-pie { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+        .ct-pie { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+        .ct-pie-info { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
         .ct-total { font-size: .9rem; color: var(--text-muted); }
         .ct-total strong { font-size: 1.15rem; color: var(--text-color); font-variant-numeric: tabular-nums; }
         .ct-acciones { display: flex; gap: 8px; flex-wrap: wrap; }
+        .ct-pago { font-size: .72rem; font-weight: 700; padding: 3px 9px; border-radius: var(--ds-radius-pill); white-space: nowrap; }
+        .ct-pago-unpaid { background: color-mix(in srgb, var(--text-muted, #667) 16%, transparent); color: var(--text-muted, #667); }
+        .ct-pago-partial { background: color-mix(in srgb, var(--warning-color, #B45309) 18%, transparent); color: var(--warning-color, #B45309); }
+        .ct-pago-paid { background: color-mix(in srgb, var(--success-color, #2E7D32) 16%, transparent); color: var(--success-color, #2E7D32); }
+        .ct-presencia { font-size: .76rem; color: var(--success-color, #2E7D32); }
+        .ct-presencia.apagada { color: var(--text-muted, #667); }
+        .ct-aviso-listo { margin-bottom: 12px; padding: 10px 14px; border-radius: var(--ds-radius-lg); background: color-mix(in srgb, var(--warning-color, #B45309) 14%, transparent); color: var(--warning-color, #B45309); font-weight: 700; }
 
-        /* Modal de alta: catálogo arriba, pedido abajo */
-        .ct-modal { max-width: 880px !important; width: min(880px, calc(100vw - 24px)); }
+        /* Modal de alta: productos a la izquierda, el pedido como COLUMNA a la derecha */
+        .ct-modal { max-width: 940px !important; width: min(940px, calc(100vw - 24px)); }
         .ct-modal-body { display: flex; flex-direction: column; gap: 14px; overflow-y: auto; max-height: calc(94vh - 130px); }
-        .ct-picker { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
-        .ct-productos { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; max-height: 300px; overflow-y: auto; }
-        .ct-seleccion-wrap { border-top: 1px solid var(--border-lighter, #eee); padding-top: 12px; }
-        .ct-seleccion-titulo { font-weight: 700; font-size: .82rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); margin-bottom: 8px; }
+        .ct-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 360px); gap: 16px; align-items: start; }
+        .ct-picker { display: flex; flex-direction: column; gap: 10px; min-height: 0; min-width: 0; }
+        .ct-productos { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; max-height: 340px; overflow-y: auto; }
+        .ct-prod { background: var(--bg-card, #fff); border: 1px solid var(--border-color); border-radius: var(--ds-radius-md); padding: 8px; cursor: pointer; text-align: center; display: flex; flex-direction: column; gap: 6px; font-family: inherit; color: var(--text-color); position: relative; }
+        .ct-prod:hover { border-color: var(--primary-color); }
+        .ct-prod.elegido { border-color: var(--primary-color); box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 30%, transparent); }
+        .ct-prod-img { position: relative; width: 100%; aspect-ratio: 1 / 1; max-height: 76px; border-radius: 8px; background: var(--bg-light); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .ct-prod-img img { width: 100%; height: 100%; object-fit: cover; }
+        .ct-prod-vacia { color: var(--text-muted); font-size: 1.2rem; }
+        .ct-prod-badge { position: absolute; top: 4px; right: 4px; background: var(--primary-color); color: var(--text-on-primary, #fff); border-radius: var(--ds-radius-pill); font-size: .7rem; font-weight: 800; min-width: 20px; padding: 1px 6px; }
+        .ct-prod-nombre { font-size: .82rem; font-weight: 600; line-height: 1.15; overflow-wrap: anywhere; }
+        .ct-prod-precio { font-size: .85rem; font-weight: 800; color: var(--primary-darker, #1F8A82); font-variant-numeric: tabular-nums; }
+        .ct-orden { border: 1px solid var(--border-color); border-radius: var(--ds-radius-lg); background: var(--bg-lightest, #fafafa); display: flex; flex-direction: column; max-height: 480px; }
+        .ct-orden-titulo { padding: 10px 14px; font-weight: 700; font-size: .82rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); border-bottom: 1px solid var(--border-lighter, #eee); }
+        .ct-orden-lista { flex: 1 1 auto; overflow-y: auto; padding: 6px 12px; min-height: 90px; }
+        .ct-orden-vacia { text-align: center; color: var(--text-muted); padding: 24px 10px; }
+        .ct-orden-vacia i { font-size: 1.6rem; display: block; margin-bottom: 8px; }
+        .ct-orden-pie { border-top: 1px solid var(--border-lighter, #eee); padding: 10px 14px; background: var(--bg-card, #fff); }
+        .ct-total-linea { display: flex; justify-content: space-between; gap: 10px; font-size: .88rem; color: var(--text-muted); padding: 2px 0; }
+        .ct-total-linea.destacado { margin-top: 6px; padding-top: 8px; border-top: 1px dashed var(--border-color); color: var(--text-color); font-weight: 700; align-items: baseline; }
+        .ct-total-linea.destacado strong { font-size: 1.3rem; font-variant-numeric: tabular-nums; }
+        .ct-total-linea.ct-descuento { color: var(--success-color, #2E7D32); }
         .ct-sel { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border-lighter, #eee); }
-        .ct-sel-nombre { flex: 1; min-width: 0; }
-        .ct-sel-controles { display: flex; align-items: center; gap: 8px; }
-        .ct-sel-cant { font-weight: 800; min-width: 30px; text-align: center; font-variant-numeric: tabular-nums; }
-        .ct-sel-importe { font-weight: 700; min-width: 70px; text-align: right; font-variant-numeric: tabular-nums; }
-        .ct-total-fila { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 10px; font-size: 1rem; color: var(--text-muted); }
-        .ct-total-fila strong { font-size: 1.3rem; color: var(--text-color); font-variant-numeric: tabular-nums; }
-        .ct-enlace-body { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
-        .ct-enlace-folio { font-family: var(--font-heading); font-weight: 800; font-size: 1.2rem; color: var(--text-color); margin: 0; }
-        .ct-enlace-estado { font-size: .85rem; color: var(--text-muted); margin: 0; }
+        .ct-sel:last-child { border-bottom: 0; }
+        .ct-sel-nombre { flex: 1; min-width: 0; font-size: .88rem; }
+        .ct-sel-promo { font-size: .72rem; color: var(--success-color, #2E7D32); }
+        .ct-sel-controles { display: flex; align-items: center; gap: 6px; }
+        .ct-paso { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card, #fff); color: var(--text-color); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+        .ct-paso:hover { border-color: var(--primary-color); color: var(--primary-darker, #1F8A82); }
+        .ct-sel-cant { font-weight: 800; min-width: 26px; text-align: center; font-variant-numeric: tabular-nums; }
+        .ct-sel-importe { font-weight: 700; min-width: 66px; text-align: right; font-variant-numeric: tabular-nums; font-size: .88rem; }
+
+        /* QR: marco blanco y esquinas redondeadas, SIN enlace a la vista */
+        .ct-modal-qr { max-width: 420px !important; width: min(420px, calc(100vw - 24px)); }
+        .ct-enlace-body { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+        .ct-enlace-folio { font-family: var(--font-heading); font-weight: 800; font-size: 1.3rem; color: var(--text-color); margin: 0; }
+        .ct-enlace-nombre { font-size: .9rem; color: var(--text-muted); margin: 0; }
+        .ct-enlace-estado { margin: 0 0 6px; }
+        .ct-qr-marco { background: #fff; padding: 18px; border-radius: 18px; box-shadow: 0 6px 20px rgba(0,0,0,.12); display: inline-flex; }
         .ct-enlace-qr { display: flex; justify-content: center; }
-        .ct-enlace-qr img, .ct-enlace-qr canvas { border-radius: 8px; }
-        #ctEnlaceUrl { width: 100%; font-size: .8rem; padding: 8px 10px; border: 1px solid var(--border-color); border-radius: var(--ds-radius-md); background: var(--bg-input, var(--bg-card)); color: var(--text-muted); }
+        .ct-enlace-qr img, .ct-enlace-qr canvas { display: block; border-radius: 10px; }
+
+        /* Modal de pago */
+        .ct-modal-pago { max-width: 460px !important; width: min(460px, calc(100vw - 24px)); }
+        .ct-pago-folio { margin: 0; font-weight: 700; color: var(--text-color); }
+        .ct-pago-total { font-size: .95rem; color: var(--text-muted); margin: 6px 0 4px; }
+        .ct-pago-total strong { font-size: 1.5rem; color: var(--text-color); font-variant-numeric: tabular-nums; }
+        .ct-pago-opciones { display: flex; flex-direction: column; gap: 8px; }
+        .ct-pago-opciones .tp-btn { justify-content: flex-start; }
 
         /* Vista cocina: solo lectura, grande, sin botones */
         body.ct-cocina-on .sidebar,
         body.ct-cocina-on .tp-vistas { display: none !important; }
-        body.ct-cocina-on .ct-pedido { border-left: 4px solid var(--primary-color); }
         body.ct-cocina-on .ct-acciones,
         body.ct-cocina-on #ctBtnNuevo,
         body.ct-cocina-on .ct-engranaje { display: none !important; }
-        body.ct-cocina-on #ctLista { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
-        body.ct-cocina-on .ct-cocina-card {
-            background: var(--bg-card, #fff);
-            border: 1px solid var(--border-color);
-            border-radius: var(--ds-radius-lg);
-            padding: 20px;
+        body.ct-cocina-on #ctLista { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; align-items: start; }
+        .ct-cocina-card { background: var(--bg-card, #fff); border: 1px solid var(--border-color); border-left: 5px solid var(--primary-color); border-radius: var(--ds-radius-lg); padding: 20px; }
+        .ct-cocina-card.listo { border-left-color: var(--warning-color, #B45309); background: color-mix(in srgb, var(--warning-color, #B45309) 7%, var(--bg-card, #fff)); }
+        .ct-cocina-cab { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+        .ct-cocina-card .ct-folio { font-size: 1.6rem; }
+        .ct-cocina-card .ct-nombre-cliente { font-size: 1.2rem; }
+        .ct-cocina-card .ct-linea { font-size: 1.1rem; }
+        .ct-cocina-card .ct-cant { font-size: 1.2rem; }
+        .ct-cocina-listo { color: var(--warning-color, #B45309); font-weight: 800; font-size: .85rem; }
+
+        /* En el teléfono: una columna (el pedido debajo de los productos) */
+        @media (max-width: 760px) {
+            .ct-layout { grid-template-columns: 1fr; }
+            .ct-orden { max-height: none; }
+            .ct-productos { max-height: 240px; }
         }
-        body.ct-cocina-on .ct-cocina-card .ct-folio { font-size: 1.6rem; }
-        body.ct-cocina-on .ct-cocina-card .ct-nombre-cliente { font-size: 1.2rem; }
-        body.ct-cocina-on .ct-cocina-card .ct-linea { font-size: 1.1rem; }
-        body.ct-cocina-on .ct-cocina-card .ct-cant { font-size: 1.2rem; }
-        .ct-cocina-card .ct-cocina-cab { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
     </style>
     <script src="js/theme-init.js?v=5"></script>
     <script src="js/format-utils.js"></script>
@@ -1835,18 +1879,24 @@
                     <label for="ctNombre">¿A nombre de quién? (opcional)</label>
                     <input type="text" id="ctNombre" maxlength="80" placeholder="María, Juan, el de la gorra…" autocomplete="off">
                 </div>
-                <div class="ct-picker">
-                    <div class="tp-menu-buscador" style="margin:0">
-                        <i class="fas fa-search"></i>
-                        <input type="text" id="ctBuscar" placeholder="Buscar producto…" autocomplete="off">
+                <div class="ct-layout">
+                    <div class="ct-picker">
+                        <div class="tp-menu-buscador" style="margin:0">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="ctBuscar" placeholder="Buscar producto…" autocomplete="off">
+                        </div>
+                        <div class="tp-menu-cats" id="ctCats"></div>
+                        <div class="ct-productos" id="ctProductos"></div>
                     </div>
-                    <div class="tp-menu-cats" id="ctCats"></div>
-                    <div class="ct-productos" id="ctProductos"></div>
-                </div>
-                <div class="ct-seleccion-wrap">
-                    <div class="ct-seleccion-titulo">El pedido</div>
-                    <div id="ctSeleccion"></div>
-                    <div class="ct-total-fila">Total <strong id="ctTotal">$0.00</strong></div>
+                    <aside class="ct-orden">
+                        <div class="ct-orden-titulo">El pedido</div>
+                        <div class="ct-orden-lista" id="ctSeleccion"></div>
+                        <div class="ct-orden-pie">
+                            <div class="ct-total-linea"><span>Subtotal</span><span id="ctSubtotal">$0.00</span></div>
+                            <div class="ct-total-linea ct-descuento hidden" id="ctDescuentoLinea"><span id="ctDescuentoNombre">Descuento</span><span id="ctDescuento">-$0.00</span></div>
+                            <div class="ct-total-linea destacado"><span>Total</span><strong id="ctTotal">$0.00</strong></div>
+                        </div>
+                    </aside>
                 </div>
             </div>
             <div class="tp-modal-pie">
@@ -1856,23 +1906,51 @@
         </div>
     </div>
 
-    <!-- Modal: enlace/QR de seguimiento del pedido de mostrador -->
+    <!-- Modal: cobro del pedido (por cobrar / adelanto / pagado) -->
+    <div class="tp-overlay hidden" id="ctModalPago">
+        <div class="tp-modal ct-modal ct-modal-pago">
+            <div class="tp-modal-head">
+                <h3>Cobro del pedido</h3>
+                <button type="button" class="tp-modal-cerrar" data-cerrar="ctModalPago" aria-label="Cerrar"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="tp-modal-body">
+                <p class="ct-pago-folio" id="ctPagoFolio"></p>
+                <div class="ct-pago-total">Total a cobrar <strong id="ctPagoTotal">$0.00</strong></div>
+                <div class="tp-campo">
+                    <label>¿Ya pagó el cliente?</label>
+                    <div class="ct-pago-opciones">
+                        <button type="button" class="tp-btn" data-ct-pagar="unpaid"><i class="fas fa-clock"></i> Solo lo pidió</button>
+                        <button type="button" class="tp-btn" data-ct-pagar="partial"><i class="fas fa-coins"></i> Con adelanto</button>
+                        <button type="button" class="tp-btn primario" data-ct-pagar="paid"><i class="fas fa-circle-check"></i> Pagado completo</button>
+                    </div>
+                </div>
+                <div class="tp-campo">
+                    <label for="ctPagoAdelanto">Monto del adelanto (si dio una parte)</label>
+                    <input type="number" id="ctPagoAdelanto" min="0" step="1" inputmode="decimal" placeholder="0">
+                </div>
+            </div>
+            <div class="tp-modal-pie">
+                <button type="button" class="tp-btn" data-cerrar="ctModalPago">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: QR de seguimiento del pedido de mostrador (solo el QR, sin enlace) -->
     <div class="tp-overlay hidden" id="ctModalEnlace">
-        <div class="tp-modal ct-modal">
+        <div class="tp-modal ct-modal ct-modal-qr">
             <div class="tp-modal-head">
                 <h3>QR del pedido</h3>
                 <button type="button" class="tp-modal-cerrar" data-cerrar="ctModalEnlace" aria-label="Cerrar"><i class="fas fa-times"></i></button>
             </div>
             <div class="tp-modal-body ct-enlace-body">
                 <p class="ct-enlace-folio" id="ctEnlaceFolio"></p>
+                <p class="ct-enlace-nombre" id="ctEnlaceNombre"></p>
                 <p class="ct-enlace-estado" id="ctEnlaceEstado"></p>
-                <div id="ctEnlaceQR" class="ct-enlace-qr"></div>
-                <p class="tp-aviso">Escanea este código para seguir el pedido desde tu teléfono y, si quieres, recibir avisos cuando esté listo.</p>
-                <input type="text" id="ctEnlaceUrl" readonly onclick="this.select()">
+                <div class="ct-qr-marco"><div id="ctEnlaceQR" class="ct-enlace-qr"></div></div>
+                <p class="tp-aviso">El cliente escanea este código para ver su pedido y, si quiere, recibir el aviso cuando esté listo.</p>
             </div>
             <div class="tp-modal-pie">
                 <button type="button" class="tp-btn" data-cerrar="ctModalEnlace">Cerrar</button>
-                <button type="button" class="tp-btn primario" id="ctEnlaceCopiar"><i class="fas fa-copy"></i> Copiar enlace</button>
             </div>
         </div>
     </div>
@@ -2189,7 +2267,7 @@
     <script src="js/tables.js?v=13"></script>
     <script src="js/cobro.js?v=2"></script>
     <script src="js/comandas.js?v=6"></script>
-    <script src="js/counter.js?v=1"></script>
+    <script src="js/counter.js?v=2"></script>
     <script src="lib/animejs/anime.min.js"></script>
     <script src="js/design-system.js?v=7"></script>
 </body>

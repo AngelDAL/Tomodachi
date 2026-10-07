@@ -55,6 +55,12 @@ services:
       # externo vea el detalle de /api/health/ready.php (vacío = solo loopback).
       HEALTH_MIN_FREE_MB: ${HEALTH_MIN_FREE_MB:-200}
       HEALTH_TOKEN: ${HEALTH_TOKEN:-}
+      # Web Push (notificaciones al cliente del mostrador y a los dispositivos del
+      # personal). VAPID_PUBLIC_KEY/PRIVATE_KEY los genera `WebPush::generarVapid()`;
+      # sin ellos, el aviso push se omite y solo se usa el aviso en vivo (WebSocket).
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@tomodachi.local}
     ports:
       - "127.0.0.1:${PORT:-8091}:80"
     volumes:

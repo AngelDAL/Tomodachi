@@ -14,6 +14,7 @@ require_once '../../config/constants.php';
 require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
 require_once '../../includes/CounterService.class.php';
+require_once '../../includes/WebPush.class.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store, max-age=0');
@@ -34,7 +35,13 @@ try {
     if (!$pedido) {
         Response::notFound('No encontramos ese pedido. Revisa el enlace o pide al personal uno nuevo.');
     }
-    Response::success(['order' => $pedido]);
+    // La clave pública VAPID es pública por diseño: la página la necesita para suscribirse a
+    // los avisos push. Si no está configurada, se manda vacía y la página ofrece solo el aviso
+    // en vivo.
+    Response::success([
+        'order'            => $pedido,
+        'vapid_public_key' => WebPush::habilitado() ? WebPush::clavePublica() : '',
+    ]);
 } catch (Exception $e) {
     Response::error('No se pudo leer el pedido: ' . $e->getMessage(), 500);
 }

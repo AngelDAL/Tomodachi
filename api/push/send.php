@@ -21,6 +21,7 @@ require_once '../../includes/Response.class.php';
 require_once '../../includes/Validator.class.php';
 require_once '../../includes/Auth.class.php';
 require_once '../../includes/ApiAuth.class.php';
+require_once '../../includes/WebPush.class.php';
 
 $db = new Database();
 $auth = new Auth($db);
@@ -86,76 +87,11 @@ try {
 
         $sent = 0;
         foreach ($subs as $sub) {
-            $ok = webPushSend($sub['endpoint'], $sub['p256dh'], $sub['auth'], $title, $body, $url);
-            if ($ok) $sent++;
+            $r = WebPush::enviar($sub, $title, $body, $url);
+            if (!empty($r['ok'])) $sent++;
         }
         Response::success(['sent' => $sent, 'devices' => count($subs)], 'Notificación enviada');
     }
 } catch (Exception $e) {
     Response::error('Error servidor: ' . $e->getMessage(), 500);
-}
-
-/**
- * Envía una notificación Web Push (RFC 8292 / VAPID).
- * Sin dependencias externas: firma JWT y cifra AES-GCM manualmente.
- */
-function webPushSend($endpoint, $p256dh, $authKey, $title, $body, $url) {
-    $payload = json_encode(['title' => $title, 'body' => $body, 'url' => $url]);
-    if ($payload === false) return false;
-
-    $publicKey = base64_decode(str_replace(['-', '_'], ['+', '/'], VAPID_PUBLIC_KEY) . '==');
-    $privateKey = base64_decode(str_replace(['-', '_'], ['+', '/'], VAPID_PRIVATE_KEY) . '==');
-    $authSecret = base64_decode(str_replace(['-', '_'], ['+', '/'], $authKey) . '==');
-    $clientPub = base64_decode(str_replace(['-', '_'], ['+', '/'], $p256dh) . '==');
-
-    // Cifrado (una sola clave compartida, simplificada para CE)
-    // En la práctica se usa ECDH; aquí usamos una implementación mínima
-    // con AES-GCM y clave derivada (documentada en docs/PUSH.md).
-    $ikm = hash('sha256', $authSecret . $clientPub, true);
-    $cek = substr(hash('sha256', $ikm . 'Content-Encoding: aes128gcm', true), 0, 16);
-    $nonce = random_bytes(12);
-    $cipher = openssl_encrypt($payload, 'aes-128-gcm', $cek, OPENSSL_RAW_DATA, $nonce, $tag);
-    if ($cipher === false) return false;
-
-    $body = $nonce . $tag . $cipher;
-    $encrypted = base64_encode($body);
-
-    $headers = [
-        'Content-Type: application/octet-stream',
-        'TTL: 86400',
-        'Content-Encoding: aes128gcm',
-        'Authorization: ' . vapidAuthorization($endpoint, $publicKey, $privateKey)
-    ];
-
-    $ch = curl_init($endpoint);
-    curl_setopt_array($ch, [
-        CURLOPT_POST => true,
-        CURLOPT_POSTFIELDS => $encrypted,
-        CURLOPT_HTTPHEADER => $headers,
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 10
-    ]);
-    $resp = curl_exec($ch);
-    $http = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-
-    return $http >= 200 && $http < 300;
-}
-
-function vapidAuthorization($endpoint, $publicKey, $privateKey) {
-    $url = parse_url($endpoint);
-    $audience = $url['scheme'] . '://' . $url['host'];
-
-    $header = base64url(json_encode(['typ' => 'JWT', 'alg' => 'ES256']));
-    $payload = base64url(json_encode(['aud' => $audience, 'exp' => time() + 3600, 'sub' => defined('VAPID_SUBJECT') ? VAPID_SUBJECT : 'mailto:admin@tomodachi.local']));
-    $signature = '';
-    openssl_sign($header . '.' . $payload, $signature, openssl_pkey_get_private($privateKey), OPENSSL_ALGO_SHA256);
-    $jwt = $header . '.' . $payload . '.' . base64url($signature);
-
-    $pub = base64url($publicKey);
-    return 'vapid t=' . $jwt . ', k=' . $pub;
-}
-
-function base64url($data) {
-    return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
 }

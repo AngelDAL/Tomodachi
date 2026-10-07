@@ -2,10 +2,17 @@
 /**
  * Pedidos de mostrador — la cajera anota, la cocina ve, el cliente sigue por QR.
  *
- *   GET                       Pedidos del día (pendientes primero, luego cerrados).
+ *   GET                       Pedidos del día (activos primero). Con ?historico=1 incluye cerrados.
  *   GET  ?orden=N             Un pedido con sus artículos.
+ *   POST {action:'preview', items:[{product_id, quantity}]}
+ *                             Solo calcula (aplica promociones) para la vista previa. Scope read.
  *   POST {action:'create', customer_name?, notes?, items:[{product_id, quantity, notes?}]}
- *   POST {action:'status',  counter_order_id, status:'completed'|'cancelled', reason?}
+ *   POST {action:'status',  counter_order_id, status:'ready'|'completed'|'cancelled', reason?}
+ *   POST {action:'notify',  counter_order_id}   Avisa al cliente (deja el pedido en 'ready').
+ *   POST {action:'payment', counter_order_id, payment_status:'unpaid'|'partial'|'paid', paid_amount?}
+ *
+ * Regla de oro: NO se puede pasar a 'completed' sin haber avisado antes (status 'ready'),
+ * porque si no el cliente nunca se entera de que su pedido está hecho.
  *
  * El estado lo cambia la CAJERA (scope write): los cocineros no tocan pantalla. El
  * seguimiento del cliente es público y va por api/counter/track.php (sin sesión).
@@ -42,12 +49,19 @@ try {
         }
         Response::success($counter->listar($store_id, empty($_GET['historico'])));
     } elseif ($method === 'POST') {
-        [$actor, $store_id] = actorDeTienda($apiAuth, $auth, 'write');
         $data = json_decode(file_get_contents('php://input'), true);
         if (!is_array($data)) {
             $data = [];
         }
         $action = (string)($data['action'] ?? '');
+
+        // Vista previa: solo calcula (aplica promociones), no guarda nada -> basta scope read.
+        if ($action === 'preview') {
+            [$actor, $store_id] = actorDeTienda($apiAuth, $auth, 'read');
+            Response::success($counter->preview($store_id, $data['items'] ?? []));
+        }
+
+        [$actor, $store_id] = actorDeTienda($apiAuth, $auth, 'write');
 
         if ($action === 'create') {
             $pedido = $counter->crear(
@@ -68,7 +82,27 @@ try {
                 $data['reason'] ?? null,
                 (int)($actor['user_id'] ?? 0)
             );
-            Response::success($pedido, $pedido['status'] === 'completed' ? 'Pedido completado' : 'Pedido cancelado');
+            $mensaje = $pedido['status'] === 'ready' ? 'Cliente avisado: pedido listo'
+                : ($pedido['status'] === 'completed' ? 'Pedido entregado' : 'Pedido cancelado');
+            Response::success($pedido, $mensaje);
+        }
+
+        // Avisar que está listo (equivale a status:'ready', pero con su propia acción para que
+        // el botón de la cajera se lea "Avisar").
+        if ($action === 'notify') {
+            $pedido = $counter->notificar((int)($data['counter_order_id'] ?? 0), $store_id);
+            Response::success($pedido, 'Cliente avisado: pedido listo');
+        }
+
+        // Estado de pago: por cobrar / con adelanto / pagado completo.
+        if ($action === 'payment') {
+            $pedido = $counter->marcarPago(
+                (int)($data['counter_order_id'] ?? 0),
+                $store_id,
+                $data['payment_status'] ?? '',
+                $data['paid_amount'] ?? null
+            );
+            Response::success($pedido, 'Pago actualizado');
         }
 
         Response::validationError(['action' => 'Acción no reconocida']);

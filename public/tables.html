@@ -357,6 +357,23 @@
             min-width: 0;
         }
         .tp-panel-menu { border-right: 1px solid var(--border-lighter, #eee); }
+
+        /* ACTIVAR (dentro de la cuenta): sustituye los dos paneles y se ve a lo ancho, en
+           escritorio y en el teléfono. Nunca es una pestaña aparte del módulo. */
+        .tp-panel-activar { display: none; grid-column: 1 / -1; }
+        .tp-cuenta-cuerpo[data-lado="activar"] .tp-panel-menu,
+        .tp-cuenta-cuerpo[data-lado="activar"] .tp-panel-pedido { display: none; }
+        .tp-cuenta-cuerpo[data-lado="activar"] .tp-panel-activar { display: flex; }
+        .tp-tab-badge {
+            background: var(--primary-color);
+            color: var(--text-on-primary, #fff);
+            border-radius: var(--ds-radius-pill, 999px);
+            font-size: .7rem;
+            font-weight: 700;
+            padding: 1px 7px;
+            min-width: 18px;
+            text-align: center;
+        }
         .tp-panel-titulo {
             display: flex;
             align-items: center;
@@ -1394,7 +1411,7 @@
 
         <main class="main-content">
             <div class="inventory-container">
-                <!-- Dos vistas del mismo módulo del piso. No son páginas separadas a
+                <!-- Tres vistas del mismo módulo del piso. No son páginas separadas a
                      propósito: la cocina y el salón son la misma operación vista desde dos
                      lados, y en la tableta de la estación se abre con ?vista=comandas. -->
                 <div class="tp-vistas" id="tpVistas">
@@ -1409,13 +1426,6 @@
                          escanear el QR de un punto. Tenerla aquí evita una página aparte. -->
                     <button type="button" class="tp-vista" data-vista="carta">
                         <i class="fas fa-book-open"></i> Carta
-                    </button>
-                    <!-- ACTIVAR: la pantalla del mesero para autorizar a los dispositivos que
-                         piden permiso. Es una vista y no un modal porque se usa DE PIE, en una
-                         tableta, durante toda la jornada. -->
-                    <button type="button" class="tp-vista" data-vista="activar">
-                        <i class="fas fa-user-check"></i> Activar
-                        <span class="tp-vista-num hidden" id="tpVistaActivarN">0</span>
                     </button>
                 </div>
 
@@ -1545,6 +1555,7 @@
                             <div class="tp-cuenta-tabs" id="tpCuentaTabs">
                                 <button type="button" class="tp-tab activo" data-lado="pedido">Pedido <span class="tp-tab-total" id="tpTabTotal">$0.00</span></button>
                                 <button type="button" class="tp-tab" data-lado="menu">Menú</button>
+                                <button type="button" class="tp-tab" data-lado="activar">Activar <span class="tp-tab-badge hidden" id="tpTabActivarN">0</span></button>
                             </div>
 
                             <div class="tp-cuenta-cuerpo" id="tpCuentaCuerpoDos" data-lado="pedido">
@@ -1570,6 +1581,31 @@
                                         <div class="tp-pie-linea" id="tpCuentaPendientes"></div>
                                         <div class="tp-pie-acciones">
                                             <button type="button" class="tp-btn" id="tpCuentaEnviar"><i class="fas fa-paper-plane"></i> Enviar a preparación</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- ACTIVAR dispositivos: solo vive dentro de la cuenta abierta de
+                                     un punto (se entra a la mesa y ahí se autoriza a quien pide
+                                     permiso). El aviso llega por el WebSocket de la tienda: sin
+                                     polling. -->
+                                <div class="tp-panel tp-panel-activar">
+                                    <div class="tp-panel-titulo">Activar dispositivos <span class="tp-panel-nota">autoriza el teléfono de esta cuenta</span></div>
+                                    <div class="tp-panel-scroll">
+                                        <div class="act-activador">
+                                            <label for="tpActCodigo" class="act-etiqueta">Número de activación</label>
+                                            <div class="act-fila">
+                                                <input type="text" id="tpActCodigo" class="act-input" inputmode="numeric" maxlength="2"
+                                                       placeholder="47" autocomplete="off" aria-describedby="tpActAyuda">
+                                                <button type="button" class="tp-accion primario" id="tpActBtnActivar">
+                                                    <i class="fas fa-user-check"></i> Activar
+                                                </button>
+                                            </div>
+                                            <p class="tp-aviso" id="tpActAyuda">Los números se dictan de un vistazo: si el cliente no los tiene a la vista, que abra su pantalla y te los muestre.</p>
+                                            <p id="tpActError" class="tp-aviso hidden"></p>
+                                        </div>
+                                        <div id="tpActLista">
+                                            <div class="tp-vacio-mini"><i class="fas fa-spinner fa-spin"></i><p>Leyendo quién pide permiso…</p></div>
                                         </div>
                                     </div>
                                 </div>
@@ -1663,38 +1699,6 @@
                             <input type="text" id="ctaBuscar" placeholder="Buscar un producto…" autocomplete="off">
                         </div>
                         <div id="ctaProductos" class="cta-productos"></div>
-                    </div>
-                </section>
-                <!-- ============ Vista: ACTIVAR (la tableta del mesero) ============
-                     El cliente pide permiso desde su teléfono y aquí aparece en vivo. El mesero
-                     teclea los dos números que le dicen (o escanea el QR del comensal, que trae
-                     la vista con el código puesto) y ese dispositivo queda autorizado. -->
-                <section class="tp-vista-panel hidden" data-vista-panel="activar">
-                    <div class="tp-header">
-                        <div>
-                            <h1 class="tp-titulo">Activar pedidos</h1>
-                            <p class="tp-sub">Aquí aparecen los dispositivos que piden permiso para pedir. Escribe los dos números que te dicen, o escanea el código del cliente.</p>
-                        </div>
-                        <div class="tp-botones">
-                            <span class="tp-vivo" id="actVivo" title="Se actualiza solo"><i class="fas fa-bolt"></i> <span>al día</span></span>
-                        </div>
-                    </div>
-
-                    <div class="act-activador">
-                        <label for="actCodigo" class="act-etiqueta">Número de activación</label>
-                        <div class="act-fila">
-                            <input type="text" id="actCodigo" class="act-input" inputmode="numeric" maxlength="2"
-                                   placeholder="47" autocomplete="off" aria-describedby="actAyuda">
-                            <button type="button" class="tp-accion primario" id="actBtnActivar">
-                                <i class="fas fa-user-check"></i> Activar
-                            </button>
-                        </div>
-                        <p class="tp-aviso" id="actAyuda">Los números se dictan de un vistazo: si el cliente no los tiene a la vista, que abra su pantalla y te los muestre.</p>
-                        <p id="actError" class="tp-aviso hidden"></p>
-                    </div>
-
-                    <div id="actLista">
-                        <div class="tp-vacio"><i class="fas fa-spinner fa-spin"></i><p>Buscando dispositivos…</p></div>
                     </div>
                 </section>
             </div>
@@ -2010,9 +2014,9 @@
     <script src="js/sidebar-loader.js?v=13"></script>
     <script src="js/app.js?v=12"></script>
     <script src="js/ws-realtime.js?v=1"></script>
-    <script src="js/tables.js?v=11"></script>
+    <script src="js/tables.js?v=12"></script>
     <script src="js/cobro.js?v=2"></script>
-    <script src="js/comandas.js?v=4"></script>
+    <script src="js/comandas.js?v=5"></script>
     <script src="lib/animejs/anime.min.js"></script>
     <script src="js/design-system.js?v=7"></script>
 </body>

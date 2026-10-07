@@ -3,6 +3,8 @@
  * Activaciones: las solicitudes de pedido que esperan al mesero.
  *
  * GET /api/dining/activaciones.php      -> { dispositivos: [...], resumen: {esperando, activos} }
+ * GET /api/dining/activaciones.php?session_id=N -> solo los dispositivos de ESA cuenta (el
+ *      panel "Activar" del apartado de un punto). Sigue requiriendo scope read.
  *
  * Es para el PERSONAL (scope read): la pantalla "Activar" de la tablet del mesero. Devuelve,
  * por cuenta abierta de la tienda, cada dispositivo con su estado:
@@ -37,7 +39,16 @@ try {
     $actor = $apiAuth->requireActor($auth);
     $apiAuth->requireScope($actor, 'read');
     $store_id = (int)$actor['store_id'];
+    $session_filtro = (int)($_GET['session_id'] ?? 0);
+    if ($session_filtro < 0) $session_filtro = 0;
     $conn = $db->getConnection();
+
+    $filtroSesion = '';
+    $params = [':sid' => $store_id];
+    if ($session_filtro > 0) {
+        $filtroSesion = ' AND p.session_id = :sesion_filtro';
+        $params[':sesion_filtro'] = $session_filtro;
+    }
 
     $stmt = $conn->prepare("
         SELECT p.participant_id, p.display_name, p.activation_code, p.activation_expires,
@@ -59,9 +70,10 @@ try {
           AND (p.activated_at IS NOT NULL
                OR p.rejected_at IS NOT NULL
                OR (p.activation_expires IS NOT NULL AND p.activation_expires > NOW()))
+          " . $filtroSesion . "
         ORDER BY (p.activated_at IS NOT NULL), p.joined_at ASC
     ");
-    $stmt->execute([':sid' => $store_id]);
+    $stmt->execute($params);
     $filas = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $dispositivos = [];

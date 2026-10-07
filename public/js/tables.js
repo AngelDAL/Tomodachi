@@ -771,7 +771,9 @@ async function tpCargarCuenta(sessionId, opciones) {
         const d = pegar ? (o.respuesta || await tpPeticion(TP_API_SESSION + '?cuenta=' + sessionId))
                         : await tpPeticion(TP_API_SESSION + '?cuenta=' + sessionId);
         tpEstado.cuentaActual = d;
-        // El catálogo se carga una vez por sesión de pantalla; luego se filtra en memoria.
+        // La cuenta ya cargó: el contador de la pestaña "Activar" se pone al día (una lectura
+        // silenciosa; el resto de actualizaciones llegan por WebSocket al cambiar dispositivos).
+        actCargar(true);
         if (!tpEstado.catalogo.length) await tpCargarCatalogo();
         // Con `pegar` se toma la respuesta del servidor como estado vigente y se rearman
         // SOLO las tarjetas que cambiaron: ni parpadeo ni lista completa. `tpPintarCuenta`
@@ -1777,28 +1779,18 @@ document.addEventListener('DOMContentLoaded', async function () {
         if (b) tpPintarChipsCarta(b.getAttribute('data-carta'));
     });
 
-    // ── Activar (la tableta del mesero) ────────────────────────────────────────
-    // El número se puede teclear o llegar por el QR del comensal (?c=47), que abre ESTA vista.
-    const params = new URLSearchParams(window.location.search);
-    const codigoUrl = (params.get('c') || '').replace(/\D/g, '').slice(0, 2);
-    if (codigoUrl) {
-        const campo = document.getElementById('actCodigo');
-        campo.value = codigoUrl;
-        const ayuda = document.getElementById('actAyuda');
-        if (ayuda) ayuda.innerHTML = '<i class="fas fa-qrcode"></i> Escaneaste el código <strong>' + tpEsc(codigoUrl) +
-            '</strong>. Toca «Activar» y ese dispositivo podrá pedir.';
-    }
-    document.getElementById('actBtnActivar').addEventListener('click', function () {
-        const codigo = (document.getElementById('actCodigo').value || '').replace(/\D/g, '');
+    // ── Activar (dentro de la cuenta abierta de un punto) ────────────────────
+    document.getElementById('tpActBtnActivar').addEventListener('click', function () {
+        const codigo = (document.getElementById('tpActCodigo').value || '').replace(/\D/g, '');
         if (codigo.length < 1) { actError('Escribe los dos números que te dicen'); return; }
-        actAccion({ action: 'activar', code: codigo }, function (d) {
+        actAccion({ action: 'activar', code: codigo, session_id: actSessionId() || undefined }, function (d) {
             return 'Activado: ' + (d.punto ? d.punto + ' ' : '') + 'ya puede pedir';
         });
     });
-    document.getElementById('actCodigo').addEventListener('keydown', function (ev) {
-        if (ev.key === 'Enter') document.getElementById('actBtnActivar').click();
+    document.getElementById('tpActCodigo').addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter') document.getElementById('tpActBtnActivar').click();
     });
-    document.getElementById('actLista').addEventListener('click', function (ev) {
+    document.getElementById('tpActLista').addEventListener('click', function (ev) {
         const b = ev.target.closest('[data-act-activar],[data-act-rechazar],[data-act-expulsar],[data-act-reiniciar]');
         if (!b) return;
         if (b.hasAttribute('data-act-activar')) {
@@ -1925,6 +1917,9 @@ document.addEventListener('DOMContentLoaded', async function () {
         this.querySelectorAll('.tp-tab').forEach(function (t) {
             t.classList.toggle('activo', t.getAttribute('data-lado') === lado);
         });
+        // La pestaña "Activar" pide los dispositivos de ESTA cuenta al abrirse (y su aviso
+        // también se pone al día sola con el WebSocket de la tienda).
+        if (lado === 'activar') actCargar(false);
     });
 
     // Junta un punto
@@ -1987,6 +1982,34 @@ document.addEventListener('DOMContentLoaded', async function () {
     });
 
     await tpCargar();
+
+    // El QR del comensal (activación) codificaba una pestaña "Activar" que ya no existe: ahora
+    // la activación vive en la cuenta abierta del punto. Si llega ?c=<par>&p=<punto>, se abre el
+    // apartado de ese punto con la pestaña Activar y el número puesto.
+    try {
+        const paramsUrl = new URLSearchParams(window.location.search);
+        const codigoUrl = (paramsUrl.get('c') || '').replace(/\D/g, '').slice(0, 2);
+        const puntoEtiqueta = (paramsUrl.get('p') || '').trim();
+        if (codigoUrl) {
+            const campo = document.getElementById('tpActCodigo');
+            if (campo) campo.value = codigoUrl;
+            const p = (tpEstado.puntos || []).find(function (x) {
+                return x.label === puntoEtiqueta || String(x.table_id) === String(puntoEtiqueta);
+            });
+            const cuenta = p ? tpCuentaDePunto(Number(p.table_id)) : null;
+            if (p && cuenta) {
+                tpAbrirDetalle(Number(p.table_id));
+                // tpAbrirDetalle pide la cuenta al servidor; se entra a Activar cuando ya esté.
+                setTimeout(function () {
+                    tpMostrarLado('activar');
+                    const ayuda = document.getElementById('tpActAyuda');
+                    if (ayuda) ayuda.innerHTML = '<i class="fas fa-qrcode"></i> Escaneaste el código <strong>' + tpEsc(codigoUrl) +
+                        '</strong>. Toca «Activar» y ese dispositivo podrá pedir.';
+                    actCargar(false);
+                }, 600);
+            }
+        }
+    } catch (_e) { /* si el QR no abre solo, la mesa se ve y el mesero actúa desde el mapa */ }
 
     // Tiempo real: se acabó el sondeo y el botón de refrescar.
     tpConectarTiempoReal();
@@ -2978,32 +3001,41 @@ async function tpPintarChipsCarta(seleccionado) {
 }
 
 // ============================================================
-// ACTIVAR: la tableta del mesero autoriza a los dispositivos
+// ACTIVAR: autorizar a los dispositivos de la cuenta abierta
 // ============================================================
 /**
- * El comensal pide permiso desde su teléfono y aparece aquí. El mesero teclea los DOS NÚMEROS
- * que le dicen (o escanea el QR del comensal, que abre esta vista con el número puesto).
+ * El comensal pide permiso desde su teléfono y aparece aquí, dentro del apartado de la cuenta
+ * abierta (pestaña "Activar": se abre la mesa y ahí se autoriza). El mesero adelanta los DOS
+ * NÚMEROS que le dicen, o toca el dispositivo que ve en la lista.
  *
- * Se refresca cada 5 s mientras la vista está abierta: el aviso de "hay alguien esperando" tiene
- * que llegar solo, y el WebSocket de la tienda no reparte los canales de cada cuenta.
+ * El aviso de quién pide permiso llega por el WebSocket de la tienda (participant_joined /
+ * participant_activated / participant_rejected / participant_removed / participants_reset),
+ * igual que el resto del salón: SIN polling. A la API solo se le pide al abrir la pestaña y
+ * cuando cambia algo en esa cuenta.
  */
 const TP_API_ACTIVACIONES = '../api/dining/activaciones.php';
 
-const actEstado = { dispositivos: [], resumen: null, temporizador: null, enviando: false };
+const actEstado = { dispositivos: [], enviando: false };
+
+/** La cuenta cuyo apartado está a la vista (para no pintar dispositivos de otra mesa). */
+function actSessionId() {
+    const d = tpEstado.cuentaActual;
+    return (d && d.session && Number(d.session.session_id)) ? Number(d.session.session_id) : null;
+}
 
 async function actCargar(silencioso) {
-    const cont = document.getElementById('actLista');
-    if (!cont) return;
-    if (!silencioso && !actEstado.dispositivos.length) {
-        cont.innerHTML = '<div class="tp-vacio"><i class="fas fa-spinner fa-spin"></i><p>Buscando dispositivos…</p></div>';
+    const sid = actSessionId();
+    const cont = document.getElementById('tpActLista');
+    if (!cont || !sid) return;
+    if (!silencioso) {
+        cont.innerHTML = '<div class="tp-vacio-mini"><i class="fas fa-spinner fa-spin"></i><p>Leyendo quién pide permiso…</p></div>';
     }
     try {
-        const d = await tpPeticion(TP_API_ACTIVACIONES);
+        const d = await tpPeticion(TP_API_ACTIVACIONES + '?session_id=' + sid);
         actEstado.dispositivos = d.dispositivos || [];
-        actEstado.resumen = d.resumen || null;
     } catch (e) {
         if (!silencioso) {
-            cont.innerHTML = '<div class="tp-vacio"><i class="fas fa-triangle-exclamation"></i><h3>No se pudieron leer las activaciones</h3><p>' + tpEsc(tpMensajeDeError(e)) + '</p></div>';
+            cont.innerHTML = '<div class="tp-vacio"><i class="fas fa-triangle-exclamation"></i><h3>No se pudieron leer los dispositivos</h3><p>' + tpEsc(tpMensajeDeError(e)) + '</p></div>';
         }
         return;
     }
@@ -3011,46 +3043,56 @@ async function actCargar(silencioso) {
 }
 
 function actPintar() {
-    const insignia = document.getElementById('tpVistaActivarN');
-    const esperando = (actEstado.resumen || {}).esperando || 0;
+    // El contador de la pestaña "Activar": quién está esperando en ESTA cuenta.
+    const pendientes = actEstado.dispositivos.filter(function (d) { return d.estado === 'pendiente'; }).length;
+    const insignia = document.getElementById('tpTabActivarN');
     if (insignia) {
-        insignia.textContent = esperando;
-        insignia.classList.toggle('hidden', esperando === 0);
+        insignia.textContent = pendientes;
+        insignia.classList.toggle('hidden', pendientes === 0);
     }
 
-    const cont = document.getElementById('actLista');
+    // Si no hay nada que autorizar en esta cuenta, la pestaña sobra: se oculta. Vuelve sola
+    // cuando el WebSocket avisc de un participant_joined. Nunca se deja al operador con la
+    // pestaña muerta abierta: si estaba en "Activar", se regresa al pedido.
+    const tab = document.querySelector('.tp-tab[data-lado="activar"]');
+    const cuerpoVis = document.getElementById('tpCuentaCuerpoDos');
+    const hayAlgo = actEstado.dispositivos.length > 0;
+    if (tab) {
+        const enActivar = cuerpoVis && cuerpoVis.getAttribute('data-lado') === 'activar';
+        if (!hayAlgo && enActivar) tpMostrarLado('pedido');
+        tab.classList.toggle('hidden', !hayAlgo);
+    }
+
+    const cont = document.getElementById('tpActLista');
     if (!cont) return;
+    // La lista solo se pinta mientras la pestaña Activar está a la vista.
+    const cuerpo = document.getElementById('tpCuentaCuerpoDos');
+    if (cuerpo && cuerpo.getAttribute('data-lado') !== 'activar') return;
+
+    const primero = actEstado.dispositivos[0] || null;
+    const enEspera = pendientes;
+    const activos = actEstado.dispositivos.filter(function (d) { return d.estado === 'activo'; }).length;
+
     if (!actEstado.dispositivos.length) {
         cont.innerHTML = '<div class="tp-vacio"><i class="fas fa-user-check"></i>' +
-            '<h3>Nadie está pidiendo permiso</h3>' +
-            '<p>Cuando un cliente toque «Listo para pedir» en su teléfono, aparecerá aquí con sus dos números.</p></div>';
+            '<h3>Nadie pide permiso en esta cuenta</h3>' +
+            '<p>Cuando el teléfono del cliente toque «Listo para pedir», aparecerá aquí con sus dos números.</p></div>';
         return;
     }
 
-    // Agrupados por punto: el mesero ve la mesa primero y luego quién está en ella.
-    const grupos = {};
-    actEstado.dispositivos.forEach(function (d) {
-        const clave = String(d.table_id || 0) + '|' + d.punto;
-        (grupos[clave] = grupos[clave] || []).push(d);
-    });
+    const resumen = [];
+    if (enEspera) resumen.push(enEspera + ' esperando');
+    if (activos) resumen.push(activos + ' pueden pedir');
 
-    cont.innerHTML = Object.keys(grupos).map(function (clave) {
-        const ds = grupos[clave];
-        const primera = ds[0];
-        const enEspera = ds.filter(function (d) { return d.estado === 'pendiente'; }).length;
-        const activos = ds.filter(function (d) { return d.estado === 'activo'; }).length;
-        const resumen = [];
-        if (enEspera) resumen.push(enEspera + ' esperando');
-        if (activos) resumen.push(activos + ' pueden pedir');
-        return '<div class="tp-card" style="margin-bottom:14px">' +
+    cont.innerHTML =
+        '<div class="tp-card" style="margin-bottom:14px">' +
             '<div class="tp-card-top">' +
-                '<div><h3 class="tp-nombre">' + tpEsc(primera.punto) + '</h3>' +
-                '<p class="tp-zona">Cuenta ' + tpEsc(primera.cuenta) + ' · ' + tpEsc(resumen.join(' · ') || 'sin dispositivos') + '</p></div>' +
-                (primera.table_id ? '<button type="button" class="tp-btn" data-act-reiniciar="' + primera.table_id + '" title="Echa a TODOS los dispositivos de esta cuenta sin cerrarla"><i class="fas fa-rotate-left"></i> Reiniciar mesa</button>' : '') +
+                '<div><h3 class="tp-nombre">' + tpEsc(primero.punto || 'Punto de servicio') + '</h3>' +
+                '<p class="tp-zona">Cuenta ' + tpEsc(primero.cuenta) + ' · ' + tpEsc(resumen.join(' · ') || 'sin dispositivos') + '</p></div>' +
+                (primero.table_id ? '<button type="button" class="tp-btn" data-act-reiniciar="' + primero.table_id + '" title="Echa a TODOS los dispositivos de esta cuenta sin cerrarla"><i class="fas fa-rotate-left"></i> Reiniciar mesa</button>' : '') +
             '</div>' +
-            '<div style="margin-top:10px">' + ds.map(actDispositivo).join('') + '</div>' +
-            '</div>';
-    }).join('');
+            '<div style="margin-top:10px">' + actEstado.dispositivos.map(actDispositivo).join('') + '</div>' +
+        '</div>';
 }
 
 /** Un renglón por dispositivo: sus números (o su estado) y las acciones del mesero. */
@@ -3087,7 +3129,7 @@ function actDispositivo(d) {
 }
 
 function actError(msg) {
-    const caja = document.getElementById('actError');
+    const caja = document.getElementById('tpActError');
     if (!caja) return;
     caja.textContent = msg || '';
     caja.classList.toggle('hidden', !msg);
@@ -3100,27 +3142,13 @@ async function actAccion(cuerpo, exito) {
     try {
         const d = await tpPeticion(TP_API_SESSION, { method: 'POST', body: JSON.stringify(cuerpo) });
         tpAviso(typeof exito === 'function' ? exito(d) : (d && d.mensaje) || 'Listo', 'success');
-        const campo = document.getElementById('actCodigo');
+        const campo = document.getElementById('tpActCodigo');
         if (campo && cuerpo.action === 'activar') campo.value = '';
         await actCargar(true);
     } catch (e) {
         actError(tpMensajeDeError(e));
         tpAviso(tpMensajeDeError(e), 'error');
     } finally { actEstado.enviando = false; }
-}
-
-/** Vigila mientras la vista está a la vista (no se deja un temporizador corriendo de fondo). */
-function actVigilar(activo) {
-    if (actEstado.temporizador) {
-        clearInterval(actEstado.temporizador);
-        actEstado.temporizador = null;
-    }
-    if (!activo) return;
-    actEstado.temporizador = setInterval(function () {
-        const panel = document.querySelector('[data-vista-panel="activar"]');
-        if (!panel || panel.classList.contains('hidden')) return;
-        actCargar(true);
-    }, 5000);
 }
 
 // ============================================================
@@ -3145,6 +3173,13 @@ function tpConectarTiempoReal() {
             // alguien pudo cerrarla desde otro dispositivo.
             const d = tpEstado.cuentaActual;
             if (d && tpCuentaVisible()) tpCargarCuenta(d.session.session_id);
+
+            // La activación de dispositivos también llega por este socket (participant_*):
+            // ese aviso refresca el panel "Activar" de la cuenta abierta, sin sondeo.
+            const evento = (msg && msg.event) || '';
+            if (d && tpCuentaVisible() && evento.indexOf('participant') === 0) {
+                if (actSessionId() === Number(d.session.session_id)) actCargar(true);
+            }
 
             // El tablero de comandas vive en esta misma página y se alimenta de ESTE socket:
             // abrir un segundo WebSocket para lo mismo sería duplicar el aviso y el trabajo

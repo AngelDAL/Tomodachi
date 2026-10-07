@@ -862,6 +862,9 @@ function actionActivar($db, $apiAuth, $auth, array $data) {
 
     $participant_id = (int)($data['participant_id'] ?? 0);
     $codigo = trim((string)($data['code'] ?? ''));
+    // Si viene la cuenta, la activación por código se limita a ESA cuenta (el panel "Activar"
+    // del apartado de un punto): el par de dos cifras ya no compite con el de otras mesas.
+    $sesion_filtro = (int)($data['session_id'] ?? 0);
 
     if ($participant_id <= 0) {
         if (!preg_match('/^\d{1,2}$/', $codigo)) {
@@ -878,10 +881,13 @@ function actionActivar($db, $apiAuth, $auth, array $data) {
               AND p.activated_at IS NULL
               AND p.rejected_at IS NULL
               AND p.activation_expires > NOW()
+              " . ($sesion_filtro ? 'AND p.session_id = :sid_filtro ' : '') . "
             ORDER BY p.joined_at ASC
             LIMIT 1
         ");
-        $stmt->execute([':sid' => $store_id, ':codigo' => $codigo]);
+        $params = [':sid' => $store_id, ':codigo' => $codigo];
+        if ($sesion_filtro) $params[':sid_filtro'] = $sesion_filtro;
+        $stmt->execute($params);
         $participant_id = (int)$stmt->fetchColumn();
         if ($participant_id <= 0) {
             Response::error('Ese código no está esperando. Los códigos vencen: pídele al cliente que genere otros', 404);

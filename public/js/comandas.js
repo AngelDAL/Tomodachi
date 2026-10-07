@@ -284,9 +284,9 @@ function kdEsValido(actual, destino) {
 // ============================================================
 // Pestañas: salón y comandas
 // ============================================================
-/** Pestañas del módulo del piso: salón, comandas, carta y activar. */
+/** Pestañas del módulo del piso: salón, comandas y carta. */
 function kdPonerVista(nombre, guardar) {
-    const validas = ['comandas', 'carta', 'activar'];
+    const validas = ['comandas', 'carta'];
     kdEstado.vista = validas.indexOf(nombre) >= 0 ? nombre : 'salon';
 
     document.querySelectorAll('.tp-vista').forEach(function (b) {
@@ -303,16 +303,6 @@ function kdPonerVista(nombre, guardar) {
     if (kdEstado.vista === 'carta' && typeof ctaCargar === 'function') {
         ctaCargar();
     }
-    // Activar también: es la pantalla del mesero y tiene que estar fresca al abrirla.
-    if (kdEstado.vista === 'activar' && typeof actCargar === 'function') {
-        actCargar();
-        const campo = document.getElementById('actCodigo');
-        if (campo && !campo.value) campo.focus();
-    }
-    // El sondeo de las activaciones solo corre mientras esta vista está a la vista.
-    if (typeof actVigilar === 'function') {
-        actVigilar(kdEstado.vista === 'activar');
-    }
 
     // El estado vive en la URL para que la tableta de la cocina se abra directo:
     // tables.html?vista=comandas&estacion=2
@@ -325,6 +315,71 @@ function kdPonerVista(nombre, guardar) {
         }
         history.replaceState(null, '', url.toString());
     }
+}
+
+// ============================================================
+// Deslizar entre las vistas del módulo (salón · comandas · carta)
+// ============================================================
+// En el teléfono el gesto encaja con la vista de Punto de Venta (productos/carrito): deslizar
+// a la izquierda avanza a la siguiente pestaña y a la derecha vuelve a la anterior. Se apoya
+// en las pestañas de verdad (kdPonerVista), así que cada vista hace su propia carga.
+//
+// El tablero de comandas se EXCLUYE a propósito: ahí el dedo arrastra las tarjetas entre
+// columnas, y un desliz mal contado lo estropearía. El gesto vive en la fila de pestañas y en
+// las vistas del salón y la carta.
+
+const KD_SWIPE_MIN = 45;   // px que hay que recorrer para que cuente como desliz
+
+function kdVistasOrdenadas() {
+    return ['salon', 'comandas', 'carta'].filter(function (v) {
+        return !!document.querySelector('.tp-vista[data-vista="' + v + '"]');
+    });
+}
+
+function kdDeslizarVista(paso) {
+    const orden = kdVistasOrdenadas();
+    const actual = orden.indexOf(kdEstado.vista);
+    if (actual < 0) return;
+    const destino = orden[actual + paso];
+    if (destino) kdPonerVista(destino, true);
+}
+
+function kdPrepararDesliz(zona) {
+    if (!zona || zona.dataset.deslizPiso === '1') return;
+    zona.dataset.deslizPiso = '1';
+
+    let x0 = 0, y0 = 0, siguiendo = false;
+
+    function empezar(e) {
+        if (e.touches.length !== 1) { siguiendo = false; return; }
+        const t = e.touches[0];
+        // El gesto no empieza sobre un control: ahí el dedo hace otra cosa.
+        if (e.target.closest && e.target.closest('input, textarea, select, button, label, a')) {
+            siguiendo = false;
+            return;
+        }
+        // El plano del salón se desliza de lado a propósito: ahí el dedo acomoda mesas, no
+        // navega entre vistas.
+        if (e.target.closest && e.target.closest('#tpPlano, .tp-plano-marco, .tp-plano-ventana')) {
+            siguiendo = false;
+            return;
+        }
+        x0 = t.clientX; y0 = t.clientY; siguiendo = true;
+    }
+
+    function terminar(e) {
+        if (!siguiendo) return;
+        siguiendo = false;
+        const t = e.changedTouches && e.changedTouches[0];
+        if (!t) return;
+        const dx = t.clientX - x0, dy = t.clientY - y0;
+        if (Math.abs(dx) < KD_SWIPE_MIN || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+        kdDeslizarVista(dx < 0 ? 1 : -1);
+    }
+
+    zona.addEventListener('touchstart', empezar, { passive: true });
+    zona.addEventListener('touchend', terminar, { passive: true });
+    zona.addEventListener('touchcancel', function () { siguiendo = false; }, { passive: true });
 }
 
 // ============================================================
@@ -1249,6 +1304,13 @@ document.addEventListener('DOMContentLoaded', function () {
             const b = ev.target.closest('[data-vista]');
             if (b) kdPonerVista(b.getAttribute('data-vista'), true);
         });
+        // Deslizar entre vistas: en la fila de pestañas (siempre) y en el salón y la carta.
+        // El tablero de comandas se queda fuera (ahí se arrastran las tarjetas).
+        kdPrepararDesliz(vistas);
+        ['salon', 'carta'].forEach(function (v) {
+            const panel = document.querySelector('[data-vista-panel="' + v + '"]');
+            if (panel) kdPrepararDesliz(panel);
+        });
     }
 
     // Tablero
@@ -1440,11 +1502,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const anularBtn = kd$('kdAnularConfirmar');
     if (anularBtn) anularBtn.addEventListener('click', kdConfirmarAnular);
 
-    // Vista inicial: la tableta de la cocina entra directo con ?vista=comandas, y la del mesero
-    // con ?vista=activar (el QR del comensal abre justo ahí, con su número ya puesto).
+    // Vista inicial: la tableta de la cocina entra directo con ?vista=comandas.
     const params = new URLSearchParams(window.location.search);
     if (params.get('estacion')) kdEstado.filtro = Number(params.get('estacion')) || 0;
-    const vistaInicial = ['comandas', 'carta', 'activar'].indexOf(params.get('vista')) >= 0
+    const vistaInicial = ['comandas', 'carta'].indexOf(params.get('vista')) >= 0
         ? params.get('vista') : 'salon';
     kdPonerVista(vistaInicial, false);
 

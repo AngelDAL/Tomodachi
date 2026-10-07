@@ -1393,6 +1393,88 @@
             .tp-chip { flex: 1 1 auto; text-align: center; }
         }
     </style>
+    <style>
+        /* ============================================================
+           Mostrador — pedidos de clientes de paso (sin mesa).
+           La cajera anota, la cocina ve en solo lectura y el cliente
+           sigue por QR. Solo tokens del tema.
+           ============================================================ */
+        .ct-pedido {
+            background: var(--bg-card, #fff);
+            border: 1px solid var(--border-color);
+            border-radius: var(--ds-radius-lg);
+            padding: 14px 16px;
+            margin-bottom: 12px;
+        }
+        .ct-pedido.pendiente { border-left: 4px solid var(--primary-color); }
+        .ct-pedido.completado { border-left: 4px solid var(--success-color, #2E7D32); opacity: .85; }
+        .ct-pedido.cancelado { border-left: 4px solid var(--danger-color, #D32F2F); opacity: .7; }
+        .ct-cab { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+        .ct-identidad { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+        .ct-folio { font-family: var(--font-heading); font-weight: 800; font-size: 1.05rem; color: var(--text-color); }
+        .ct-nombre-cliente { font-weight: 600; color: var(--text-color); overflow-wrap: anywhere; }
+        .ct-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+        .ct-estado {
+            font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+            padding: 3px 9px; border-radius: var(--ds-radius-pill); white-space: nowrap;
+        }
+        .ct-estado-pending { background: color-mix(in srgb, var(--primary-color) 16%, transparent); color: var(--primary-darker, #1F8A82); }
+        .ct-estado-completed { background: color-mix(in srgb, var(--success-color, #2E7D32) 16%, transparent); color: var(--success-color, #2E7D32); }
+        .ct-estado-cancelled { background: color-mix(in srgb, var(--danger-color, #D32F2F) 14%, transparent); color: var(--danger-color, #D32F2F); }
+        .ct-min { font-size: .78rem; color: var(--text-muted); white-space: nowrap; }
+        .ct-articulos { display: flex; flex-direction: column; gap: 6px; }
+        .ct-linea { display: flex; gap: 8px; align-items: baseline; }
+        .ct-cant { font-weight: 800; color: var(--primary-darker, #1F8A82); font-variant-numeric: tabular-nums; min-width: 30px; }
+        .ct-nombre { flex: 1; min-width: 0; }
+        .ct-nota { color: var(--warning-color, #B45309); font-size: .82rem; }
+        .ct-importe { font-weight: 700; white-space: nowrap; color: var(--text-color); font-variant-numeric: tabular-nums; }
+        .ct-nota-pedido { margin-top: 8px; font-size: .82rem; color: var(--text-muted); font-style: italic; }
+        .ct-pie { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+        .ct-total { font-size: .9rem; color: var(--text-muted); }
+        .ct-total strong { font-size: 1.15rem; color: var(--text-color); font-variant-numeric: tabular-nums; }
+        .ct-acciones { display: flex; gap: 8px; flex-wrap: wrap; }
+
+        /* Modal de alta: catálogo arriba, pedido abajo */
+        .ct-modal { max-width: 880px !important; width: min(880px, calc(100vw - 24px)); }
+        .ct-modal-body { display: flex; flex-direction: column; gap: 14px; }
+        .ct-picker { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+        .ct-productos { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; max-height: 300px; overflow-y: auto; }
+        .ct-seleccion-wrap { border-top: 1px solid var(--border-lighter, #eee); padding-top: 12px; }
+        .ct-seleccion-titulo { font-weight: 700; font-size: .82rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); margin-bottom: 8px; }
+        .ct-sel { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border-lighter, #eee); }
+        .ct-sel-nombre { flex: 1; min-width: 0; }
+        .ct-sel-controles { display: flex; align-items: center; gap: 8px; }
+        .ct-sel-cant { font-weight: 800; min-width: 30px; text-align: center; font-variant-numeric: tabular-nums; }
+        .ct-sel-importe { font-weight: 700; min-width: 70px; text-align: right; font-variant-numeric: tabular-nums; }
+        .ct-total-fila { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 10px; font-size: 1rem; color: var(--text-muted); }
+        .ct-total-fila strong { font-size: 1.3rem; color: var(--text-color); font-variant-numeric: tabular-nums; }
+        .ct-enlace-body { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+        .ct-enlace-folio { font-family: var(--font-heading); font-weight: 800; font-size: 1.2rem; color: var(--text-color); margin: 0; }
+        .ct-enlace-estado { font-size: .85rem; color: var(--text-muted); margin: 0; }
+        .ct-enlace-qr { display: flex; justify-content: center; }
+        .ct-enlace-qr img, .ct-enlace-qr canvas { border-radius: 8px; }
+        #ctEnlaceUrl { width: 100%; font-size: .8rem; padding: 8px 10px; border: 1px solid var(--border-color); border-radius: var(--ds-radius-md); background: var(--bg-input, var(--bg-card)); color: var(--text-muted); }
+
+        /* Vista cocina: solo lectura, grande, sin botones */
+        body.ct-cocina-on .sidebar,
+        body.ct-cocina-on .tp-vistas { display: none !important; }
+        body.ct-cocina-on .ct-pedido { border-left: 4px solid var(--primary-color); }
+        body.ct-cocina-on .ct-acciones,
+        body.ct-cocina-on #ctBtnNuevo,
+        body.ct-cocina-on .ct-engranaje { display: none !important; }
+        body.ct-cocina-on #ctLista { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+        body.ct-cocina-on .ct-cocina-card {
+            background: var(--bg-card, #fff);
+            border: 1px solid var(--border-color);
+            border-radius: var(--ds-radius-lg);
+            padding: 20px;
+        }
+        body.ct-cocina-on .ct-cocina-card .ct-folio { font-size: 1.6rem; }
+        body.ct-cocina-on .ct-cocina-card .ct-nombre-cliente { font-size: 1.2rem; }
+        body.ct-cocina-on .ct-cocina-card .ct-linea { font-size: 1.1rem; }
+        body.ct-cocina-on .ct-cocina-card .ct-cant { font-size: 1.2rem; }
+        .ct-cocina-card .ct-cocina-cab { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+    </style>
     <script src="js/theme-init.js?v=5"></script>
     <script src="js/format-utils.js"></script>
     <link rel="manifest" href="manifest.json">
@@ -1422,6 +1504,12 @@
                     <button type="button" class="tp-vista" data-vista="comandas">
                         <i class="fas fa-fire-burner"></i> Comandas
                         <span class="tp-vista-num hidden" id="tpVistaComandasN">0</span>
+                    </button>
+                    <!-- MOSTRADOR: pedidos de clientes de paso (sin mesa). La cajera anota, la
+                         cocina ve en solo lectura y el cliente sigue su orden por QR. -->
+                    <button type="button" class="tp-vista" data-vista="mostrador">
+                        <i class="fas fa-store"></i> Mostrador
+                        <span class="tp-vista-num hidden" id="ctPendientes">0</span>
                     </button>
                     <!-- La CARTA es del mismo módulo del piso: es lo que el cliente ve al
                          escanear el QR de un punto. Tenerla aquí evita una página aparte. -->
@@ -1702,8 +1790,91 @@
                         <div id="ctaProductos" class="cta-productos"></div>
                     </div>
                 </section>
+
+                <!-- ============ Vista: MOSTRADOR (pedidos de clientes de paso) ============
+                     La cajera anota lo que pide una persona (a nombre de quién), la cocina lo
+                     ve en una pantalla de SOLO LECTURA y el cliente sigue su orden por QR. -->
+                <section class="tp-vista-panel hidden" data-vista-panel="mostrador">
+                    <div class="tp-header">
+                        <div>
+                            <h1 class="tp-titulo">Mostrador</h1>
+                            <p class="tp-sub">Pedidos de clientes de paso, sin mesa. Anota a nombre de quién van y dale el QR para que siga su orden.</p>
+                        </div>
+                        <div class="tp-botones">
+                            <span class="tp-vivo" id="ctVivo" title="Se actualiza solo, en tiempo real"><i class="fas fa-bolt"></i> <span>en vivo</span></span>
+                            <button type="button" class="tp-btn primario" id="ctBtnNuevo"><i class="fas fa-plus"></i> Nuevo pedido</button>
+                            <div class="tp-engranaje ct-engranaje">
+                                <button type="button" class="tp-btn tp-icono" id="ctMenuBtn" aria-haspopup="true" aria-expanded="false" title="Opciones del mostrador"><i class="fas fa-ellipsis"></i></button>
+                                <div class="tp-menu-config hidden" id="ctMenu">
+                                    <button type="button" id="ctMenuHistorico"><i class="fas fa-clock-rotate-left"></i> <span>Ver completados/cancelados</span></button>
+                                    <button type="button" id="ctMenuCocina"><i class="fas fa-eye"></i> <span id="ctMenuCocinaTexto">Vista cocina (solo lectura)</span></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="button" class="tp-btn hidden" id="ctSalirCocina" style="margin:0 0 12px"><i class="fas fa-arrow-left"></i> Salir de la vista cocina</button>
+
+                    <div id="ctLista">
+                        <div class="tp-vacio"><i class="fas fa-spinner fa-spin"></i><p>Cargando pedidos…</p></div>
+                    </div>
+                </section>
             </div>
         </main>
+    </div>
+
+    <!-- Modal: nuevo pedido de mostrador -->
+    <div class="tp-overlay hidden" id="ctModalNuevo">
+        <div class="tp-modal ct-modal">
+            <div class="tp-modal-head">
+                <h3>Nuevo pedido</h3>
+                <button type="button" class="tp-modal-cerrar" data-cerrar="ctModalNuevo" aria-label="Cerrar"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="tp-modal-body ct-modal-body">
+                <div class="tp-campo">
+                    <label for="ctNombre">¿A nombre de quién? (opcional)</label>
+                    <input type="text" id="ctNombre" maxlength="80" placeholder="María, Juan, el de la gorra…" autocomplete="off">
+                </div>
+                <div class="ct-picker">
+                    <div class="tp-menu-buscador" style="margin:0">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="ctBuscar" placeholder="Buscar producto…" autocomplete="off">
+                    </div>
+                    <div class="tp-menu-cats" id="ctCats"></div>
+                    <div class="ct-productos" id="ctProductos"></div>
+                </div>
+                <div class="ct-seleccion-wrap">
+                    <div class="ct-seleccion-titulo">El pedido</div>
+                    <div id="ctSeleccion"></div>
+                    <div class="ct-total-fila">Total <strong id="ctTotal">$0.00</strong></div>
+                </div>
+            </div>
+            <div class="tp-modal-pie">
+                <button type="button" class="tp-btn" data-cerrar="ctModalNuevo">Cancelar</button>
+                <button type="button" class="tp-btn primario" id="ctGuardar"><i class="fas fa-check"></i> Guardar pedido</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: enlace/QR de seguimiento del pedido de mostrador -->
+    <div class="tp-overlay hidden" id="ctModalEnlace">
+        <div class="tp-modal ct-modal">
+            <div class="tp-modal-head">
+                <h3>QR del pedido</h3>
+                <button type="button" class="tp-modal-cerrar" data-cerrar="ctModalEnlace" aria-label="Cerrar"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="tp-modal-body ct-enlace-body">
+                <p class="ct-enlace-folio" id="ctEnlaceFolio"></p>
+                <p class="ct-enlace-estado" id="ctEnlaceEstado"></p>
+                <div id="ctEnlaceQR" class="ct-enlace-qr"></div>
+                <p class="tp-aviso">Escanea este código para seguir el pedido desde tu teléfono y, si quieres, recibir avisos cuando esté listo.</p>
+                <input type="text" id="ctEnlaceUrl" readonly onclick="this.select()">
+            </div>
+            <div class="tp-modal-pie">
+                <button type="button" class="tp-btn" data-cerrar="ctModalEnlace">Cerrar</button>
+                <button type="button" class="tp-btn primario" id="ctEnlaceCopiar"><i class="fas fa-copy"></i> Copiar enlace</button>
+            </div>
+        </div>
     </div>
 
     <!-- Modal: crear / editar una carta. El modo y las opciones son BOTONES (nunca un select). -->
@@ -2015,9 +2186,10 @@
     <script src="js/sidebar-loader.js?v=13"></script>
     <script src="js/app.js?v=12"></script>
     <script src="js/ws-realtime.js?v=1"></script>
-    <script src="js/tables.js?v=12"></script>
+    <script src="js/tables.js?v=13"></script>
     <script src="js/cobro.js?v=2"></script>
-    <script src="js/comandas.js?v=5"></script>
+    <script src="js/comandas.js?v=6"></script>
+    <script src="js/counter.js?v=1"></script>
     <script src="lib/animejs/anime.min.js"></script>
     <script src="js/design-system.js?v=7"></script>
 </body>

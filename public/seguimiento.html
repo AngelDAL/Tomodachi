@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Mi pedido - Tomodachi</title>
+    <link rel="stylesheet" href="css/fonts.css?v=4">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css?v=4">
+    <link rel="stylesheet" href="css/variables.css?v=6">
+    <link rel="stylesheet" href="css/design-system.css?v=10">
+    <style>
+        :root { color-scheme: light dark; }
+        .hidden { display: none !important; }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: var(--font-body, system-ui, sans-serif);
+            background: var(--bg-color, var(--bg-light, #f4f7f6));
+            color: var(--text-color, #1a1a2e);
+            min-height: 100vh;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 20px 14px;
+        }
+        .wrap { width: 100%; max-width: 520px; display: flex; flex-direction: column; gap: 14px; }
+        .card {
+            background: var(--bg-card, #fff);
+            border: 1px solid var(--border-color, #e3e8ec);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 8px 24px color-mix(in srgb, var(--dark-color, #0c2b29) 8%, transparent);
+        }
+        .marca { display: flex; align-items: center; gap: 8px; color: var(--text-muted, #667); font-size: .85rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; }
+        .marca i { color: var(--primary-color, #39C5BB); }
+        .estado {
+            margin-top: 14px;
+            border-radius: 14px;
+            padding: 18px;
+            text-align: center;
+            color: var(--text-on-primary, #fff);
+        }
+        .estado i { font-size: 2rem; display: block; margin-bottom: 6px; }
+        .estado h1 { margin: 0; font-size: 1.5rem; font-family: var(--font-heading, sans-serif); }
+        .estado .hora { margin-top: 6px; font-size: .85rem; opacity: .92; }
+        .estado-pending { background: linear-gradient(135deg, var(--warning-color, #B45309), #D97706); }
+        .estado-completed { background: linear-gradient(135deg, var(--success-color, #2E7D32), #43A047); }
+        .estado-cancelled { background: linear-gradient(135deg, var(--danger-color, #D32F2F), #E53935); }
+        .cab { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+        .folio { font-family: var(--font-heading); font-weight: 800; font-size: 1.3rem; }
+        .nombre { color: var(--text-muted); font-size: .95rem; }
+        .linea { display: flex; gap: 10px; align-items: baseline; padding: 8px 0; border-bottom: 1px solid var(--border-lighter, #eef2f4); }
+        .linea:last-child { border-bottom: 0; }
+        .cant { font-weight: 800; color: var(--primary-darker, #1F8A82); font-variant-numeric: tabular-nums; min-width: 30px; }
+        .prod { flex: 1; min-width: 0; }
+        .nota { color: var(--warning-color, #B45309); font-size: .82rem; }
+        .total { display: flex; justify-content: space-between; font-weight: 800; font-size: 1.2rem; margin-top: 10px; }
+        .qr-box { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+        .qr-box p { margin: 0; font-size: .85rem; color: var(--text-muted); }
+        #qr { display: flex; justify-content: center; }
+        .botones { display: flex; gap: 10px; flex-wrap: wrap; }
+        button {
+            flex: 1; min-width: 150px;
+            border: 0; border-radius: 12px; cursor: pointer;
+            padding: 13px 16px; font-size: .95rem; font-weight: 700; font-family: inherit;
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            background: var(--primary-color, #39C5BB); color: var(--text-on-primary, #fff);
+        }
+        button.secundario { background: var(--bg-card, #fff); color: var(--text-color); border: 1px solid var(--border-color); }
+        .aviso { font-size: .82rem; color: var(--text-muted); text-align: center; }
+        .aviso a { color: var(--primary-darker, #1F8A82); word-break: break-all; }
+        .conexion { font-size: .75rem; color: var(--text-muted); text-align: center; }
+    </style>
+    <script src="lib/qrcodejs/qrcode.min.js"></script>
+</head>
+<body>
+    <div class="wrap">
+        <div class="marca"><i class="fas fa-utensils"></i> <span>Tomodachi · Mi pedido</span></div>
+
+        <div class="card" id="cardEstado">
+            <div class="cab">
+                <span class="folio" id="folio">Pedido</span>
+                <span class="nombre" id="nombre"></span>
+            </div>
+            <div class="estado estado-pending" id="estado">
+                <i class="fas fa-fire-burner" id="estadoIcono"></i>
+                <h1 id="estadoTexto">En preparación</h1>
+                <div class="hora" id="estadoHora"></div>
+            </div>
+        </div>
+
+        <div class="card" id="cardArticulos">
+            <div id="articulos"></div>
+            <div class="total"><span>Total</span><span id="total">$0.00</span></div>
+        </div>
+
+        <div class="card qr-box">
+            <div class="marca"><i class="fas fa-qrcode"></i> <span>Mi código de recogida</span></div>
+            <div id="qr"></div>
+            <p>Muestra este código al llegar para recoger tu pedido.</p>
+        </div>
+
+        <div class="botones">
+            <button type="button" id="btnNotif"><i class="fas fa-bell"></i> <span>Activar avisos</span></button>
+            <button type="button" class="secundario" id="btnCopiar"><i class="fas fa-link"></i> Copiar enlace</button>
+        </div>
+        <div class="conexion" id="conexion"></div>
+        <div class="aviso hidden" id="avisoError"></div>
+    </div>
+
+    <script>
+    (function () {
+        'use strict';
+        var params = new URLSearchParams(window.location.search);
+        var token = (params.get('t') || '').trim();
+        var pedido = null;
+        var socket = null;
+        var sondeo = null;
+
+        var $ = function (id) { return document.getElementById(id); };
+        function dinero(n) { return '$' + (Number(n) || 0).toFixed(2); }
+        function esc(v) { return String(v === null || v === undefined ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+        var ETIQUETA = { pending: ['En preparación', 'fa-fire-burner', 'estado-pending'], completed: ['Listo para recoger', 'fa-check', 'estado-completed'], cancelled: ['Cancelado', 'fa-ban', 'estado-cancelled'] };
+
+        function pintar() {
+            if (!pedido) return;
+            $('folio').textContent = 'Pedido #' + pedido.number;
+            $('nombre').textContent = pedido.customer_name ? 'A nombre de ' + pedido.customer_name : '';
+
+            var e = ETIQUETA[pedido.status] || ETIQUETA.pending;
+            var est = $('estado');
+            est.className = 'estado ' + e[2];
+            $('estadoIcono').className = 'fas ' + e[1];
+            $('estadoTexto').textContent = e[0];
+            $('estadoHora').textContent = pedido.status === 'pending'
+                ? (pedido.minutos > 0 ? 'Hace ' + pedido.minutos + ' min' : 'Recién registrado')
+                : '';
+
+            $('articulos').innerHTML = (pedido.items || []).map(function (it) {
+                return '<div class="linea"><span class="cant">' + (Number(it.quantity)||0) + '×</span>' +
+                    '<span class="prod">' + esc(it.product_name) +
+                        (it.notes ? '<div class="nota">' + esc(it.notes) + '</div>' : '') + '</span></div>';
+            }).join('');
+            $('total').textContent = dinero(pedido.total);
+        }
+
+        function dibujarQr() {
+            var c = $('qr');
+            c.innerHTML = '';
+            if (typeof QRCode === 'function') {
+                new QRCode(c, { text: window.location.href, width: 180, height: 180, correctLevel: QRCode.CorrectLevel.M });
+            }
+        }
+
+        function notificar(texto) {
+            try {
+                if (('Notification' in window) && Notification.permission === 'granted') {
+                    new Notification(texto, { body: 'Tu pedido en Tomodachi', icon: '/public/assets/images/default-logo.png' });
+                }
+            } catch (e) { /* sin permisos, se sigue sin notificar */ }
+        }
+
+        async function cargar(silencioso) {
+            try {
+                var r = await fetch('../api/counter/track.php?t=' + encodeURIComponent(token), { cache: 'no-store' });
+                var d = await r.json();
+                if (!r.ok || !d.success) throw new Error((d && d.message) || 'No se pudo leer el pedido');
+                var anterior = pedido ? pedido.status : null;
+                pedido = d.data.order;
+                pintar();
+                if (anterior && anterior !== pedido.status && pedido.status !== 'pending') {
+                    var e = ETIQUETA[pedido.status];
+                    notificar(e ? e[0] : 'Tu pedido cambió');
+                }
+                $('avisoError').classList.add('hidden');
+            } catch (err) {
+                if (!silencioso) {
+                    $('avisoError').textContent = (err && err.message) || 'No encontramos tu pedido.';
+                    $('avisoError').classList.remove('hidden');
+                }
+            }
+        }
+
+        function conectarWS() {
+            if (!token || !('WebSocket' in window)) return;
+            var scheme = (location.protocol === 'https:') ? 'wss:' : 'ws:';
+            try {
+                socket = new WebSocket(scheme + '//' + window.location.host + '/ws/?session=' + encodeURIComponent(token));
+            } catch (e) { socket = null; return; }
+            socket.onopen = function () { $('conexion').textContent = 'Conectado · se actualiza solo'; };
+            socket.onmessage = function (ev) {
+                var m = null; try { m = JSON.parse(ev.data); } catch (e) { return; }
+                if (m && (m.type === 'order_update' || m.event)) cargar(true);
+            };
+            socket.onclose = function () { $('conexion').textContent = 'Reconectando…'; };
+            socket.onerror = function () {};
+        }
+
+        function iniciarSondeo() {
+            if (sondeo) return;
+            sondeo = setInterval(function () { if (!socket || socket.readyState !== 1) cargar(true); }, 20000);
+        }
+
+        $('btnNotif').addEventListener('click', function () {
+            if (!('Notification' in window)) { $('btnNotif').querySelector('span').textContent = 'Avisos no soportados'; return; }
+            Notification.requestPermission().then(function (permiso) {
+                if (permiso === 'granted') {
+                    $('btnNotif').querySelector('span').textContent = 'Avisos activados';
+                    notificar('Avisos activados: te diremos cuando esté listo.');
+                } else {
+                    $('btnNotif').querySelector('span').textContent = 'Avisos desactivados';
+                }
+            });
+        });
+
+        $('btnCopiar').addEventListener('click', function () {
+            if (navigator.clipboard) navigator.clipboard.writeText(window.location.href);
+            else { var t = document.createElement('input'); t.value = window.location.href; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); }
+            var old = this.innerHTML; this.innerHTML = '<i class="fas fa-check"></i> Copiado'; setTimeout(function () { document.getElementById('btnCopiar').innerHTML = old; }, 1500);
+        });
+
+        if (!token) {
+            $('avisoError').textContent = 'Falta el identificador del pedido en el enlace.';
+            $('avisoError').classList.remove('hidden');
+        } else {
+            dibujarQr();
+            cargar(false);
+            conectarWS();
+            iniciarSondeo();
+        }
+    })();
+    </script>
+</body>
+</html>

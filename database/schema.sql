@@ -1133,6 +1133,49 @@ CREATE TABLE comandas (
     FOREIGN KEY (station_id) REFERENCES stations(station_id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Tabla: counter_orders
+-- Pedidos de mostrador (clientes de paso, sin mesa). La cajera anota lo pedido, la cocina
+-- lo ve en una pantalla de solo lectura y el cliente sigue su pedido por un enlace/QR con
+-- su folio, nombre y estado. No es una cuenta ni toca dinero/inventario: es flujo.
+CREATE TABLE counter_orders (
+    counter_order_id INT AUTO_INCREMENT PRIMARY KEY,
+    store_id INT NOT NULL,
+    business_date DATE NOT NULL,
+    number INT NOT NULL COMMENT 'Folio del día, por tienda',
+    customer_name VARCHAR(80) NULL COMMENT 'A nombre de quién va el pedido',
+    tracking_token CHAR(36) NOT NULL COMMENT 'UUID v4: llave del enlace de seguimiento y canal WS del cliente',
+    status ENUM('pending','completed','cancelled') NOT NULL DEFAULT 'pending',
+    notes VARCHAR(255) NULL,
+    cancel_reason VARCHAR(255) NULL,
+    created_by INT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at DATETIME NULL,
+    cancelled_at DATETIME NULL,
+    UNIQUE KEY uk_counter_folio (store_id, business_date, number),
+    UNIQUE KEY uk_counter_token (tracking_token),
+    INDEX idx_counter_store (store_id, status, business_date),
+    FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(user_id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: counter_order_items
+-- Lo pedido en un pedido de mostrador. Guarda el nombre y el precio al momento para que el
+-- pedido no cambie si el producto se renombra o cambia de precio después.
+CREATE TABLE counter_order_items (
+    item_id INT AUTO_INCREMENT PRIMARY KEY,
+    counter_order_id INT NOT NULL,
+    product_id INT NULL,
+    product_name VARCHAR(150) NOT NULL COMMENT 'Guardado al momento: si el producto cambia, el pedido no',
+    quantity DECIMAL(12,3) NOT NULL DEFAULT 1,
+    unit_price DECIMAL(10,2) NOT NULL,
+    notes VARCHAR(255) NULL,
+    line_total DECIMAL(10,2) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_coitem_order (counter_order_id),
+    FOREIGN KEY (counter_order_id) REFERENCES counter_orders(counter_order_id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Tabla: print_jobs
 -- La cola de impresión del servidor. Una fila por (comanda, salida) con el payload
 -- ESC/POS YA renderizado: el worker (scripts/print-worker.php) solo reclama, escribe

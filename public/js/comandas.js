@@ -284,9 +284,9 @@ function kdEsValido(actual, destino) {
 // ============================================================
 // Pestañas: salón y comandas
 // ============================================================
-/** Pestañas del módulo del piso: salón, comandas y carta. */
+/** Pestañas del módulo del piso: salón, comandas, mostrador y carta. */
 function kdPonerVista(nombre, guardar) {
-    const validas = ['comandas', 'carta'];
+    const validas = ['comandas', 'mostrador', 'carta'];
     kdEstado.vista = validas.indexOf(nombre) >= 0 ? nombre : 'salon';
 
     document.querySelectorAll('.tp-vista').forEach(function (b) {
@@ -298,6 +298,10 @@ function kdPonerVista(nombre, guardar) {
 
     if (kdEstado.vista === 'comandas') {
         kdCargar(true);
+    }
+    // El mostrador (pedidos de clientes de paso) vive en counter.js: se pide al entrar.
+    if (kdEstado.vista === 'mostrador' && typeof ctCargar === 'function') {
+        ctCargar(false);
     }
     // La carta vive en tables.js (la otra cara del QR de los puntos): se pide al entrar.
     if (kdEstado.vista === 'carta' && typeof ctaCargar === 'function') {
@@ -331,7 +335,7 @@ function kdPonerVista(nombre, guardar) {
 const KD_SWIPE_MIN = 45;   // px que hay que recorrer para que cuente como desliz
 
 function kdVistasOrdenadas() {
-    return ['salon', 'comandas', 'carta'].filter(function (v) {
+    return ['salon', 'comandas', 'mostrador', 'carta'].filter(function (v) {
         return !!document.querySelector('.tp-vista[data-vista="' + v + '"]');
     });
 }
@@ -1505,7 +1509,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Vista inicial: la tableta de la cocina entra directo con ?vista=comandas.
     const params = new URLSearchParams(window.location.search);
     if (params.get('estacion')) kdEstado.filtro = Number(params.get('estacion')) || 0;
-    const vistaInicial = ['comandas', 'carta'].indexOf(params.get('vista')) >= 0
+    const vistaInicial = ['comandas', 'mostrador', 'carta'].indexOf(params.get('vista')) >= 0
         ? params.get('vista') : 'salon';
     kdPonerVista(vistaInicial, false);
 

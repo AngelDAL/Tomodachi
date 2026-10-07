@@ -3212,7 +3212,7 @@ function tpMarcarVivo(estado) {
     const texto = conocido ? etiquetas[estado] : 'sin tiempo real';
     const caido = !conocido || estado !== 'conectado';
 
-    ['tpMapaVivo', 'tpCuentaVivo', 'kdVivo'].forEach(function (id) {
+    ['tpMapaVivo', 'tpCuentaVivo', 'kdVivo', 'ctVivo'].forEach(function (id) {
         const nodo = document.getElementById(id);
         if (!nodo) return;
         nodo.classList.toggle('desconectado', caido && estado !== 'reconectando');

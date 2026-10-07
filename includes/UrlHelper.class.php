@@ -50,9 +50,17 @@ class UrlHelper {
      */
     public static function carta($menuToken, $tableToken = null) {
         $url = self::base() . '/m/' . rawurlencode($menuToken);
-        if ($tableToken !== null && $tableToken !== '') {
+        if ($tableToken) {
             $url .= '?punto=' . rawurlencode($tableToken);
         }
         return $url;
+    }
+
+    /**
+     * URL de seguimiento de un pedido de mostrador. Es lo que va en el QR que escanea el
+     * cliente para ver el estado de su orden y (opcional) activar notificaciones.
+     */
+    public static function seguimiento($token) {
+        return self::base() . '/public/seguimiento.html?t=' . rawurlencode($token);
     }
 }

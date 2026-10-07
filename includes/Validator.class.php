@@ -13,6 +13,59 @@ class Validator {
     public static function sanitizeString($data) {
         return htmlspecialchars(strip_tags(trim($data)), ENT_QUOTES, 'UTF-8');
     }
+
+    /**
+     * URL del papel tapiz de la tienda (imagen de fondo).
+     *
+     * La URL se pinta después dentro de un `url()` del tema, así que solo se
+     * aceptan imágenes de la propia instalación, en ruta relativa y sin saltos
+     * de directorio. Cadena vacía = sin papel tapiz (válido).
+     *
+     * @param mixed $url
+     * @return string|null  La ruta normalizada, '' para quitar, o null si no es válida
+     */
+    public static function wallpaperUrl($url) {
+        if (!is_string($url)) return null;
+        $url = trim($url);
+        if ($url === '') return '';
+        if (strpos($url, '..') !== false) return null;
+        if (strpos($url, '\\') !== false) return null;
+        // Esquema (http:, data:, javascript:) o URL de otro sitio: fuera.
+        if (preg_match('#^[a-zA-Z][a-zA-Z0-9+.\-]*:#', $url)) return null;
+        if (strpos($url, '//') === 0) return null;
+        $patron = '#^(assets/images/(wallpapers|backgrounds)|uploads/[A-Za-z0-9._/\-]+)/[A-Za-z0-9._\-]+\.(jpe?g|png|webp|avif)$#i';
+        if (!preg_match($patron, $url)) return null;
+        return $url;
+    }
+
+    /**
+     * Normaliza las claves del papel tapiz dentro de un theme_config.
+     * Las claves ausentes se dejan ausentes; las inválidas se descartan (no
+     * tiene sentido rechazar todo el tema por un valor raro de opacidad).
+     *
+     * @param array $cfg
+     * @return array
+     */
+    public static function wallpaperConfig($cfg) {
+        if (!is_array($cfg)) return $cfg;
+
+        if (array_key_exists('wallpaper_url', $cfg)) {
+            $url = self::wallpaperUrl($cfg['wallpaper_url']);
+            if ($url === null) unset($cfg['wallpaper_url']);
+            else $cfg['wallpaper_url'] = $url;
+        }
+        if (array_key_exists('wallpaper_opacity', $cfg)) {
+            if (!is_numeric($cfg['wallpaper_opacity'])) {
+                unset($cfg['wallpaper_opacity']);
+            } else {
+                $cfg['wallpaper_opacity'] = max(0, min(100, (int)round((float)$cfg['wallpaper_opacity'])));
+            }
+        }
+        if (array_key_exists('wallpaper_size', $cfg)) {
+            $cfg['wallpaper_size'] = ($cfg['wallpaper_size'] === 'fill') ? 'fill' : 'cover';
+        }
+        return $cfg;
+    }
     
     /**
      * Validar email

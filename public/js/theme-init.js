@@ -199,6 +199,11 @@
                 applySurfaces(cfg);
             }
         }
+
+        // Papel tapiz: viaja en el mismo config que el resto del tema, así que
+        // se aplica aquí y queda puesto en cualquier vista y en cualquier
+        // cambio de tema (claro/oscuro) sin código extra en cada página.
+        applyWallpaper(cfg, darkMode, cfgDark);
     }
 
     // Aplica solo variables de superficie desde un config (claro u oscuro)
@@ -230,7 +235,74 @@
         ].forEach(v => root.style.removeProperty(v));
     }
 
-    window.ThemeColorUtils = { hexToRgb, mix, rgbaOf, luminance, contrastText, brandVariants, darkSurfaces, apply, applySurfaces, clearDerived, DARK_CONFIG_VERSION: 2 };
+    // ============================================================
+    // PAPEL TAPIZ DE LA TIENDA (imagen de fondo)
+    //
+    // La imagen se guarda por tienda (theme_config.wallpaper_url) y se pinta en
+    // dos capas fijas detrás del contenido, con la opacidad y el ajuste que
+    // eligió el usuario. Como se aplica aquí, en el <head>, no hay parpadeo: la
+    // primera pintura ya sale con el fondo puesto.
+    // ============================================================
+
+    // Solo imágenes de la propia instalación: la ruta se pinta en un url() del
+    // tema, así que no puede traer esquema (http:, data:, javascript:), otro
+    // dominio ni saltos de directorio.
+    function normalizeWallpaperUrl(url) {
+        const raw = String(url == null ? '' : url).trim();
+        if (!raw) return '';
+        if (raw.indexOf('..') !== -1) return '';
+        if (raw.indexOf('\\') !== -1) return '';
+        if (/^[a-zA-Z][a-zA-Z0-9+.\-]*:/.test(raw)) return '';
+        if (raw.indexOf('//') === 0) return '';
+        if (!/^(assets\/images\/(wallpapers|backgrounds)|uploads\/[A-Za-z0-9._\-\/]+)\/[A-Za-z0-9._\-]+\.(jpe?g|png|webp|avif)$/i.test(raw)) return '';
+        return raw;
+    }
+
+    // Opacidad guardada en porcentaje (0-100) → 0..1 para CSS
+    function normalizeWallpaperOpacity(value) {
+        const n = Number(value);
+        if (!isFinite(n)) return 0.3;
+        return Math.min(1, Math.max(0, n / 100));
+    }
+
+    function normalizeWallpaperSize(value) {
+        return String(value || '').toLowerCase() === 'fill' ? 'fill' : 'cover';
+    }
+
+    /**
+     * Aplica (o quita) el papel tapiz.
+     *   - url ausente en la config recibida → no se toca lo que ya esté puesto
+     *     (hay llamadores que pasan configs parciales, p. ej. la sugerencia de
+     *     tema oscuro, y no deben borrar el fondo).
+     *   - url vacía ('') → se quita el fondo (acción explícita del usuario).
+     */
+    function applyWallpaper(cfg, darkMode, cfgDark) {
+        const root = document.documentElement;
+        const base = cfg || {};
+        const active = (darkMode && cfgDark) ? cfgDark : {};
+        const rawUrl = active.wallpaper_url !== undefined ? active.wallpaper_url : base.wallpaper_url;
+
+        if (rawUrl === undefined) return;   // config parcial: no tocar
+
+        const url = normalizeWallpaperUrl(rawUrl);
+        if (!url) {
+            root.classList.remove('has-wallpaper');
+            root.removeAttribute('data-wallpaper-size');
+            root.style.removeProperty('--wallpaper-image');
+            root.style.removeProperty('--wallpaper-opacity');
+            return;
+        }
+
+        const rawOpacity = active.wallpaper_opacity !== undefined ? active.wallpaper_opacity : base.wallpaper_opacity;
+        const rawSize = active.wallpaper_size !== undefined ? active.wallpaper_size : base.wallpaper_size;
+
+        root.style.setProperty('--wallpaper-image', 'url("' + url + '")');
+        root.style.setProperty('--wallpaper-opacity', String(normalizeWallpaperOpacity(rawOpacity)));
+        root.setAttribute('data-wallpaper-size', normalizeWallpaperSize(rawSize));
+        root.classList.add('has-wallpaper');
+    }
+
+    window.ThemeColorUtils = { hexToRgb, mix, rgbaOf, luminance, contrastText, brandVariants, darkSurfaces, apply, applySurfaces, clearDerived, applyWallpaper, normalizeWallpaperUrl, normalizeWallpaperOpacity, normalizeWallpaperSize, DARK_CONFIG_VERSION: 2 };
 
     // Versión del modo oscuro. Los temas oscuros guardados por el usuario
     // (localStorage 'pos_theme_config_dark' / stores.theme_config_dark) que NO

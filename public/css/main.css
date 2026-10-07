@@ -1951,6 +1951,13 @@ html[data-theme] textarea {
         color: #1a1a2e !important;
     }
 
+    /* El papel tapiz de la tienda NO se imprime: los reportes y tickets salen
+       en blanco, como siempre. */
+    html.has-wallpaper body::before,
+    html.has-wallpaper body::after {
+        display: none !important;
+    }
+
     /* Ocultar elementos de navegación y acciones al imprimir */
     .sidebar, .sidebar-modern, .mobile-nav, .topbar, .top-bar,
     .navbar, .main-nav, .sidebar-overlay, .mobile-nav-overlay,
@@ -3272,4 +3279,58 @@ body .form-actions-centered.acciones-al-menu { display: none; }
     clip: rect(0, 0, 0, 0);
     white-space: nowrap;
     border: 0;
+}
+
+/* ============================================================
+   PAPEL TAPIZ DE LA TIENDA — imagen de fondo (Configuración de empresa)
+   ------------------------------------------------------------
+   Dos capas fijas DETRÁS del contenido:
+
+     1. body::before → la base del tema (var(--bg-body), que cambia sola entre
+        modo claro y oscuro), para que un fondo con poca opacidad no deje la
+        pantalla en blanco.
+     2. body::after  → la imagen, con la opacidad que eligió el usuario
+        (--wallpaper-opacity) y su ajuste (data-wallpaper-size:
+        «cover» = cubrir, «fill» = rellenar).
+
+   El fondo del body se vuelve transparente para que las capas se vean, pero
+   las tarjetas, modales y la barra lateral conservan su superficie opaca: el
+   texto sigue siendo legible con cualquier imagen.
+
+   Lo activa theme-init.js ANTES del pintado (agrega .has-wallpaper a <html>),
+   así que la primera pintura ya sale con el fondo puesto y sin parpadeo.
+   En impresión las capas se ocultan (ver @media print).
+   ============================================================ */
+html.has-wallpaper body {
+    background-color: transparent;
+}
+
+html.has-wallpaper body::before,
+html.has-wallpaper body::after {
+    content: '';
+    position: fixed;
+    top: 0; right: 0; bottom: 0; left: 0;
+    inset: 0;
+    pointer-events: none;
+    background-repeat: no-repeat;
+    background-position: center center;
+}
+
+/* Base del tema (claro u oscuro) detrás de la imagen */
+html.has-wallpaper body::before {
+    z-index: -2;
+    background-color: var(--bg-body);
+}
+
+/* La imagen, con la opacidad elegida */
+html.has-wallpaper body::after {
+    z-index: -1;
+    background-image: var(--wallpaper-image);
+    background-size: cover;
+    opacity: var(--wallpaper-opacity, 0.3);
+}
+
+/* Ajuste «Rellenar»: la imagen ocupa toda la ventana (puede deformarse) */
+html.has-wallpaper[data-wallpaper-size="fill"] body::after {
+    background-size: 100% 100%;
 }

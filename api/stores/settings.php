@@ -71,6 +71,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $phone = isset($data['phone']) ? Validator::sanitizeString($data['phone']) : '';
         $theme_config = isset($data['theme_config']) ? $data['theme_config'] : null;
         $theme_config_dark = isset($data['theme_config_dark']) ? $data['theme_config_dark'] : null;
+        // Papel tapiz (imagen de fondo): la URL viene del cliente y se pinta en
+        // un `url()` del tema, así que se valida contra las imágenes de la casa
+        // y se acotan opacidad y ajuste antes de guardar.
+        $theme_config = Validator::wallpaperConfig($theme_config);
+        $theme_config_dark = Validator::wallpaperConfig($theme_config_dark);
         $settings = isset($data['settings']) ? $data['settings'] : null;
 
         if (!Validator::required($store_name)) {

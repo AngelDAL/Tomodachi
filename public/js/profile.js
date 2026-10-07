@@ -347,6 +347,9 @@ async function loadCompanySettings() {
             // Pestañas Claro/Oscuro
             initThemeTabs();
 
+            // Imagen de fondo (papel tapiz de la tienda)
+            initWallpaperEditor(themeConfig);
+
             // Sincronizar la pestaña del editor con el modo real guardado:
             // si el modo es oscuro, activar la pestaña Oscuro para que el
             // preview muestre el oscuro desde el inicio (y no contamine el
@@ -550,7 +553,161 @@ function collectThemeConfig(dark) {
         const key = inp.name.replace(/_dark$/, '');
         cfg[key] = inp.value;
     });
+    // El papel tapiz es de la TIENDA (vale para claro y oscuro), así que viaja
+    // en el tema claro. Si el tema oscuro lo define, lo sobrescribe.
+    if (!dark) {
+        cfg.wallpaper_url = wallpaperState.url || '';
+        cfg.wallpaper_opacity = wallpaperState.opacity;
+        cfg.wallpaper_size = wallpaperState.size;
+    }
     return cfg;
+}
+
+// ============================================================
+// Papel tapiz (imagen de fondo de la tienda)
+// ============================================================
+// Estado del editor. Vive en memoria: si el usuario no guarda, se descarta
+// (igual que un color elegido y no guardado). La imagen subida tampoco se
+// pierde: queda en la biblioteca de la tienda.
+let wallpaperState = { url: '', opacity: 30, size: 'cover' };
+
+function initWallpaperEditor(themeConfig) {
+    const cfg = themeConfig || {};
+    const opacidad = Number(cfg.wallpaper_opacity);
+    wallpaperState = {
+        url: typeof cfg.wallpaper_url === 'string' ? cfg.wallpaper_url : '',
+        opacity: Number.isFinite(opacidad) ? Math.min(100, Math.max(0, Math.round(opacidad))) : 30,
+        size: String(cfg.wallpaper_size || '').toLowerCase() === 'fill' ? 'fill' : 'cover'
+    };
+    renderWallpaperEditor();
+
+    const pickBtn = document.getElementById('wallpaperPickBtn');
+    const fileInput = document.getElementById('wallpaperInput');
+    const removeBtn = document.getElementById('wallpaperRemoveBtn');
+    const opacityInput = document.getElementById('wallpaperOpacity');
+    const sizeGroup = document.getElementById('wallpaperSizeGroup');
+
+    if (pickBtn && fileInput) {
+        pickBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', () => {
+            const file = fileInput.files && fileInput.files[0];
+            fileInput.value = '';   // permite volver a elegir el mismo archivo
+            if (file) uploadWallpaper(file);
+        });
+    }
+
+    if (removeBtn) {
+        removeBtn.addEventListener('click', () => {
+            wallpaperState.url = '';
+            renderWallpaperEditor();
+            applyWallpaperPreview();
+            setWallpaperStatus('Fondo quitado. Se confirma al guardar la configuración.');
+        });
+    }
+
+    if (opacityInput) {
+        opacityInput.addEventListener('input', () => {
+            wallpaperState.opacity = Math.min(100, Math.max(0, parseInt(opacityInput.value, 10) || 0));
+            renderWallpaperEditor();
+            applyWallpaperPreview();
+        });
+    }
+
+    if (sizeGroup) {
+        sizeGroup.querySelectorAll('[data-wallpaper-size]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                wallpaperState.size = btn.getAttribute('data-wallpaper-size') === 'fill' ? 'fill' : 'cover';
+                renderWallpaperEditor();
+                applyWallpaperPreview();
+            });
+        });
+    }
+}
+
+function renderWallpaperEditor() {
+    const img = document.getElementById('wallpaperPreviewImg');
+    const empty = document.getElementById('wallpaperEmpty');
+    const removeBtn = document.getElementById('wallpaperRemoveBtn');
+    const opacity = document.getElementById('wallpaperOpacity');
+    const opacityValue = document.getElementById('wallpaperOpacityValue');
+    const sizeGroup = document.getElementById('wallpaperSizeGroup');
+
+    const hayImagen = !!wallpaperState.url;
+    if (img) {
+        if (hayImagen) { img.src = wallpaperState.url; img.hidden = false; }
+        else { img.removeAttribute('src'); img.hidden = true; }
+    }
+    if (empty) empty.hidden = hayImagen;
+    if (removeBtn) removeBtn.hidden = !hayImagen;
+    if (opacity) opacity.value = String(wallpaperState.opacity);
+    if (opacityValue) opacityValue.textContent = wallpaperState.opacity + '%';
+    if (sizeGroup) {
+        sizeGroup.querySelectorAll('[data-wallpaper-size]').forEach(btn => {
+            btn.classList.toggle('active', btn.getAttribute('data-wallpaper-size') === wallpaperState.size);
+        });
+    }
+}
+
+function setWallpaperStatus(texto) {
+    const el = document.getElementById('wallpaperStatus');
+    if (el) el.textContent = texto;
+}
+
+// Vista previa en vivo: el fondo se pinta en la propia página mientras se ajusta
+function applyWallpaperPreview() {
+    if (!window.ThemeColorUtils || !window.ThemeColorUtils.applyWallpaper) return;
+    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    window.ThemeColorUtils.applyWallpaper({
+        wallpaper_url: wallpaperState.url,
+        wallpaper_opacity: wallpaperState.opacity,
+        wallpaper_size: wallpaperState.size
+    }, dark, null);
+}
+
+async function uploadWallpaper(file) {
+    const pickBtn = document.getElementById('wallpaperPickBtn');
+    const textoOriginal = pickBtn ? pickBtn.innerHTML : '';
+
+    if (file.size > 25 * 1024 * 1024) {
+        showNotification('La imagen supera los 25MB. Elige una más ligera.', 'error');
+        return;
+    }
+
+    if (pickBtn) {
+        pickBtn.disabled = true;
+        pickBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Subiendo';
+    }
+    setWallpaperStatus('Subiendo la imagen...');
+
+    try {
+        const fd = new FormData();
+        fd.append('wallpaper', file);
+        const res = await fetch('../api/stores/upload_wallpaper.php', {
+            method: 'POST',
+            body: fd,
+            credentials: 'include'
+        });
+        const data = await res.json();
+        if (data && data.success && data.data && data.data.wallpaper_url) {
+            wallpaperState.url = data.data.wallpaper_url;
+            renderWallpaperEditor();
+            applyWallpaperPreview();
+            setWallpaperStatus('Imagen lista. Se confirma al guardar la configuración.');
+            showNotification('Imagen de fondo subida', 'success');
+        } else {
+            setWallpaperStatus('No se pudo subir la imagen.');
+            showNotification((data && data.message) || 'No se pudo subir la imagen', 'error');
+        }
+    } catch (e) {
+        console.error(e);
+        setWallpaperStatus('Error de conexión al subir la imagen.');
+        showNotification('Error de conexión al subir la imagen', 'error');
+    } finally {
+        if (pickBtn) {
+            pickBtn.disabled = false;
+            pickBtn.innerHTML = textoOriginal;
+        }
+    }
 }
 
 // ============================================================

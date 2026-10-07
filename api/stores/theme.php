@@ -19,6 +19,7 @@ require_once '../../includes/Database.class.php';
 require_once '../../includes/Response.class.php';
 require_once '../../includes/Auth.class.php';
 require_once '../../includes/ApiAuth.class.php';
+require_once '../../includes/Validator.class.php';
 require_once __DIR__ . '/../../includes/RequestContext.class.php';
 
 header('Content-Type: application/json; charset=utf-8');
@@ -103,6 +104,21 @@ try {
                     if (!in_array($value, ['light', 'dark', 'auto'], true)) {
                         Response::validationError(['theme_config.theme_mode' => 'Debe ser light/dark/auto']);
                     }
+                    continue;
+                }
+                // Papel tapiz (imagen de fondo de la tienda)
+                if ($key === 'wallpaper_url') {
+                    $url = Validator::wallpaperUrl($value);
+                    if ($url === null) { unset($cfg[$key]); } else { $cfg[$key] = $url; }
+                    continue;
+                }
+                if ($key === 'wallpaper_opacity') {
+                    if (!is_numeric($value)) { unset($cfg[$key]); }
+                    else { $cfg[$key] = max(0, min(100, (int)round((float)$value))); }
+                    continue;
+                }
+                if ($key === 'wallpaper_size') {
+                    $cfg[$key] = ($value === 'fill') ? 'fill' : 'cover';
                     continue;
                 }
                 // Variables de superficie permitidas como colores

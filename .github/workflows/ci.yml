@@ -75,5 +75,8 @@ jobs:
       - name: Matriz de estados del healthcheck (sin BD)
         run: php tests/health_check_test.php
 
+      - name: Reglas del papel tapiz (imagen de fondo)
+        run: php tests/wallpaper_rules_test.php
+
       - name: Sintaxis de las suites de WebSocket
         run: python3 -m py_compile tests/ws_auth_test.py tests/ws_event_test.py

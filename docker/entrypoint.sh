@@ -54,23 +54,27 @@ SCHEMA_SQL="/var/www/html/database/schema.sql"
 #
 # Idempotente: en el primer arranque se lleva las imágenes que trae la imagen
 # (semillas) y deja el enlace; en los siguientes no hace nada.
+#
+# 7-oct-2026: lo mismo para los LOGOS y los FONDOS (papel tapiz). El logo vivía
+# en la capa efímera: uno subido desde la interfaz se perdía en el siguiente
+# despliegue, igual que pasaba con las fotos de producto antes de este arreglo.
 # ---------------------------------------------------------------------------
-FOTOS_DIR="/var/www/html/public/assets/images/products"
-FOTOS_PERSISTENTE="/var/www/html/public/uploads/products"
+for SUBDIR in products logos wallpapers; do
+  DIR="/var/www/html/public/assets/images/${SUBDIR}"
+  PERSISTENTE="/var/www/html/public/uploads/${SUBDIR}"
 
-mkdir -p "${FOTOS_PERSISTENTE}"
-if [ ! -L "${FOTOS_DIR}" ]; then
-  if [ -d "${FOTOS_DIR}" ]; then
-    # -n: no sobrescribir lo que ya exista en el volumen
-    cp -rn "${FOTOS_DIR}/." "${FOTOS_PERSISTENTE}/" 2>/dev/null || true
-    rm -rf "${FOTOS_DIR}"
+  mkdir -p "${PERSISTENTE}"
+  if [ ! -L "${DIR}" ]; then
+    if [ -d "${DIR}" ]; then
+      # -n: no sobrescribir lo que ya exista en el volumen
+      cp -rn "${DIR}/." "${PERSISTENTE}/" 2>/dev/null || true
+      rm -rf "${DIR}"
+    fi
+    ln -sfn "${PERSISTENTE}" "${DIR}"
+    echo "[Tomodachi] ${SUBDIR}: enlazado al volumen persistente."
   fi
-  ln -sfn "${FOTOS_PERSISTENTE}" "${FOTOS_DIR}"
-  echo "[Tomodachi] Fotos de producto enlazadas al volumen persistente."
-else
-  echo "[Tomodachi] Fotos de producto ya persistentes."
-fi
-chown -R www-data:www-data "${FOTOS_PERSISTENTE}" 2>/dev/null || true
+  chown -R www-data:www-data "${PERSISTENTE}" 2>/dev/null || true
+done
 
 # Generar config/database.php a partir de variables de entorno
 if [ ! -f /var/www/html/config/database.php ]; then

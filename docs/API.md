@@ -181,9 +181,16 @@ Los inputs de fecha SIEMPRE usan ISO en la API, independientemente del formato d
 | GET/POST | `api/stores/theme.php` | Leer/modificar tema | sesión/token (custom) |
 | POST | `api/stores/import_data.php` | Importar productos | solo sesión admin |
 | POST | `api/stores/upload_logo.php` | Subir logo | solo sesión admin |
+| POST | `api/stores/upload_wallpaper.php` | Subir la imagen de fondo (papel tapiz) | solo sesión admin |
 | POST | `api/stores/save_background.php` | Guardar fondo | solo sesión (IA off en CE) |
 
 - `theme`: `POST {theme_config: {"primary_color":"#E3057A",...}}` requiere scope **custom** (un token write NO puede). GET requiere read.
+- `theme` (imagen de fondo): el papel tapiz viaja dentro del mismo `theme_config`:
+  `{"wallpaper_url":"assets/images/wallpapers/store_1_....jpg","wallpaper_opacity":30,"wallpaper_size":"cover"}`.
+  `wallpaper_size` es `cover` (cubrir) o `fill` (rellenar); `wallpaper_opacity` va de 0 a 100 y
+  `wallpaper_url` debe ser una imagen de la propia instalación (se rechaza cualquier URL externa,
+  `data:` o con `..`), o `""` para quitar el fondo. El archivo se sube antes con
+  `api/stores/upload_wallpaper.php` (multipart, campo `wallpaper`), que devuelve la `wallpaper_url`.
 
 ### 4.10 Usuarios
 

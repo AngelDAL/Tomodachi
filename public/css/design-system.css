@@ -418,3 +418,43 @@ input[type="checkbox"], input[type="radio"], label, select, .form-select,
 .switch.compacto .track { width: 42px; height: 24px; }
 .switch.compacto .track::after { top: 2px; left: 2px; width: 20px; height: 20px; }
 .switch.compacto input:checked + .track::after { transform: translateX(18px); }
+
+/* ================================================================
+   DESLIZADOR (rango) — valores continuos: opacidad, tamaño, volumen…
+   Se define aquí, en el catálogo, para no improvisarlo en cada página.
+   ================================================================ */
+.ds-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: var(--ds-radius-pill);
+  background: var(--bg-lighter);
+  border: 1px solid var(--border-color);
+  outline: none;
+  cursor: pointer;
+}
+.ds-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--primary-color);
+  border: 2px solid var(--bg-card);
+  box-shadow: var(--ds-shadow-sm);
+  cursor: pointer;
+}
+.ds-range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--primary-color);
+  border: 2px solid var(--bg-card);
+  box-shadow: var(--ds-shadow-sm);
+  cursor: pointer;
+}
+.ds-range:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 3px;
+}

@@ -88,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
   (atribución). NO uses `$currentUser['role']` sin checar `via === 'session'`.
 - GET exige `read`; escritura exige `write`; el tema exige `custom` (POST).
 - Endpoints SOLO sesión (no cablear tokens): `auth/*`, `super_admin/*`,
-  `users/create|update|delete|profile`, `stores/create|import_data|upload_logo|save_background`,
+  `users/create|update|delete|profile`, `stores/create|import_data|upload_logo|upload_wallpaper|save_background`,
   `terminals/*`, `ai/*`, `sales/cart_sync.php`, `inventory/upload_image.php`.
 
 ## Flujo de trabajo recomendado

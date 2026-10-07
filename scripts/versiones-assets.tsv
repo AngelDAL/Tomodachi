@@ -4,12 +4,12 @@
 css/bulk_sales.css	4	0c6f3294f5ee1bf1e36f6cf59eaa90c8
 css/cart_responsive.css	12	93e389961bcab19a1d2a402808f95422
 css/dashboard.css	5	8c2d44ff49e0dac2126cf5ba7705188b
-css/design-system.css	9	07eb82a28af10e8ab7e4f2148c293f6f
+css/design-system.css	10	f52e34d53399fda4ac3370206bd849a9
 css/fonts.css	4	35e58fb00cdd00a6d2260d26dc38d3d0
 css/inventory.css	38	1ef098b7041e10192170d6452a34cda3
 css/landing.css	4	5c70436f4f0c59a13476cbc3062587b4
 css/login.css	12	07632a90a320c3381d1b73e65fa29ebf
-css/main.css	22	c56b6bd66ea417bc5b0cdfdff80e6040
+css/main.css	23	281a7c0ccd9671131f47c4469a7afb2f
 css/mobile-nav.css	5	cd112fc5358a29e7240bfd7cb33f2bcf
 css/promotions-v2.css	2	19d0f8dd4ac2c00c0a87a876ff7d0c56
 css/promotions.css	13	c7b4d1e6fa1d6f50e54a37f91cd2aa36
@@ -25,7 +25,7 @@ js/dashboard.js	3	200245e5ecfc4f29165cffa70760314e
 js/design-system.js	7	a6d47b4914401e512f34f7e692a94b56
 js/inventory-exits.js	3	3a250de195d9e66c8412377bb611fe77
 js/inventory.js	21	ff6c352ce8d2b5f505f31efc190fe9b4
-js/profile.js	5	bb6c414aa5f7ca4976761d1a84235828
+js/profile.js	6	741c2a0e4dc67e7cc857f8413d9621da
 js/promotion-client-rules.js	2	f525b40be81b26d1d735dc3c4122f50c
 js/promotions-v2.js	2	685ed10b0d03cee6df18d1e6908aa8d9
 js/promotions.js	6	bef366591e374f4e4cfde6b767284727
@@ -36,6 +36,6 @@ js/sidebar-loader.js	13	d7bd4144a7a76b248ea7dd147f97b6cd
 js/stock-rule.js	1	5818188ed9718de696abeffe9d55909f
 js/stripe-pos.js	1	a261c0664235a63f2da8b4ae3c1194c7
 js/tables.js	11	ad25b20b4d38c780841cfdac2a3fdd4a
-js/theme-init.js	3	f19a5338c4808273acba84e0f21aa214
+js/theme-init.js	4	189c7e05bf3750fda8133f610dfd615a
 js/tour.js	4	45da073236616c3069a0bf1977d34178
 js/ws-realtime.js	1	461256bedbddbc69af5bcd627e5241d7

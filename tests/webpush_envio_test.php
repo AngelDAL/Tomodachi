@@ -32,7 +32,8 @@ $authB64   = WebPush::b64url($auth);
 // --- 2. Enviar como lo haría el servidor ---
 $sub = ['endpoint' => "http://127.0.0.1:$puerto/push/abc123", 'p256dh' => $p256dhB64, 'auth' => $authB64];
 $texto = 'Tu pedido #7 está listo';
-$res = WebPush::enviar($sub, 'Título de prueba', $texto, 'http://ejemplo/seguimiento.html?t=x');
+$icono = 'https://pos.ejemplo.com/public/assets/app-icons/tomodachi-icon-192.png';
+$res = WebPush::enviar($sub, 'Título de prueba', $texto, 'http://ejemplo/seguimiento.html?t=x', $icono);
 if (!empty($res['ok'])) { ok("enviar() reporta éxito (HTTP {$res['status']})"); } else { mal('enviar() falló: ' . json_encode($res)); }
 
 usleep(300000);
@@ -75,6 +76,12 @@ else {
         ok('el navegador descifra el aviso completo (título, cuerpo y url)');
     } else {
         mal('descifró pero el contenido no cuadra: ' . substr((string)$claro, 0, 120));
+    }
+    // El icono es lo que hacía falta para que la notificación no salga como cuadro roto.
+    if (is_array($j) && ($j['icon'] ?? '') === $icono) {
+        ok('el aviso lleva su icono (logo del negocio o el de Tomodachi)');
+    } else {
+        mal('el aviso NO llevó el icono: ' . json_encode($j['icon'] ?? null));
     }
 }
 if ($rs >= strlen($reg) + 16) { ok("el tamaño de registro declarado ($rs) es válido"); } else { mal("rs inválido: $rs"); }

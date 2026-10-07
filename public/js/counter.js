@@ -460,7 +460,33 @@ function ctAbrirPago(id) {
     document.getElementById('ctPagoTotal').textContent = tpDinero(p.total);
     const adelanto = document.getElementById('ctPagoAdelanto');
     if (adelanto) adelanto.value = p.payment_status === 'partial' ? p.paid_amount : '';
+    ctPagoVolver();   // el modal siempre abre en el estado de opciones, sin confirmación a medias
     tpAbrirModal('ctModalPago');
+}
+
+/** Vuelve al estado normal del modal de pago (opciones visibles, confirmación oculta). */
+function ctPagoVolver() {
+    const ops = document.getElementById('ctPagoOpciones');
+    const conf = document.getElementById('ctPagoConfirmar');
+    if (ops) ops.classList.remove('hidden');
+    if (conf) conf.classList.add('hidden');
+    const campo = document.getElementById('ctPagoAdelantoCampo');
+    if (campo) campo.classList.remove('hidden');
+}
+
+/**
+ * El cobro completo pide confirmación, pero EN ESTE MISMO modal: no se abre otro encima.
+ * Se ocultan las opciones y se pregunta si de verdad se recibió el dinero.
+ */
+function ctPagoConfirmarCompleto() {
+    const p = ctEstado.pagoPedido;
+    if (!p) return;
+    document.getElementById('ctPagoOpciones').classList.add('hidden');
+    const campo = document.getElementById('ctPagoAdelantoCampo');
+    if (campo) campo.classList.add('hidden');
+    document.getElementById('ctPagoConfirmarTexto').textContent =
+        '¿Confirmas que recibiste ' + tpDinero(p.total) + ' y el pedido queda pagado por completo?';
+    document.getElementById('ctPagoConfirmar').classList.remove('hidden');
 }
 
 async function ctGuardarPago(estado) {
@@ -582,10 +608,18 @@ document.addEventListener('DOMContentLoaded', function () {
         if (enlace) ctAbrirEnlace(enlace.getAttribute('data-ct-enlace'));
     });
 
-    // Modal de pago
+    // Modal de pago: el cobro completo se confirma dentro del mismo modal.
     document.querySelectorAll('[data-ct-pagar]').forEach(function (b) {
-        b.addEventListener('click', function () { ctGuardarPago(b.getAttribute('data-ct-pagar')); });
+        b.addEventListener('click', function () {
+            const estado = b.getAttribute('data-ct-pagar');
+            if (estado === 'paid') { ctPagoConfirmarCompleto(); return; }
+            ctGuardarPago(estado);
+        });
     });
+    const pagoSi = document.getElementById('ctPagoSi');
+    if (pagoSi) pagoSi.addEventListener('click', function () { ctGuardarPago('paid'); });
+    const pagoNo = document.getElementById('ctPagoNo');
+    if (pagoNo) pagoNo.addEventListener('click', ctPagoVolver);
 
     // Menú de tres puntos
     const menuBtn = document.getElementById('ctMenuBtn');

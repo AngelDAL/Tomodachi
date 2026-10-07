@@ -41,7 +41,7 @@ class WebPush {
      * @param string $url    a dónde lleva al tocarla
      * @return array ['ok'=>bool, 'status'=>int, 'error'=>?string]
      */
-    public static function enviar(array $sub, $titulo, $cuerpo, $url = '/') {
+    public static function enviar(array $sub, $titulo, $cuerpo, $url = '/', $icono = '') {
         if (!self::habilitado()) {
             return ['ok' => false, 'status' => 0, 'error' => 'VAPID no configurado'];
         }
@@ -50,11 +50,17 @@ class WebPush {
             return ['ok' => false, 'status' => 0, 'error' => 'suscripción incompleta'];
         }
 
-        $payload = json_encode([
+        $datos = [
             'title' => mb_substr((string)$titulo, 0, 120),
             'body'  => mb_substr((string)$cuerpo, 0, 300),
             'url'   => (string)$url,
-        ], JSON_UNESCAPED_UNICODE);
+        ];
+        // El icono viaja en el aviso: si no se manda, el navegador pinta su propio cuadro
+        // (que es justo el rectángulo roto que se veía).
+        if ((string)$icono !== '') {
+            $datos['icon'] = (string)$icono;
+        }
+        $payload = json_encode($datos, JSON_UNESCAPED_UNICODE);
         if ($payload === false || strlen($payload) > self::MAX_PAYLOAD) {
             return ['ok' => false, 'status' => 0, 'error' => 'payload inválido'];
         }

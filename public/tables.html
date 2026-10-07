@@ -1443,12 +1443,15 @@
         .ct-presencia.apagada { color: var(--text-muted, #667); }
         .ct-aviso-listo { margin-bottom: 12px; padding: 10px 14px; border-radius: var(--ds-radius-lg); background: color-mix(in srgb, var(--warning-color, #B45309) 14%, transparent); color: var(--warning-color, #B45309); font-weight: 700; }
 
-        /* Modal de alta: productos a la izquierda, el pedido como COLUMNA a la derecha */
-        .ct-modal { max-width: 940px !important; width: min(940px, calc(100vw - 24px)); }
-        .ct-modal-body { display: flex; flex-direction: column; gap: 14px; overflow-y: auto; max-height: calc(94vh - 130px); }
-        .ct-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 360px); gap: 16px; align-items: start; }
+        /* Modal de alta: productos a la izquierda, el pedido como COLUMNA a la derecha.
+           El modal ocupa el ALTO DISPONIBLE y el scroll vive DENTRO de la rejilla de
+           productos y de la lista del pedido: antes se quedaba a media pantalla porque
+           las dos columnas tenían alto fijo (340px / 480px). */
+        .ct-modal { max-width: 940px !important; width: min(940px, calc(100vw - 24px)); height: min(92vh, 900px); display: flex; flex-direction: column; overflow: hidden; }
+        .ct-modal-body { display: flex; flex-direction: column; gap: 14px; overflow: hidden; flex: 1 1 auto; min-height: 0; }
+        .ct-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 360px); gap: 16px; align-items: stretch; flex: 1 1 auto; min-height: 0; }
         .ct-picker { display: flex; flex-direction: column; gap: 10px; min-height: 0; min-width: 0; }
-        .ct-productos { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; max-height: 340px; overflow-y: auto; }
+        .ct-productos { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; flex: 1 1 auto; min-height: 180px; overflow-y: auto; align-content: start; }
         .ct-prod { background: var(--bg-card, #fff); border: 1px solid var(--border-color); border-radius: var(--ds-radius-md); padding: 8px; cursor: pointer; text-align: center; display: flex; flex-direction: column; gap: 6px; font-family: inherit; color: var(--text-color); position: relative; }
         .ct-prod:hover { border-color: var(--primary-color); }
         .ct-prod.elegido { border-color: var(--primary-color); box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 30%, transparent); }
@@ -1458,7 +1461,7 @@
         .ct-prod-badge { position: absolute; top: 4px; right: 4px; background: var(--primary-color); color: var(--text-on-primary, #fff); border-radius: var(--ds-radius-pill); font-size: .7rem; font-weight: 800; min-width: 20px; padding: 1px 6px; }
         .ct-prod-nombre { font-size: .82rem; font-weight: 600; line-height: 1.15; overflow-wrap: anywhere; }
         .ct-prod-precio { font-size: .85rem; font-weight: 800; color: var(--primary-darker, #1F8A82); font-variant-numeric: tabular-nums; }
-        .ct-orden { border: 1px solid var(--border-color); border-radius: var(--ds-radius-lg); background: var(--bg-lightest, #fafafa); display: flex; flex-direction: column; max-height: 480px; }
+        .ct-orden { border: 1px solid var(--border-color); border-radius: var(--ds-radius-lg); background: var(--bg-lightest, #fafafa); display: flex; flex-direction: column; min-height: 0; }
         .ct-orden-titulo { padding: 10px 14px; font-weight: 700; font-size: .82rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); border-bottom: 1px solid var(--border-lighter, #eee); }
         .ct-orden-lista { flex: 1 1 auto; overflow-y: auto; padding: 6px 12px; min-height: 90px; }
         .ct-orden-vacia { text-align: center; color: var(--text-muted); padding: 24px 10px; }
@@ -1478,8 +1481,9 @@
         .ct-sel-cant { font-weight: 800; min-width: 26px; text-align: center; font-variant-numeric: tabular-nums; }
         .ct-sel-importe { font-weight: 700; min-width: 66px; text-align: right; font-variant-numeric: tabular-nums; font-size: .88rem; }
 
-        /* QR: marco blanco y esquinas redondeadas, SIN enlace a la vista */
-        .ct-modal-qr { max-width: 420px !important; width: min(420px, calc(100vw - 24px)); }
+        /* QR: marco blanco y esquinas redondeadas, SIN enlace a la vista.
+           Alto automático: es un modal chico y no tiene por qué llenar la pantalla. */
+        .ct-modal-qr { max-width: 420px !important; width: min(420px, calc(100vw - 24px)); height: auto; }
         .ct-enlace-body { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
         .ct-enlace-folio { font-family: var(--font-heading); font-weight: 800; font-size: 1.3rem; color: var(--text-color); margin: 0; }
         .ct-enlace-nombre { font-size: .9rem; color: var(--text-muted); margin: 0; }
@@ -1489,12 +1493,17 @@
         .ct-enlace-qr img, .ct-enlace-qr canvas { display: block; border-radius: 10px; }
 
         /* Modal de pago */
-        .ct-modal-pago { max-width: 460px !important; width: min(460px, calc(100vw - 24px)); }
+        .ct-modal-pago { max-width: 460px !important; width: min(460px, calc(100vw - 24px)); height: auto; }
         .ct-pago-folio { margin: 0; font-weight: 700; color: var(--text-color); }
         .ct-pago-total { font-size: .95rem; color: var(--text-muted); margin: 6px 0 4px; }
         .ct-pago-total strong { font-size: 1.5rem; color: var(--text-color); font-variant-numeric: tabular-nums; }
         .ct-pago-opciones { display: flex; flex-direction: column; gap: 8px; }
         .ct-pago-opciones .tp-btn { justify-content: flex-start; }
+        /* Confirmación del cobro completo: en el MISMO modal, nunca encimando otro. */
+        .ct-pago-confirmar { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: var(--ds-radius-lg); background: color-mix(in srgb, var(--primary-color) 10%, transparent); }
+        .ct-pago-confirmar p { margin: 0; font-weight: 700; color: var(--text-color); }
+        .ct-pago-confirmar-botones { display: flex; gap: 8px; flex-wrap: wrap; }
+        .ct-pago-confirmar-botones .tp-btn { flex: 1 1 auto; justify-content: center; }
 
         /* Vista cocina: solo lectura, grande, sin botones */
         body.ct-cocina-on .sidebar,
@@ -1512,11 +1521,29 @@
         .ct-cocina-card .ct-cant { font-size: 1.2rem; }
         .ct-cocina-listo { color: var(--warning-color, #B45309); font-weight: 800; font-size: .85rem; }
 
-        /* En el teléfono: una columna (el pedido debajo de los productos) */
-        @media (max-width: 760px) {
+        /* Tableta (mismo corte que el sistema de diseño, 900px): el modal sigue ocupando la
+           pantalla, pero los modales CHICOS del mostrador —QR y cobro— se quedan compactos y
+           centrados. Sin esto heredaban el `height:100dvh; border-radius:0` de
+           `.tp-modal:not(.tp-modal-cuenta)` y salían de alto completo, sin centrar y con la
+           esquina cuadrada (la tableta vertical de 712x1138 cae justo aquí). */
+        @media (max-width: 900px) {
+            .tp-modal.ct-modal-qr,
+            .tp-modal.ct-modal-pago {
+                width: auto;
+                height: auto;
+                max-height: 92dvh;
+                border-radius: var(--ds-radius-lg);
+                margin: auto;
+                overflow-y: auto;
+            }
+        }
+
+        /* Teléfono: una columna, el pedido debajo de los productos. */
+        @media (max-width: 700px) {
             .ct-layout { grid-template-columns: 1fr; }
-            .ct-orden { max-height: none; }
-            .ct-productos { max-height: 240px; }
+            .ct-productos { flex: 0 1 auto; min-height: 150px; max-height: 42vh; }
+            .ct-orden { max-height: 46vh; }
+            .ct-modal-body { overflow-y: auto; }
         }
     </style>
     <script src="js/theme-init.js?v=5"></script>
@@ -1918,13 +1945,21 @@
                 <div class="ct-pago-total">Total a cobrar <strong id="ctPagoTotal">$0.00</strong></div>
                 <div class="tp-campo">
                     <label>¿Ya pagó el cliente?</label>
-                    <div class="ct-pago-opciones">
+                    <div class="ct-pago-opciones" id="ctPagoOpciones">
                         <button type="button" class="tp-btn" data-ct-pagar="unpaid"><i class="fas fa-clock"></i> Solo lo pidió</button>
                         <button type="button" class="tp-btn" data-ct-pagar="partial"><i class="fas fa-coins"></i> Con adelanto</button>
-                        <button type="button" class="tp-btn primario" data-ct-pagar="paid"><i class="fas fa-circle-check"></i> Pagado completo</button>
+                        <button type="button" class="tp-btn" data-ct-pagar="paid"><i class="fas fa-circle-check"></i> Pagado completo</button>
+                    </div>
+                    <!-- El cobro completo se confirma AQUÍ MISMO, sin abrir otro modal encima. -->
+                    <div class="ct-pago-confirmar hidden" id="ctPagoConfirmar">
+                        <p id="ctPagoConfirmarTexto"></p>
+                        <div class="ct-pago-confirmar-botones">
+                            <button type="button" class="tp-btn primario" id="ctPagoSi"><i class="fas fa-check"></i> Sí, lo recibí</button>
+                            <button type="button" class="tp-btn" id="ctPagoNo">No, volver</button>
+                        </div>
                     </div>
                 </div>
-                <div class="tp-campo">
+                <div class="tp-campo" id="ctPagoAdelantoCampo">
                     <label for="ctPagoAdelanto">Monto del adelanto (si dio una parte)</label>
                     <input type="number" id="ctPagoAdelanto" min="0" step="1" inputmode="decimal" placeholder="0">
                 </div>
@@ -2267,7 +2302,7 @@
     <script src="js/tables.js?v=13"></script>
     <script src="js/cobro.js?v=2"></script>
     <script src="js/comandas.js?v=6"></script>
-    <script src="js/counter.js?v=2"></script>
+    <script src="js/counter.js?v=3"></script>
     <script src="lib/animejs/anime.min.js"></script>
     <script src="js/design-system.js?v=7"></script>
 </body>

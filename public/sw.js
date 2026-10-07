@@ -35,7 +35,7 @@ const STATIC_ASSETS = [
   '/public/lib/fontawesome/webfonts/fa-brands-400.woff2',
   '/public/lib/qrcodejs/qrcode.min.js',
   '/public/lib/html5-qrcode/html5-qrcode.min.js',
-  '/public/assets/images/default-logo.png'
+  '/public/assets/app-icons/tomodachi-icon-192.png'
 ];
 
 self.addEventListener('install', (event) => {
@@ -130,8 +130,9 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title || 'Tomodachi POS', {
       body: data.body || '',
-      icon: '/public/assets/images/default-logo.png',
-      badge: '/public/assets/images/default-logo.png',
+      // El icono lo manda el servidor; si no viene, el de Tomodachi. Nunca el
+      // default-logo.png, que era un PNG de 1x1 y salía como cuadro roto.
+      icon: data.icon || '/public/assets/app-icons/tomodachi-icon-192.png',
       data: { url: data.url || '/public/dashboard.html' }
     })
   );

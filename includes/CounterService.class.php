@@ -263,6 +263,8 @@ class CounterService {
         $pedido = $this->armar($f, true);
         // Los colores del negocio para que la página del cliente use SU identidad (dinámico).
         $pedido['tema'] = $this->temaDeTienda((int)$f['store_id']);
+        // Icono del aviso: el del negocio, o el de Tomodachi (nunca un archivo inexistente).
+        $pedido['icono_aviso'] = $this->iconoDeAviso((int)$f['store_id']);
         return $pedido;
     }
 
@@ -384,7 +386,7 @@ class CounterService {
         $cuerpo = $pedido['customer_name']
             ? $pedido['customer_name'] . ', ya puedes pasar a recogerlo.'
             : 'Ya puedes pasar a recoger tu pedido.';
-        $enviados = $this->enviarPush((int)$counter_order_id, $titulo, $cuerpo, $pedido['tracking_url']);
+        $enviados = $this->enviarPush((int)$counter_order_id, $titulo, $cuerpo, $pedido['tracking_url'], $this->iconoDeAviso((int)$store_id));
 
         $this->avisar((int)$store_id, $pedido['tracking_token'], 'counter_ready', (int)$counter_order_id);
 
@@ -518,8 +520,36 @@ class CounterService {
         return (int)$stmt->fetchColumn();
     }
 
+    /**
+     * Icono del aviso: el logo del NEGOCIO si tiene archivo, y si no el de Tomodachi.
+     * Se comprueba que el archivo exista de verdad: hay tiendas cuyo `logo_url` apunta a un
+     * archivo que ya no está, y una notificación con la imagen rota (un rectángulo) se ve
+     * peor que una con el icono de la app.
+     */
+    public function iconoDeAviso($store_id) {
+        $defecto = '/public/assets/app-icons/tomodachi-icon-192.png';
+        $logo = '';
+        try {
+            $stmt = $this->conn->prepare("SELECT logo_url FROM stores WHERE store_id = :s LIMIT 1");
+            $stmt->execute([':s' => (int)$store_id]);
+            $logo = trim((string)$stmt->fetchColumn());
+        } catch (Exception $e) {
+            return UrlHelper::base() . $defecto;
+        }
+        if ($logo !== '') {
+            $ruta = ltrim(str_replace('\\', '/', $logo), '/');
+            if (strpos($ruta, 'public/') !== 0) {
+                $ruta = 'public/' . $ruta;
+            }
+            if (is_file(__DIR__ . '/../' . $ruta)) {
+                return UrlHelper::base() . '/' . $ruta;
+            }
+        }
+        return UrlHelper::base() . $defecto;
+    }
+
     /** Manda el push a todos los dispositivos suscritos de un pedido. @return int enviados */
-    private function enviarPush($counter_order_id, $titulo, $cuerpo, $url) {
+    private function enviarPush($counter_order_id, $titulo, $cuerpo, $url, $icono = '') {
         if (!WebPush::habilitado()) {
             return 0;
         }
@@ -530,7 +560,7 @@ class CounterService {
         $subs = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $enviados = 0;
         foreach ($subs as $s) {
-            $r = WebPush::enviar($s, $titulo, $cuerpo, $url ?: '/');
+            $r = WebPush::enviar($s, $titulo, $cuerpo, $url ?: '/', $icono);
             if (!empty($r['ok'])) {
                 $enviados++;
             } elseif (in_array((int)$r['status'], [404, 410], true)) {

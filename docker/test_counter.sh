@@ -115,6 +115,9 @@ if [ -n "$(echo "$TRACK" | jq_ data.order.subtotal)" ] && [ -n "$(echo "$TRACK" 
 if [ -n "$(echo "$TRACK" | jq_ data.order.esperando_seg)" ]; then ok "el seguimiento trae los segundos de espera (reloj del cliente sin depender de su zona horaria)"; else mal "track sin esperando_seg"; fi
 if echo "$TRACK" | grep -q "tema"; then ok "el seguimiento trae los colores del negocio"; else mal "track sin tema"; fi
 if echo "$TRACK" | grep -q "vapid_public_key"; then ok "el seguimiento trae la llave pública de avisos"; else mal "track sin vapid_public_key"; fi
+# El icono del aviso NUNCA debe apuntar a un archivo que no existe (salía un cuadro roto).
+ICONO=$(echo "$TRACK" | jq_ data.order.icono_aviso)
+if echo "$ICONO" | grep -q "tomodachi-icon-192.png"; then ok "el icono del aviso cae al de Tomodachi (esta tienda no tiene logo con archivo)"; else mal "icono del aviso ($ICONO)"; fi
 
 # 7. Cobro con adelanto → lo que ve el cliente
 PAGO=$(api -X POST "$BASE/api/dining/counter.php" -H 'Content-Type: application/json' \

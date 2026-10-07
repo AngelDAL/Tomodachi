@@ -20,10 +20,12 @@ self.addEventListener('push', function (event) {
 
     event.waitUntil(self.registration.showNotification(datos.title, {
         body: datos.body,
-        icon: '/public/assets/images/default-logo.png',
-        badge: '/public/assets/images/default-logo.png',
+        // El icono lo manda el servidor (el logo del negocio, o el de Tomodachi). Nunca el
+        // default-logo.png de antes: era un PNG de 1x1 y el navegador pintaba un cuadro roto.
+        icon: datos.icon || '/public/assets/app-icons/tomodachi-icon-192.png',
         tag: 'tomodachi-pedido',
         renotify: true,
+        requireInteraction: true,
         vibrate: [120, 60, 120],
         data: { url: datos.url || '/public/seguimiento.html' }
     }));

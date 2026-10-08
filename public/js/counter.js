@@ -362,11 +362,49 @@ function ctAgregar(product_id) {
     ctBroadcastKiosko();
 }
 
+/** El mostrador transmite al kiosko por el socket de la tienda. Si el de tables.js aún no
+ *  está listo (o esta vista no lo encendió), el mostrador abre el suyo: así el carrito en
+ *  vivo llega siempre, pase lo que pase con la otra conexión. */
+let ctSocketKiosko = null;
+let ctSidKiosko = null;   // store_id para el canal, resuelto una sola vez
+function ctSidTienda() {
+    if (ctSidKiosko) return Promise.resolve(ctSidKiosko);
+    const directo = tpEstado && tpEstado.tienda && tpEstado.tienda.store_id;
+    if (directo) { ctSidKiosko = Number(directo); return Promise.resolve(ctSidKiosko); }
+    // Si esta vista no expone la tienda, se pide una vez a settings (el mostrador es staff).
+    return fetch('../api/stores/settings.php', { credentials: 'include' })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+            ctSidKiosko = Number((d && d.data && d.data.store_id) || 0);
+            return ctSidKiosko;
+        })
+        .catch(function () { return 0; });
+}
+function ctAsegurarSocket() {
+    const rt = tpEstado && tpEstado.tiempoReal;
+    if (rt && typeof rt.enviar === 'function') return rt;
+    if (!window.TomodachiRealtime) return null;
+    if (!ctSocketKiosko) {
+        ctSidTienda().then(function (sid) {
+            if (!sid || ctSocketKiosko) return;
+            ctSocketKiosko = window.TomodachiRealtime.conectar({
+                canal: 'store:' + sid,
+                onEvento: function (msg) {
+                    const evt = (msg && msg.event) || '';
+                    if ((msg && msg.counter) || evt.indexOf('counter_') === 0) ctCargar(true);
+                },
+                onEstado: function () {}
+            });
+        });
+    }
+    return ctSocketKiosko;
+}
+
 /** Transmite el carrito en vivo al kiosko: la pantalla del cliente va mostrando lo que
  *  la cajera arma ANTES de confirmar el pedido. Si el carrito queda vacío, se limpia la
- *  pantalla (vuelve al reposo/bienvenida). Va por el mismo socket de la tienda. */
+ *  pantalla (vuelve al reposo/bienvenida). Va por el socket de la tienda. */
 function ctBroadcastKiosko() {
-    const rt = window.tpEstado && tpEstado.tiempoReal;
+    const rt = ctAsegurarSocket();
     if (!rt || typeof rt.enviar !== 'function') return;
     rt.enviar({
         type: 'kiosko_cart',
@@ -484,7 +522,7 @@ async function ctGuardar() {
         await ctCargar(true);
         ctMostrarEnlace(pedido);
         // El pedido ya quedó cerrado: el kiosko muestra ahora la versión final (con su QR).
-        const rt2 = window.tpEstado && tpEstado.tiempoReal;
+        const rt2 = ctAsegurarSocket();
         if (rt2 && typeof rt2.enviar === 'function') {
             rt2.enviar({ type: 'kiosko_qr', counter: pedido.counter_order_id, store_id: (tpEstado.tienda && tpEstado.tienda.store_id) || null });
         }

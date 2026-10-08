@@ -164,8 +164,9 @@ function ctTarjeta(p) {
     const opciones = acti
         ? '<button type="button" data-ct-avisar="' + id + '"><i class="fas fa-bell"></i> Notificar al cliente</button>' +
           '<button type="button" data-ct-regenerar="' + id + '"><i class="fas fa-qrcode"></i> Volver a generar el QR</button>' +
-          '<button type="button" data-ct-pago="' + id + '"><i class="fas fa-money-bill"></i> Generar pago</button>' +
-          '<button type="button" class="peligro" data-ct-cancelar="' + id + '"><i class="fas fa-ban"></i> Cancelar orden</button>'
+          '<button type="button" data-ct-pago="' + p.counter_order_id + '"><i class="fas fa-money-bill"></i> Generar pago</button>' +
+          '<button type="button" data-ct-kiosko="' + p.counter_order_id + '"><i class="fas fa-tv"></i> Mostrar en el kiosko</button>' +
+          '<button type="button" class="peligro" data-ct-cancelar="' + p.counter_order_id + '"><i class="fas fa-ban"></i> Cancelar orden</button>'
         : '<button type="button" data-ct-regenerar="' + id + '"><i class="fas fa-qrcode"></i> Volver a generar el QR</button>';
 
     const pie = acti
@@ -1002,6 +1003,15 @@ document.addEventListener('DOMContentLoaded', function () {
         if (entregar) { ctEntregar(entregar.getAttribute('data-ct-entregar')); return; }
         const regenerar = ev.target.closest('[data-ct-regenerar]');
         if (regenerar) { ctCerrarMenus(); ctAbrirEnlace(regenerar.getAttribute('data-ct-regenerar')); return; }
+        const kiosko = ev.target.closest('[data-ct-kiosko]');
+        if (kiosko) {
+            ctCerrarMenus();
+            const kid = kiosko.getAttribute('data-ct-kiosko');
+            tpPeticion(CT_API, { method: 'POST', body: JSON.stringify({ action: 'kiosko', counter_order_id: Number(kid) }) })
+                .then(function () { tpAviso('Mostrado en el kiosko', 'success'); })
+                .catch(function (e) { tpAviso(tpMensajeDeError(e), 'error'); });
+            return;
+        }
         const cancelar = ev.target.closest('[data-ct-cancelar]');
         if (cancelar) { ctCerrarMenus(); ctCancelar(cancelar.getAttribute('data-ct-cancelar')); return; }
         const pago = ev.target.closest('[data-ct-pago]');

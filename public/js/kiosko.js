@@ -30,6 +30,22 @@
 
     var $ = function (id) { return document.getElementById(id); };
 
+    // Helper locales: este kiosko NO carga tables.js (que es donde viven tpDinero/tpEsc), así
+    // que no puede apoyarse en ellos. Dinero y cantidades con el formato regional del navegador.
+    function dinero(n) {
+        try { return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(Number(n) || 0); }
+        catch (e) { return '$' + (Number(n) || 0).toFixed(2); }
+    }
+    function esc(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+    }
+    function cant(n) {
+        var v = Number(n) || 0;
+        return Number.isInteger(v) ? String(v) : String(v);
+    }
+
     // ============================================================
     // Estado y colores (el mismo idioma que el resto del mostrador)
     // ============================================================
@@ -42,7 +58,7 @@
 
     function etiquetaPago(p) {
         if (p.payment_status === 'paid') return '<i class="fas fa-circle-check"></i> Pagado';
-        if (p.payment_status === 'partial') return '<i class="fas fa-coins"></i> Con adelanto de ' + tpDinero(p.paid_amount);
+        if (p.payment_status === 'partial') return '<i class="fas fa-coins"></i> Con adelanto de ' + dinero(p.paid_amount);
         return '<i class="fas fa-hourglass"></i> Paga al recoger';
     }
 
@@ -64,17 +80,17 @@
     function tarjeta(p) {
         var est = ETIQUETA[p.status] || ['—', ''];
         var linea = (p.items || []).map(function (it) {
-            return '<div class="k-item"><span>' + tpCantidad(it.quantity) + '× ' + tpEsc(it.product_name) +
-                (it.notes ? ' <span style="color:var(--warning-color)">(' + tpEsc(it.notes) + ')</span>' : '') +
+            return '<div class="k-item"><span>' + cant(it.quantity) + '× ' + esc(it.product_name) +
+                (it.notes ? ' <span style="color:var(--warning-color)">(' + esc(it.notes) + ')</span>' : '') +
                 '</span></div>';
         }).join('');
         return '<article class="k-tarjeta ' + est[1] + '">' +
             '<div class="k-tarjeta-head"><span class="k-folio">#' + p.number + '</span>' +
             '<span class="k-estado">' + est[0] + '</span></div>' +
-            (p.customer_name ? '<div class="k-nombre">' + tpEsc(p.customer_name) + '</div>' : '') +
-            (p.notes ? '<div class="k-item" style="color:var(--warning-color)"><i class="fas fa-note-sticky"></i> ' + tpEsc(p.notes) + '</div>' : '') +
+            (p.customer_name ? '<div class="k-nombre">' + esc(p.customer_name) + '</div>' : '') +
+            (p.notes ? '<div class="k-item" style="color:var(--warning-color)"><i class="fas fa-note-sticky"></i> ' + esc(p.notes) + '</div>' : '') +
             (linea ? '<div class="k-items">' + linea + '</div>' : '') +
-            '<div class="k-pie"><span class="k-total">' + tpDinero(p.total) + '</span>' +
+            '<div class="k-pie"><span class="k-total">' + dinero(p.total) + '</span>' +
             '<span class="k-tiempo"><i class="fas fa-hourglass-half"></i>' + mm(p.segunos !== undefined ? p.segunos : 0) + '</span></div>' +
         '</article>';
     }
@@ -159,15 +175,15 @@
         } catch (e) { qr.innerHTML = ''; }
 
         var items = (p.items || []).map(function (it) {
-            return '<div class="k-item"><span><b>' + tpCantidad(it.quantity) + '×</b> ' + tpEsc(it.product_name) + '</span>' +
-                '<span class="k-precio">' + tpDinero(it.line_total) + '</span></div>';
+            return '<div class="k-item"><span><b>' + cant(it.quantity) + '×</b> ' + esc(it.product_name) + '</span>' +
+                '<span class="k-precio">' + dinero(it.line_total) + '</span></div>';
         }).join('');
-        $('kItems').innerHTML = (p.notes ? '<div class="k-item" style="color:var(--warning-color)"><i class="fas fa-note-sticky"></i> ' + tpEsc(p.notes) + '</div>' : '') + items;
+        $('kItems').innerHTML = (p.notes ? '<div class="k-item" style="color:var(--warning-color)"><i class="fas fa-note-sticky"></i> ' + esc(p.notes) + '</div>' : '') + items;
 
         $('kResumen').innerHTML =
-            '<div class="k-fila"><span>Subtotal</span><b>' + tpDinero(p.subtotal) + '</b></div>' +
-            (Number(p.discount) > 0.004 ? '<div class="k-fila"><span>Descuentos</span><b>-' + tpDinero(p.discount) + '</b></div>' : '') +
-            '<div class="k-fila k-final"><span>Total</span><b>' + tpDinero(p.total) + '</b></div>';
+            '<div class="k-fila"><span>Subtotal</span><b>' + dinero(p.subtotal) + '</b></div>' +
+            (Number(p.discount) > 0.004 ? '<div class="k-fila"><span>Descuentos</span><b>-' + dinero(p.discount) + '</b></div>' : '') +
+            '<div class="k-fila k-final"><span>Total</span><b>' + dinero(p.total) + '</b></div>';
         $('kPago').innerHTML = etiquetaPago(p);
 
         // El tiempo corriendo viene de los segundos que manda el servidor (robusto a zonas horarias).

@@ -81,7 +81,64 @@
         }
         .tab-content.active {
             display: block;
+            /* La pestaña entra con un movimiento corto: se nota el cambio de sección sin
+               sobresaltos. */
+            animation: tabEntra .26s cubic-bezier(.2,.7,.3,1);
         }
+        @keyframes tabEntra {
+            from { opacity: 0; transform: translateY(7px); }
+            to   { opacity: 1; transform: none; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .tab-content.active { animation: none; }
+        }
+
+        /* Móvil: con más pestañas, la tira se desplaza de lado en vez de apilarse en varias
+           filas (que dejaba las pestañas lejos del pulgar y del contenido). */
+        @media (max-width: 900px) {
+            .tabs {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                width: 100%;
+                justify-content: flex-start;
+                scrollbar-width: none;
+                -webkit-overflow-scrolling: touch;
+                scroll-behavior: smooth;
+            }
+            .tabs::-webkit-scrollbar { display: none; }
+            .tab-btn {
+                flex: 0 0 auto;
+                white-space: nowrap;
+                padding: 9px 16px;
+                font-size: 0.92rem;
+            }
+        }
+
+        /* Selector de forma de pago en mostrador: mismas píldoras que el modo de tema. */
+        .pay-opt-btn { transition: all .25s cubic-bezier(.4,0,.2,1); }
+        .pay-opt-btn:hover {
+            border-color: var(--primary-color) !important;
+            color: var(--primary-color);
+        }
+        .pay-opt-btn.active {
+            background: var(--primary-color) !important;
+            border-color: var(--primary-color) !important;
+            color: #fff !important;
+        }
+
+        /* Aviso discreto del guardado automático: el usuario tiene que saber que ya quedó. */
+        .autosave-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            opacity: 0;
+            transition: opacity .2s ease;
+        }
+        .autosave-chip.visible { opacity: 1; }
+        .autosave-chip.ok { color: var(--success-color, #2E7D32); }
+        .autosave-chip.error { color: var(--danger-color, #D32F2F); }
         .card {
             background: var(--bg-card);
             padding: 2rem;
@@ -541,11 +598,19 @@
 
         <main class="main-content">
             <div class="profile-container">
-                <div class="tabs">
-                    <button class="tab-btn active" onclick="switchTab('profile')">Mi Perfil</button>
-                    <button class="tab-btn" id="companyTabBtn" onclick="switchTab('company')" style="display: none;">Mi Empresa</button>
-                    <button class="tab-btn" id="usersTabBtn" onclick="switchTab('users')" style="display: none;">Usuarios</button>
+                <!-- Pestañas de configuración. En móvil la tira se desplaza de lado y se puede
+                     deslizar el dedo para pasar de una a otra. -->
+                <div class="tabs" id="configTabs">
+                    <button class="tab-btn active" onclick="switchTab('profile')"><i class="fas fa-user"></i> Mi Perfil</button>
+                    <button class="tab-btn" id="companyTabBtn" onclick="switchTab('negocio')" style="display: none;"><i class="fas fa-store"></i> Negocio</button>
+                    <button class="tab-btn" id="pagosTabBtn" onclick="switchTab('pagos')" style="display: none;"><i class="fas fa-credit-card"></i> Pagos</button>
+                    <button class="tab-btn" id="regionalTabBtn" onclick="switchTab('regional')" style="display: none;"><i class="fas fa-globe"></i> Regional</button>
+                    <button class="tab-btn" id="aparienciaTabBtn" onclick="switchTab('apariencia')" style="display: none;"><i class="fas fa-palette"></i> Apariencia</button>
+                    <button class="tab-btn" id="datosTabBtn" onclick="switchTab('datos')" style="display: none;"><i class="fas fa-plug"></i> Datos</button>
+                    <button class="tab-btn" id="usersTabBtn" onclick="switchTab('users')" style="display: none;"><i class="fas fa-users"></i> Usuarios</button>
                 </div>
+                <!-- Los cambios se guardan solos: aquí se ve que ya quedaron. -->
+                <div class="autosave-chip" id="autosaveChip" role="status" aria-live="polite" style="margin: -1.4rem 0 1.4rem 4px;"><i class="fas fa-circle-check"></i> <span id="autosaveTxt">Guardado</span></div>
 
                 <!-- Tab: Mi Perfil -->
                 <div id="profile" class="tab-content active">
@@ -591,11 +656,17 @@
                     </div>
                 </div>
 
-                <!-- Tab: Mi Empresa -->
-                <div id="company" class="tab-content">
-                    <div class="card">
-                        <h3>Datos de la Empresa</h3>
-                        <form id="companyForm">
+                <!-- Las pestañas de configuración, ya categorizadas: en vez de una sola
+                     pestaña "Mi Empresa" con todo dentro, cada asunto tiene la suya, y en móvil
+                     se navega deslizando el dedo. El guardado es automático: el botón de
+                     guardar quedaba muy abajo y se perdía de vista. -->
+                <form id="companyForm">
+
+                    <!-- Negocio: los datos de la empresa y cómo opera. -->
+                    <div id="negocio" class="tab-content">
+                        <div class="card">
+                            <h3>Mi Negocio</h3>
+
                             <div class="form-grid">
                                 <div class="form-group" style="grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 1rem;">
                                     <div style="width: 100px; height: 100px; border-radius: 50%; overflow: hidden; border: 2px solid var(--border-color); position: relative;">
@@ -650,6 +721,52 @@
                             </div>
 
                             <div class="settings-block">
+                                <h5 class="settings-subhead"><i class="fas fa-user-check"></i> Pedidos desde el QR de la mesa</h5>
+                                <label class="catalog-check">
+                                    <input type="checkbox" name="dining_require_activation" id="diningRequireActivation">
+                                    <span class="catalog-check-box"></span>
+                                    <span class="catalog-check-label">Que quien atiende active el pedido</span>
+                                </label>
+                                <p class="settings-hint">Al tocar «Listo para pedir», el comensal ve dos números y quien lo atiende los escribe (o escanea su QR) para autorizar ese teléfono. Los números caducan y son de un solo uso.</p>
+                                <p class="settings-hint" style="margin-left: 0;"><strong>Si lo apagas</strong>, cualquiera que tenga el enlace de una mesa puede pedir desde donde sea.</p>
+
+                                <div id="diningActivationGroup" style="display:none; margin-top: 12px;">
+                                    <div class="form-group" style="margin-bottom: 10px;">
+                                        <label style="font-size: 0.85rem; margin-bottom: 4px;">Cuánto viven los números (minutos)</label>
+                                        <input type="number" id="diningActivationMinutes" min="1" max="60" value="10" style="width:100%; padding:8px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-input); color: var(--text-color);">
+                                    </div>
+                                </div>
+
+                                <div class="form-group" style="margin-top: 12px;">
+                                    <label style="font-size: 0.85rem; margin-bottom: 4px;">Celulares a la vez por cuenta</label>
+                                    <input type="number" id="diningMaxDevices" min="0" max="50" step="1" inputmode="numeric" placeholder="0" style="width:100%; padding:8px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-input); color: var(--text-color);">
+                                    <p class="settings-hint"><strong>Déjalo en 0</strong> y el tope lo pone cada mesa, según sus asientos (se acomodan en el salón, en «Acomodar el salón»).</p>
+                                </div>
+                            </div>
+
+                            
+                            <!-- Forma de pago con la que nace una venta de mostrador. Cada negocio
+                                 cobra distinto: unos al pedir, otros piden un apartado y otros
+                                 cobran al entregar. Es solo el valor inicial: la cajera siempre
+                                 lo puede cambiar en el pedido. -->
+                            <div class="settings-block">
+                                <h5 class="settings-subhead"><i class="fas fa-money-bill-wave"></i> Pago en mostrador</h5>
+                                <label style="font-size: 0.9rem; display: block; margin-bottom: 8px;">Al crear un pedido de mostrador, ¿cómo nace el pago?</label>
+                                <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="counterPaymentOpts">
+                                    <button type="button" class="pay-opt-btn active" data-pago="unpaid" style="flex:1; min-width: 150px; padding: 9px 14px; border: 1px solid var(--border-color); background: transparent; cursor: pointer; font-size: 0.85rem;"><i class="fas fa-hand-holding-dollar"></i> Libre</button>
+                                    <button type="button" class="pay-opt-btn" data-pago="paid" style="flex:1; min-width: 150px; padding: 9px 14px; border: 1px solid var(--border-color); background: transparent; cursor: pointer; font-size: 0.85rem;"><i class="fas fa-circle-check"></i> Pagado</button>
+                                    <button type="button" class="pay-opt-btn" data-pago="partial" style="flex:1; min-width: 150px; padding: 9px 14px; border: 1px solid var(--border-color); background: transparent; cursor: pointer; font-size: 0.85rem;"><i class="fas fa-coins"></i> Apartado</button>
+                                </div>
+                                <p class="settings-hint" id="counterPaymentHint">Se cobra al entregar el pedido.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pagos: con qué se cobra. -->
+                    <div id="pagos" class="tab-content">
+                        <div class="card">
+                            <h3>Medios de pago</h3>
+<div class="settings-block">
                                 <h5 class="settings-subhead"><i class="fas fa-qrcode"></i> CoDi (Cobro Digital)</h5>
                                 <label class="catalog-check">
                                     <input type="checkbox" name="codi_enabled" id="codiEnabled">
@@ -694,30 +811,6 @@
                                  a ESE dispositivo. No es una contraseña: es la prueba de que está
                                  ahí, con el factor humano a cargo. -->
                             <div class="settings-block">
-                                <h5 class="settings-subhead"><i class="fas fa-user-check"></i> Pedidos desde el QR de la mesa</h5>
-                                <label class="catalog-check">
-                                    <input type="checkbox" name="dining_require_activation" id="diningRequireActivation">
-                                    <span class="catalog-check-box"></span>
-                                    <span class="catalog-check-label">Que quien atiende active el pedido</span>
-                                </label>
-                                <p class="settings-hint">Al tocar «Listo para pedir», el comensal ve dos números y quien lo atiende los escribe (o escanea su QR) para autorizar ese teléfono. Los números caducan y son de un solo uso.</p>
-                                <p class="settings-hint" style="margin-left: 0;"><strong>Si lo apagas</strong>, cualquiera que tenga el enlace de una mesa puede pedir desde donde sea.</p>
-
-                                <div id="diningActivationGroup" style="display:none; margin-top: 12px;">
-                                    <div class="form-group" style="margin-bottom: 10px;">
-                                        <label style="font-size: 0.85rem; margin-bottom: 4px;">Cuánto viven los números (minutos)</label>
-                                        <input type="number" id="diningActivationMinutes" min="1" max="60" value="10" style="width:100%; padding:8px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-input); color: var(--text-color);">
-                                    </div>
-                                </div>
-
-                                <div class="form-group" style="margin-top: 12px;">
-                                    <label style="font-size: 0.85rem; margin-bottom: 4px;">Celulares a la vez por cuenta</label>
-                                    <input type="number" id="diningMaxDevices" min="0" max="50" step="1" inputmode="numeric" placeholder="0" style="width:100%; padding:8px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-input); color: var(--text-color);">
-                                    <p class="settings-hint"><strong>Déjalo en 0</strong> y el tope lo pone cada mesa, según sus asientos (se acomodan en el salón, en «Acomodar el salón»).</p>
-                                </div>
-                            </div>
-
-                            <div class="settings-block">
                                 <h5 class="settings-subhead"><i class="fas fa-credit-card"></i> Stripe (Tarjeta de credito/debito)</h5>
                                 <label class="catalog-check">
                                     <input type="checkbox" name="stripe_enabled" id="stripeEnabled">
@@ -743,7 +836,15 @@
                                 </div>
                             </div>
 
-                            <h4 class="sub-section-title" style="margin-top: 2.2rem; margin-bottom: 1rem;"><i class="fas fa-globe"></i> Formato Regional</h4>
+                            <h4 class="sub-section-title" style="margin-top: 2.2rem; margin-bottom: 1rem;">
+                        </div>
+                    </div>
+
+                    <!-- Regional: cómo se escriben el dinero y las fechas. -->
+                    <div id="regional" class="tab-content">
+                        <div class="card">
+                            <h3>Formato regional</h3>
+<i class="fas fa-globe"></i> Formato Regional</h4>
                             <p class="sub-section-desc">Cómo se muestran los números, la moneda y las fechas en todo el sistema (pantallas, tickets y reportes). Solo afecta la presentación; los datos se guardan igual para todas las regiones.</p>
                             <div class="form-grid">
                                 <div class="form-group" style="grid-column: 1 / -1;">
@@ -827,7 +928,15 @@
                                 </div>
                             </div>
 
-                            <h4 class="sub-section-title" style="margin-top: 2.2rem; margin-bottom: 1rem;"><i class="fas fa-plug"></i> Integraciones</h4>
+                            <h4 class="sub-section-title" style="margin-bottom: 1rem;">
+                        </div>
+                    </div>
+
+                    <!-- Datos: lo que entra y lo que sale del sistema. -->
+                    <div id="datos" class="tab-content">
+                        <div class="card">
+                            <h3>Datos e integraciones</h3>
+<i class="fas fa-plug"></i> Integraciones</h4>
                             <p class="sub-section-desc">Conecta tus asistentes y herramientas externas con claves de acceso.</p>
                             <div class="sub-section-body">
                             <div style="background: var(--bg-light); padding: 1.5rem 2rem; border-radius: 8px; border: 1px dashed var(--border-color); display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
@@ -849,7 +958,7 @@
                             </div>
                             </div>
 
-                            <h4 class="sub-section-title" style="margin-top: 2.2rem; margin-bottom: 1rem;"><i class="fas fa-file-import"></i> Importar Datos</h4>
+                            <h4 class="sub-section-title" style="margin-bottom: 1rem;"><i class="fas fa-file-import"></i> Importar Datos</h4>
                             <p class="sub-section-desc">Carga tus productos, precios y existencias desde un archivo Excel.</p>
                             <div class="sub-section-body">
                             <div style="background: var(--bg-light); padding: 2rem; border-radius: 8px; border: 1px dashed var(--border-color); text-align: center;">
@@ -869,7 +978,15 @@
                             </div>
                             </div>
 
-                            <h4 class="sub-section-title" style="margin-top: 2.2rem; margin-bottom: 1rem;"><i class="fas fa-palette"></i> Personalización</h4>
+                            <h4 class="sub-section-title" style="margin-bottom: 1rem;">
+                        </div>
+                    </div>
+
+                    <!-- Apariencia: tema, colores y papel tapiz. -->
+                    <div id="apariencia" class="tab-content">
+                        <div class="card">
+                            <h3>Apariencia</h3>
+<i class="fas fa-palette"></i> Personalización</h4>
                             <p class="sub-section-desc">Personaliza los colores de tu tienda, el modo de tema y la imagen de fondo. Los cambios se ven reflejados en tiempo real.</p>
                             <div class="sub-section-body">
 
@@ -1157,20 +1274,16 @@
                                                 Cubrir llena la pantalla y recorta lo que sobra; rellenar estira la imagen completa.
                                             </p>
                                         </div>
-                                        <p class="wallpaper-hint" id="wallpaperStatus">Los cambios se guardan con «Guardar Configuración».</p>
+                                        <p class="wallpaper-hint" id="wallpaperStatus">Los cambios se guardan solos.</p>
                                     </div>
                                 </div>
                             </div>
                             </div>
-                            </div>
 
-                            <div style="margin-top: 2rem;">
-                                <button type="submit" class="btn btn-primary">Guardar Configuración</button>
-                            </div>
-                        </form>
+                            
+                        </div>
                     </div>
-                </div>
-
+                </form>
                 <!-- Tab: Usuarios -->
                 <div id="users" class="tab-content">
                     <div class="card">
@@ -1403,7 +1516,7 @@
 
     <script src="js/sidebar-loader.js?v=13"></script>
     <script src="js/app.js?v=12"></script>
-    <script src="js/profile.js?v=7"></script>
+    <script src="js/profile.js?v=8"></script>
     <script src="lib/animejs/anime.min.js"></script>
     <script src="js/design-system.js?v=7"></script>
 </body>

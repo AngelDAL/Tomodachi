@@ -57,6 +57,11 @@ try {
             }
             Response::success($pedido);
         }
+        // Catálogo con el precio ya con promociones: lo usa la rejilla del alta de pedido para
+        // mostrar el descuento en la propia tarjeta, sin una consulta por producto.
+        if (!empty($_GET['catalogo'])) {
+            Response::success(['products' => $counter->catalogo($store_id)]);
+        }
         Response::success($counter->listar($store_id, empty($_GET['historico'])));
     } elseif ($method === 'POST') {
         $data = json_decode(file_get_contents('php://input'), true);
@@ -79,7 +84,9 @@ try {
                 $data['customer_name'] ?? null,
                 $data['items'] ?? [],
                 $data['notes'] ?? null,
-                (int)($actor['user_id'] ?? 0)
+                (int)($actor['user_id'] ?? 0),
+                $data['payment_status'] ?? null,     // si no viene, se usa lo que tenga configurado el negocio
+                $data['paid_amount'] ?? null
             );
             Response::success($pedido, 'Pedido registrado');
         }

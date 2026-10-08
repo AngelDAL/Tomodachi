@@ -187,6 +187,61 @@ if [ "$(echo "$CANC" | jq_ data.status)" = "cancelled" ] && [ "$(echo "$CANC" | 
 COD=$(codigo "$BASE/api/counter/track.php?t=00000000-0000-4000-8000-000000000000")
 if [ "$COD" = "404" ]; then ok "token inventado responde 404"; else mal "token inventado ($COD)"; fi
 
+# 12. Catálogo con precios de promoción (lo que pinta la rejilla del alta de pedido)
+CAT=$(api "$BASE/api/dining/counter.php?catalogo=1")
+NPROD=$(echo "$CAT" | python3 -c "import json,sys;print(len((json.load(sys.stdin).get('data') or {}).get('products') or []))" 2>/dev/null)
+if [ "${NPROD:-0}" -gt 0 ]; then ok "el catálogo del mostrador trae productos ($NPROD)"; else mal "catálogo vacío"; fi
+CAMPOS=$(echo "$CAT" | python3 -c "
+import json,sys
+ps=(json.load(sys.stdin).get('data') or {}).get('products') or []
+if not ps: print('no'); raise SystemExit
+p=ps[0]
+faltan=[k for k in ('product_id','product_name','price','original_price','promo_price') if k not in p]
+print('si' if not faltan else 'faltan:'+','.join(faltan))
+")
+if [ "$CAMPOS" = "si" ]; then ok "cada línea trae precio de lista y precio con promoción"; else mal "campos del catálogo ($CAMPOS)"; fi
+# El precio con promoción nunca puede ser mayor que el de lista.
+DESB=$(echo "$CAT" | python3 -c "
+import json,sys
+ps=(json.load(sys.stdin).get('data') or {}).get('products') or []
+malos=[p['product_name'] for p in ps if float(p['promo_price']) > float(p['original_price']) + 0.004]
+print('no' if malos else 'si')
+")
+if [ "$DESB" = "si" ]; then ok "ningún precio con promoción supera al de lista"; else mal "precio con promoción mayor que el de lista"; fi
+
+# 13. Forma de pago por defecto del mostrador (la configura el negocio)
+AJUSTES=$(api "$BASE/api/stores/settings.php")
+BASE_CFG=$(echo "$AJUSTES" | python3 -c "import json,sys;d=json.load(sys.stdin).get('data') or {};print(json.dumps({'store_name':d.get('store_name'),'address':d.get('address'),'phone':d.get('phone'),'settings':d.get('settings') or {}}))")
+guardar_pago() {
+  echo "$BASE_CFG" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+d['settings']['counter']={'default_payment':'$1'}
+print(json.dumps(d))
+" > /tmp/pago.json
+  api -X POST "$BASE/api/stores/settings.php" -H 'Content-Type: application/json' -d @/tmp/pago.json > /dev/null
+}
+crear_pago() {
+  api -X POST "$BASE/api/dining/counter.php" -H 'Content-Type: application/json' \
+    -d "{\"action\":\"create\",\"customer_name\":\"Pago $suf\",\"items\":[{\"product_id\":$P2,\"quantity\":2}]$1}"
+}
+guardar_pago paid
+P=$(crear_pago "")
+if [ "$(echo "$P" | jq_ data.payment_status)" = "paid" ] && [ "$(mismo "$(echo "$P" | jq_ data.paid_amount)" "$(echo "$P" | jq_ data.total)")" = "si" ]; then
+  ok "con el negocio en 'pagado', la venta nace pagada"
+else mal "pago por defecto 'paid' ($P)"; fi
+guardar_pago partial
+P=$(crear_pago ",\"paid_amount\":5")
+if [ "$(echo "$P" | jq_ data.payment_status)" = "partial" ] && [ "$(mismo "$(echo "$P" | jq_ data.paid_amount)" 5)" = "si" ]; then
+  ok "con el negocio en 'apartado', la venta nace con el adelanto"
+else mal "pago por defecto 'partial' ($P)"; fi
+P=$(crear_pago "")
+if [ "$(echo "$P" | jq_ data.payment_status)" = "unpaid" ]; then ok "un apartado sin monto no es un pago (queda por cobrar)"; else mal "apartado sin monto ($P)"; fi
+guardar_pago paid
+P=$(crear_pago ",\"payment_status\":\"unpaid\"")
+if [ "$(echo "$P" | jq_ data.payment_status)" = "unpaid" ]; then ok "la cajera puede cambiar la forma de pago sugerida"; else mal "anular el valor por defecto ($P)"; fi
+guardar_pago unpaid
+
 echo "===== RESULTADO: $PASS pasaron, $FAIL fallaron ====="
 rm -f "$CJ"
 [ "$FAIL" -eq 0 ]

@@ -1511,15 +1511,23 @@
         .ct-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 360px); gap: 16px; align-items: stretch; flex: 1 1 auto; min-height: 0; }
         .ct-picker { display: flex; flex-direction: column; gap: 10px; min-height: 0; min-width: 0; }
         .ct-productos { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; flex: 1 1 auto; min-height: 180px; overflow-y: auto; align-content: start; }
-        .ct-prod { background: var(--bg-card, #fff); border: 1px solid var(--border-color); border-radius: var(--ds-radius-md); padding: 8px; cursor: pointer; text-align: center; display: flex; flex-direction: column; gap: 6px; font-family: inherit; color: var(--text-color); position: relative; }
+        .ct-prod { background: var(--bg-card, #fff); border: 1px solid var(--border-color); border-radius: var(--ds-radius-md); padding: 8px; cursor: pointer; text-align: center; display: flex; flex-direction: column; gap: 6px; font-family: inherit; color: var(--text-color); position: relative; min-width: 0; }
         .ct-prod:hover { border-color: var(--primary-color); }
         .ct-prod.elegido { border-color: var(--primary-color); box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 30%, transparent); }
         .ct-prod-img { position: relative; width: 100%; aspect-ratio: 1 / 1; max-height: 76px; border-radius: 8px; background: var(--bg-light); display: flex; align-items: center; justify-content: center; overflow: hidden; }
         .ct-prod-img img { width: 100%; height: 100%; object-fit: cover; }
         .ct-prod-vacia { color: var(--text-muted); font-size: 1.2rem; }
         .ct-prod-badge { position: absolute; top: 4px; right: 4px; background: var(--primary-color); color: var(--text-on-primary, #fff); border-radius: var(--ds-radius-pill); font-size: .7rem; font-weight: 800; min-width: 20px; padding: 1px 6px; }
-        .ct-prod-nombre { font-size: .82rem; font-weight: 600; line-height: 1.15; overflow-wrap: anywhere; }
-        .ct-prod-precio { font-size: .85rem; font-weight: 800; color: var(--primary-darker, #1F8A82); font-variant-numeric: tabular-nums; }
+        /* El nombre puede partirse en varias líneas, pero siempre centrado y sin desbordar. */
+        .ct-prod-nombre { font-size: .82rem; font-weight: 600; line-height: 1.15; text-align: center; overflow-wrap: anywhere; word-break: break-word; }
+        /* Etiqueta chica: hay una promoción que aplica pero pide más cantidad (aún no cambia el unitario). */
+        .ct-prod-promo { font-size: .66rem; line-height: 1.15; color: var(--success-color, #2E7D32); text-align: center; overflow-wrap: anywhere; }
+        .ct-prod-promo i { margin-right: 2px; }
+        /* El bloque de precios va EMPUJADO AL FONDO: así, aunque un nombre ocupe tres líneas y otro
+           una sola, todos los precios de la fila quedan a la misma altura. */
+        .ct-prod-precios { margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 1px; }
+        .ct-prod-precio-orig { font-size: .74rem; line-height: 1.1; color: var(--text-muted); text-decoration: line-through; font-variant-numeric: tabular-nums; }
+        .ct-prod-precio { font-size: .9rem; line-height: 1.1; font-weight: 800; color: var(--primary-darker, #1F8A82); font-variant-numeric: tabular-nums; }
         .ct-orden { border: 1px solid var(--border-color); border-radius: var(--ds-radius-lg); background: var(--bg-lightest, #fafafa); display: flex; flex-direction: column; min-height: 0; }
         .ct-orden-titulo { padding: 10px 14px; font-weight: 700; font-size: .82rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); border-bottom: 1px solid var(--border-lighter, #eee); }
         .ct-orden-lista { flex: 1 1 auto; overflow-y: auto; padding: 6px 12px; min-height: 90px; }
@@ -1608,6 +1616,17 @@
            Cada pestaña se queda con TODO el alto disponible: antes se repartían el alto a
            medias (42vh / 46vh) y las dos quedaban apretadas. */
         .ct-pestanas { display: none; }
+
+        /* Alta de pedido: al cambiar de pestaña, la zona que ENTRA se desliza desde el lado
+           contrario al gesto (dedo a la izquierda -> "Pedido" entra desde la derecha). Se anima
+           SOLO la zona de contenido, nunca la barra de pestañas ni el modal. */
+        .ct-entra-derecha { animation: ct-entra-derecha .26s cubic-bezier(.2, .7, .3, 1); }
+        .ct-entra-izquierda { animation: ct-entra-izquierda .26s cubic-bezier(.2, .7, .3, 1); }
+        @keyframes ct-entra-derecha { from { transform: translateX(26px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes ct-entra-izquierda { from { transform: translateX(-26px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @media (prefers-reduced-motion: reduce) {
+            .ct-entra-derecha, .ct-entra-izquierda { animation: none; }
+        }
 
         @media (max-width: 900px) {
             .ct-pestanas {
@@ -2433,7 +2452,7 @@
     <script src="js/tables.js?v=13"></script>
     <script src="js/cobro.js?v=2"></script>
     <script src="js/comandas.js?v=6"></script>
-    <script src="js/counter.js?v=5"></script>
+    <script src="js/counter.js?v=6"></script>
     <script src="lib/animejs/anime.min.js"></script>
     <script src="js/design-system.js?v=7"></script>
 </body>

@@ -58,7 +58,7 @@ class CounterService {
      * @param array $items [{product_id, quantity, notes?}]
      * @return array el pedido armado (obtener())
      */
-    public function crear($store_id, $customer_name, array $items, $notes = null, $created_by = null) {
+    public function crear($store_id, $customer_name, array $items, $notes = null, $created_by = null, $payment_status = null, $paid_amount = null) {
         $items = array_values(array_filter($items, function ($i) {
             return is_array($i) && isset($i['product_id']) && (float)($i['quantity'] ?? 0) > 0;
         }));
@@ -100,7 +100,13 @@ class CounterService {
 
         $token = self::uuidv4();
         $fecha = $this->fechaDeNegocio();
-        $order_id = $this->insertarPedido($store_id, $fecha, $nombre, $token, $nota, $created_by, $antes, $descuento, $total);
+
+        // Forma de pago con la que NACE la venta. No todos los negocios cobran igual: unos
+        // cobran al pedir (mostrador rápido), otros piden un apartado y otros cobran al final.
+        // El negocio lo configura; la cajera siempre lo puede cambiar después.
+        [$pagoEstado, $pagoMonto] = $this->resolverPago($store_id, $total, $payment_status, $paid_amount);
+
+        $order_id = $this->insertarPedido($store_id, $fecha, $nombre, $token, $nota, $created_by, $antes, $descuento, $total, $pagoEstado, $pagoMonto);
 
         foreach ($lines as $l) {
             $pid = (int)$l['product_id'];
@@ -130,12 +136,12 @@ class CounterService {
         return $this->obtener($order_id, $store_id);
     }
 
-    private function insertarPedido($store_id, $fecha, $nombre, $token, $nota, $created_by, $subtotal, $descuento, $total) {
+    private function insertarPedido($store_id, $fecha, $nombre, $token, $nota, $created_by, $subtotal, $descuento, $total, $pagoEstado = 'unpaid', $pagoMonto = 0) {
         $sql = "INSERT INTO counter_orders
                     (store_id, business_date, number, customer_name, tracking_token, notes,
-                     subtotal, discount, created_by)
+                     subtotal, discount, created_by, payment_status, paid_amount)
                 SELECT :store_id, :fecha, COALESCE(MAX(number), 0) + 1, :nombre, :token, :nota,
-                       :subtotal, :descuento, :by
+                       :subtotal, :descuento, :by, :pago_estado, :pago_monto
                   FROM counter_orders
                  WHERE store_id = :store_id_filtro AND business_date = :fecha_filtro";
         for ($intento = 1; $intento <= 4; $intento++) {
@@ -150,6 +156,8 @@ class CounterService {
                     ':subtotal'        => $subtotal,
                     ':descuento'       => $descuento,
                     ':by'              => $created_by !== null ? (int)$created_by : null,
+                    ':pago_estado'     => $pagoEstado,
+                    ':pago_monto'      => $pagoMonto,
                     ':store_id_filtro' => $store_id,
                     ':fecha_filtro'    => $fecha,
                 ]);
@@ -161,6 +169,144 @@ class CounterService {
             }
         }
         throw new Exception('No se pudo asignar el folio del pedido');
+    }
+
+    /**
+     * Forma de pago de una venta nueva: lo que mande la cajera y, si no manda nada, lo que el
+     * negocio tenga configurado (`settings.counter.default_payment`).
+     *
+     * Devuelve [estado, monto pagado]. Un adelanto sin monto no es un adelanto, así que en ese
+     * caso el pedido queda como "por cobrar" en vez de mostrar un pago de cero.
+     */
+    private function resolverPago($store_id, $total, $pedido_por_la_cajera = null, $monto = null) {
+        $total = round((float)$total, 2);
+        $modo  = $pedido_por_la_cajera ?: $this->pagoPorDefecto($store_id);
+        if (!in_array($modo, ['unpaid', 'partial', 'paid'], true)) {
+            $modo = 'unpaid';
+        }
+
+        if ($modo === 'paid') {
+            return ['paid', $total];
+        }
+        if ($modo === 'partial') {
+            $adelanto = $monto !== null ? round((float)$monto, 2) : 0.0;
+            if ($adelanto <= 0) {
+                return ['unpaid', 0];
+            }
+            if ($adelanto >= $total) {
+                return ['paid', $total];
+            }
+            return ['partial', $adelanto];
+        }
+        return ['unpaid', 0];
+    }
+
+    /** Cómo nace el pago en el mostrador para esta tienda. Por defecto: libre (se cobra al final). */
+    private function pagoPorDefecto($store_id) {
+        try {
+            $stmt = $this->conn->prepare("SELECT settings FROM stores WHERE store_id = ?");
+            $stmt->execute([(int)$store_id]);
+            $crudo = (string)$stmt->fetchColumn();
+            $cfg = $crudo !== '' ? json_decode($crudo, true) : null;
+            $modo = is_array($cfg) ? ($cfg['counter']['default_payment'] ?? null) : null;
+            return in_array($modo, ['unpaid', 'partial', 'paid'], true) ? $modo : 'unpaid';
+        } catch (Throwable $e) {
+            return 'unpaid';
+        }
+    }
+
+    /**
+     * Catálogo del mostrador con el precio YA con promociones.
+     *
+     * La rejilla del alta de pedido tiene que mostrar el descuento en la propia tarjeta, y quien
+     * manda es el motor de precios (`Pricing`), el mismo que cobra: se le pasa el catálogo
+     * completo de una sola vez para no hacer una consulta por producto.
+     *
+     * Las promociones que piden más de una pieza (un "3 por 2") no cambian el precio de una
+     * unidad, así que aparte se avisan con `promo_hint`: la cajera ve que ahí hay promoción
+     * aunque el precio unitario no baje, y el descuento aparece al juntar la cantidad.
+     */
+    public function catalogo($store_id) {
+        $stmt = $this->conn->prepare(
+            "SELECT product_id, product_name, price, image_path, category_id,
+                    is_ingredient, hidden_in_pos
+               FROM products
+              WHERE store_id = ? AND status = 'active'
+              ORDER BY product_name ASC"
+        );
+        $stmt->execute([(int)$store_id]);
+        $prods = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $items = [];
+        foreach ($prods as $p) {
+            $items[] = ['product_id' => (int)$p['product_id'], 'quantity' => 1];
+        }
+        $lineas = [];
+        if ($items) {
+            try {
+                $calc = (new Pricing($this->db))->calculate($store_id, $items, true);
+                foreach (($calc['lines'] ?? []) as $l) {
+                    $lineas[(int)$l['product_id']] = $l;
+                }
+            } catch (Throwable $e) {
+                $lineas = [];   // sin promociones se muestra el precio de lista; nunca se rompe
+            }
+        }
+
+        $avisos = $this->promocionesPorCantidad($store_id);
+
+        $salida = [];
+        foreach ($prods as $p) {
+            $id    = (int)$p['product_id'];
+            $lista = round((float)$p['price'], 2);
+            $l     = $lineas[$id] ?? null;
+            $real  = $l ? round((float)$l['unit_price'], 2) : $lista;
+            $antes = $l ? round((float)($l['original_price'] ?? $lista), 2) : $lista;
+            $cat   = $p['category_id'] !== null ? (int)$p['category_id'] : null;
+
+            $salida[] = [
+                'product_id'     => $id,
+                'product_name'   => $p['product_name'],
+                'category_id'    => $cat,
+                'image_path'     => $p['image_path'],
+                'is_ingredient'  => (int)$p['is_ingredient'],
+                'hidden_in_pos'  => (int)$p['hidden_in_pos'],
+                'price'          => $lista,
+                'original_price' => $antes,
+                'promo_price'    => $real,
+                'promotion_name' => ($real < $antes - 0.004) ? ($l['promotion_name'] ?? null) : null,
+                'promo_hint'     => $avisos[$id] ?? ($cat !== null ? ($avisos['cat' . $cat] ?? null) : null),
+            ];
+        }
+        return $salida;
+    }
+
+    /** Promociones vigentes que piden más de una pieza, por producto o por su categoría. */
+    private function promocionesPorCantidad($store_id) {
+        try {
+            $stmt = $this->conn->prepare(
+                "SELECT pt.product_id, pt.category_id, pt.required_quantity, pr.name
+                   FROM promotion_targets pt
+                   JOIN promotions pr ON pr.promotion_id = pt.promotion_id
+                  WHERE pr.store_id = ? AND pr.is_active = 1
+                    AND (pr.min_quantity > 1 OR pt.required_quantity > 1)
+                    AND NOW() BETWEEN pr.start_date AND pr.end_date"
+            );
+            $stmt->execute([(int)$store_id]);
+            $filas = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Throwable $e) {
+            return [];
+        }
+
+        $mapa = [];
+        foreach ($filas as $f) {
+            if ($f['product_id'] !== null) {
+                $mapa[(int)$f['product_id']] = $f['name'];
+            } elseif ($f['category_id'] !== null) {
+                $mapa['cat' . (int)$f['category_id']] = $f['name'];
+            }
+        }
+        return $mapa;
     }
 
     // =========================================================

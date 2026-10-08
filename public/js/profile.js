@@ -11,8 +11,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Si es admin, mostrar pestañas extra
     if (session.role === 'admin') {
-        document.getElementById('companyTabBtn').style.display = 'inline-block';
-        document.getElementById('usersTabBtn').style.display = 'inline-block';
+        // Las pestañas de configuración van juntas: si el rol no es admin, no se muestra ninguna.
+        ['companyTabBtn', 'pagosTabBtn', 'regionalTabBtn', 'aparienciaTabBtn', 'datosTabBtn', 'usersTabBtn'].forEach(function (id) {
+            const b = document.getElementById(id);
+            if (b) b.style.display = 'inline-block';
+        });
+        activarGuardadoAutomatico();
+        activarDeslizPestanas();
         loadCompanySettings();
         if (session.must_change_password) {
             // Mientras la contraseña pendiente, el backend bloquea
@@ -104,8 +109,159 @@ function switchTab(tabId) {
     document.getElementById(tabId).classList.add('active');
     // Encontrar el botón correspondiente (un poco hacky pero funciona)
     const btn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick').includes(tabId));
-    if (btn) btn.classList.add('active');
+    if (btn) {
+        btn.classList.add('active');
+        // En móvil la tira se desplaza de lado: la pestaña activa tiene que quedar a la vista,
+        // si no el usuario queda en una pestaña que no ve.
+        if (btn.scrollIntoView) {
+            btn.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+        }
+    }
 }
+
+// ============================================================
+// Guardado automático de la configuración
+//
+// El botón de guardar quedaba al final de una pestaña larguísima y se perdía de vista. Ahora
+// los cambios se guardan solos en cuanto el usuario termina de tocar algo, y un aviso discreto
+// confirma que ya quedaron.
+//
+// Se reutiliza el MISMO guardado de siempre (`requestSubmit` dispara el manejador que ya
+// existía): así no hay dos caminos que puedan desincronizarse, solo cambia CUÁNDO se dispara.
+//
+// La pestaña "Mi Perfil" se queda con su botón a propósito: ahí se cambia la contraseña, y
+// guardarla sola mientras se escribe sería una mala idea.
+// ============================================================
+
+let programarGuardadoConfig = null;
+
+function avisoAutosave(texto, estado) {
+    const chip = document.getElementById('autosaveChip');
+    const txt = document.getElementById('autosaveTxt');
+    if (!chip || !txt) return;
+    txt.textContent = texto;
+    chip.classList.remove('ok', 'error');
+    if (estado) chip.classList.add(estado);
+    chip.classList.add('visible');
+    clearTimeout(avisoAutosave._t);
+    if (estado !== 'error') {
+        avisoAutosave._t = setTimeout(function () { chip.classList.remove('visible'); }, 2600);
+    }
+}
+
+function activarGuardadoAutomatico() {
+    const form = document.getElementById('companyForm');
+    if (!form || form.dataset.autosave === '1') return;
+    form.dataset.autosave = '1';
+
+    let t = null;
+    const instantanea = () => Array.prototype.map.call(form.elements, function (el) {
+        if (!el.name && !el.id) return '';
+        return (el.name || el.id) + '=' + (el.type === 'checkbox' ? (el.checked ? 1 : 0) : el.value);
+    }).join('|') + '|pago=' + pagoMostradorSeleccionado();
+    let previa = instantanea();
+
+    programarGuardadoConfig = function () {
+        clearTimeout(t);
+        avisoAutosave('Guardando…', null);
+        t = setTimeout(function () {
+            const ahora = instantanea();
+            if (ahora === previa) {
+                const chip = document.getElementById('autosaveChip');
+                if (chip) chip.classList.remove('visible');
+                return;
+            }
+            previa = ahora;
+            // El guardado silencioso no lanza avisos emergentes: informa el chip de arriba.
+            window.__guardadoAuto = true;
+            try { form.requestSubmit(); } finally { window.__guardadoAuto = false; }
+        }, 700);
+    };
+
+    form.addEventListener('input', programarGuardadoConfig);
+    form.addEventListener('change', programarGuardadoConfig);
+}
+
+// ============================================================
+// Pestañas de configuración: se pasa de una a otra deslizando el dedo
+//
+// Mismo criterio que en el resto de la aplicación: solo cuenta si el gesto es claramente
+// horizontal (45 px y al menos 1.5 veces el movimiento vertical). Así, desplazar una lista
+// larga de ajustes con el dedo torcido NO cambia de pestaña sin querer.
+// ============================================================
+
+const ORDEN_PESTANAS = ['profile', 'negocio', 'pagos', 'regional', 'apariencia', 'datos', 'users'];
+
+function pestanaVisible(id) {
+    const btn = document.querySelector('.tab-btn[onclick*="switchTab(\'' + id + '\')"]');
+    return !!(btn && btn.style.display !== 'none');
+}
+
+function activarDeslizPestanas() {
+    const zona = document.querySelector('main') || document.body;
+    if (!zona || zona.dataset.deslizConfig === '1') return;
+    zona.dataset.deslizConfig = '1';
+
+    let x0 = 0, y0 = 0, siguiendo = false;
+
+    zona.addEventListener('touchstart', function (e) {
+        if (e.touches.length !== 1) { siguiendo = false; return; }
+        if (!window.matchMedia || !window.matchMedia('(max-width: 900px)').matches) { siguiendo = false; return; }
+        // Aquí todo es formulario: si el gesto empieza sobre un control, el dedo hace otra cosa.
+        if (e.target.closest && e.target.closest('input, textarea, select, label, a, button')) { siguiendo = false; return; }
+        x0 = e.touches[0].clientX;
+        y0 = e.touches[0].clientY;
+        siguiendo = true;
+    }, { passive: true });
+
+    zona.addEventListener('touchend', function (e) {
+        if (!siguiendo) return;
+        siguiendo = false;
+        const t = e.changedTouches && e.changedTouches[0];
+        if (!t) return;
+        const dx = t.clientX - x0, dy = t.clientY - y0;
+        if (Math.abs(dx) < 45 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+        const activa = document.querySelector('.tab-content.active');
+        const lista = ORDEN_PESTANAS.filter(pestanaVisible);
+        const i = lista.indexOf(activa ? activa.id : 'profile');
+        if (i < 0) return;
+        const destino = lista[i + (dx < 0 ? 1 : -1)];
+        if (destino) switchTab(destino);
+    }, { passive: true });
+
+    zona.addEventListener('touchcancel', function () { siguiendo = false; }, { passive: true });
+}
+
+// ============================================================
+// Pago en mostrador: con qué forma de pago nace una venta nueva
+// ============================================================
+
+function pagoMostradorSeleccionado() {
+    const b = document.querySelector('#counterPaymentOpts .pay-opt-btn.active');
+    return b ? b.getAttribute('data-pago') : 'unpaid';
+}
+
+function marcarPagoMostrador(modo) {
+    if (['unpaid', 'paid', 'partial'].indexOf(modo) < 0) modo = 'unpaid';
+    document.querySelectorAll('#counterPaymentOpts .pay-opt-btn').forEach(function (b) {
+        b.classList.toggle('active', b.getAttribute('data-pago') === modo);
+    });
+    const pistas = {
+        unpaid: 'Se cobra al entregar el pedido.',
+        paid: 'Al tomar el pedido queda pagado por completo.',
+        partial: 'Se pide un adelanto y el resto se cobra al entregar.'
+    };
+    const h = document.getElementById('counterPaymentHint');
+    if (h) h.textContent = pistas[modo];
+}
+
+document.addEventListener('click', function (ev) {
+    const b = ev.target.closest && ev.target.closest('#counterPaymentOpts .pay-opt-btn');
+    if (!b) return;
+    marcarPagoMostrador(b.getAttribute('data-pago'));
+    // Los botones no disparan 'change': hay que avisarle al guardado automático.
+    if (typeof programarGuardadoConfig === 'function') programarGuardadoConfig();
+});
 
 async function loadProfile() {
   // Reintento: el SW o la red pueden fallar la primera vez al navegar.
@@ -199,6 +355,8 @@ async function loadCompanySettings() {
         if (store.settings) {
           document.getElementById('allowNegativeStock').checked = !!store.settings.allow_negative_stock;
           document.getElementById('requireOpenRegister').checked = !!store.settings.require_open_register;
+          // Forma de pago con la que nace una venta de mostrador.
+          marcarPagoMostrador((store.settings.counter && store.settings.counter.default_payment) || 'unpaid');
           // Cargar formato regional
                 loadFormatConfig(store.settings.format || null);
             }
@@ -817,6 +975,14 @@ if (formatPresetSel) {
 
 document.getElementById('companyForm').addEventListener('submit', async (e) => {
     e.preventDefault();
+    // Cuando el guardado lo dispara el guardado automático, no se lanzan avisos emergentes:
+    // basta el chip de "Guardado" de arriba. Los errores sí se avisan siempre.
+    const silencioso = window.__guardadoAuto === true;
+    const avisar = (msg, tipo) => {
+        if (silencioso && tipo === 'success') { avisoAutosave('Guardado', 'ok'); return; }
+        if (silencioso && tipo !== 'success') { avisoAutosave('No se pudo guardar', 'error'); }
+        showNotification(msg, tipo);
+    };
     const formData = new FormData(e.target);
 
     // Recolectar configuración de tema — AHORA se guardan TODAS las
@@ -878,6 +1044,10 @@ document.getElementById('companyForm').addEventListener('submit', async (e) => {
             secret_key: document.getElementById('stripeSecretKey').value || undefined,
             publishable_key: document.getElementById('stripePublishableKey').value || undefined,
             webhook_secret: document.getElementById('stripeWebhookSecret').value || undefined
+        },
+        // Forma de pago con la que nace una venta de mostrador (la elige el negocio).
+        counter: {
+            default_payment: pagoMostradorSeleccionado()
         }
     };
 
@@ -903,11 +1073,11 @@ document.getElementById('companyForm').addEventListener('submit', async (e) => {
             // el GET) y se envía al endpoint que ya lo escribe con COALESCE.
             const codiSecret = await saveCodiWebhookSecret();
             if (!codiSecret.attempted) {
-                showNotification('Configuración guardada', 'success');
+                avisar('Configuración guardada', 'success');
             } else if (codiSecret.ok) {
-                showNotification('Configuración y secreto de webhook guardados', 'success');
+                avisar('Configuración y secreto de webhook guardados', 'success');
             } else {
-                showNotification('Se guardó la configuración, pero el secreto del webhook de CoDi NO: ' + codiSecret.message, 'error');
+                avisar('Se guardó la configuración, pero el secreto del webhook de CoDi NO: ' + codiSecret.message, 'error');
             }
             // Aplicar en vivo el tema guardado (modo actual) y refrescar caché
             if (window.__activeThemeConfig) {
@@ -925,10 +1095,10 @@ document.getElementById('companyForm').addEventListener('submit', async (e) => {
                 if (window.FormatUtils) window.FormatUtils.init(settings.format);
             }
         } else {
-            showNotification(result.message, 'error');
+            avisar(result.message, 'error');
         }
     } catch (error) {
-        showNotification('Error de conexión', 'error');
+        avisar('Error de conexión', 'error');
     }
 });
 

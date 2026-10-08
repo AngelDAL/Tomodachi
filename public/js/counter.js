@@ -236,6 +236,7 @@ async function ctNuevo() {
     ctPintarProductos();
     // Siempre se empieza por los productos, con las pestañas listas (móvil y tableta).
     ctPrepararAlta();
+    ctPestanaPrevia = null;   // al abrir no hubo desliz: no hay nada que animar
     ctPonerPestana('productos', true);
     tpAbrirModal('ctModalNuevo');
     setTimeout(function () { if (campo) campo.focus(); }, 60);
@@ -270,6 +271,25 @@ function ctPintarProductos() {
     cont.innerHTML = lista.slice(0, 300).map(function (p) {
         const enLista = ctEstado.items.find(function (i) { return Number(i.product_id) === Number(p.product_id); });
         const img = (typeof getRelativeImagePath === 'function') ? getRelativeImagePath(p.image_path) : null;
+
+        // Precios POR UNIDAD. El backend ya puede mandar el desglose (lista + con promoción),
+        // pero hasta que esté desplegado la tarjeta se cae al precio de lista: nunca se rompe.
+        const lista_ = Number(p.price) || 0;
+        const original = (p.original_price === null || p.original_price === undefined) ? lista_ : Number(p.original_price);
+        const real = (p.promo_price === null || p.promo_price === undefined) ? lista_ : Number(p.promo_price);
+        const originalOk = isFinite(original) ? original : lista_;
+        const realOk = isFinite(real) ? real : originalOk;
+        // Medio centavo de tolerancia: con puras cuentas de flotantes no queremos pintar un
+        // "descuento" que en realidad no existe.
+        const hayDescuento = realOk < originalOk - 0.004;
+        const pista = p.promo_hint ? String(p.promo_hint) : '';
+        // El precio original (tachado) va arriba y el real abajo; cuando no hay promoción solo
+        // se muestra el real, en una sola línea.
+        const precios = '<div class="ct-prod-precios">' +
+            (hayDescuento ? '<div class="ct-prod-precio-orig">' + tpDinero(originalOk) + '</div>' : '') +
+            '<div class="ct-prod-precio">' + tpDinero(realOk) + '</div>' +
+            '</div>';
+
         return '<button type="button" class="ct-prod' + (enLista ? ' elegido' : '') + '" data-ct-agregar="' + p.product_id + '">' +
             '<div class="ct-prod-img">' +
                 '<span class="ct-prod-vacia"' + (img ? ' hidden' : '') + '><i class="fas fa-utensils"></i></span>' +
@@ -277,7 +297,8 @@ function ctPintarProductos() {
                 (enLista ? '<span class="ct-prod-badge">' + tpCantidad(enLista.quantity) + '</span>' : '') +
             '</div>' +
             '<div class="ct-prod-nombre">' + tpEsc(p.product_name) + '</div>' +
-            '<div class="ct-prod-precio">' + tpDinero(p.price) + '</div>' +
+            (pista ? '<div class="ct-prod-promo"><i class="fas fa-tags"></i> ' + tpEsc(pista) + '</div>' : '') +
+            precios +
             '</button>';
     }).join('');
 }
@@ -580,6 +601,11 @@ function ctMostrarEnlace(pedido) {
 
 var CT_ALTA_MIN = 45;   // px de recorrido horizontal para que cuente como desliz
 
+// Pestaña que está visible ahora mismo. Se lleva aparte del DOM para saber, al cambiar, de qué
+// lado entró la nueva zona y animar el desliz en la dirección correcta.
+var ctPestanaPrevia = null;
+var CT_ORDEN_PESTANAS = { productos: 0, pedido: 1 };
+
 function ctPanelAlta() { return document.querySelector('#ctModalNuevo .ct-layout'); }
 
 /** ¿Estamos en la pantalla donde hay pestañas? En escritorio se ven las dos columnas. */
@@ -587,9 +613,37 @@ function ctAltaEnPestanas() {
     return !!(window.matchMedia && window.matchMedia('(max-width: 900px)').matches);
 }
 
+/** La zona nueva entra desde la derecha cuando se avanza hacia "Pedido" (y desde la izquierda al volver). */
+function ctEntraDesdeLaDerecha(cual) {
+    const desde = CT_ORDEN_PESTANAS[ctPestanaPrevia];
+    if (desde === undefined) return true;   // sin referencia, da igual: se toma la derecha
+    return CT_ORDEN_PESTANAS[cual] > desde;
+}
+
+/** Anima SOLO la zona de contenido que entra (ni la barra de pestañas ni el modal). */
+function ctAnimarEntradaAlta(cual, desdeDerecha) {
+    // Con "menos movimiento" activado el cambio es instantáneo, como pide el sistema.
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const zona = cual === 'pedido'
+        ? document.querySelector('#ctModalNuevo .ct-orden')
+        : document.querySelector('#ctModalNuevo .ct-picker');
+    if (!zona) return;
+    const clase = desdeDerecha ? 'ct-entra-derecha' : 'ct-entra-izquierda';
+    zona.classList.remove('ct-entra-derecha', 'ct-entra-izquierda');
+    void zona.offsetWidth;   // reinicia la animación si se repite el mismo lado dos veces
+    zona.classList.add(clase);
+    // La clase se quita al terminar (y por si acaso con un temporizador) para no dejarla colgada
+    // peleando con el siguiente cambio.
+    const limpiar = function () { zona.classList.remove(clase); };
+    zona.addEventListener('animationend', limpiar, { once: true });
+    setTimeout(limpiar, 450);
+}
+
 function ctPonerPestana(cual, sinVolverArriba) {
     const panel = ctPanelAlta();
     if (!panel) return;
+    const cambio = ctPestanaPrevia !== cual;
+
     panel.setAttribute('data-pestana', cual);
     const caja = document.getElementById('ctPestanas');
     if (caja) {
@@ -599,6 +653,12 @@ function ctPonerPestana(cual, sinVolverArriba) {
             b.setAttribute('aria-selected', activa ? 'true' : 'false');
         });
     }
+
+    // La zona que entra se desliza desde el lado contrario al gesto (o al orden de las pestañas
+    // si el cambio fue tocando). Se hace DESPUÉS de mostrar la zona, que si no no se anima.
+    if (cambio) ctAnimarEntradaAlta(cual, ctEntraDesdeLaDerecha(cual));
+    ctPestanaPrevia = cual;
+
     // Al cambiar de zona se empieza arriba, no a media lista.
     const zona = cual === 'pedido' ? document.getElementById('ctSeleccion') : document.getElementById('ctProductos');
     if (zona && !sinVolverArriba) zona.scrollTop = 0;

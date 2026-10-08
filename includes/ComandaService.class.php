@@ -210,6 +210,10 @@ class ComandaService {
      */
     public function tablero($store_id, array $opts = []) {
         $store_id   = (int)$store_id;
+        // Antes de leer: los pedidos de mostrador creados ANTES de que existiera el enlace no
+        // tienen comanda, y en cocina no aparecerían nunca. Se reparan al vuelo (normalmente no
+        // hay nada que reparar) en vez de confiar en una migración de una sola vez.
+        $this->repararComandasDeMostrador($store_id);
         $station_id = (int)($opts['station_id'] ?? 0);
         $fecha      = $opts['fecha'] ?? $this->fechaDeNegocio();
         $historicas = !empty($opts['historicas']);
@@ -339,6 +343,38 @@ TIMESTAMPDIFF(MINUTE, COALESCE(c.sent_at, c.created_at), NOW()) AS minutos,
             $salida[] = $this->formatear($f, $items[(int)$f['comanda_id']] ?? []);
         }
         return $salida;
+    }
+
+    /**
+     * Les pone comanda a los pedidos de mostrador activos que no la tengan.
+     *
+     * Son los que se crearon antes de que el mostrador creara comandas. Sin esto, en cocina no
+     * aparecerían nunca y el fallo seguiría viéndose con los pedidos ya existentes.
+     */
+    private function repararComandasDeMostrador($store_id) {
+        try {
+            // Sin `NOT EXISTS`: se piden los pedidos activos y `crearDesdeMostrador` ya devuelve
+            // la comanda que exista en vez de duplicarla. La consulta con subconsulta sobre la
+            // misma tabla fallaba en silencio (el catch se la tragaba) y no reparaba nada.
+            $st = $this->conn->prepare(
+                "SELECT counter_order_id, notes, created_by, status
+                   FROM counter_orders
+                  WHERE store_id = ? AND status IN ('pending', 'ready')"
+            );
+            $st->execute([(int)$store_id]);
+            $faltan = $st->fetchAll(PDO::FETCH_ASSOC);
+            if (!$faltan) {
+                return;
+            }
+            foreach ($faltan as $o) {
+                $this->crearDesdeMostrador($store_id, (int)$o['counter_order_id'], $o['notes'], $o['created_by']);
+                if ((string)$o['status'] === 'ready') {
+                    $this->sincronizarMostrador($store_id, (int)$o['counter_order_id'], 'ready');
+                }
+            }
+        } catch (Throwable $e) {
+            // La reparación es una red de seguridad: si falla, el tablero se lee igual.
+        }
     }
 
     /** Los ítems de varias comandas, en una sola consulta. */

@@ -1054,8 +1054,13 @@ document.addEventListener('DOMContentLoaded', function () {
     // ── Lector de QR ──
     const btnEscaner = document.getElementById('ctBtnEscaner');
     if (btnEscaner) btnEscaner.addEventListener('click', ctAbrirEscaner);
-    const menuEscaner = document.getElementById('ctMenuEscaner');
-    if (menuEscaner) menuEscaner.addEventListener('click', function () { ctCerrarMenus(); ctAbrirEscaner(); });
+    // Abrir la pantalla del kiosko (la vista que ve el cliente). El lector de QR está
+    // arriba como botón propio; aquí no se repite.
+    const menuKiosko = document.getElementById('ctMenuKiosko');
+    if (menuKiosko) menuKiosko.addEventListener('click', function () {
+        menu.classList.add('hidden');
+        window.open('kiosko.html', '_blank');
+    });
     // Cualquier cierre del modal (Cerrar, la X, Esc) apaga la cámara.
     document.querySelectorAll('[data-cerrar="ctModalEscaner"]').forEach(function (b) {
         b.addEventListener('click', ctDetenerCamara);

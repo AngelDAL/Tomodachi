@@ -11,7 +11,7 @@
     <link rel="icon" type="image/svg+xml" href="assets/app-icons/tomodachi-favicon.svg">
     <link rel="manifest" href="manifest.json">
     <script src="js/format-utils.js"></script>
-    <script src="js/ws-realtime.js"></script>
+    <script src="js/ws-realtime.js?v=2"></script>
     <script src="lib/qrcodejs/qrcode.min.js"></script>
     <style>
         :root {
@@ -91,8 +91,9 @@
         .k-pago i { color: var(--success-color); }
 
         /* Reposo: carrusel de imágenes/videos configurados, o pantalla limpia en espera. */
-        .k-reposo { flex: 1 1 auto; position: relative; overflow: hidden; height: 100vh; display: none; }
-        .k-reposo.activo { display: block; }
+        .k-reposo { flex: 1 1 auto; position: relative; overflow: hidden; height: 100vh; display: none;
+            align-items: center; justify-content: center; }
+        .k-reposo.activo { display: flex; }
         .kr-slide { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
         .kr-slide img, .kr-slide video { width: 100%; height: 100%; object-fit: contain; }
         .kr-slide.oculto { opacity: 0; }
@@ -192,18 +193,20 @@
             </div>
 
             <div class="k-campo">
-                <label>Contenido del carrusel (en reposo)</label>
-                <div class="k-help">Imágenes o videos de promociones, del menú o de lo que quieras mostrar.</div>
-                <div class="k-assets" id="kAssetList"></div>
-                <div class="k-add">
-                    <select id="kAssetTipo" class="k-tipo">
-                        <option value="image">Imagen</option>
-                        <option value="video">Video</option>
-                    </select>
-                    <input type="text" id="kAssetUrl" placeholder="Pega el enlace de la imagen o el video">
-                    <button type="button" id="kAgregarAsset" class="k-btn k-btn-primario"><i class="fas fa-plus"></i></button>
-                </div>
-            </div>
+                            <label for="kMensaje">Mensaje cuando no hay pedido a la vista</label>
+                            <input type="text" id="kMensaje" maxlength="60" placeholder="Bienvenidos">
+                            <div class="k-help">El letrero que se ve en reposo mientras el carrusel no esté en uso.</div>
+                        </div>
+
+                        <div class="k-campo">
+                            <label>Contenido del carrusel (en reposo)</label>
+                            <div class="k-help">Sube imágenes o videos (promociones, el menú, lo que quieras mostrar).</div>
+                            <div class="k-assets" id="kAssetList"></div>
+                            <div class="k-add">
+                                <input type="file" id="kAssetFile" accept="image/*,video/*" multiple>
+                                <button type="button" id="kSubirAsset" class="k-btn k-btn-primario"><i class="fas fa-upload"></i> Subir</button>
+                            </div>
+                        </div>
 
             <div class="k-panel-fila">
                 <span class="k-guardar-estado" id="kGuardado"><i class="fas fa-check"></i> Guardado</span>
@@ -212,6 +215,6 @@
         </div>
     </div>
 
-    <script src="js/kiosko.js?v=4"></script>
+    <script src="js/kiosko.js?v=5"></script>
 </body>
 </html>

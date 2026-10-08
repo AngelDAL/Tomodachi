@@ -192,7 +192,8 @@ async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
             #   cart_update  -> carrito del punto de venta (customer display)
             #   order_update -> cambios de la cuenta por mesa (pedido/comanda)
             #   kiosko_qr    -> el mostrador manda un pedido a la pantalla del cliente en el kiosko
-            if tipo not in {"cart_update", "order_update", "kiosko_qr"}:
+            #   kiosko_cart  -> la cajera arma el pedido en vivo y el kiosko lo muestra mientras
+            if tipo not in {"cart_update", "order_update", "kiosko_qr", "kiosko_cart"}:
                 continue
             await broadcast(session, json.dumps(message, separators=(",", ":")), writer)
     except (asyncio.IncompleteReadError, ConnectionError, ValueError, json.JSONDecodeError):

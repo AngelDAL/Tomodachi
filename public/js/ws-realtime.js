@@ -145,9 +145,17 @@ window.TomodachiRealtime = (function () {
             abrir();
         }
 
+        /** Envía un mensaje JSON al canal (el relay lo reenvía a los demás suscritos). */
+        function enviar(objeto) {
+            if (!objeto || typeof objeto !== 'object') return false;
+            if (!socket || socket.readyState !== 1) return false;
+            try { socket.send(JSON.stringify(objeto)); return true; }
+            catch (e) { return false; }
+        }
+
         abrir();
 
-        return { cerrar: cerrar, reconectar: reconectar, canal: canal };
+        return { cerrar: cerrar, reconectar: reconectar, enviar: enviar, canal: canal };
     }
 
     return { conectar: conectar, urlBase: urlBase };

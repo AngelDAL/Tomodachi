@@ -222,6 +222,7 @@ function ctTarjetaCocina(p) {
 async function ctNuevo() {
     ctEstado.nombre = '';
     ctEstado.items = [];
+    ctBroadcastKiosko(); // al abrir un pedido nuevo, la pantalla del kiosko vuelve al inicio
     ctEstado.busqueda = '';
     ctEstado.categoria = 'todas';
     ctEstado.calculo = null;
@@ -358,6 +359,21 @@ function ctAgregar(product_id) {
     ctPintarSeleccion();
     ctPintarProductos();
     ctProgramarPreview();
+    ctBroadcastKiosko();
+}
+
+/** Transmite el carrito en vivo al kiosko: la pantalla del cliente va mostrando lo que
+ *  la cajera arma ANTES de confirmar el pedido. Si el carrito queda vacío, se limpia la
+ *  pantalla (vuelve al reposo/bienvenida). Va por el mismo socket de la tienda. */
+function ctBroadcastKiosko() {
+    const rt = window.tpEstado && tpEstado.tiempoReal;
+    if (!rt || typeof rt.enviar !== 'function') return;
+    rt.enviar({
+        type: 'kiosko_cart',
+        items: ctEstado.items.map(function (i) { return { product_id: i.product_id, quantity: i.quantity }; }),
+        name: (document.getElementById('ctNombre').value || '').trim() || null,
+        store_id: (tpEstado.tienda && tpEstado.tienda.store_id) || null
+    });
 }
 
 function ctBump(product_id, delta) {
@@ -368,6 +384,7 @@ function ctBump(product_id, delta) {
     ctPintarSeleccion();
     ctPintarProductos();
     ctProgramarPreview();
+    ctBroadcastKiosko();
 }
 
 /** Columna derecha: el pedido, con cantidades editables. */
@@ -466,6 +483,11 @@ async function ctGuardar() {
         ctEstado.historico = false;
         await ctCargar(true);
         ctMostrarEnlace(pedido);
+        // El pedido ya quedó cerrado: el kiosko muestra ahora la versión final (con su QR).
+        const rt2 = window.tpEstado && tpEstado.tiempoReal;
+        if (rt2 && typeof rt2.enviar === 'function') {
+            rt2.enviar({ type: 'kiosko_qr', counter: pedido.counter_order_id, store_id: (tpEstado.tienda && tpEstado.tienda.store_id) || null });
+        }
     } catch (e) {
         tpAviso(tpMensajeDeError(e), 'error');
     } finally {
@@ -959,6 +981,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (guardar) guardar.addEventListener('click', ctGuardar);
     const nombre = document.getElementById('ctNombre');
     if (nombre) nombre.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') ctGuardar(); });
+    if (nombre) nombre.addEventListener('input', ctBroadcastKiosko);
 
     const buscar = document.getElementById('ctBuscar');
     if (buscar) buscar.addEventListener('input', function () { ctEstado.busqueda = this.value.trim(); ctPintarProductos(); });

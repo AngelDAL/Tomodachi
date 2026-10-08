@@ -97,7 +97,8 @@
         fetch(API, { credentials: 'include' })
             .then(function (r) { return r.json(); })
             .then(function (d) {
-                var lista = (d && d.data) || [];
+                // La lista viene en `data.pedidos` (un objeto con `fecha`), no `data` a secas.
+                var lista = (d && d.data && d.data.pedidos) ? d.data.pedidos : [];
                 pedidos = (d && d.success !== false && Array.isArray(lista)) ? lista : [];
                 // Si el pedido destacado cambió, se refresca; si ya se entregó/canceló, se vuelve a la lista.
                 if (destacado) {

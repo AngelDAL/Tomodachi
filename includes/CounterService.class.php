@@ -19,6 +19,7 @@ require_once __DIR__ . '/UrlHelper.class.php';
 require_once __DIR__ . '/Pricing.class.php';
 require_once __DIR__ . '/BomHelper.class.php';   // Pricing lo usa al construir (recetas/BOM)
 require_once __DIR__ . '/WebPush.class.php';
+require_once __DIR__ . '/ComandaService.class.php';   // el pedido de mostrador tambien es una comanda de cocina
 
 class CounterService {
 
@@ -131,6 +132,13 @@ class CounterService {
                 ':total'  => round((float)$l['total'], 2),
             ]);
         }
+
+        // El pedido de mostrador TAMBIEN es una comanda de cocina: sin esto se quedaba solo en su
+        // tabla y en la estacion no se veia nunca. Si la comanda falla, la venta ya esta hecha y no
+        // se tumba: se avisa igual y queda el pedido.
+        try {
+            (new ComandaService($this->db))->crearDesdeMostrador($store_id, $order_id, $nota, $created_by);
+        } catch (Throwable $e) { /* la comanda no puede tumbar una venta ya registrada */ }
 
         $this->avisar($store_id, $token, 'counter_created', $order_id);
         return $this->obtener($order_id, $store_id);
@@ -413,6 +421,57 @@ class CounterService {
         return $f ? $this->armar($f) : null;
     }
 
+    /**
+     * Guarda (o borra) la nota de un pedido ya creado.
+     *
+     * La nota es para quien cocina: por eso se espeja en la comanda y se avisa en vivo, tanto al
+     * tablero como a la página del cliente. Se puede poner al tomar el pedido o después.
+     */
+    public function guardarNota($counter_order_id, $store_id, $notes) {
+        $pedido = $this->obtener((int)$counter_order_id, $store_id);
+        if (!$pedido) {
+            throw new Exception('Ese pedido no existe en esta tienda', 404);
+        }
+        $limpia = trim((string)$notes);
+        $nota = $limpia !== '' ? mb_substr($limpia, 0, 255) : null;
+
+        $stmt = $this->conn->prepare(
+            "UPDATE counter_orders SET notes = :nota WHERE counter_order_id = :id AND store_id = :sid"
+        );
+        $stmt->execute([':nota' => $nota, ':id' => (int)$counter_order_id, ':sid' => (int)$store_id]);
+
+        try {
+            (new ComandaService($this->db))->sincronizarMostrador(
+                (int)$store_id, (int)$counter_order_id, (string)$pedido['status'], null, (string)$notes
+            );
+        } catch (Throwable $e) { /* la nota igual queda en el pedido */ }
+
+        $this->avisar((int)$store_id, $pedido['tracking_token'] ?? null, 'counter_nota', (int)$counter_order_id);
+        return $this->obtener((int)$counter_order_id, (int)$store_id);
+    }
+
+    /**
+     * Manda un pedido a la pantalla del kiosko (la que ve el cliente en el mostrador).
+     *
+     * Va por el canal de la TIENDA, que es el mismo por el que ya se avisa de todo lo demás: la
+     * pantalla se entera en vivo y no hay que inventar otro camino.
+     */
+    public function mostrarEnKiosko($counter_order_id, $store_id) {
+        $pedido = $this->obtener((int)$counter_order_id, $store_id);
+        if (!$pedido) {
+            throw new Exception('Ese pedido no existe en esta tienda', 404);
+        }
+        $payload = json_encode([
+            'type'     => 'kiosko_qr',
+            'counter'  => (int)$counter_order_id,
+            'store_id' => (int)$store_id,
+        ], JSON_UNESCAPED_UNICODE);
+        if ($payload !== false) {
+            DiningSession::enviarAlRelay(WsToken::canalTienda((int)$store_id), $payload);
+        }
+        return $pedido;
+    }
+
     /** Seguimiento público por token: no expone tienda ni el token. */
     public function track($token) {
         $token = trim((string)$token);
@@ -480,7 +539,23 @@ class CounterService {
      *                  nunca se enteraría de que su pedido salió.
      *  - `cancelled` = cancelar con motivo.
      */
+    /**
+     * Cambia el estado del pedido y deja la comanda de cocina en el mismo estado.
+     *
+     * Se envuelve el cambio de estado en vez de tocar cada camino (avisar, entregar, cancelar):
+     * asi no hay forma de agregar un estado nuevo y olvidarse de la comanda.
+     */
     public function cambiarEstado($counter_order_id, $store_id, $status, $reason = null, $user_id = null) {
+        $resultado = $this->cambiarEstadoBase($counter_order_id, $store_id, $status, $reason, $user_id);
+        try {
+            (new ComandaService($this->db))->sincronizarMostrador(
+                (int)$store_id, (int)$counter_order_id, (string)($resultado['status'] ?? ''), $reason
+            );
+        } catch (Throwable $e) { /* la comanda no puede impedir el cambio de estado */ }
+        return $resultado;
+    }
+
+    private function cambiarEstadoBase($counter_order_id, $store_id, $status, $reason = null, $user_id = null) {
         $status = (string)$status;
         if (!in_array($status, ['ready', 'completed', 'cancelled'], true)) {
             throw new Exception('Estado no permitido', 422);

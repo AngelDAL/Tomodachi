@@ -122,6 +122,25 @@ try {
             Response::success($pedido, 'Pago actualizado');
         }
 
+        // Nota del pedido: la cajera la puede poner al tomarlo o después, y la lee quien cocina.
+        if ($action === 'nota') {
+            $pedido = $counter->guardarNota(
+                (int)($data['counter_order_id'] ?? 0),
+                $store_id,
+                $data['notes'] ?? ''
+            );
+            Response::success($pedido, 'Nota guardada');
+        }
+
+        // Manda el pedido a la pantalla del kiosko (la que ve el cliente en el mostrador).
+        if ($action === 'kiosko') {
+            $pedido = $counter->mostrarEnKiosko(
+                (int)($data['counter_order_id'] ?? 0),
+                $store_id
+            );
+            Response::success($pedido, 'Mostrando en el kiosko');
+        }
+
         Response::validationError(['action' => 'Acción no reconocida']);
     } else {
         Response::error('Método no permitido', 405);

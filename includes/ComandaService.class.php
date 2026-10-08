@@ -380,7 +380,163 @@ TIMESTAMPDIFF(MINUTE, COALESCE(c.sent_at, c.created_at), NOW()) AS minutos,
                 'served_at'        => $it['served_at'],
             ];
         }
+        // Las comandas de MOSTRADOR no tienen renglones en `dining_order_items`: viven en su
+        // propia tabla. Se unen aquí para que quien pinta el tablero no tenga que saber de dónde
+        // viene cada renglón.
+        return $por_comanda + $this->itemsDeComandasMostrador($comanda_ids);
+    }
+
+    /**
+     * Renglones de las comandas que vienen del mostrador.
+     *
+     * El eslabón es `comandas.external_ref`, que apunta al pedido de mostrador: así no hace falta
+     * duplicar columnas en `counter_order_items` ni migrar nada.
+     *
+     * El estado del renglón se DEDUCE del de la comanda: en el mostrador un pedido se prepara
+     * completo, no renglón por renglón.
+     */
+    private function itemsDeComandasMostrador(array $comanda_ids) {
+        if (!$comanda_ids) {
+            return [];
+        }
+        $marcadores = implode(',', array_fill(0, count($comanda_ids), '?'));
+        try {
+            $stmt = $this->conn->prepare(
+                "SELECT c.comanda_id, i.item_id, i.product_id, i.product_name, i.quantity, i.notes,
+                        c.status AS comanda_status
+                   FROM comandas c
+                   JOIN counter_order_items i ON i.counter_order_id = CAST(c.external_ref AS UNSIGNED)
+                  WHERE c.comanda_id IN ($marcadores) AND c.channel = 'counter'
+                  ORDER BY i.item_id ASC"
+            );
+            $stmt->execute($comanda_ids);
+            $filas = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Throwable $e) {
+            return [];   // sin mostrador en la comanda no se rompe el tablero de cocina
+        }
+
+        $equivalente = [
+            'sent' => 'sent', 'preparing' => 'preparing', 'ready' => 'ready',
+            'served' => 'served', 'dispatched' => 'sent', 'delivered' => 'served',
+            'cancelled' => 'cancelled', 'draft' => 'sent',
+        ];
+
+        $por_comanda = [];
+        foreach ($filas as $it) {
+            $estado = $equivalente[$it['comanda_status']] ?? 'sent';
+            $por_comanda[(int)$it['comanda_id']][] = [
+                'order_item_id'    => (int)$it['item_id'],
+                'product_id'       => $it['product_id'] !== null ? (int)$it['product_id'] : null,
+                'product_name'     => $it['product_name'],
+                'quantity'         => (float)$it['quantity'],
+                'notes'            => $it['notes'],
+                'status'           => $estado,
+                'added_by'         => 'staff',
+                'participant_id'   => null,
+                'participant_name' => null,
+                'station_id'       => null,
+                'cancel_reason'    => null,
+                'sent_at'          => null,
+                'ready_at'         => null,
+                'served_at'        => null,
+            ];
+        }
         return $por_comanda;
+    }
+
+    /**
+     * Crea la comanda de un pedido de MOSTRADOR, para que aparezca en el tablero de cocina.
+     *
+     * Sin esto el pedido de mostrador se quedaba sólo en su tabla y en cocina no se veía nunca.
+     * `channel = 'counter'` y `external_ref` = el id del pedido: con eso quien pregunta puede
+     * volver al pedido (y sus renglones) sin duplicar datos.
+     */
+    public function crearDesdeMostrador($store_id, $counter_order_id, $notes = null, $by_id = null) {
+        $store_id = (int)$store_id;
+        $counter_order_id = (int)$counter_order_id;
+
+        // Si ya tiene comanda (por un reintento de la caja), no se duplica.
+        $stmt = $this->conn->prepare(
+            "SELECT comanda_id FROM comandas
+              WHERE store_id = ? AND channel = 'counter' AND external_ref = ?
+              ORDER BY comanda_id DESC LIMIT 1"
+        );
+        $stmt->execute([$store_id, (string)$counter_order_id]);
+        $ya = $stmt->fetchColumn();
+        if ($ya) {
+            return (int)$ya;
+        }
+
+        $fecha = $this->fechaDeNegocio();
+        // Una sola comanda para todo el pedido, sin estación: el mostrador es un pedido completo
+        // para un cliente, no renglones que se reparten entre barra y cocina.
+        $sql = "INSERT INTO comandas
+                    (store_id, session_id, channel, external_ref, business_date, number, station_id,
+                     status, created_by_type, created_by_id, notes, sent_at)
+                SELECT :store_id, NULL, 'counter', :ref, :fecha,
+                       COALESCE(MAX(number), 0) + 1, NULL, 'sent', 'staff', :by, :notas, NOW()
+                  FROM comandas
+                 WHERE store_id = :store_id_filtro AND business_date = :fecha_filtro";
+
+        for ($intento = 1; $intento <= 4; $intento++) {
+            try {
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([
+                    ':store_id'        => $store_id,
+                    ':ref'             => (string)$counter_order_id,
+                    ':fecha'           => $fecha,
+                    ':by'              => $by_id !== null ? (int)$by_id : null,
+                    ':notas'           => ($notes !== null && trim((string)$notes) !== '') ? mb_substr(trim((string)$notes), 0, 255) : null,
+                    ':store_id_filtro' => $store_id,
+                    ':fecha_filtro'    => $fecha,
+                ]);
+                $comanda_id = (int)$this->conn->lastInsertId();
+                $this->encolarImpresion($comanda_id, $store_id);
+                return $comanda_id;
+            } catch (PDOException $e) {
+                if ((string)$e->getCode() !== '23000' || $intento === 4) {
+                    throw $e;
+                }
+            }
+        }
+        throw new Exception('No se pudo asignar el folio de la comanda de mostrador');
+    }
+
+    /** Mantiene la comanda de mostrador al día con su pedido (avisar, entregar, cancelar). */
+    public function sincronizarMostrador($store_id, $counter_order_id, $estado_pedido, $motivo = null, $notes = null) {
+        $equivalente = [
+            'pending'   => 'sent',
+            'ready'     => 'ready',
+            'completed' => 'served',
+            'cancelled' => 'cancelled',
+        ];
+        $nuevo = $equivalente[$estado_pedido] ?? null;
+        if ($nuevo === null) {
+            return false;
+        }
+        try {
+            $sets = ['status = :estado'];
+            $params = [':estado' => $nuevo, ':sid' => (int)$store_id, ':ref' => (string)(int)$counter_order_id];
+            if ($nuevo === 'ready')   { $sets[] = 'ready_at = COALESCE(ready_at, NOW())'; }
+            if ($nuevo === 'served')  { $sets[] = 'served_at = COALESCE(served_at, NOW())'; }
+            if ($nuevo === 'cancelled') {
+                $sets[] = 'cancelled_at = COALESCE(cancelled_at, NOW())';
+                $sets[] = 'cancel_reason = :motivo';
+                $params[':motivo'] = $motivo !== null ? mb_substr((string)$motivo, 0, 255) : null;
+            }
+            if ($notes !== null) {
+                $sets[] = 'notes = :notas';
+                $params[':notas'] = trim((string)$notes) !== '' ? mb_substr(trim((string)$notes), 0, 255) : null;
+            }
+            $stmt = $this->conn->prepare(
+                "UPDATE comandas SET " . implode(', ', $sets) . "
+                  WHERE store_id = :sid AND channel = 'counter' AND external_ref = :ref"
+            );
+            $stmt->execute($params);
+            return $stmt->rowCount() > 0;
+        } catch (Throwable $e) {
+            return false;
+        }
     }
 
     /** Fila cruda de una comanda, acotada a la tienda. */

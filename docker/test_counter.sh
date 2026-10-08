@@ -242,6 +242,58 @@ P=$(crear_pago ",\"payment_status\":\"unpaid\"")
 if [ "$(echo "$P" | jq_ data.payment_status)" = "unpaid" ]; then ok "la cajera puede cambiar la forma de pago sugerida"; else mal "anular el valor por defecto ($P)"; fi
 guardar_pago unpaid
 
+# 14. El pedido de mostrador también es una comanda de cocina
+NOTA="sin mayonesa $suf"
+CM=$(api -X POST "$BASE/api/dining/counter.php" -H 'Content-Type: application/json' \
+  -d "{\"action\":\"create\",\"customer_name\":\"Comanda $suf\",\"items\":[{\"product_id\":$P2,\"quantity\":1}],\"notes\":\"$NOTA\"}")
+OIDC=$(echo "$CM" | jq_ data.counter_order_id)
+TAB=$(api "$BASE/api/dining/comandas.php")
+CMP=$(echo "$TAB" | python3 -c "
+import json,sys
+cs=(json.load(sys.stdin).get('data') or {}).get('comandas') or []
+mias=[c for c in cs if c.get('channel')=='counter' and (c.get('notes') or '')=='$NOTA']
+print(json.dumps(mias[0] if mias else {}))
+")
+if [ -n "$CMP" ] && [ "$CMP" != "{}" ]; then ok "el pedido de mostrador aparece en comandas"; else mal "el pedido de mostrador NO aparece en comandas"; fi
+ITEMS=$(echo "$CMP" | python3 -c "import json,sys;print(len(json.loads(sys.stdin.read() or '{}').get('items') or []))" 2>/dev/null)
+if [ "${ITEMS:-0}" -gt 0 ]; then ok "la comanda de mostrador trae sus renglones ($ITEMS)"; else mal "la comanda de mostrador no trae renglones"; fi
+if [ "$(echo "$CMP" | python3 -c "import json,sys;print(json.loads(sys.stdin.read() or '{}').get('folio'))" 2>/dev/null)" != "None" ] && [ -n "$(echo "$CMP" | python3 -c "import json,sys;print(json.loads(sys.stdin.read() or '{}').get('folio'))" 2>/dev/null)" ]; then ok "la comanda tiene folio propio"; else mal "la comanda de mostrador sin folio"; fi
+
+# La nota se puede corregir después y tiene que llegar a cocina
+NOTA2="sin salsa $suf"
+api -X POST "$BASE/api/dining/counter.php" -H 'Content-Type: application/json' \
+  -d "{\"action\":\"nota\",\"counter_order_id\":$OIDC,\"notes\":\"$NOTA2\"}" > /dev/null
+TAB2=$(api "$BASE/api/dining/comandas.php")
+if echo "$TAB2" | grep -q "$NOTA2"; then ok "la nota corregida llega a la comanda de cocina"; else mal "la nota no llegó a cocina"; fi
+if [ "$(echo "$TAB2" | grep -c "$NOTA\"")" -eq 0 ]; then ok "la nota vieja no se queda pegada"; else mal "quedó la nota vieja en cocina"; fi
+
+# El aviso de listo y la entrega mueven también la comanda
+api -X POST "$BASE/api/dining/counter.php" -H 'Content-Type: application/json' \
+  -d "{\"action\":\"status\",\"counter_order_id\":$OIDC,\"status\":\"ready\"}" > /dev/null
+EST=$(api "$BASE/api/dining/comandas.php" | python3 -c "
+import json,sys
+cs=(json.load(sys.stdin).get('data') or {}).get('comandas') or []
+mias=[c for c in cs if c.get('channel')=='counter' and (c.get('notes') or '')=='$NOTA2']
+print(mias[0].get('status') if mias else 'no_esta')
+")
+if [ "$EST" = "ready" ]; then ok "avisar al cliente deja la comanda en 'listo'"; else mal "estado de la comanda tras avisar ($EST)"; fi
+api -X POST "$BASE/api/dining/counter.php" -H 'Content-Type: application/json' \
+  -d "{\"action\":\"status\",\"counter_order_id\":$OIDC,\"status\":\"completed\"}" > /dev/null
+QUEDA=$(api "$BASE/api/dining/comandas.php" | python3 -c "
+import json,sys
+cs=(json.load(sys.stdin).get('data') or {}).get('comandas') or []
+print(len([c for c in cs if c.get('channel')=='counter' and (c.get('notes') or '')=='$NOTA2']))
+")
+if [ "$QUEDA" = "0" ]; then ok "entregar el pedido lo saca del tablero de cocina"; else mal "la comanda entregada sigue en el tablero"; fi
+
+# Mandar un pedido al kiosko (la pantalla del cliente)
+KIO=$(api -X POST "$BASE/api/dining/counter.php" -H 'Content-Type: application/json' \
+  -d "{\"action\":\"kiosko\",\"counter_order_id\":$OIDC}")
+if [ "$(echo "$KIO" | grep -o '"success":true')" = '"success":true' ]; then ok "se puede mandar un pedido al kiosko"; else mal "mandar al kiosko ($KIO)"; fi
+KIO2=$(api -X POST "$BASE/api/dining/counter.php" -H 'Content-Type: application/json' \
+  -d '{"action":"kiosko","counter_order_id":999999}')
+if [ "$(echo "$KIO2" | grep -o '"success":false')" = '"success":false' ]; then ok "mandar un pedido inventado al kiosko falla claro"; else mal "kiosko con pedido inexistente"; fi
+
 echo "===== RESULTADO: $PASS pasaron, $FAIL fallaron ====="
 rm -f "$CJ"
 [ "$FAIL" -eq 0 ]

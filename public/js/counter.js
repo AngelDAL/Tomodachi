@@ -234,6 +234,9 @@ async function ctNuevo() {
     }
     ctPintarSeleccion();
     ctPintarProductos();
+    // Siempre se empieza por los productos, con las pestañas listas (móvil y tableta).
+    ctPrepararAlta();
+    ctPonerPestana('productos', true);
     tpAbrirModal('ctModalNuevo');
     setTimeout(function () { if (campo) campo.focus(); }, 60);
 }
@@ -306,6 +309,7 @@ function ctBump(product_id, delta) {
 /** Columna derecha: el pedido, con cantidades editables. */
 function ctPintarSeleccion() {
     const cont = document.getElementById('ctSeleccion');
+    ctActualizarCuentaAlta();
     if (!cont) return;
     if (!ctEstado.items.length) {
         cont.innerHTML = '<div class="ct-orden-vacia"><i class="fas fa-basket-shopping"></i><p>Toca los productos para agregarlos.</p></div>';
@@ -558,6 +562,116 @@ function ctMostrarEnlace(pedido) {
         });
     }
     tpAbrirModal('ctModalEnlace');
+}
+
+// ============================================================
+// Pestañas del alta de pedido (móvil y tableta)
+//
+// En pantalla chica los productos y el pedido no caben cómodos uno al lado del otro, así que
+// van en dos pestañas y cada una se queda con todo el alto. Se cambia tocando la pestaña o
+// deslizando el dedo.
+//
+// El desliz usa el MISMO criterio que el resto de la aplicación (`ui-movil.js`, `comandas.js`):
+// solo cuenta si el gesto es claramente horizontal — 45 px de recorrido y al menos 1.5 veces
+// el movimiento vertical. Así, cuando alguien desplaza la lista de productos y el dedo se va
+// torcido hacia un lado, NO cambia de pestaña sin querer. Además se ignora el gesto que empieza
+// sobre un control (el buscador, una categoría, el botón de sumar): ahí el dedo hace otra cosa.
+// ============================================================
+
+var CT_ALTA_MIN = 45;   // px de recorrido horizontal para que cuente como desliz
+
+function ctPanelAlta() { return document.querySelector('#ctModalNuevo .ct-layout'); }
+
+/** ¿Estamos en la pantalla donde hay pestañas? En escritorio se ven las dos columnas. */
+function ctAltaEnPestanas() {
+    return !!(window.matchMedia && window.matchMedia('(max-width: 900px)').matches);
+}
+
+function ctPonerPestana(cual, sinVolverArriba) {
+    const panel = ctPanelAlta();
+    if (!panel) return;
+    panel.setAttribute('data-pestana', cual);
+    const caja = document.getElementById('ctPestanas');
+    if (caja) {
+        [].forEach.call(caja.querySelectorAll('[data-ct-pestana]'), function (b) {
+            const activa = b.getAttribute('data-ct-pestana') === cual;
+            b.classList.toggle('active', activa);
+            b.setAttribute('aria-selected', activa ? 'true' : 'false');
+        });
+    }
+    // Al cambiar de zona se empieza arriba, no a media lista.
+    const zona = cual === 'pedido' ? document.getElementById('ctSeleccion') : document.getElementById('ctProductos');
+    if (zona && !sinVolverArriba) zona.scrollTop = 0;
+}
+
+/** Cuántas cosas lleva el pedido, para verlo desde la pestaña de productos. */
+function ctActualizarCuentaAlta() {
+    const c = document.getElementById('ctCuentaPedido');
+    if (!c) return;
+    const n = (ctEstado.items || []).reduce(function (a, i) { return a + (Number(i.quantity) || 0); }, 0);
+    c.textContent = n;
+    c.classList.toggle('visible', n > 0);
+}
+
+function ctEscucharDeslizAlta(zona) {
+    if (!zona || zona.dataset.ctDesliz === '1') return;
+    zona.dataset.ctDesliz = '1';
+
+    let x0 = 0, y0 = 0, siguiendo = false;
+
+    // Un desliz no debe además agregar un producto: si el gesto acaba en desliz, se traga el
+    // clic que el navegador pudiera disparar después (los productos son botones).
+    zona.addEventListener('click', function (ev) {
+        if (zona.dataset.ctClicBloqueado === '1') {
+            ev.stopPropagation();
+            ev.preventDefault();
+        }
+    }, true);
+
+    zona.addEventListener('touchstart', function (e) {
+        if (e.touches.length !== 1) { siguiendo = false; return; }
+        if (!ctAltaEnPestanas()) { siguiendo = false; return; }
+        // Se ignora el gesto que empieza donde el dedo ESCRIBE o SELECCIONA (buscador,
+        // cantidades, enlaces). Los botones SÍ cuentan: la rejilla de productos está llena de
+        // botones y si no, el desliz no funcionaría justo en la zona donde uno lo intenta.
+        // Un toque normal recorre menos de los 45 px que hacen falta, así que no hay riesgo.
+        if (e.target.closest && e.target.closest('input, textarea, select, label, a')) {
+            siguiendo = false;
+            return;
+        }
+        x0 = e.touches[0].clientX;
+        y0 = e.touches[0].clientY;
+        siguiendo = true;
+    }, { passive: true });
+
+    zona.addEventListener('touchend', function (e) {
+        if (!siguiendo) return;
+        siguiendo = false;
+        const t = e.changedTouches && e.changedTouches[0];
+        if (!t) return;
+        const dx = t.clientX - x0, dy = t.clientY - y0;
+        // Vertical, o apenas inclinado: era un desplazamiento de la lista, no un desliz.
+        if (Math.abs(dx) < CT_ALTA_MIN || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+        zona.dataset.ctClicBloqueado = '1';
+        setTimeout(function () { zona.dataset.ctClicBloqueado = '0'; }, 400);
+        ctPonerPestana(dx < 0 ? 'pedido' : 'productos');
+    }, { passive: true });
+
+    zona.addEventListener('touchcancel', function () { siguiendo = false; }, { passive: true });
+}
+
+function ctPrepararAlta() {
+    const panel = ctPanelAlta();
+    if (!panel) return;
+    ctEscucharDeslizAlta(panel);
+    const caja = document.getElementById('ctPestanas');
+    if (caja && caja.dataset.ctListo !== '1') {
+        caja.dataset.ctListo = '1';
+        caja.addEventListener('click', function (ev) {
+            const b = ev.target.closest('[data-ct-pestana]');
+            if (b) ctPonerPestana(b.getAttribute('data-ct-pestana'));
+        });
+    }
 }
 
 // ============================================================

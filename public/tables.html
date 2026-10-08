@@ -1602,12 +1602,46 @@
             }
         }
 
-        /* Teléfono: una columna, el pedido debajo de los productos. */
-        @media (max-width: 700px) {
+        /* Móvil y tableta: los productos y el pedido van en DOS PESTAÑAS, y se puede deslizar
+           el dedo para cambiar de una a otra. En escritorio se siguen viendo las dos columnas
+           a la vez, que ahí sí caben.
+           Cada pestaña se queda con TODO el alto disponible: antes se repartían el alto a
+           medias (42vh / 46vh) y las dos quedaban apretadas. */
+        .ct-pestanas { display: none; }
+
+        @media (max-width: 900px) {
+            .ct-pestanas {
+                display: flex; gap: 6px; padding: 4px; flex: 0 0 auto; margin-bottom: 12px;
+                background: var(--bg-light, #f4f7f6); border-radius: var(--ds-radius-md);
+            }
+            .ct-pestanas button {
+                flex: 1 1 0; min-width: 0; border: 0; background: none; cursor: pointer;
+                padding: 10px 8px; border-radius: calc(var(--ds-radius-md) - 2px);
+                font: inherit; font-size: .88rem; font-weight: 600; color: var(--text-muted);
+                display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+            }
+            .ct-pestanas button.active {
+                background: var(--bg-card, #fff); color: var(--primary-color);
+                box-shadow: 0 1px 3px rgba(0, 0, 0, .08);
+            }
+            /* Cuántas cosas lleva el pedido, visible desde la otra pestaña. */
+            .ct-pestanas .ct-cuenta {
+                display: none; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px;
+                background: var(--primary-color); color: #fff; font-size: .72rem; font-weight: 700;
+                align-items: center; justify-content: center;
+            }
+            .ct-pestanas .ct-cuenta.visible { display: inline-flex; }
+
             .ct-layout { grid-template-columns: 1fr; }
-            .ct-productos { flex: 0 1 auto; min-height: 150px; max-height: 42vh; }
-            .ct-orden { max-height: 46vh; }
-            .ct-modal-body { overflow-y: auto; }
+            /* Solo una zona a la vez. */
+            .ct-layout > .ct-picker, .ct-layout > .ct-orden { display: none; }
+            .ct-layout[data-pestana="productos"] > .ct-picker { display: flex; }
+            .ct-layout[data-pestana="pedido"] > .ct-orden { display: flex; }
+            .ct-productos { min-height: 0; max-height: none; }
+            .ct-orden { max-height: none; }
+            /* El desplazamiento vive DENTRO de la lista, no en el cuerpo: así el gesto vertical
+               no compite con el desliz de pestañas. */
+            .ct-modal-body { overflow: hidden; }
         }
     </style>
     <script src="js/theme-init.js?v=5"></script>
@@ -1972,7 +2006,13 @@
                     <label for="ctNombre">¿A nombre de quién? (opcional)</label>
                     <input type="text" id="ctNombre" maxlength="80" placeholder="María, Juan, el de la gorra…" autocomplete="off">
                 </div>
-                <div class="ct-layout">
+                <!-- En móvil y tableta estas dos zonas van en pestañas (se puede deslizar el
+                     dedo para cambiar); en escritorio se ven las dos columnas a la vez. -->
+                <div class="ct-pestanas" id="ctPestanas" role="tablist">
+                    <button type="button" data-ct-pestana="productos" class="active" role="tab" aria-selected="true"><i class="fas fa-mug-hot"></i> Productos</button>
+                    <button type="button" data-ct-pestana="pedido" role="tab" aria-selected="false"><i class="fas fa-receipt"></i> Pedido <span class="ct-cuenta" id="ctCuentaPedido">0</span></button>
+                </div>
+                <div class="ct-layout" data-pestana="productos">
                     <div class="ct-picker">
                         <div class="tp-menu-buscador" style="margin:0">
                             <i class="fas fa-search"></i>
@@ -2393,7 +2433,7 @@
     <script src="js/tables.js?v=13"></script>
     <script src="js/cobro.js?v=2"></script>
     <script src="js/comandas.js?v=6"></script>
-    <script src="js/counter.js?v=4"></script>
+    <script src="js/counter.js?v=5"></script>
     <script src="lib/animejs/anime.min.js"></script>
     <script src="js/design-system.js?v=7"></script>
 </body>

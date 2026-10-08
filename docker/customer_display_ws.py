@@ -189,9 +189,10 @@ async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
                 continue
             # El relay es genérico por canal: cada tipo es un mensaje que algunos
             # clientes quieren reenviar a los demás del mismo canal.
-            #   cart_update  -> carrito del punto de venta
+            #   cart_update  -> carrito del punto de venta (customer display)
             #   order_update -> cambios de la cuenta por mesa (pedido/comanda)
-            if tipo not in {"cart_update", "order_update"}:
+            #   kiosko_qr    -> el mostrador manda un pedido a la pantalla del cliente en el kiosko
+            if tipo not in {"cart_update", "order_update", "kiosko_qr"}:
                 continue
             await broadcast(session, json.dumps(message, separators=(",", ":")), writer)
     except (asyncio.IncompleteReadError, ConnectionError, ValueError, json.JSONDecodeError):

@@ -15,7 +15,6 @@
     <script src="lib/qrcodejs/qrcode.min.js"></script>
     <style>
         :root {
-            /* El mismo inicio que el resto: theme-init/themeConfig lo reemplazan por la tienda. */
             --primary-color: #39C5BB;
             --bg-body: #10141a;
             --bg-card: #1a2027;
@@ -32,116 +31,129 @@
         body {
             font-family: 'Google Sans Flex', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: var(--bg-body); color: var(--text-color);
-            display: flex; flex-direction: column;
-            overflow: hidden;
+            display: flex; flex-direction: column; overflow: hidden;
         }
         button { font-family: inherit; cursor: pointer; }
 
-        /* Cabecera: pensada para leerla de lejos. */
+        /* Barra mínima: sólo la rueda de configuración (no está el nombre de la app,
+           ni cuántos esperan, ni pantalla completa: aquí solo se ve lo que pide el cliente). */
         .k-top {
-            display: flex; align-items: center; gap: 18px;
-            padding: 18px 26px; background: var(--bg-card); border-bottom: 1px solid var(--border-color);
-            flex: 0 0 auto;
+            position: fixed; top: 0; right: 0; z-index: 20;
+            padding: 12px 16px; display: flex; justify-content: flex-end;
         }
-        .k-top h1 { font-size: 1.5rem; font-weight: 700; }
-        .k-top .k-cuenta { font-size: 1.1rem; color: var(--text-muted); }
-        .k-top .k-cuenta strong { color: var(--primary-color); font-size: 1.6rem; margin-right: 4px; }
-        .k-full {
-            margin-left: auto; border: 1px solid var(--border-color); background: none;
-            color: var(--text-muted); font-size: 1rem; padding: 10px 16px; border-radius: 10px;
-            display: inline-flex; align-items: center; gap: 8px;
+        .k-ajustes {
+            width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--border-color);
+            background: rgba(0,0,0,.25); color: var(--text-muted); font-size: 1.15rem;
+            display: inline-flex; align-items: center; justify-content: center; opacity: .55;
+            transition: opacity .2s;
         }
-        .k-full:hover { color: var(--primary-color); border-color: var(--primary-color); }
+        .k-ajustes:hover { opacity: 1; color: var(--primary-color); border-color: var(--primary-color); }
 
-        /* Lista de pedidos: rejilla grande, legible de lejos. */
-        .k-lista { flex: 1 1 auto; overflow-y: auto; padding: 20px 26px; display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; align-content: start; }
-        .k-tarjeta {
-            background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px;
-            padding: 18px; display: flex; flex-direction: column; gap: 12px;
-        }
-        .k-tarjeta.k-ready { border-left: 5px solid var(--success-color); }
-        .k-tarjeta-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-        .k-folio { font-size: 1.7rem; font-weight: 800; color: var(--primary-color); }
-        .k-nombre { font-size: 1.15rem; font-weight: 600; overflow-wrap: anywhere; }
-        .k-estado { font-size: .85rem; font-weight: 700; padding: 5px 12px; border-radius: 999px; background: var(--bg-light); }
-        .k-ready .k-estado { background: var(--success-color); color: #06251a; }
-        .k-items { display: flex; flex-direction: column; gap: 6px; }
-        .k-item { display: flex; justify-content: space-between; gap: 8px; font-size: 1.05rem; color: var(--text-muted); }
-        .k-item b { color: var(--text-color); }
-        .k-pie { display: flex; align-items: center; justify-content: space-between; border-top: 1px dashed var(--border-color); padding-top: 10px; }
-        .k-total { font-size: 1.5rem; font-weight: 800; }
-        .k-tiempo { color: var(--text-muted); font-size: 1rem; }
-        .k-tiempo i { margin-right: 5px; }
-
-        /* Pedido destacado: una sola cosa en pantalla, todo el alto. */
+        /* El pedido del cliente: una sola cosa en la pantalla. */
         .k-pedido {
             flex: 1 1 auto; display: flex; flex-direction: column;
-            padding: 22px 30px; gap: 14px; overflow-y: auto;
+            padding: 26px 40px; gap: 18px; overflow-y: auto; height: 100vh;
         }
         .k-pedido.hidden { display: none; }
-        .k-volver { align-self: flex-start; border: 1px solid var(--border-color); background: none;
-            color: var(--text-muted); font-size: 1rem; padding: 9px 14px; border-radius: 10px; display: inline-flex; gap: 8px; align-items: center; }
         .k-pedido-vivo {
-            display: grid; grid-template-columns: minmax(0, 1fr) auto;
-            gap: 24px; align-items: center; background: var(--bg-card);
-            border: 1px solid var(--border-color); border-radius: 18px; padding: 24px 30px;
+            display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 30px; align-items: center;
+            background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 20px;
+            padding: 28px 34px;
         }
-        .k-pedido-info { display: flex; flex-direction: column; gap: 10px; }
-        .k-pedido-info h2 { font-size: 1.6rem; }
-        .k-pedido-folio { font-size: 2.6rem; font-weight: 800; color: var(--primary-color); }
-        .k-pedido-estado { font-size: 1.15rem; font-weight: 700; }
-        .k-pedido-tiempo { font-size: 1.3rem; color: var(--text-muted); }
+        .k-pedido-info { display: flex; flex-direction: column; gap: 8px; }
+        .k-pedido-folio { font-size: 3rem; font-weight: 800; color: var(--primary-color); }
+        .k-pedido-nombre { font-size: 1.7rem; font-weight: 600; overflow-wrap: anywhere; }
+        .k-pedido-tiempo { font-size: 1.35rem; color: var(--text-muted); }
         .k-pedido-tiempo strong { color: var(--text-color); font-variant-numeric: tabular-nums; }
-        /* El QR con su marco blanco: lo escanea el cliente para entrar a su página. */
-        .k-qr { background: #fff; padding: 14px; border-radius: 18px; }
-        .k-qr.demasiado-grande { display: flex; justify-content: center; }
-        .k-qr canvas, .k-qr img { max-width: 100%; height: auto; }
-        .k-pedido-cuerpo { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 24px; }
-        .k-pedido-cuerpo .k-items { font-size: 1.25rem; gap: 10px; }
-        .k-pedido-cuerpo .k-item .k-precio { font-variant-numeric: tabular-nums; }
-        .k-resumen { display: flex; flex-direction: column; gap: 10px; min-width: 260px; }
-        .k-fila { display: flex; justify-content: space-between; font-size: 1.2rem; color: var(--text-muted); }
+        .k-qr { background: #fff; padding: 16px; border-radius: 20px; }
+        .k-qr canvas, .k-qr img { max-width: 240px; height: auto; display: block; }
+
+        .k-pedido-cuerpo { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 26px; }
+        .k-items { display: flex; flex-direction: column; gap: 12px; }
+        .k-item {
+            display: flex; justify-content: space-between; gap: 14px; align-items: flex-start;
+            background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px;
+            padding: 16px 18px; font-size: 1.3rem;
+        }
+        .k-item .k-izq { display: flex; align-items: baseline; gap: 10px; }
+        .k-item .k-cant { font-weight: 800; color: var(--primary-color); }
+        .k-item .k-nombre-item { overflow-wrap: anywhere; }
+        .k-item .k-precio { font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .k-item .k-precio-orig { color: var(--text-muted); text-decoration: line-through; font-size: 1rem; margin-right: 6px; }
+
+        .k-resumen { display: flex; flex-direction: column; gap: 12px; min-width: 300px; }
+        .k-fila { display: flex; justify-content: space-between; font-size: 1.3rem; color: var(--text-muted); }
         .k-fila b { color: var(--text-color); }
-        .k-fila.k-final { border-top: 1px dashed var(--border-color); padding-top: 12px; font-size: 1.5rem; }
+        .k-fila.k-final { border-top: 1px dashed var(--border-color); padding-top: 14px; font-size: 1.8rem; }
         .k-fila.k-final b { color: var(--primary-color); }
-        .k-pago { font-size: 1.1rem; padding: 10px 14px; border-radius: 10px; background: var(--bg-light); }
-        .k-pago i { margin-right: 6px; }
+        .k-pago { font-size: 1.2rem; padding: 12px 16px; border-radius: 12px; background: var(--bg-light);
+            display: flex; align-items: center; gap: 10px; border: 1px solid var(--border-color); }
+        .k-pago i { color: var(--success-color); }
 
-        /* Hueco para el contenido en reposo (promociones, video, imágenes): se implementará
-           después. Hasta entonces la pantalla simplemente queda con el fondo. */
-        .k-reposo { flex: 1 1 auto; display: none; }
-        .k-reposo.activo { display: flex; align-items: center; justify-content: center; }
+        /* Reposo: carrusel de imágenes/videos configurados, o pantalla limpia en espera. */
+        .k-reposo { flex: 1 1 auto; position: relative; overflow: hidden; height: 100vh; display: none; }
+        .k-reposo.activo { display: block; }
+        .kr-slide { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+        .kr-slide img, .kr-slide video { width: 100%; height: 100%; object-fit: contain; }
+        .kr-slide.oculto { opacity: 0; }
+        .kr-fade { transition: opacity .9s ease; }
+        .kr-sin { flex: 1 1 auto; display: flex; align-items: center; justify-content: center; }
+        .kr-sin div { text-align: center; color: var(--text-muted); font-size: 1.6rem; display: flex; flex-direction: column; gap: 16px; align-items: center; }
+        .kr-sin i { font-size: 3.4rem; color: var(--border-color); }
 
-        .k-vacio { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center;
-            gap: 12px; color: var(--text-muted); font-size: 1.4rem; }
-        .k-vacio i { font-size: 3rem; color: var(--border-color); }
+        /* Panel de configuración (tres puntos). */
+        .k-panel { position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.55);
+            display: none; align-items: center; justify-content: center; padding: 20px; }
+        .k-panel.abierto { display: flex; }
+        .k-panel-caja {
+            background: var(--bg-light); border: 1px solid var(--border-color); border-radius: 18px;
+            max-width: 520px; width: 100%; max-height: 92vh; overflow-y: auto; padding: 22px;
+            display: flex; flex-direction: column; gap: 16px;
+        }
+        .k-panel-titulo { display: flex; align-items: center; justify-content: space-between; }
+        .k-panel-titulo h3 { font-size: 1.4rem; }
+        .k-campo { display: flex; flex-direction: column; gap: 6px; }
+        .k-campo label { font-size: .95rem; color: var(--text-muted); font-weight: 600; }
+        .k-campo input, .k-campo select {
+            background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-color);
+            border-radius: 10px; padding: 11px 13px; font-size: 1rem; font-family: inherit;
+        }
+        .k-help { font-size: .85rem; color: var(--text-muted); }
+        .k-assets { display: flex; flex-direction: column; gap: 8px; }
+        .k-asset { display: flex; align-items: center; gap: 10px; background: var(--bg-card);
+            border: 1px solid var(--border-color); border-radius: 10px; padding: 8px 10px; }
+        .k-asset img, .k-asset video { width: 54px; height: 40px; object-fit: cover; border-radius: 8px; background: #000; }
+        .k-asset .k-asset-url { flex: 1; font-size: .8rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .k-asset button { background: none; border: none; color: var(--danger-color); font-size: 1.1rem; }
+        .k-add { display: flex; gap: 8px; }
+        .k-add input { flex: 1; }
+        .k-add .k-tipo { width: 96px; }
+        .k-btn { border: none; border-radius: 12px; padding: 13px 16px; font-size: 1.05rem; font-weight: 700; }
+        .k-btn-primario { background: var(--primary-color); color: #06231f; }
+        .k-btn-fantasma { background: none; border: 1px solid var(--border-color); color: var(--text-muted); font-size: 1rem; padding: 10px 14px; }
+        .k-panel-fila { display: flex; gap: 10px; justify-content: flex-end; }
+        .k-guardar-estado { font-size: .9rem; color: var(--success-color); display: none; }
 
         @media (max-width: 700px) {
-            .k-pedido-vivo { grid-template-columns: 1fr; }
-            .k-pedido-cuerpo { grid-template-columns: 1fr; }
+            .k-pedido-vivo, .k-pedido-cuerpo { grid-template-columns: 1fr; }
             .k-resumen { min-width: 0; }
         }
     </style>
 </head>
 <body class="kiosko">
-    <!-- Cabecera: cuántos esperan y cómo salir/entrar de pantalla completa. -->
-    <header class="k-top">
-        <h1><i class="fas fa-utensils" style="margin-right:10px; color:var(--primary-color);"></i>Tomodachi</h1>
-        <span class="k-cuenta"><strong id="kCuenta">0</strong> esperando</span>
-        <button type="button" id="kFullscreen" class="k-full"><i class="fas fa-expand"></i> <span>Pantalla completa</span></button>
-    </header>
+    <!-- Rueda de configuración: la única cosa del personal en esta pantalla. -->
+    <div class="k-top">
+        <button type="button" id="kAjustes" class="k-ajustes" title="Configuración del kiosko" aria-label="Configurar">
+            <i class="fas fa-ellipsis-v"></i>
+        </button>
+    </div>
 
-    <main id="kLista" class="k-lista"></main>
-
-    <!-- Pedido destacado: la cajera lo manda y aparece aquí en grande, con su QR. -->
+    <!-- El pedido del cliente (una sola pantalla). -->
     <main id="kPedido" class="k-pedido hidden">
-        <button type="button" id="kVolver" class="k-volver"><i class="fas fa-arrow-left"></i> Volver a la lista</button>
         <section class="k-pedido-vivo">
             <div class="k-pedido-info">
                 <div class="k-pedido-folio" id="kFolio"></div>
-                <h2 id="kNombre"></h2>
-                <div class="k-pedido-estado" id="kEstado"></div>
+                <div class="k-pedido-nombre" id="kNombre"></div>
                 <div class="k-pedido-tiempo"><i class="fas fa-clock"></i> Lleva <strong id="kTiempo">—</strong></div>
             </div>
             <div class="k-qr" id="kQr"></div>
@@ -153,9 +165,53 @@
         <div class="k-pago" id="kPago"></div>
     </main>
 
-    <!-- Contenido en reposo (pendiente de implementar). -->
+    <!-- Reposo: carrusel o espera limpia. -->
     <div id="kReposo" class="k-reposo"></div>
 
-    <script src="js/kiosko.js?v=3"></script>
+    <!-- Panel de configuración del kiosko. -->
+    <div id="kPanel" class="k-panel">
+        <div class="k-panel-caja">
+            <div class="k-panel-titulo">
+                <h3><i class="fas fa-tv"></i> Configuración del kiosko</h3>
+                <button type="button" id="kCerrarPanel" class="k-btn-fantasma"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div class="k-campo">
+                <label for="kReposoTiempo">Tiempo en reposo antes del carrusel</label>
+                <input type="number" id="kReposoTiempo" min="5" max="3600" step="5">
+                <div class="k-help">Segundos con el kiosko sin pedido a la vista antes de mostrar el carrusel.</div>
+            </div>
+
+            <div class="k-campo">
+                <label for="kTransicion">Animación de transición</label>
+                <select id="kTransicion">
+                    <option value="fade">Fundido</option>
+                    <option value="slide">Deslizar</option>
+                    <option value="none">Sin animación</option>
+                </select>
+            </div>
+
+            <div class="k-campo">
+                <label>Contenido del carrusel (en reposo)</label>
+                <div class="k-help">Imágenes o videos de promociones, del menú o de lo que quieras mostrar.</div>
+                <div class="k-assets" id="kAssetList"></div>
+                <div class="k-add">
+                    <select id="kAssetTipo" class="k-tipo">
+                        <option value="image">Imagen</option>
+                        <option value="video">Video</option>
+                    </select>
+                    <input type="text" id="kAssetUrl" placeholder="Pega el enlace de la imagen o el video">
+                    <button type="button" id="kAgregarAsset" class="k-btn k-btn-primario"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+
+            <div class="k-panel-fila">
+                <span class="k-guardar-estado" id="kGuardado"><i class="fas fa-check"></i> Guardado</span>
+                <button type="button" id="kGuardarCfg" class="k-btn k-btn-primario">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/kiosko.js?v=4"></script>
 </body>
 </html>

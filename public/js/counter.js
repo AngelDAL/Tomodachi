@@ -273,6 +273,17 @@ async function ctCargarPreciosDePromocion() {
     } catch (e) { /* sin promociones en la lista; la cajera no pierde nada */ }
 }
 
+/**
+ * La X del buscador: aparece sólo cuando hay algo escrito y deja cancelar la búsqueda de un
+ * toque (borra y vuelve a pintar todo), devolviendo el foco al campo para seguir escribiendo.
+ */
+function ctActualizarBotonBuscar() {
+    const campo = document.getElementById('ctBuscar');
+    const x = document.getElementById('ctBuscarX');
+    if (!campo || !x) return;
+    x.classList.toggle('hidden', campo.value.trim() === '');
+}
+
 function ctPintarProductos() {
     const cont = document.getElementById('ctProductos');
     if (!cont) return;
@@ -1009,6 +1020,22 @@ document.addEventListener('DOMContentLoaded', function () {
             ctGuardarPago(estado);
         });
     });
+    const buscarX = document.getElementById('ctBuscarX');
+    if (buscarX) buscarX.addEventListener('click', function () {
+        const campo = document.getElementById('ctBuscar');
+        if (!campo) return;
+        campo.value = '';
+        ctEstado.busqueda = '';
+        ctPintarProductos();
+        ctActualizarBotonBuscar();
+        campo.focus();
+    });
+    const campoBuscar = document.getElementById('ctBuscar');
+    if (campoBuscar) {
+        campoBuscar.addEventListener('input', ctActualizarBotonBuscar);
+        ctActualizarBotonBuscar();
+    }
+
     const pagoSi = document.getElementById('ctPagoSi');
     if (pagoSi) pagoSi.addEventListener('click', function () { ctGuardarPago('paid'); });
     const pagoNo = document.getElementById('ctPagoNo');
@@ -1066,11 +1093,16 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // La presencia del cliente se refresca sola cada 15 s (para que "está viendo" no se quede pegado).
+    // NADA de sondear cada 15 s: el mostrador ya se entera de todo por WebSocket (arriba), así que
+    // esto eran llamadas repetidas y casi siempre vacías. Queda sólo una red de seguridad lenta
+    // por si el socket se cae y el navegador no avisa: sirve para que el icono de "el cliente está
+    // viendo" no se quede pegado para siempre. Con el socket sano no molesta a nadie.
     setInterval(function () {
         const panel = document.querySelector('[data-vista-panel="mostrador"]');
+        const socket = window.WsRealtime && window.WsRealtime.estado ? window.WsRealtime.estado() : null;
+        if (socket === 'conectado') return;      // el socket ya se encarga
         if (panel && !panel.classList.contains('hidden')) ctCargar(true);
-    }, 15000);
+    }, 90000);
 
     const params = new URLSearchParams(window.location.search);
     if (params.get('vista') === 'mostrador' && params.get('pantalla') === '1') {

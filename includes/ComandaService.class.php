@@ -346,6 +346,51 @@ TIMESTAMPDIFF(MINUTE, COALESCE(c.sent_at, c.created_at), NOW()) AS minutos,
     }
 
     /**
+     * Refleja en el pedido de mostrador lo que acaba de hacer la cocina.
+     *
+     * Al dar "entregar" en cocina, el pedido sale de su lista (el tablero no muestra las comandas
+     * servidas) y además la caja y el cliente tienen que ver lo mismo: si no, el pedido seguiría
+     * apareciendo como pendiente en el mostrador y el cliente nunca se enteraría.
+     */
+    private function sincronizarPedidoDeMostrador(array $comanda, $destino, $store_id) {
+        if (($comanda['channel'] ?? '') !== 'counter' || empty($comanda['external_ref'])) {
+            return;
+        }
+        // El `store_id` se recibe: la fila de la comanda no lo trae en su SELECT.
+        $oid = (int)$comanda['external_ref'];
+        try {
+            if ($destino === 'ready') {
+                $this->conn->prepare(
+                    "UPDATE counter_orders SET status = 'ready', notified_at = COALESCE(notified_at, NOW())
+                      WHERE counter_order_id = ? AND store_id = ? AND status = 'pending'"
+                )->execute([$oid, $store_id]);
+            } elseif ($destino === 'served' || $destino === 'delivered') {
+                $this->conn->prepare(
+                    "UPDATE counter_orders SET status = 'completed', completed_at = COALESCE(completed_at, NOW())
+                      WHERE counter_order_id = ? AND store_id = ? AND status IN ('pending', 'ready')"
+                )->execute([$oid, $store_id]);
+            } elseif ($destino === 'cancelled') {
+                $this->conn->prepare(
+                    "UPDATE counter_orders SET status = 'cancelled', cancelled_at = COALESCE(cancelled_at, NOW())
+                      WHERE counter_order_id = ? AND store_id = ? AND status IN ('pending', 'ready')"
+                )->execute([$oid, $store_id]);
+            }
+            // Se avisa por el canal de la tienda: la caja y el cliente lo ven al instante.
+            $payload = json_encode([
+                'type'     => 'order_update',
+                'counter'  => $oid,
+                'event'    => 'counter_' . $destino,
+                'store_id' => $store_id,
+            ], JSON_UNESCAPED_UNICODE);
+            if ($payload !== false) {
+                DiningSession::enviarAlRelay(WsToken::canalTienda($store_id), $payload);
+            }
+        } catch (Throwable $e) {
+            // La comanda ya avanzó: esto es el espejo, no puede deshacer lo que hizo la cocina.
+        }
+    }
+
+    /**
      * Les pone comanda a los pedidos de mostrador activos que no la tengan.
      *
      * Son los que se crearon antes de que el mostrador creara comandas. Sin esto, en cocina no
@@ -578,7 +623,9 @@ TIMESTAMPDIFF(MINUTE, COALESCE(c.sent_at, c.created_at), NOW()) AS minutos,
     /** Fila cruda de una comanda, acotada a la tienda. */
     private function filaComanda($comanda_id, $store_id) {
         $stmt = $this->conn->prepare(
-            "SELECT c.comanda_id, c.session_id, c.channel, c.station_id, c.status,
+            // `external_ref` es lo que enlaza la comanda con el pedido de mostrador: sin esta
+            // columna, el espejo hacia la caja no encontraba el pedido y lo daba por ajeno.
+            "SELECT c.comanda_id, c.session_id, c.channel, c.external_ref, c.station_id, c.status,
                     c.number, c.business_date, c.notes, c.printed_count,
                     c.print_status, c.print_attempts, c.print_last_error, c.print_failed_at,
                     c.created_by_type, c.sent_at, c.ready_at, c.served_at,
@@ -732,6 +779,10 @@ TIMESTAMPDIFF(MINUTE, COALESCE(c.sent_at, c.created_at), NOW()) AS minutos,
         if ($comanda['session_id'] !== null) {
             DiningSession::broadcast((int)$comanda['session_id'], 'comanda_' . $destino);
         }
+
+        // Si la comanda es de MOSTRADOR, lo que hizo la cocina tiene que verse igual en la caja y
+        // en la página del cliente: son la misma cosa vista desde dos lados.
+        $this->sincronizarPedidoDeMostrador($comanda, $destino, (int)$store_id);
 
         return $this->obtener((int)$comanda_id, (int)$store_id);
     }

@@ -1510,6 +1510,10 @@
         .ct-modal-body { display: flex; flex-direction: column; gap: 14px; overflow: hidden; flex: 1 1 auto; min-height: 0; }
         .ct-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 360px); gap: 16px; align-items: stretch; flex: 1 1 auto; min-height: 0; }
         .ct-picker { display: flex; flex-direction: column; gap: 10px; min-height: 0; min-width: 0; }
+        /* La X aparece sólo cuando hay algo escrito: deja cancelar la búsqueda sin borrar a mano. */
+        .ct-buscar-x { border: 0; background: none; cursor: pointer; color: var(--text-muted); padding: 0 4px; font-size: .95rem; }
+        .ct-buscar-x:hover { color: var(--danger-color, #D32F2F); }
+        .ct-buscar-x.hidden { display: none; }
         .ct-productos { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; flex: 1 1 auto; min-height: 180px; overflow-y: auto; align-content: start; }
         .ct-prod { background: var(--bg-card, #fff); border: 1px solid var(--border-color); border-radius: var(--ds-radius-md); padding: 8px; cursor: pointer; text-align: center; display: flex; flex-direction: column; gap: 6px; font-family: inherit; color: var(--text-color); position: relative; min-width: 0; }
         .ct-prod:hover { border-color: var(--primary-color); }
@@ -1986,10 +1990,10 @@
                     <div class="tp-header">
                         <div>
                             <h1 class="tp-titulo">Mostrador</h1>
-                            <p class="tp-sub">Pedidos de clientes de paso, sin mesa. Anota a nombre de quién van y dale el QR para que siga su orden.</p>
+
                         </div>
                         <div class="tp-botones">
-                            <span class="tp-vivo" id="ctVivo" title="Se actualiza solo, en tiempo real"><i class="fas fa-bolt"></i> <span>en vivo</span></span>
+                            
                             <button type="button" class="tp-btn" id="ctBtnEscaner" title="Leer el QR del cliente para recibir su pedido"><i class="fas fa-camera"></i> Leer QR</button>
                             <button type="button" class="tp-btn primario" id="ctBtnNuevo"><i class="fas fa-plus"></i> Nuevo pedido</button>
                             <div class="tp-engranaje ct-engranaje">
@@ -2036,6 +2040,7 @@
                         <div class="tp-menu-buscador" style="margin:0">
                             <i class="fas fa-search"></i>
                             <input type="text" id="ctBuscar" placeholder="Buscar producto…" autocomplete="off">
+                            <button type="button" class="ct-buscar-x hidden" id="ctBuscarX" aria-label="Borrar la búsqueda" title="Borrar la búsqueda"><i class="fas fa-xmark"></i></button>
                         </div>
                         <div class="tp-menu-cats" id="ctCats"></div>
                         <div class="ct-productos" id="ctProductos"></div>
@@ -2452,7 +2457,7 @@
     <script src="js/tables.js?v=13"></script>
     <script src="js/cobro.js?v=2"></script>
     <script src="js/comandas.js?v=6"></script>
-    <script src="js/counter.js?v=7"></script>
+    <script src="js/counter.js?v=8"></script>
     <script src="lib/animejs/anime.min.js"></script>
     <script src="js/design-system.js?v=7"></script>
 </body>

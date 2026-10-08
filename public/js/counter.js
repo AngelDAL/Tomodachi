@@ -232,6 +232,9 @@ async function ctNuevo() {
     if (!tpEstado.catalogo.length) {
         try { await tpCargarCatalogo(); } catch (e) { /* sin catálogo el modal lo dirá */ }
     }
+    // Los precios con promoción se piden aparte: el catálogo del punto de venta trae el precio
+    // de lista, y la rejilla tiene que mostrar el descuento en la propia tarjeta.
+    await ctCargarPreciosDePromocion();
     ctPintarSeleccion();
     ctPintarProductos();
     // Siempre se empieza por los productos, con las pestañas listas (móvil y tableta).
@@ -240,6 +243,34 @@ async function ctNuevo() {
     ctPonerPestana('productos', true);
     tpAbrirModal('ctModalNuevo');
     setTimeout(function () { if (campo) campo.focus(); }, 60);
+}
+
+/**
+ * Trae el catálogo del mostrador CON el precio ya con promociones (el mismo motor que cobra) y
+ * se lo pega a los productos que ya tiene el punto de venta.
+ *
+ * Se hace por producto y sobre el catálogo existente para no duplicar la lista ni romper el
+ * buscador y las categorías, que ya trabajan sobre `tpEstado.catalogo`. Si esto falla, la
+ * rejilla sigue mostrando el precio de lista: es información de más, no un requisito para
+ * vender.
+ */
+async function ctCargarPreciosDePromocion() {
+    try {
+        const datos = await tpPeticion(CT_API + '?catalogo=1');
+        const lista = (datos && datos.products) || [];
+        if (!lista.length || !tpEstado.catalogo.length) return;
+        const porId = {};
+        lista.forEach(function (p) { porId[Number(p.product_id)] = p; });
+        tpEstado.catalogo.forEach(function (p) {
+            const con = porId[Number(p.product_id)];
+            if (!con) return;
+            p.price = con.price;
+            p.original_price = con.original_price;
+            p.promo_price = con.promo_price;
+            p.promotion_name = con.promotion_name;
+            p.promo_hint = con.promo_hint;
+        });
+    } catch (e) { /* sin promociones en la lista; la cajera no pierde nada */ }
 }
 
 function ctPintarProductos() {

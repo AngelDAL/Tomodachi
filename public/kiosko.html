@@ -48,47 +48,42 @@
             transition: opacity .2s;
         }
         .k-ajustes:hover { opacity: 1; color: var(--primary-color); border-color: var(--primary-color); }
+        /* Mientras se muestra el pedido no hay controles a la vista (igual que el monitor del POS). */
+        .kiosko.k-pedido-visible .k-top { display: none; }
 
-        /* El pedido del cliente: una sola cosa en la pantalla. */
+        /* El pedido del cliente: una sola tarjeta, centrada en la pantalla (como el monitor del POS). */
         .k-pedido {
-            flex: 1 1 auto; display: flex; flex-direction: column;
-            padding: 26px 40px; gap: 18px; overflow-y: auto; height: 100vh;
+            flex: 1 1 auto; display: flex; align-items: center; justify-content: center;
+            height: 100vh; padding: 24px 40px;
         }
         .k-pedido.hidden { display: none; }
-        .k-pedido-vivo {
-            display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 30px; align-items: center;
-            background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 20px;
-            padding: 28px 34px;
+        .k-pedido-caja {
+            background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 22px;
+            padding: 30px 36px; max-width: 760px; width: 100%;
+            display: flex; flex-direction: column; gap: 20px;
         }
-        .k-pedido-info { display: flex; flex-direction: column; gap: 8px; }
-        .k-pedido-folio { font-size: 3rem; font-weight: 800; color: var(--primary-color); }
-        .k-pedido-nombre { font-size: 1.7rem; font-weight: 600; overflow-wrap: anywhere; }
-        .k-pedido-tiempo { font-size: 1.35rem; color: var(--text-muted); }
-        .k-pedido-tiempo strong { color: var(--text-color); font-variant-numeric: tabular-nums; }
-        .k-qr { background: #fff; padding: 16px; border-radius: 20px; }
-        .k-qr canvas, .k-qr img { max-width: 240px; height: auto; display: block; }
-
-        .k-pedido-cuerpo { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 26px; }
-        .k-items { display: flex; flex-direction: column; gap: 12px; }
+        .k-pedido-folio { font-size: 2.8rem; font-weight: 800; color: var(--primary-color); text-align: center; }
+        .k-pedido-fila { display: flex; gap: 28px; align-items: center; justify-content: center; }
+        .k-articulos { flex: 1; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+        .k-items { display: flex; flex-direction: column; gap: 10px; }
         .k-item {
             display: flex; justify-content: space-between; gap: 14px; align-items: flex-start;
-            background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px;
-            padding: 16px 18px; font-size: 1.3rem;
+            border-bottom: 1px dashed var(--border-color); padding: 8px 2px; font-size: 1.35rem;
         }
-        .k-item .k-izq { display: flex; align-items: baseline; gap: 10px; }
-        .k-item .k-cant { font-weight: 800; color: var(--primary-color); }
-        .k-item .k-nombre-item { overflow-wrap: anywhere; }
-        .k-item .k-precio { font-variant-numeric: tabular-nums; white-space: nowrap; }
-        .k-item .k-precio-orig { color: var(--text-muted); text-decoration: line-through; font-size: 1rem; margin-right: 6px; }
-
-        .k-resumen { display: flex; flex-direction: column; gap: 12px; min-width: 300px; }
-        .k-fila { display: flex; justify-content: space-between; font-size: 1.3rem; color: var(--text-muted); }
+        .k-izq { display: flex; align-items: baseline; gap: 10px; }
+        .k-cant { font-weight: 800; color: var(--primary-color); }
+        .k-nombre-item { overflow-wrap: anywhere; }
+        .k-precio { font-variant-numeric: tabular-nums; white-space: nowrap; display: flex; align-items: baseline; gap: 8px; }
+        .k-precio-orig { color: var(--text-muted); text-decoration: line-through; font-size: 1.05rem; }
+        .k-resumen { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--border-color); padding-top: 12px; }
+        .k-fila { display: flex; justify-content: space-between; font-size: 1.25rem; color: var(--text-muted); }
         .k-fila b { color: var(--text-color); }
-        .k-fila.k-final { border-top: 1px dashed var(--border-color); padding-top: 14px; font-size: 1.8rem; }
+        .k-fila.k-final { font-size: 1.7rem; }
         .k-fila.k-final b { color: var(--primary-color); }
-        .k-pago { font-size: 1.2rem; padding: 12px 16px; border-radius: 12px; background: var(--bg-light);
-            display: flex; align-items: center; gap: 10px; border: 1px solid var(--border-color); }
-        .k-pago i { color: var(--success-color); }
+        .k-pago { font-size: 1.05rem; padding: 9px 14px; border-radius: 10px; background: var(--bg-light);
+            display: flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid var(--border-color); }
+        .k-qr { background: #fff; padding: 14px; border-radius: 18px; flex: 0 0 auto; }
+        .k-qr canvas, .k-qr img { width: 200px; height: 200px; display: block; }
 
         /* Reposo: carrusel de imágenes/videos configurados, o pantalla limpia en espera. */
         .k-reposo { flex: 1 1 auto; position: relative; overflow: hidden; height: 100vh; display: none;
@@ -149,21 +144,19 @@
         </button>
     </div>
 
-    <!-- El pedido del cliente (una sola pantalla). -->
+    <!-- El pedido del cliente: una tarjeta centrada, igual que el monitor del POS. -->
     <main id="kPedido" class="k-pedido hidden">
-        <section class="k-pedido-vivo">
-            <div class="k-pedido-info">
-                <div class="k-pedido-folio" id="kFolio"></div>
-                <div class="k-pedido-nombre" id="kNombre"></div>
-                <div class="k-pedido-tiempo"><i class="fas fa-clock"></i> Lleva <strong id="kTiempo">—</strong></div>
+        <div class="k-pedido-caja">
+            <div class="k-pedido-folio" id="kFolio"></div>
+            <div class="k-pedido-fila">
+                <div class="k-articulos">
+                    <div class="k-items" id="kItems"></div>
+                    <div class="k-resumen" id="kResumen"></div>
+                    <div class="k-pago" id="kPago"></div>
+                </div>
+                <div class="k-qr" id="kQr"></div>
             </div>
-            <div class="k-qr" id="kQr"></div>
-        </section>
-        <section class="k-pedido-cuerpo">
-            <div class="k-items" id="kItems"></div>
-            <div class="k-resumen" id="kResumen"></div>
-        </section>
-        <div class="k-pago" id="kPago"></div>
+        </div>
     </main>
 
     <!-- Reposo: carrusel o espera limpia. -->
@@ -215,6 +208,6 @@
         </div>
     </div>
 
-    <script src="js/kiosko.js?v=5"></script>
+    <script src="js/kiosko.js?v=6"></script>
 </body>
 </html>

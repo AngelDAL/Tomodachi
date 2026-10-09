@@ -84,8 +84,8 @@
                 var descFila = desc / (Number(it.quantity) || 1);
                 var base = Number(it.base_price || it.product_price) || (precio + descFila);
                 if (base <= 0) base = precio + descFila;
-                origen = '<span class="k-precio-orig">' + dinero(base) + '</span>' +
-                         '<span style="color:var(--danger-color)">-' + dinero(descFila) + '</span>';
+                // Precio original en muted y rayado; el real es el que resalta. Nada más.
+                origen = '<span class="k-precio-orig">' + dinero(base) + '</span>';
             }
             h += '<div class="k-item">' +
                 '<div class="k-izq"><span class="k-cant">' + cant(it.quantity) + '×</span>' +
@@ -105,24 +105,21 @@
 
     function pintarBorrador() {
         var b = borrador;
-        $('kFolio').textContent = 'Tu pedido';
-        $('kNombre').textContent = esc(b.name || '');
-        $('kTiempo').textContent = '';
+        // Nada de título ni reloj: solo lo que se va pidiendo.
+        $('kFolio').textContent = '';
         pintarItems(b.items);
         pintarTotales(b.subtotal, b.discount, b.total);
         var pago = $('kPago');
-        if (pago) pago.innerHTML = '<i class="fas fa-tv"></i> Preparando tu pedido, escaneas el QR al final';
+        if (pago) pago.style.display = 'none';
         limpiarQr();
         $('kPedido').classList.remove('hidden');
         $('kReposo').classList.remove('activo');
+        document.body.classList.add('k-pedido-visible');
     }
 
     function pintarDestacado() {
         var p = destacado;
         $('kFolio').textContent = '#' + esc(p.number);
-        $('kNombre').textContent = esc(p.customer_name || '');
-        var s = Math.max(0, Number(p.esperando_seg) || Number(p.segundos) || 0);
-        $('kTiempo').textContent = mm(s);
         pintarItems(p.items);
         var subtotal = Number(p.subtotal) || 0;
         var descuento = Number(p.discount) || 0;
@@ -130,11 +127,11 @@
         if (!(total > 0)) total = subtotal - descuento;
         pintarTotales(subtotal, descuento, total);
         var pago = $('kPago');
-        if (pago) pago.innerHTML = etiquetaPago(p);
+        if (pago) { pago.style.display = ''; pago.innerHTML = etiquetaPago(p); }
         pintarQr(p);
         $('kPedido').classList.remove('hidden');
         $('kReposo').classList.remove('activo');
-        arrancaReloj(s);
+        document.body.classList.add('k-pedido-visible');
     }
 
     function limpiarQr() {
@@ -157,16 +154,6 @@
         if (can) { can.style.width = '220px'; can.style.height = '220px'; }
     }
 
-    function arrancaReloj(s) {
-        if (reloj) { clearInterval(reloj); reloj = null; }
-        $('kTiempo').textContent = mm(s);
-        reloj = setInterval(function () {
-            if (!destacado) return;
-            destacado.esperando_seg = (Number(destacado.esperando_seg) || 0) + 1;
-            $('kTiempo').textContent = mm(destacado.esperando_seg);
-        }, 1000);
-    }
-
     // ============================================================
     // Estados: borrador (vivo) / pedido final (QR) / reposo
     // ============================================================
@@ -174,6 +161,7 @@
         borrador = null;
         destacado = null;
         if (reloj) { clearInterval(reloj); reloj = null; }
+        document.body.classList.remove('k-pedido-visible');
         limpiarQr();
         $('kItems').innerHTML = '';
         $('kResumen').innerHTML = '';

@@ -890,6 +890,40 @@
                 font-size: 1.4rem;
             }
         }
+        /* ── Bloque "Gracias por tu compra" + QR de notificación (no modal) ── */
+        .gracias {
+            position: fixed; inset: 0; z-index: 35;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 18px; text-align: center; padding: 24px;
+            background: color-mix(in srgb, var(--bg-body) 70%, transparent);
+        }
+        .gracias.hidden { display: none; }
+        .gracias-qr { background: #fff; padding: 16px; border-radius: 20px; box-shadow: 0 8px 30px rgba(0,0,0,.35); }
+        .gracias-qr canvas, .gracias-qr img { width: 220px; height: 220px; display: block; }
+        .gracias-titulo { font-size: 2.6rem; font-weight: 800; color: var(--text-color) !important; }
+        .gracias-msg { font-size: 1.35rem; max-width: 520px; color: var(--text-color) !important; line-height: 1.45; }
+        .gracias-folio { font-size: 1.15rem; font-weight: 700; color: var(--primary-color) !important; }
+
+        /* ── Legibilidad forzada: contraste alto y fuentes claras en toda la pantalla ── */
+        body { font-family: 'Google Sans Flex', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        .store-name, #clock, .welcome-msg,
+        .section-title, .product-name, .product-unit-price, .product-total,
+        .summary-row .summary-label, .summary-row .summary-value,
+        .empty-cart-text, .qr-title, .qr-desc, .qr-note,
+        .display-action, .summary-card, .section-title span {
+            color: var(--text-color) !important;
+        }
+        .section-title { font-size: 1.5rem; }
+        .product-item { background: var(--bg-card) !important; }
+        .product-name { font-size: 1.35rem; font-weight: 700; }
+        .product-unit-price { font-size: 1.05rem; }
+        .product-total { font-size: 1.4rem; font-weight: 800; }
+        .summary-row .summary-value { font-weight: 700; }
+        .summary-row .summary-label { font-weight: 600; }
+        #clock { font-size: 2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+        .store-name { font-size: 1.9rem; font-weight: 800; text-shadow: 0 2px 6px rgba(0,0,0,.5); }
+        .empty-cart-text { font-size: 1.5rem; font-weight: 700; }
+        .empty-cart i { color: var(--text-muted); opacity: .6; }
     </style>
     <link rel="stylesheet" href="css/design-system.css?v=10">
     <script src="lib/qrcodejs/qrcode.min.js"></script>
@@ -897,6 +931,12 @@
     <script src="js/design-system.js?v=7" defer></script>
 </head>
 <body>
+    <div class="gracias hidden" id="kGracias">
+        <div class="gracias-qr" id="kGraciasQr"></div>
+        <div class="gracias-titulo">¡Gracias por tu compra!</div>
+        <p class="gracias-msg">Escanea el código QR si quieres que te notifiquemos a tu teléfono cuando esté listo tu pedido.</p>
+        <div class="gracias-folio" id="kGraciasFolio"></div>
+    </div>
     <!-- Header -->
     <div class="header">
         <div class="logo header-left">
@@ -1753,9 +1793,30 @@
         updateDisplay(lineasAtom(api.lines), totals, storeInfo(), null);
     }
 
+    // Muestra el "¡Gracias por tu compra!" con el QR de notificación (depende del
+    // token de seguimiento del pedido). No es un modal: se ve encima de la pantalla.
+    function mostrarGracias(p) {
+        var caja = document.getElementById('kGraciasQr');
+        if (!caja) return;
+        caja.innerHTML = '';
+        if (p.tracking_token) {
+            window.KOSKO_QR_URL = window.location.origin + '/public/seguimiento.html?t=' + encodeURIComponent(p.tracking_token);
+            try {
+                new QRCode(caja, { text: window.KOSKO_QR_URL, width: 220, height: 220,
+                    colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+            } catch (e) { /* no se rompe la pantalla sin QR */ }
+        }
+        var folio = document.getElementById('kGraciasFolio');
+        if (folio) folio.textContent = 'Pedido #' + String(p.number || '');
+        var g = document.getElementById('kGracias');
+        if (g) g.classList.remove('hidden');
+    }
+
     function limpiar() {
         window.__kioskoCurrent = null;
         window.KOSKO_QR_URL = null;
+        var g = document.getElementById('kGracias');
+        if (g) { g.classList.add('hidden'); var q = document.getElementById('kGraciasQr'); if (q) q.innerHTML = ''; }
         var panel = document.getElementById('qrPanel');
         if (panel) panel.classList.add('hidden');
         var ec = document.getElementById('emptyCart');
@@ -1772,11 +1833,7 @@
                 var p = d.data;
                 pintar({ lines: p.items || [], subtotal: p.subtotal, discount: p.discount, total: p.total });
                 window.__kioskoCurrent = Number(p.counter_order_id);
-                if (p.tracking_token) {
-                    window.KOSKO_QR_URL = window.location.origin + '/public/seguimiento.html?t=' + encodeURIComponent(p.tracking_token);
-                    // Ya no hace falta el botón: el QR sale solo en el "gracias por tu compra".
-                    showQrPanel();
-                }
+                mostrarGracias(p);
             });
     }
 

@@ -419,6 +419,18 @@
             .catch(function () { alert('Error de red al guardar'); });
     }
 
+    // Aplica la imagen de fondo que el negocio tiene configurada en el sistema (no la
+    // del navegador). Si se quitó, la vacía se lecta y se limpia de la pantalla.
+    function aplicarFondoSistema(origen) {
+        if (!window.ThemeColorUtils || typeof ThemeColorUtils.applyWallpaper !== 'function') return;
+        var tc = origen.theme_config || {};
+        var tcd = origen.theme_config_dark || {};
+        var claro = Object.assign({}, tc, { wallpaper_url: (typeof tc.wallpaper_url === 'string' ? tc.wallpaper_url : '') });
+        var oscuro = Object.assign({}, tcd, { wallpaper_url: (typeof tcd.wallpaper_url === 'string' ? tcd.wallpaper_url : '') });
+        var dark = !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        ThemeColorUtils.applyWallpaper(claro, dark, oscuro);
+    }
+
     // ============================================================
     // Arranque
     // ============================================================
@@ -430,6 +442,7 @@
                 var origen = d.data || {};
                 QUIEN = { store_id: origen.store_id, orig: origen };
                 cargarCfg(origen.settings);
+                aplicarFondoSistema(origen);
                 conectarTiempoReal();
                 habilitarReposo();
             })

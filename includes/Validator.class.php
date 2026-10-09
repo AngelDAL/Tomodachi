@@ -50,9 +50,15 @@ class Validator {
         if (!is_array($cfg)) return $cfg;
 
         if (array_key_exists('wallpaper_url', $cfg)) {
-            $url = self::wallpaperUrl($cfg['wallpaper_url']);
-            if ($url === null) unset($cfg['wallpaper_url']);
-            else $cfg['wallpaper_url'] = $url;
+            if ($cfg['wallpaper_url'] === '') {
+                // Quitar el fondo: se persiste vacío (no se borra la clave) para que el
+                // cliente lo lea como "sin fondo" y lo quite de la pantalla de inmediato.
+                $cfg['wallpaper_url'] = '';
+            } else {
+                $url = self::wallpaperUrl($cfg['wallpaper_url']);
+                if ($url === null) unset($cfg['wallpaper_url']);
+                else $cfg['wallpaper_url'] = $url;
+            }
         }
         if (array_key_exists('wallpaper_opacity', $cfg)) {
             if (!is_numeric($cfg['wallpaper_opacity'])) {

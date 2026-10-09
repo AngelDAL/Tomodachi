@@ -130,6 +130,19 @@
         .k-panel-fila { display: flex; gap: 10px; justify-content: flex-end; }
         .k-guardar-estado { font-size: .9rem; color: var(--success-color); display: none; }
 
+        /* Imagen de fondo del sistema (papel tapiz): la pinta el tema con la misma técnica
+           del resto de la app (html.has-wallpaper body::after). */
+        html.has-wallpaper body { background-color: transparent; }
+        html.has-wallpaper body::before,
+        html.has-wallpaper body::after {
+            content: ''; position: fixed; top: 0; right: 0; bottom: 0; left: 0;
+            pointer-events: none; background-repeat: no-repeat; background-position: center center;
+        }
+        html.has-wallpaper body::before { z-index: -2; background-color: var(--bg-body); }
+        html.has-wallpaper body::after { z-index: -1; background-image: var(--wallpaper-image);
+            background-size: cover; opacity: var(--wallpaper-opacity, 0.3); }
+        html.has-wallpaper[data-wallpaper-size="fill"] body::after { background-size: 100% 100%; }
+
         @media (max-width: 700px) {
             .k-pedido-vivo, .k-pedido-cuerpo { grid-template-columns: 1fr; }
             .k-resumen { min-width: 0; }
@@ -208,6 +221,6 @@
         </div>
     </div>
 
-    <script src="js/kiosko.js?v=6"></script>
+    <script src="js/kiosko.js?v=7"></script>
 </body>
 </html>

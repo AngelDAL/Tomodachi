@@ -957,8 +957,12 @@
         }
         /* El encabezado es oscuro siempre: su texto va en claro (--text-on-primary),
            tanto en tema claro como oscuro (en claro NO es negro sobre el header). */
-        .store-name, #clock, .welcome-msg {
-            color: var(--text-on-primary) !important;
+        /* El encabezado es oscuro siempre (var(--dark-color)): su texto va en claro fijo,
+           tanto en tema claro como oscuro. El --text-on-primary de la tienda está oscuro
+           y en claro dejaba negro sobre negro. */
+        .header, .store-name, #clock, .welcome-msg,
+        .header button, .header a, .header .welcome-msg {
+            color: #eaf0f1 !important;
             text-shadow: 0 1px 3px rgba(0,0,0,.55);
         }
         /* El --text-color guardado por la tienda puede ser negro en ambos modos:

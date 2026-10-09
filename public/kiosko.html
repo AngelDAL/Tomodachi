@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kiosko - Tomodachi</title>
+    <title>Pantalla de Cliente - Tomodachi</title>
     <link rel="stylesheet" href="lib/fontawesome/css/all.min.css?v=4">
     <link rel="stylesheet" href="css/fonts.css?v=4">
     <link rel="stylesheet" href="css/variables.css?v=6">
@@ -11,216 +11,1853 @@
     <link rel="icon" type="image/svg+xml" href="assets/app-icons/tomodachi-favicon.svg">
     <link rel="manifest" href="manifest.json">
     <script src="js/format-utils.js"></script>
-    <script src="js/ws-realtime.js?v=2"></script>
-    <script src="lib/qrcodejs/qrcode.min.js"></script>
     <style>
         :root {
+            /* Fallback semántico: theme-init / themeConfig lo reemplaza por tienda. */
             --primary-color: #39C5BB;
-            --bg-body: #10141a;
-            --bg-card: #1a2027;
-            --bg-light: #232a33;
-            --text-color: #ecf0f3;
-            --text-muted: #9aa4b0;
-            --border-color: #2c343e;
-            --success-color: #34c07a;
-            --warning-color: #e2a03f;
-            --danger-color: #e05b4d;
+            --secondary-color: #0E86A6;
+            --bg-body: #f4f7f6;
+            --bg-card: #ffffff;
+            --bg-light: #eef2f7;
+            --text-color: #333333;
+            --text-light: #718096;
+            --text-muted: #718096;
+            --border-color: #dce3ec;
+            --success-color: #4CAF50;
+            --danger-color: #f44336;
+            --text-on-primary: #ffffff;
+            --dark-color: #333333;
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { height: 100%; }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             font-family: 'Google Sans Flex', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--bg-body); color: var(--text-color);
-            display: flex; flex-direction: column; overflow: hidden;
+            background: var(--bg-body);
+            color: var(--text-color);
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
-        button { font-family: inherit; cursor: pointer; }
 
-        /* Barra mínima: sólo la rueda de configuración (no está el nombre de la app,
-           ni cuántos esperan, ni pantalla completa: aquí solo se ve lo que pide el cliente). */
-        .k-top {
-            position: fixed; top: 0; right: 0; z-index: 20;
-            padding: 12px 16px; display: flex; justify-content: flex-end;
+        /* Header — grid de 3 columnas: logo a la izquierda, reloj CENTRADO,
+           controles a la derecha. */
+        .header {
+            background: var(--dark-color);
+            padding: 15px 40px;
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 2px 10px color-mix(in srgb, var(--dark-color) 18%, transparent);
+            color: var(--text-on-primary);
         }
-        .k-ajustes {
-            width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--border-color);
-            background: rgba(0,0,0,.25); color: var(--text-muted); font-size: 1.15rem;
-            display: inline-flex; align-items: center; justify-content: center; opacity: .55;
-            transition: opacity .2s;
+        .header-left { justify-self: start; }
+        .header-center { justify-self: center; }
+        .header-right { justify-self: end; }
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            position: relative;
         }
-        .k-ajustes:hover { opacity: 1; color: var(--primary-color); border-color: var(--primary-color); }
-        /* Mientras se muestra el pedido no hay controles a la vista (igual que el monitor del POS). */
-        .kiosko.k-pedido-visible .k-top { display: none; }
 
-        /* El pedido del cliente: una sola tarjeta, centrada en la pantalla (como el monitor del POS). */
-        .k-pedido {
-            flex: 1 1 auto; display: flex; align-items: center; justify-content: center;
-            height: 100vh; padding: 24px 40px;
+        /* Reloj centrado */
+        .header-center {
+            font-size: 2.1rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 0.04em;
+            line-height: 1;
+            color: var(--text-on-primary);
+            text-shadow: 0 0 18px color-mix(in srgb, var(--primary-color) 40%, transparent);
         }
-        .k-pedido.hidden { display: none; }
-        .k-pedido-caja {
-            background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 22px;
-            padding: 30px 36px; max-width: 760px; width: 100%;
-            display: flex; flex-direction: column; gap: 20px;
-        }
-        .k-pedido-folio { font-size: 2.8rem; font-weight: 800; color: var(--primary-color); text-align: center; }
-        .k-pedido-fila { display: flex; gap: 28px; align-items: center; justify-content: center; }
-        .k-articulos { flex: 1; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
-        .k-items { display: flex; flex-direction: column; gap: 10px; }
-        .k-item {
-            display: flex; justify-content: space-between; gap: 14px; align-items: flex-start;
-            border-bottom: 1px dashed var(--border-color); padding: 8px 2px; font-size: 1.35rem;
-        }
-        .k-izq { display: flex; align-items: baseline; gap: 10px; }
-        .k-cant { font-weight: 800; color: var(--primary-color); }
-        .k-nombre-item { overflow-wrap: anywhere; }
-        .k-precio { font-variant-numeric: tabular-nums; white-space: nowrap; display: flex; align-items: baseline; gap: 8px; }
-        .k-precio-orig { color: var(--text-muted); text-decoration: line-through; font-size: 1.05rem; }
-        .k-resumen { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--border-color); padding-top: 12px; }
-        .k-fila { display: flex; justify-content: space-between; font-size: 1.25rem; color: var(--text-muted); }
-        .k-fila b { color: var(--text-color); }
-        .k-fila.k-final { font-size: 1.7rem; }
-        .k-fila.k-final b { color: var(--primary-color); }
-        .k-pago { font-size: 1.05rem; padding: 9px 14px; border-radius: 10px; background: var(--bg-light);
-            display: flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid var(--border-color); }
-        .k-qr { background: #fff; padding: 14px; border-radius: 18px; flex: 0 0 auto; }
-        .k-qr canvas, .k-qr img { width: 200px; height: 200px; display: block; }
 
-        /* Reposo: carrusel de imágenes/videos configurados, o pantalla limpia en espera. */
-        .k-reposo { flex: 1 1 auto; position: relative; overflow: hidden; height: 100vh; display: none;
-            align-items: center; justify-content: center; }
-        .k-reposo.activo { display: flex; }
-        .kr-slide { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
-        .kr-slide img, .kr-slide video { width: 100%; height: 100%; object-fit: contain; }
-        .kr-slide.oculto { opacity: 0; }
-        .kr-fade { transition: opacity .9s ease; }
-        .kr-sin { flex: 1 1 auto; display: flex; align-items: center; justify-content: center; }
-        .kr-sin div { text-align: center; color: var(--text-muted); font-size: 1.6rem; display: flex; flex-direction: column; gap: 16px; align-items: center; }
-        .kr-sin i { font-size: 3.4rem; color: var(--border-color); }
-
-        /* Panel de configuración (tres puntos). */
-        .k-panel { position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.55);
-            display: none; align-items: center; justify-content: center; padding: 20px; }
-        .k-panel.abierto { display: flex; }
-        .k-panel-caja {
-            background: var(--bg-light); border: 1px solid var(--border-color); border-radius: 18px;
-            max-width: 520px; width: 100%; max-height: 92vh; overflow-y: auto; padding: 22px;
-            display: flex; flex-direction: column; gap: 16px;
+        /* Menú compacto de acciones del kiosco. */
+        .display-actions-toggle {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            color: var(--text-on-primary);
+            border-radius: 8px;
+            width: 40px;
+            height: 36px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
         }
-        .k-panel-titulo { display: flex; align-items: center; justify-content: space-between; }
-        .k-panel-titulo h3 { font-size: 1.4rem; }
-        .k-campo { display: flex; flex-direction: column; gap: 6px; }
-        .k-campo label { font-size: .95rem; color: var(--text-muted); font-weight: 600; }
-        .k-campo input, .k-campo select {
-            background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-color);
-            border-radius: 10px; padding: 11px 13px; font-size: 1rem; font-family: inherit;
+        .display-actions-toggle:hover,
+        .display-actions-toggle[aria-expanded="true"] {
+            background: color-mix(in srgb, var(--primary-color) 30%, transparent);
+            border-color: var(--primary-color);
         }
-        .k-help { font-size: .85rem; color: var(--text-muted); }
-        .k-assets { display: flex; flex-direction: column; gap: 8px; }
-        .k-asset { display: flex; align-items: center; gap: 10px; background: var(--bg-card);
-            border: 1px solid var(--border-color); border-radius: 10px; padding: 8px 10px; }
-        .k-asset img, .k-asset video { width: 54px; height: 40px; object-fit: cover; border-radius: 8px; background: #000; }
-        .k-asset .k-asset-url { flex: 1; font-size: .8rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .k-asset button { background: none; border: none; color: var(--danger-color); font-size: 1.1rem; }
-        .k-add { display: flex; gap: 8px; }
-        .k-add input { flex: 1; }
-        .k-add .k-tipo { width: 96px; }
-        .k-btn { border: none; border-radius: 12px; padding: 13px 16px; font-size: 1.05rem; font-weight: 700; }
-        .k-btn-primario { background: var(--primary-color); color: #06231f; }
-        .k-btn-fantasma { background: none; border: 1px solid var(--border-color); color: var(--text-muted); font-size: 1rem; padding: 10px 14px; }
-        .k-panel-fila { display: flex; gap: 10px; justify-content: flex-end; }
-        .k-guardar-estado { font-size: .9rem; color: var(--success-color); display: none; }
-
-        /* Imagen de fondo del sistema (papel tapiz): la pinta el tema con la misma técnica
-           del resto de la app (html.has-wallpaper body::after). */
-        html.has-wallpaper body { background-color: transparent; }
-        html.has-wallpaper body::before,
-        html.has-wallpaper body::after {
-            content: ''; position: fixed; top: 0; right: 0; bottom: 0; left: 0;
-            pointer-events: none; background-repeat: no-repeat; background-position: center center;
+        .display-actions-menu {
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            min-width: 190px;
+            padding: 6px;
+            border: 1px solid color-mix(in srgb, var(--text-on-primary) 18%, transparent);
+            border-radius: 10px;
+            background: color-mix(in srgb, var(--dark-color) 94%, var(--bg-card));
+            box-shadow: 0 12px 28px color-mix(in srgb, var(--dark-color) 35%, transparent);
+            z-index: 20;
         }
-        html.has-wallpaper body::before { z-index: -2; background-color: var(--bg-body); }
-        html.has-wallpaper body::after { z-index: -1; background-image: var(--wallpaper-image);
-            background-size: cover; opacity: var(--wallpaper-opacity, 0.3); }
-        html.has-wallpaper[data-wallpaper-size="fill"] body::after { background-size: 100% 100%; }
+        .display-actions-menu.hidden { display: none; }
+        .display-action {
+            width: 100%;
+            padding: 10px 12px;
+            border: 0;
+            border-radius: 7px;
+            background: transparent;
+            color: var(--text-on-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-align: left;
+            cursor: pointer;
+            font: inherit;
+            font-size: 0.9rem;
+        }
+        .display-action:hover { background: color-mix(in srgb, var(--text-on-primary) 12%, transparent); }
 
-        @media (max-width: 700px) {
-            .k-pedido-vivo, .k-pedido-cuerpo { grid-template-columns: 1fr; }
-            .k-resumen { min-width: 0; }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo-img {
+            width: 50px;
+            height: 50px;
+            border-radius: 8px;
+            object-fit: contain;
+            background: var(--bg-card);
+            padding: 2px;
+            opacity: 0;
+            transition: opacity 0.18s ease;
+        }
+        .logo-img.loaded { opacity: 1; }
+
+        .store-name {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--text-on-primary);
+            text-shadow: 0 2px 4px color-mix(in srgb, var(--dark-color) 18%, transparent);
+        }
+
+        .welcome-msg {
+            font-size: 1.2rem;
+            color: color-mix(in srgb, var(--text-on-primary) 90%, transparent);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            gap: 20px;
+            padding: 20px 40px;
+            overflow: hidden;
+        }
+
+        /* Products List */
+        .products-section {
+            flex: 1;
+            background: var(--bg-card);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 15px color-mix(in srgb, var(--dark-color) 10%, transparent);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            border-top: 4px solid var(--primary-color);
+        }
+
+        .section-title {
+            color: var(--text-color);
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .section-title i {
+            color: var(--primary-color);
+        }
+
+        .products-list {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .products-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .products-list::-webkit-scrollbar-track {
+            background: var(--bg-light);
+        }
+
+        .products-list::-webkit-scrollbar-thumb {
+            background: var(--primary-color);
+            border-radius: 10px;
+        }
+
+        .product-item {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 10px;
+            display: grid;
+            grid-template-columns: auto auto 1fr auto;
+            gap: 20px;
+            align-items: center;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        .product-item:last-child {
+            border-bottom: none;
+        }
+
+        .product-image {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            object-fit: cover;
+            background: var(--bg-light);
+            border: 1px solid var(--border-color);
+        }
+
+        .product-image-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            background: var(--bg-light);
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            font-size: 1.8rem;
+        }
+
+        .product-quantity {
+            background: var(--primary-color);
+            color: var(--text-on-primary);
+            min-width: 40px;
+            height: 40px;
+            padding: 0 10px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            font-weight: 700;
+            box-shadow: 0 2px 5px color-mix(in srgb, var(--dark-color) 16%, transparent);
+        }
+
+        .product-info {
+            flex: 1;
+        }
+
+        .product-name {
+            color: var(--text-color);
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .product-unit-price {
+            color: var(--text-light);
+            font-size: 0.95rem;
+        }
+
+        .price-original {
+            text-decoration: line-through;
+            color: var(--text-muted);
+            margin-right: 8px;
+            font-size: 0.9rem;
+        }
+
+        .price-promo {
+            color: var(--danger-color);
+            font-weight: 700;
+        }
+
+        .product-total {
+            color: var(--primary-color);
+            font-size: 1.5rem;
+            font-weight: 700;
+            text-align: right;
+        }
+
+        .empty-cart {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            text-align: center;
+            height: 100%;
+        }
+
+        .empty-cart i {
+            font-size: 4rem;
+            margin-bottom: 15px;
+            opacity: 0.5;
+            color: var(--primary-color);
+        }
+
+        .empty-cart-text {
+            font-size: 1.2rem;
+            color: var(--text-color);
+        }
+
+        /* Summary Section */
+        .summary-section {
+            width: 350px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .summary-card {
+            background: var(--bg-card);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 4px 15px color-mix(in srgb, var(--dark-color) 10%, transparent);
+            border-top: 4px solid var(--secondary-color);
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-medium);
+        }
+
+        .summary-row:last-child {
+            border-bottom: none;
+        }
+
+        .summary-label {
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-color);
+        }
+
+        .summary-value {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-color);
+        }
+
+        .total-row {
+            background: var(--primary-color);
+            margin: -25px;
+            margin-top: 15px;
+            padding: 25px;
+            border-radius: 0 0 15px 15px;
+            color: var(--text-on-primary);
+            box-shadow: 0 -4px 10px color-mix(in srgb, var(--dark-color) 10%, transparent);
+        }
+
+        .total-row .summary-label {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-on-primary);
+        }
+
+        .total-row .summary-value {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--text-on-primary);
+            text-shadow: 0 2px 4px color-mix(in srgb, var(--dark-color) 18%, transparent);
+        }
+
+        /* Info Card */
+        .info-card {
+            background: var(--bg-card);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 15px color-mix(in srgb, var(--dark-color) 10%, transparent);
+            color: var(--text-light);
+        }
+
+        .info-card i {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+            color: var(--primary-color);
+        }
+
+        /* Promo Badges */
+        .promo-badges {
+            display: flex;
+            gap: 6px;
+            margin-top: 6px;
+            flex-wrap: wrap;
+        }
+        
+        .promo-pill {
+            background-color: var(--secondary-color);
+            color: var(--text-on-primary);
+            font-size: 0.75rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .discount-tag {
+            background-color: var(--primary-color);
+            color: var(--text-on-primary);
+            font-size: 0.75rem;
+            padding: 3px 6px;
+            border-radius: 6px;
+            font-weight: 700;
+        }
+
+        /* Bundle Slideshow */
+        .bundle-image-container {
+            position: relative;
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            border: 2px solid var(--secondary-color);
+            overflow: hidden;
+            background: var(--bg-card);
+        }
+
+        .bundle-image-container img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: opacity 0.5s ease-in-out;
+            opacity: 1;
+        }
+        
+        .bundle-image-container img.fading-out {
+            opacity: 0;
+        }
+
+        /* Cart tab badge */
+        .cart-tab-badge {
+            display: inline-block;
+            font-size: 0.6rem;
+            font-weight: 700;
+            padding: 1px 6px;
+            border-radius: 4px;
+            margin-right: 4px;
+            vertical-align: middle;
+            background: var(--bg-light);
+            color: var(--text-light);
+        }
+        .cart-tab-badge.active {
+            background: var(--primary-color);
+            color: var(--text-on-primary);
+        }
+        .product-item.tab-active {
+            border-left: 3px solid var(--primary-color);
+        }
+        .product-item {
+            border-left: 3px solid transparent;
+        }
+
+        /* Connection status */
+        .conn-status {
+            font-size: 0.8rem;
+            padding: 4px 12px;
+            border-radius: 12px;
+            background: color-mix(in srgb, var(--text-on-primary) 15%, transparent);
+            color: color-mix(in srgb, var(--text-on-primary) 80%, transparent);
+            white-space: nowrap;
+        }
+        .conn-status.connected {
+            background: color-mix(in srgb, var(--success-color) 30%, transparent);
+            color: var(--success-color);
+        }
+        .conn-status.disconnected {
+            background: color-mix(in srgb, var(--danger-color) 30%, transparent);
+            color: var(--danger-color);
+        }
+
+        /* QR Panel */
+        .qr-panel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: color-mix(in srgb, var(--dark-color) 72%, transparent);
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .qr-panel.hidden { display: none; }
+        .qr-panel-content {
+            background: var(--bg-card);
+            padding: 30px;
+            border-radius: 16px;
+            max-width: 420px;
+            width: 90%;
+            text-align: center;
+            position: relative;
+            animation: qrFadeIn 0.3s ease;
+        }
+        @keyframes qrFadeIn {
+            from { opacity: 0; transform: scale(0.95) translateY(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .qr-close {
+            position: absolute;
+            top: 12px;
+            right: 16px;
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+        .qr-close:hover { color: var(--text-color); }
+        .qr-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text-color);
+            margin-bottom: 8px;
+        }
+        .qr-desc {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            margin-bottom: 16px;
+        }
+        .qr-image-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 16px;
+        }
+        .qr-image-container canvas,
+        .qr-image-container img {
+            border-radius: 8px;
+            border: 2px solid var(--border-color);
+        }
+        .qr-url-box {
+            background: var(--bg-light);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px 14px;
+            font-size: 0.85rem;
+            color: var(--text-color);
+            word-break: break-all;
+            margin-bottom: 12px;
+            user-select: all;
+        }
+        .qr-copy-btn {
+            padding: 8px 20px;
+            border: 1px solid var(--primary-color);
+            border-radius: 8px;
+            background: var(--bg-card);
+            color: var(--primary-color);
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+            margin-bottom: 12px;
+        }
+        .qr-copy-btn:hover {
+            background: var(--primary-color);
+            color: var(--text-on-primary);
+        }
+        .qr-note {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* Responsive */
+        @media (max-width: 1000px) {
+            .main-content {
+                flex-direction: column;
+            }
+
+            .summary-section {
+                width: 100%;
+                flex-direction: row;
+            }
+            
+            .summary-card {
+                flex: 2;
+            }
+            
+            .info-card {
+                flex: 1;
+            }
+        }
+
+        /* Tablets y teléfonos en landscape */
+        @media (max-width: 768px) {
+            .header {
+                padding: 10px 16px;
+            }
+
+            .logo-img {
+                width: 40px;
+                height: 40px;
+            }
+
+            .store-name {
+                font-size: 1.3rem;
+            }
+
+            .welcome-msg {
+                font-size: 1rem;
+            }
+
+            .main-content {
+                padding: 12px;
+                gap: 12px;
+            }
+
+            .products-section,
+            .summary-card,
+            .info-card {
+                border-radius: 12px;
+                padding: 16px;
+            }
+
+            .section-title {
+                font-size: 1.2rem;
+                margin-bottom: 12px;
+                padding-bottom: 8px;
+            }
+
+            .product-item {
+                padding: 12px 8px;
+                gap: 12px;
+            }
+
+            .product-image,
+            .product-image-icon,
+            .bundle-image-container {
+                width: 48px;
+                height: 48px;
+            }
+
+            .product-image-icon {
+                font-size: 1.4rem;
+            }
+
+            .product-quantity {
+                min-width: 34px;
+                height: 34px;
+                font-size: 1rem;
+            }
+
+            .product-name {
+                font-size: 1.05rem;
+            }
+
+            .product-unit-price {
+                font-size: 0.85rem;
+            }
+
+            .product-total {
+                font-size: 1.2rem;
+            }
+
+            .summary-row {
+                padding: 8px 0;
+            }
+
+            .summary-label {
+                font-size: 1rem;
+            }
+
+            .summary-value {
+                font-size: 1.1rem;
+            }
+
+            .total-row {
+                margin: -16px;
+                margin-top: 12px;
+                padding: 16px;
+            }
+
+            .total-row .summary-label {
+                font-size: 1.2rem;
+            }
+
+            .total-row .summary-value {
+                font-size: 1.6rem;
+            }
+        }
+
+        /* Teléfonos pequeños y vista muy reducida */
+        @media (max-width: 480px) {
+            body {
+                overflow: auto; /* Permitir scroll si el contenido no cabe */
+            }
+
+            .header {
+                padding: 8px 12px;
+            }
+
+            .logo {
+                gap: 8px;
+            }
+
+            .logo-img {
+                width: 32px;
+                height: 32px;
+            }
+
+            .store-name {
+                font-size: 1.05rem;
+            }
+
+            .conn-status {
+                font-size: 0.7rem;
+                padding: 3px 8px;
+            }
+
+            .main-content {
+                flex-direction: column;
+                padding: 8px;
+                gap: 8px;
+            }
+
+            .products-section {
+                padding: 12px;
+                min-height: 0;
+            }
+
+            .products-list {
+                padding-right: 6px;
+            }
+
+            .product-item {
+                padding: 10px 6px;
+                gap: 8px;
+                /* En pantallas muy pequeñas priorizamos cantidad, info y total */
+                grid-template-columns: auto 1fr auto;
+            }
+
+            /* Ocultar imagen en móvil muy pequeño para ganar espacio */
+            .product-item > .product-image,
+            .product-item > .product-image-icon,
+            .product-item > .bundle-image-container {
+                display: none;
+            }
+
+            .product-quantity {
+                min-width: 30px;
+                height: 30px;
+                font-size: 0.95rem;
+            }
+
+            .product-name {
+                font-size: 0.95rem;
+            }
+
+            .product-unit-price {
+                font-size: 0.8rem;
+            }
+
+            .product-total {
+                font-size: 1.05rem;
+            }
+
+            .summary-section {
+                width: 100%;
+                flex-direction: column;
+                gap: 8px;
+                /* Fijar resumen abajo para que el total siempre sea visible */
+                position: sticky;
+                bottom: 0;
+                z-index: 10;
+            }
+
+            .summary-card {
+                padding: 12px;
+                box-shadow: 0 -4px 15px color-mix(in srgb, var(--dark-color) 16%, transparent);
+            }
+
+            .info-card {
+                display: none; /* En pantallas muy pequeñas omitimos el mensaje de agradecimiento */
+            }
+
+            .summary-row {
+                padding: 6px 0;
+            }
+
+            .summary-label {
+                font-size: 0.9rem;
+            }
+
+            .summary-value {
+                font-size: 1rem;
+            }
+
+            .total-row {
+                margin: -12px;
+                margin-top: 10px;
+                padding: 12px;
+            }
+
+            .total-row .summary-label {
+                font-size: 1.1rem;
+            }
+
+            .total-row .summary-value {
+                font-size: 1.4rem;
+            }
+        }
+
+        /* Orientación landscape en teléfonos pequeños */
+        @media (max-height: 500px) and (orientation: landscape) {
+            .header {
+                padding: 6px 12px;
+            }
+
+            .logo-img {
+                width: 32px;
+                height: 32px;
+            }
+
+            .store-name {
+                font-size: 1.1rem;
+            }
+
+            .main-content {
+                flex-direction: row;
+                padding: 8px 12px;
+            }
+
+            .products-section {
+                flex: 2;
+                padding: 10px;
+            }
+
+            .summary-section {
+                flex: 1;
+                width: auto;
+                min-width: 180px;
+            }
+
+            .summary-card,
+            .info-card {
+                padding: 12px;
+                border-radius: 10px;
+            }
+
+            .product-item {
+                padding: 8px 6px;
+                gap: 8px;
+            }
+
+            .product-image,
+            .product-image-icon,
+            .bundle-image-container {
+                width: 40px;
+                height: 40px;
+            }
+
+            .product-name {
+                font-size: 0.95rem;
+            }
+
+            .product-total {
+                font-size: 1.05rem;
+            }
+
+            .total-row .summary-value {
+                font-size: 1.4rem;
+            }
         }
     </style>
+    <link rel="stylesheet" href="css/design-system.css?v=10">
+    <script src="lib/qrcodejs/qrcode.min.js"></script>
+    <script src="js/ws-realtime.js?v=2"></script>
+    <script src="js/design-system.js?v=7" defer></script>
 </head>
-<body class="kiosko">
-    <!-- Rueda de configuración: la única cosa del personal en esta pantalla. -->
-    <div class="k-top">
-        <button type="button" id="kAjustes" class="k-ajustes" title="Configuración del kiosko" aria-label="Configurar">
-            <i class="fas fa-ellipsis-v"></i>
-        </button>
-    </div>
-
-    <!-- El pedido del cliente: una tarjeta centrada, igual que el monitor del POS. -->
-    <main id="kPedido" class="k-pedido hidden">
-        <div class="k-pedido-caja">
-            <div class="k-pedido-folio" id="kFolio"></div>
-            <div class="k-pedido-fila">
-                <div class="k-articulos">
-                    <div class="k-items" id="kItems"></div>
-                    <div class="k-resumen" id="kResumen"></div>
-                    <div class="k-pago" id="kPago"></div>
-                </div>
-                <div class="k-qr" id="kQr"></div>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="logo header-left">
+            <img alt="Logo de la tienda" class="logo-img" id="storeLogo">
+            <div class="store-name" id="storeName">Tomodachi</div>
+        </div>
+        <!-- Reloj centrado en la parte superior central -->
+        <div class="header-center" id="clock"></div>
+        <div class="header-controls header-right">
+            <button class="display-actions-toggle" id="displayActionsBtn" type="button" title="Opciones de pantalla" aria-label="Opciones de pantalla" aria-expanded="false">
+                <i class="fas fa-ellipsis-vertical"></i>
+            </button>
+            <div class="display-actions-menu hidden" id="displayActionsMenu">
+                <button class="display-action" id="fullscreenBtn" type="button">
+                    <i class="fas fa-expand"></i> Pantalla completa
+                </button>
+                <button class="display-action" id="qrToggleBtn" type="button">
+                    <i class="fas fa-qrcode"></i> Mostrar QR
+                </button>
             </div>
         </div>
-    </main>
+    </div>
+    <div class="qr-panel hidden" id="qrPanel">
+        <div class="qr-panel-content">
+            <i class="fas fa-times qr-close" id="qrClose"></i>
+            <div class="qr-title" id="qrTitle">¡Gracias por tu compra!</div>
+            <p class="qr-desc" id="qrDesc">Escanea el código para recibir el aviso de tu pedido</p>
+            <div class="qr-image-container" id="qrImageContainer"></div>
+            <div class="qr-url-box" id="qrUrlBox"></div>
+            <button class="qr-copy-btn" id="qrCopyBtn"><i class="fas fa-copy"></i> Copiar enlace</button>
+            <div class="qr-note">La pantalla se actualizará automáticamente cuando agregues productos.</div>
+        </div>
+    </div>
 
-    <!-- Reposo: carrusel o espera limpia. -->
-    <div id="kReposo" class="k-reposo"></div>
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Products Section -->
+        <div class="products-section">
+            <div class="section-title">
+                <i class="fas fa-list"></i>
+                <span>Artículos</span>
+            </div>
+            <div class="products-list" id="productsList">
+                <!-- Empty State -->
+                <div class="empty-cart" id="emptyCart">
+                    <i class="fas fa-shopping-basket"></i>
+                    <div class="empty-cart-text">Su pedido aparecerá aquí</div>
+                </div>
+            </div>
+        </div>
 
-    <!-- Panel de configuración del kiosko. -->
-    <div id="kPanel" class="k-panel">
-        <div class="k-panel-caja">
-            <div class="k-panel-titulo">
-                <h3><i class="fas fa-tv"></i> Configuración del kiosko</h3>
-                <button type="button" id="kCerrarPanel" class="k-btn-fantasma"><i class="fas fa-times"></i></button>
+        <!-- Summary Section -->
+        <div class="summary-section">
+            <!-- Summary Card -->
+            <div class="summary-card">
+                <div class="summary-row">
+                    <div class="summary-label">
+                        Artículos
+                    </div>
+                    <div class="summary-value" id="itemCount">0</div>
+                </div>
+                <div class="summary-row">
+                    <div class="summary-label">
+                        Subtotal
+                    </div>
+                    <div class="summary-value" id="subtotal">$0.00</div>
+                </div>
+                <div class="summary-row" id="discountRow" style="display: none;">
+                    <div class="summary-label">
+                        Descuento
+                    </div>
+                    <div class="summary-value" id="discount" style="color: var(--success-color);">$0.00</div>
+                </div>
+                <div class="summary-row total-row">
+                    <div class="summary-label">
+                        TOTAL
+                    </div>
+                    <div class="summary-value" id="total">$0.00</div>
+                </div>
             </div>
 
-            <div class="k-campo">
-                <label for="kReposoTiempo">Tiempo en reposo antes del carrusel</label>
-                <input type="number" id="kReposoTiempo" min="5" max="3600" step="5">
-                <div class="k-help">Segundos con el kiosko sin pedido a la vista antes de mostrar el carrusel.</div>
+            <!-- Info Card -->
+            <div class="info-card">
+                <i class="fas fa-heart"></i>
+                <div class="info-text">¡Gracias por tu compra!</div>
             </div>
+        </div>
+    </div>
 
-            <div class="k-campo">
-                <label for="kTransicion">Animación de transición</label>
-                <select id="kTransicion">
-                    <option value="fade">Fundido</option>
-                    <option value="slide">Deslizar</option>
-                    <option value="none">Sin animación</option>
-                </select>
-            </div>
+    <script>
+        // ============================================================
+        // Configuración
+        // ============================================================
+        const CHANNEL_NAME = 'tomodachi_pos_sync';
+        let broadcastChannel = null;
 
-            <div class="k-campo">
-                            <label for="kMensaje">Mensaje cuando no hay pedido a la vista</label>
-                            <input type="text" id="kMensaje" maxlength="60" placeholder="Bienvenidos">
-                            <div class="k-help">El letrero que se ve en reposo mientras el carrusel no esté en uso.</div>
+        const urlParams = new URLSearchParams(window.location.search);
+        const SESSION_UUID = urlParams.get('cart');
+        // Credencial de lectura del carrito (TAB-25-X3): la UUID sola ya no abre el carrito.
+        // El token firmado lo pone el POS en el enlace; si no viene, este display sólo puede
+        // leer por la sesión del navegador (mismo equipo) o no leerá nada.
+        const CART_TOKEN = urlParams.get('token') || '';
+        const CART_EXP = urlParams.get('exp') || '';
+
+        function cartSyncUrl() {
+            let url = '../api/sales/cart_sync.php?session=' + encodeURIComponent(SESSION_UUID);
+            if (CART_TOKEN && CART_EXP) {
+                url += '&exp=' + encodeURIComponent(CART_EXP) + '&token=' + encodeURIComponent(CART_TOKEN);
+            }
+            return url;
+        }
+
+        // Elementos del DOM
+        const productsList = document.getElementById('productsList');
+        const emptyCart = document.getElementById('emptyCart');
+        const itemCount = document.getElementById('itemCount');
+        const subtotal = document.getElementById('subtotal');
+        const discount = document.getElementById('discount');
+        const discountRow = document.getElementById('discountRow');
+        const total = document.getElementById('total');
+        const qrToggleBtn = document.getElementById('qrToggleBtn');
+        const displayActionsBtn = document.getElementById('displayActionsBtn');
+        const displayActionsMenu = document.getElementById('displayActionsMenu');
+        const qrPanel = document.getElementById('qrPanel');
+        const qrClose = document.getElementById('qrClose');
+        const qrUrlBox = document.getElementById('qrUrlBox');
+        const qrCopyBtn = document.getElementById('qrCopyBtn');
+
+        // ============================================================
+        // Polling: consulta al servidor cada 2s (tablets, otros dispositivos)
+        // ============================================================
+        let pollTimer = null;
+        let realtimeSocket = null;
+        let realtimeReconnectTimer = null;
+        let lastRealtimeSignature = '';
+        let lastJson = '';
+        let displayRenderToken = 0;
+
+        function receiveDisplayUpdate(data) {
+            const signature = JSON.stringify([data.cart || [], data.totals || {}, data.activeTab || null]);
+            if (signature === lastRealtimeSignature) return;
+            lastRealtimeSignature = signature;
+            updateDisplay(data.cart || [], data.totals || null, data.storeInfo || null, data.activeTab || null);
+            setConnStatus('connected');
+        }
+
+        // WebSocket es el transporte principal. HTTP solo recupera el estado
+        // inicial y funciona como respaldo lento si no hay socket.
+        function realtimeUrl() {
+            const scheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            return `${scheme}//${window.location.host}/ws/?session=${encodeURIComponent(SESSION_UUID)}`;
+        }
+
+        function startFallbackPolling() {
+            if (pollTimer || !SESSION_UUID) return;
+            pollTimer = setInterval(pollOnce, 15000);
+        }
+
+        function connectRealtime() {
+            if (!SESSION_UUID || (realtimeSocket && (realtimeSocket.readyState === WebSocket.OPEN || realtimeSocket.readyState === WebSocket.CONNECTING))) return;
+            if (realtimeReconnectTimer) clearTimeout(realtimeReconnectTimer);
+            try {
+                realtimeSocket = new WebSocket(realtimeUrl());
+                realtimeSocket.onopen = () => {
+                    stopPolling();
+                    setConnStatus('connected');
+                };
+                realtimeSocket.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        if (data.type === 'cart_update') receiveDisplayUpdate(data);
+                    } catch (_) {}
+                };
+                realtimeSocket.onclose = () => {
+                    realtimeSocket = null;
+                    startFallbackPolling();
+                    realtimeReconnectTimer = setTimeout(connectRealtime, 3000);
+                };
+                realtimeSocket.onerror = () => realtimeSocket?.close();
+            } catch (_) {
+                startFallbackPolling();
+                realtimeReconnectTimer = setTimeout(connectRealtime, 3000);
+            }
+        }
+
+        function startPolling() {
+            if (!SESSION_UUID) {
+                setConnStatus('ready');
+                return;
+            }
+            setConnStatus('connecting');
+            pollOnce();
+            connectRealtime();
+        }
+
+        function stopPolling() {
+            if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+        }
+
+        async function pollOnce() {
+            try {
+                const url = cartSyncUrl() + '&_=' + Date.now();
+                const res = await fetch(url);
+                const json = await res.json();
+                if (json.success && json.data) {
+                    // Hash del contenido real del carrito (product_id + quantity + unit_price)
+                    let contentHash = '0';
+                    if (json.data.cart && json.data.cart.length > 0) {
+                        const parts = json.data.cart.map(i => i.product_id + ':' + i.quantity + ':' + i.unit_price);
+                        contentHash = parts.join('|');
+                    }
+                    if (contentHash !== lastJson) {
+                        lastJson = contentHash;
+                        receiveDisplayUpdate(json.data);
+                    }
+                    setConnStatus('connected');
+                } else {
+                    setConnStatus('disconnected');
+                }
+            } catch (e) {
+                setConnStatus('disconnected');
+            }
+        }
+
+        // ============================================================
+        // BroadcastChannel (misma ventana/pestaña — popup del POS)
+        // ============================================================
+        function initBroadcastChannel() {
+            try {
+                broadcastChannel = new BroadcastChannel(CHANNEL_NAME);
+                broadcastChannel.onmessage = (event) => {
+                    if (event.data.type === 'cart_update') {
+                        receiveDisplayUpdate(event.data);
+                    }
+                };
+                setTimeout(() => {
+                    broadcastChannel.postMessage({ type: 'request_data' });
+                }, 500);
+            } catch (error) {
+                initLocalStorageFallback();
+            }
+        }
+
+        function initLocalStorageFallback() {
+            window.addEventListener('storage', (e) => {
+                if (e.key === 'tomodachi_customer_display') {
+                    try {
+                        const data = JSON.parse(e.newValue || '{}');
+                        receiveDisplayUpdate(data);
+                    } catch (_) {}
+                }
+            });
+            try {
+                const stored = localStorage.getItem('tomodachi_customer_display');
+                if (stored) {
+                    const data = JSON.parse(stored);
+                    receiveDisplayUpdate(data);
+                }
+            } catch (_) {}
+        }
+
+        // ============================================================
+        // Estado de conexión
+        // ============================================================
+        function setConnStatus(status) {
+            // El kiosco no muestra texto de conexión para conservar un encabezado limpio.
+        }
+
+        // ============================================================
+        // QR / Link panel
+        // ============================================================
+        function getDisplayUrl() {
+            // Compatible con subcarpeta local (/Tomodachi/public) y dominio propio (raíz /public)
+            const base = window.location.origin + window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1) + 'customer-display.html';
+            if (!SESSION_UUID) return base;
+            // El token viaja también aquí: si no, el enlace que muestra el QR no podría leer.
+            let url = base + '?cart=' + encodeURIComponent(SESSION_UUID);
+            if (CART_TOKEN && CART_EXP) {
+                url += '&exp=' + encodeURIComponent(CART_EXP) + '&token=' + encodeURIComponent(CART_TOKEN);
+            }
+            return url;
+        }
+
+        function closeDisplayActions() {
+            if (displayActionsMenu) displayActionsMenu.classList.add('hidden');
+            if (displayActionsBtn) displayActionsBtn.setAttribute('aria-expanded', 'false');
+        }
+
+        function showQrPanel() {
+            if (!qrPanel || !qrUrlBox) return;
+            const url = getDisplayUrl();
+            qrUrlBox.textContent = url;
+            // Generar código QR visual
+            const qrContainer = document.getElementById('qrImageContainer');
+            if (qrContainer && typeof QRCode === 'function') {
+                qrContainer.innerHTML = '';
+                new QRCode(qrContainer, {
+                    text: url,
+                    width: 180,
+                    height: 180,
+                    colorDark: '#333333',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+            }
+            qrPanel.classList.remove('hidden');
+            closeDisplayActions();
+        }
+
+        if (displayActionsBtn) {
+            displayActionsBtn.addEventListener('click', () => {
+                const willOpen = displayActionsMenu?.classList.contains('hidden');
+                displayActionsMenu?.classList.toggle('hidden', !willOpen);
+                displayActionsBtn.setAttribute('aria-expanded', String(willOpen));
+            });
+        }
+        document.addEventListener('click', (event) => {
+            if (displayActionsMenu && displayActionsBtn && !displayActionsMenu.contains(event.target) && !displayActionsBtn.contains(event.target)) {
+                closeDisplayActions();
+            }
+        });
+        document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeDisplayActions(); });
+        if (qrToggleBtn) qrToggleBtn.addEventListener('click', showQrPanel);
+        if (qrClose) qrClose.addEventListener('click', () => qrPanel.classList.add('hidden'));
+        if (qrPanel) qrPanel.addEventListener('click', (e) => { if (e.target === qrPanel) qrPanel.classList.add('hidden'); });
+        if (qrCopyBtn) {
+            qrCopyBtn.addEventListener('click', () => {
+                const url = getDisplayUrl();
+                navigator.clipboard.writeText(url).then(() => {
+                    qrCopyBtn.innerHTML = '<i class="fas fa-check"></i> Copiado';
+                    setTimeout(() => { qrCopyBtn.innerHTML = '<i class="fas fa-copy"></i> Copiar enlace'; }, 2000);
+                }).catch(() => {
+                    qrUrlBox.select();
+                    document.execCommand('copy');
+                });
+            });
+        }
+
+        // ============================================================
+        // Tema de tienda: el display puede estar en una tablet sin localStorage.
+        // Aplica la paleta que recibe desde POS/polling, sin colores fijos.
+        // ============================================================
+        function applyDisplayTheme(storeInfo) {
+            const cfg = storeInfo?.theme_config;
+            const cfgDark = storeInfo?.theme_config_dark || null;
+            if (!cfg || !window.ThemeColorUtils) return;
+            const mode = storeInfo?.theme_mode || cfg.theme_mode || 'light';
+            const dark = mode === 'dark' || (mode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+            window.ThemeColorUtils.apply(cfg, dark, cfgDark);
+        }
+
+        // ============================================================
+        // Renderizado del carrito
+        // ============================================================
+        function updateDisplay(cart, totals, storeInfo, activeTab) {
+            const renderToken = ++displayRenderToken;
+            // Guardar activeTab para usar en renderizado de items
+            window._activeTab = activeTab;
+            // Actualizar info de tienda si viene en los datos
+            if (storeInfo) {
+                applyDisplayTheme(storeInfo);
+                if (storeInfo.name) document.getElementById('storeName').textContent = storeInfo.name;
+                // La API entrega la clave 'logo_url' (a veces 'logo'); aceptamos ambas.
+                const brandLogo = storeInfo.logo_url || storeInfo.logo;
+                if (brandLogo) {
+                    const logoPath = getRelativeImagePath(brandLogo);
+                    if (logoPath) setStoreLogo(logoPath);
+                }
+            }
+
+            if (!cart || cart.length === 0) {
+                const finishEmpty = () => {
+                    if (renderToken !== displayRenderToken) return;
+                    productsList.innerHTML = `
+                        <div class="empty-cart">
+                            <i class="fas fa-shopping-basket"></i>
+                            <div class="empty-cart-text">Su pedido aparecerá aquí</div>
                         </div>
+                    `;
+                    itemCount.textContent = '0';
+                    subtotal.textContent = '$0.00';
+                    discount.textContent = '$0.00';
+                    discountRow.style.display = 'none';
+                    total.textContent = '$0.00';
+                };
+                const currentNodes = Array.from(productsList.querySelectorAll('.product-item'));
+                if (currentNodes.length && typeof anime !== 'undefined' && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                    anime.remove(currentNodes);
+                    anime({
+                        targets: currentNodes,
+                        opacity: [1, 0],
+                        translateX: [0, 24],
+                        duration: 240,
+                        easing: 'easeInCubic',
+                        complete: finishEmpty
+                    });
+                } else {
+                    finishEmpty();
+                }
+                return;
+            }
 
-                        <div class="k-campo">
-                            <label>Contenido del carrusel (en reposo)</label>
-                            <div class="k-help">Sube imágenes o videos (promociones, el menú, lo que quieras mostrar).</div>
-                            <div class="k-assets" id="kAssetList"></div>
-                            <div class="k-add">
-                                <input type="file" id="kAssetFile" accept="image/*,video/*" multiple>
-                                <button type="button" id="kSubirAsset" class="k-btn k-btn-primario"><i class="fas fa-upload"></i> Subir</button>
+            // Procesar y agrupar items para visualización (manejo de Bundles)
+            const displayItems = [];
+            const processedBundles = new Set(); // Para rastrear qué bundles ya agregamos
+
+            cart.forEach(item => {
+                if (item.bundle_data && item.bundle_data.in_bundle_qty > 0) {
+                    const bundleName = item.bundle_data.name;
+                    
+                    // Si no hemos procesado este bundle, crearlo
+                    if (!processedBundles.has(bundleName)) {
+                        processedBundles.add(bundleName);
+                        
+                        // Buscar todos los items que pertenecen a este mismo bundle
+                        const bundleItems = cart.filter(i => 
+                            i.bundle_data && 
+                            i.bundle_data.name === bundleName && 
+                            i.bundle_data.in_bundle_qty > 0
+                        );
+
+                        // Calcular total del bundle sumando las partes "in_bundle" de cada item
+                        const totalBundlePrice = bundleItems.reduce((sum, i) => sum + i.bundle_data.in_bundle_subtotal, 0);
+                        const bundleCount = item.bundle_data.count;
+
+                        displayItems.push({
+                            type: 'bundle',
+                            name: bundleName,
+                            count: bundleCount,
+                            subtotal: totalBundlePrice,
+                            items: bundleItems.map(i => ({
+                                name: i.product_name,
+                                qty: i.bundle_data.in_bundle_qty,
+                                image: i.image_path
+                            }))
+                        });
+                    }
+
+                    // Si el item tiene sobras fuera del bundle, agregarlas como item normal
+                    if (item.bundle_data.out_bundle_qty > 0) {
+                        displayItems.push({
+                            type: 'standard',
+                            ...item,
+                            quantity: item.bundle_data.out_bundle_qty,
+                            subtotal: item.bundle_data.out_bundle_subtotal,
+                            unit_price: item.original_price, // El resto se cobra a precio full (o ya descontado por simple promo si aplicara, pero sales.js usa original_price para bundle calculations)
+                            promo_applied: null // El resto no es bundle
+                        });
+                    }
+
+                } else {
+                    // Item normal
+                    displayItems.push({
+                        type: 'standard',
+                        ...item
+                    });
+                }
+            });
+
+            // Renderizar items procesados
+            const html = displayItems.map((item, displayIndex) => {
+                const displayId = String(item.product_id || (item.type === 'bundle' ? 'bundle:' + item.name : item.name) || displayIndex);
+                if (item.type === 'bundle') {
+                    // Renderizado de Bundle
+                    // Usar imagen del primer producto o ícono de paquete
+                    // Collect all unique images
+                    const uniqueImages = [...new Set(item.items.map(p => p.image).filter(img => img))];
+                    const validImages = uniqueImages.map(img => getRelativeImagePath(img));
+                    
+                    let imgHtml;
+                    if (validImages.length > 0) {
+                        // Join with a separator (pipe)
+                        const imagesStr = validImages.join('|').replace(/"/g, '&quot;');
+                        imgHtml = `
+                        <div class="bundle-image-container" data-images="${imagesStr}" data-index="0">
+                            <img src="${validImages[0]}" alt="">
+                        </div>`;
+                    } else {
+                         imgHtml = `<div class="product-image-icon" style="color: var(--secondary-color)"><i class="fas fa-box-open"></i></div>`;
+                    }
+
+                    const productsListHtml = item.items.map(p => 
+                        `<div style="font-size: 0.85rem; color: var(--text-light); display: flex; align-items: center; gap: 5px; margin-top: 2px;">
+                           <i class="fas fa-check-circle" style="font-size: 0.7rem; color: var(--success-color);"></i> 
+                           ${formatQuantity(p.qty)}x ${escapeHtml(p.name)}
+                         </div>`
+                    ).join('');
+
+                    return `
+                    <div class="product-item" data-product-id="${escapeHtml(displayId)}" style="background: var(--bg-card); border-left: 4px solid var(--secondary-color);">
+                        ${imgHtml}
+                        <div class="product-quantity" style="background: var(--secondary-color);">${item.count}</div>
+                        <div class="product-info">
+                            <div class="product-name" style="color: var(--secondary-color); font-weight: 700;">
+                                <i class="fas fa-star" style="font-size:0.8em; margin-right:4px;"></i> ${escapeHtml(item.name)}
+                            </div>
+                            <div class="product-unit-price" style="margin-top: 4px;">
+                                ${productsListHtml}
                             </div>
                         </div>
+                        <div class="product-total">${formatCurrency(item.subtotal)}</div>
+                    </div>`;
+                } else {
+                    // Renderizado Normal (Standard)
+                    const hasPromo = item.unit_price < item.original_price;
+                    const imagePath = getRelativeImagePath(item.image_path);
+                    const discountPct = hasPromo ? calculateDiscountPercentage(item.original_price, item.unit_price) : 0;
+                    
+                    // La pestaña del carrito es un detalle interno del cajero;
+                    // no se muestra en la pantalla de cliente.
+                    const tabLabel = '';
 
-            <div class="k-panel-fila">
-                <span class="k-guardar-estado" id="kGuardado"><i class="fas fa-check"></i> Guardado</span>
-                <button type="button" id="kGuardarCfg" class="k-btn k-btn-primario">Guardar</button>
-            </div>
-        </div>
-    </div>
+                    const imgHtml = imagePath 
+                        ? `<img src="${imagePath}" alt="" class="product-image" onerror="this.outerHTML='<div class=\\'product-image-icon\\'><i class=\\'fas fa-shopping-basket\\'></i></div>'">`
+                        : `<div class="product-image-icon"><i class="fas fa-shopping-basket"></i></div>`;
+                    
+                    return `
+                    <div class="product-item ${item.is_active ? 'tab-active' : ''}" data-product-id="${escapeHtml(displayId)}">
+                        ${imgHtml}
+                        <div class="product-quantity">${formatQuantity(item.quantity)}</div>
+                        <div class="product-info">
+                            <div class="product-name">${tabLabel} ${escapeHtml(item.product_name)}</div>
+                            <div class="product-unit-price">
+                                ${hasPromo 
+                                    ? `<span class="price-original">${formatCurrency(item.original_price)}</span>
+                                    <span class="price-promo">${formatCurrency(item.unit_price)}</span>`
+                                    : formatCurrency(item.unit_price)
+                                }
+                                ${item.is_bulk ? `/ ${item.bulk_unit || 'kg'}` : 'c/u'}
+                            </div>
+                            ${hasPromo ? `
+                            <div class="promo-badges">
+                                <span class="promo-pill"><i class="fas fa-tag"></i> ${escapeHtml(item.promo_applied || 'Oferta')}</span>
+                                ${discountPct > 0 ? `<span class="discount-tag">-${discountPct}%</span>` : ''}
+                            </div>
+                            ` : ''}
+                        </div>
+                        <div class="product-total">${formatCurrency(item.subtotal || (item.quantity * item.unit_price))}</div>
+                    </div>
+                `
+                }
+            }).join('');
 
-    <script src="js/kiosko.js?v=7"></script>
+            // Actualización incremental: se preservan nodos/imágenes existentes.
+            // Solo el artículo nuevo nace en el DOM listo para Anime.js.
+            const staging = document.createElement('div');
+            staging.innerHTML = html;
+            const nextNodes = Array.from(staging.querySelectorAll('.product-item'));
+            const nextIds = new Set(nextNodes.map(el => el.dataset.productId));
+            const currentNodes = Array.from(productsList.querySelectorAll('.product-item'));
+            const currentById = new Map(currentNodes.map(el => [el.dataset.productId, el]));
+            const addedNodes = [];
+
+            currentNodes.filter(el => !nextIds.has(el.dataset.productId)).forEach(el => {
+                if (typeof anime !== 'undefined' && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                    anime.remove(el);
+                    anime({ targets: el, opacity: [1, 0], translateX: [0, 24], duration: 220, easing: 'easeInCubic', complete: () => el.remove() });
+                } else {
+                    el.remove();
+                }
+            });
+
+            nextNodes.forEach(next => {
+                const current = currentById.get(next.dataset.productId);
+                if (!current) {
+                    // Al llegar el primer producto se elimina el estado vacío;
+                    // de otro modo queda arriba como un banner residual.
+                    productsList.querySelector('.empty-cart')?.remove();
+                    next.classList.add('product-enter');
+                    next.style.opacity = '0';
+                    next.style.transform = 'translateX(-28px)';
+                    productsList.appendChild(next);
+                    addedNodes.push(next);
+                } else if (current.innerHTML !== next.innerHTML) {
+                    // Solo la línea que cambió (cantidad/precio) se actualiza.
+                    current.innerHTML = next.innerHTML;
+                    current.className = next.className;
+                }
+            });
+
+            if (addedNodes.length) {
+                const focusItem = addedNodes[addedNodes.length - 1];
+                // Siempre enfocar y desplazar el panel interno, con o sin Anime.js.
+                focusItem.tabIndex = -1;
+                const panelRect = productsList.getBoundingClientRect();
+                const itemRect = focusItem.getBoundingClientRect();
+                const targetTop = Math.max(0, productsList.scrollTop + itemRect.top - panelRect.top - 8);
+                productsList.scrollTo({ top: targetTop, behavior: 'smooth' });
+                focusItem.focus({ preventScroll: true });
+
+                if (typeof anime !== 'undefined' && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                    requestAnimationFrame(() => requestAnimationFrame(() => {
+                        const targets = addedNodes.filter(el => el.isConnected);
+                        anime.remove(targets);
+                        anime({
+                            targets,
+                            opacity: [0, 1],
+                            translateX: [-28, 0],
+                            duration: 360,
+                            delay: anime.stagger(55),
+                            easing: 'easeOutCubic',
+                            complete: () => targets.forEach(el => el.classList.remove('product-enter'))
+                        });
+                    }));
+                } else {
+                    // La carga inicial puede llegar antes que el script defer de
+                    // Anime.js; jamás dejamos productos ocultos en ese caso.
+                    addedNodes.forEach(el => {
+                        el.classList.remove('product-enter');
+                        el.style.opacity = '1';
+                        el.style.transform = 'translateX(0)';
+                    });
+                }
+            }
+
+            // Actualizar totales
+            if (totals) {
+                // ... (Totales iguales)
+                itemCount.textContent = cart.length; // Ojo: item count sigue siendo líneas de productos reales? O bundles?
+                // El cliente preferiría ver "Artículos" físicos o líneas? 
+                // Por ahora mostramos cart.length que es líneas de productos (no bundles).
+                // Podríamos cambiar a totals.itemCount si viene del backend.
+                
+                subtotal.textContent = formatCurrency(totals.subtotal || 0);
+                
+                if (totals.discount > 0) {
+                    discount.textContent = '-' + formatCurrency(totals.discount);
+                    discountRow.style.display = 'flex';
+                } else {
+                    discountRow.style.display = 'none';
+                }
+                
+                total.textContent = formatCurrency(totals.total || 0);
+            }
+        }
+
+        // Formatear moneda
+        function formatCurrency(amount) {
+            if (window.FormatUtils) return window.FormatUtils.currency(amount);
+            return new Intl.NumberFormat('es-MX', {
+                style: 'currency',
+                currency: 'MXN'
+            }).format(amount);
+        }
+
+        // Formatear cantidad
+        function formatQuantity(qty) {
+            if (window.FormatUtils) return window.FormatUtils.qty(qty);
+            const num = parseFloat(qty);
+            return Number.isInteger(num) ? num : num.toFixed(3);
+        }
+
+        function calculateDiscountPercentage(original, current) {
+            if (!original || original <= 0) return 0;
+            const diff = original - current;
+            const pct = (diff / original) * 100;
+            return Math.round(pct);
+        }
+
+        // Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Obtener ruta relativa de imagen
+        function getRelativeImagePath(path) {
+            if (!path) return null;
+            // Si es base64, retornar tal cual
+            if (path.startsWith('data:image')) return path;
+            // Si es http/https, retornar tal cual
+            if (path.startsWith('http')) return path;
+            
+            // Normalizar slashes
+            let cleanPath = path.replace(/\\/g, '/');
+            
+            // Si contiene 'public/', tomar lo que sigue
+            if (cleanPath.includes('public/')) {
+                cleanPath = cleanPath.split('public/')[1];
+            }
+            
+            // Eliminar slash inicial si existe para hacerlo relativo
+            if (cleanPath.startsWith('/')) {
+                cleanPath = cleanPath.substring(1);
+            }
+            
+            return cleanPath;
+        }
+
+        function setStoreLogo(path) {
+            const logo = document.getElementById('storeLogo');
+            if (!logo || !path) return;
+            logo.onload = () => logo.classList.add('loaded');
+            logo.onerror = () => {
+                logo.removeAttribute('src');
+                logo.classList.remove('loaded');
+            };
+            logo.classList.remove('loaded');
+            logo.src = path;
+            // Las imágenes reutilizadas desde caché pueden estar completas sin
+            // disparar un nuevo load; en ese caso se hacen visibles de inmediato.
+            if (logo.complete && logo.naturalWidth > 0) logo.classList.add('loaded');
+        }
+
+        // Cargar logo de la tienda
+        function loadStoreLogo() {
+            const stored = localStorage.getItem('tomodachi_store_logo');
+            if (stored) {
+                const logoPath = getRelativeImagePath(stored);
+                if (logoPath) setStoreLogo(logoPath);
+            }
+
+            const storeName = localStorage.getItem('tomodachi_store_name');
+            if (storeName) {
+                document.getElementById('storeName').textContent = storeName;
+            }
+        }
+
+        // Reloj en la sección superior central
+        function initClock() {
+            const el = document.getElementById('clock');
+            if (!el) return;
+            const tick = () => {
+                const now = new Date();
+                el.textContent = now.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+            };
+            tick();
+            setInterval(tick, 1000);
+        }
+
+        // Pantalla completa (toggle)
+        function initFullscreen() {
+            const btn = document.getElementById('fullscreenBtn');
+            if (!btn) return;
+            const updateIcon = () => {
+                const fs = document.fullscreenElement || document.webkitFullscreenElement;
+                const icon = btn.querySelector('i');
+                if (icon) icon.className = fs ? 'fas fa-compress' : 'fas fa-expand';
+                btn.title = fs ? 'Salir de pantalla completa' : 'Pantalla completa';
+            };
+            btn.addEventListener('click', () => {
+                closeDisplayActions();
+                if (document.fullscreenElement || document.webkitFullscreenElement) {
+                    (document.exitFullscreen && document.exitFullscreen()) ||
+                        (document.webkitExitFullscreen && document.webkitExitFullscreen());
+                } else {
+                    const el = document.documentElement;
+                    if (el.requestFullscreen) el.requestFullscreen();
+                    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+                }
+            });
+            ['fullscreenchange', 'webkitfullscreenchange'].forEach(ev => document.addEventListener(ev, updateIcon));
+        }
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStoreLogo();
+            initClock();
+            initFullscreen();
+
+            // El kiosko del mostrador se alimenta del canal de la TIENDA (kiosko_cart /
+            // kiosko_qr), no del carrito de una mesa; lo enchufa initKiosko() de abajo.
+            if (typeof initKiosko === 'function') {
+                initKiosko();
+            } else {
+                startPolling();
+                initBroadcastChannel();
+            }
+
+            console.log('Pantalla de cliente iniciada');
+            
+            // Iniciar Slideshow de Bundles
+            setInterval(() => {
+                const containers = document.querySelectorAll('.bundle-image-container');
+                containers.forEach(container => {
+                    const imagesAttr = container.getAttribute('data-images');
+                    if (!imagesAttr) return;
+                    
+                    const images = imagesAttr.split('|');
+                    if (images.length <= 1) return;
+                    
+                    let currentIndex = parseInt(container.getAttribute('data-index') || 0);
+                    let nextIndex = (currentIndex + 1) % images.length;
+                    
+                    const img = container.querySelector('img');
+                    if (img && !img.classList.contains('fading-out')) {
+                        // Start fade out
+                        img.classList.add('fading-out');
+                        
+                        setTimeout(() => {
+                            img.src = images[nextIndex];
+                            // Wait for load or just show
+                            img.onload = () => {
+                                img.classList.remove('fading-out');
+                            };
+                            // Fallback timeout
+                            setTimeout(() => img.classList.remove('fading-out'), 100);
+                        }, 500); // 500ms transition time
+                        
+                        container.setAttribute('data-index', nextIndex);
+                    }
+                });
+            }, 3000); // Cambiar imagen cada 3 segundos
+        });
+
+        // Limpiar al cerrar
+        window.addEventListener('beforeunload', () => {
+            if (broadcastChannel) broadcastChannel.close();
+            if (realtimeReconnectTimer) clearTimeout(realtimeReconnectTimer);
+            if (realtimeSocket) realtimeSocket.close();
+            stopPolling();
+        });
+    </script>
+
+<!-- ============================================================
+     Kiosko del mostrador (driver): mismo look que el monitor del POS,
+     pero alimentado por el canal de la TIENDA.
+     kiosko_cart  -> carrito en vivo (sin QR) mientras la cajera arma.
+     kiosko_qr / order_update(counter_created) -> pedido final con su
+        "¡Gracias por tu compra!" y el QR de seguimiento (t=<token>).
+     order_update (entregado/cancelado) -> vuelve a la bienvenida.
+     ============================================================ -->
+<script>
+(function () {
+    'use strict';
+
+    function storeInfo() {
+        return window.__kioskoStore || null;
+    }
+
+    function lineasAtom(items) {
+        return (items || []).map(function (it) {
+            return {
+                product_id: it.product_id,
+                product_name: it.product_name || it.name,
+                quantity: it.quantity,
+                unit_price: it.unit_price,
+                original_price: (it.original_price != null ? it.original_price : (it.original_unit_price || it.unit_price)),
+                image_path: it.image_path || null,
+                subtotal: it.line_total != null ? it.line_total : (Number(it.unit_price) * Number(it.quantity)),
+                discount: it.discount || 0
+            };
+        }).filter(function (i) { return i.product_id; });
+    }
+
+    function pintar(api) {
+        if (!api || !api.lines || !api.lines.length) {
+            updateDisplay([], null, storeInfo(), null);
+            return;
+        }
+        var totals = { subtotal: Number(api.subtotal) || 0, discount: Number(api.discount) || 0, total: Number(api.total) || 0 };
+        updateDisplay(lineasAtom(api.lines), totals, storeInfo(), null);
+    }
+
+    function limpiar() {
+        window.__kioskoCurrent = null;
+        window.KOSKO_QR_URL = null;
+        var panel = document.getElementById('qrPanel');
+        if (panel) panel.classList.add('hidden');
+        var ec = document.getElementById('emptyCart');
+        var t = ec && ec.querySelector('.empty-cart-text');
+        if (t) t.textContent = 'Su pedido aparecerá aquí';
+        updateDisplay([], null, storeInfo(), null);
+    }
+
+    function mostrarPedidoFinal(id) {
+        fetch('../api/dining/counter.php?orden=' + encodeURIComponent(id), { credentials: 'include' })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (!d || !d.data) return;
+                var p = d.data;
+                pintar({ lines: p.items || [], subtotal: p.subtotal, discount: p.discount, total: p.total });
+                window.__kioskoCurrent = Number(p.counter_order_id);
+                if (p.tracking_token) {
+                    window.KOSKO_QR_URL = window.location.origin + '/public/seguimiento.html?t=' + encodeURIComponent(p.tracking_token);
+                    // Ya no hace falta el botón: el QR sale solo en el "gracias por tu compra".
+                    showQrPanel();
+                }
+            });
+    }
+
+    function cargarVivo(msg) {
+        if (!msg.items || !msg.items.length) { limpiar(); return; }
+        fetch('../api/dining/counter.php', {
+            method: 'POST', credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'preview', items: msg.items })
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                var calc = d && d.data;
+                if (!calc) return;
+                // preview ya devuelve image_path por línea.
+                window.__kioskoCurrent = null;
+                pintar(calc);
+            });
+    }
+
+    function conectarWS(sid) {
+        if (!sid || !window.TomodachiRealtime) return;
+        window.__kioskoRt = TomodachiRealtime.conectar({
+            canal: 'store:' + sid,
+            onEvento: function (msg) {
+                if (!msg) return;
+                if (msg.type === 'kiosko_qr' && msg.counter) { mostrarPedidoFinal(msg.counter); return; }
+                if (msg.type === 'order_update' && msg.counter) {
+                    var ev = msg.event || '';
+                    if (ev === 'counter_created') { mostrarPedidoFinal(msg.counter); return; }
+                    if (window.__kioskoCurrent && Number(msg.counter) === Number(window.__kioskoCurrent) &&
+                        (ev.indexOf('deliver') === 0 || ev.indexOf('cancel') === 0)) {
+                        limpiar();
+                    }
+                    return;
+                }
+                if (msg.type === 'kiosko_cart') { cargarVivo(msg); }
+            },
+            onEstado: function () {}
+        });
+    }
+
+    window.initKiosko = function () {
+        fetch('../api/stores/settings.php', { credentials: 'include' })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (!d || d.success === false) { limpiar(); return; }
+                var o = d.data || {};
+                window.__kioskoStore = {
+                    name: o.store_name || o.name,
+                    logo_url: o.logo_url || o.logo,
+                    theme_config: o.theme_config,
+                    theme_config_dark: o.theme_config_dark
+                };
+                var sid = o.store_id;
+                var store = window.__kioskoStore;
+                limpiar();
+                if (store.theme_config && window.ThemeColorUtils) {
+                    var mode = store.theme_config.theme_mode || 'light';
+                    var dark = (mode === 'dark') || (mode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+                    window.ThemeColorUtils.apply(store.theme_config, dark, store.theme_config_dark);
+                    // El fondo del sistema se pasa tal cual: si la config oscura no define
+                    // uno, cae al claro; si se quitó (''), el tema lo limpia.
+                    window.ThemeColorUtils.applyWallpaper(store.theme_config, dark, store.theme_config_dark || {});
+                }
+                conectarWS(sid);
+            });
+    };
+
+    // getDisplayUrl (del clon) entrega el QR del carrito de mesa; aquí el del seguimiento.
+    var origGetDisplayUrl = window.getDisplayUrl;
+    window.getDisplayUrl = function () {
+        if (window.KOSKO_QR_URL) return window.KOSKO_QR_URL;
+        return origGetDisplayUrl ? origGetDisplayUrl() : '#';
+    };
+
+    // El "Mostrar QR" del encabezado no aplica a mesas en el kiosko: igual funciona.
+    var btnQr = document.getElementById('qrToggleBtn');
+    if (btnQr) btnQr.style.display = 'none';
+})();
+</script>
 </body>
 </html>

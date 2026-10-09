@@ -349,6 +349,16 @@ class CounterService {
                 'line_total'     => round((float)$l['total'], 2),
             ];
         }
+        // Imágenes de producto para que la pantalla del cliente muestre lo que se pide.
+        if ($lineas) {
+            $ids = implode(',', array_map(function ($l) { return (int)$l['product_id']; }, $lineas));
+            $map = [];
+            foreach ($this->conn->query("SELECT product_id, image_path FROM products WHERE product_id IN ($ids)") as $r) {
+                $map[(int)$r['product_id']] = $r['image_path'];
+            }
+            foreach ($lineas as &$l) { $l['image_path'] = $map[(int)$l['product_id']] ?? null; }
+            unset($l);
+        }
         $antes = round($antes, 2);
         $total = round((float)$calc['total'], 2);
         return [

@@ -1586,6 +1586,10 @@
         body.ct-cocina-on #ctBtnNuevo,
         body.ct-cocina-on #ctBtnEscaner,
         body.ct-cocina-on .ct-engranaje { display: none !important; }
+        /* El mostrador usa un grid de tarjetas: el ancho sobrante se reparte en
+           más columnas en vez de estirar cada tarjeta a todo el ancho. */
+        #ctLista { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; align-items: start; }
+        @media (max-width: 760px) { #ctLista { grid-template-columns: 1fr; } }
         body.ct-cocina-on #ctLista { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; align-items: start; }
         .ct-cocina-card { background: var(--bg-card, #fff); border: 1px solid var(--border-color); border-left: 5px solid var(--primary-color); border-radius: var(--ds-radius-lg); padding: 20px; }
         .ct-cocina-card.listo { border-left-color: var(--warning-color, #B45309); background: color-mix(in srgb, var(--warning-color, #B45309) 7%, var(--bg-card, #fff)); }

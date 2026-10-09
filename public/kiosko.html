@@ -904,14 +904,55 @@
         .gracias-msg { font-size: 1.35rem; max-width: 520px; color: var(--text-color) !important; line-height: 1.45; }
         .gracias-folio { font-size: 1.15rem; font-weight: 700; color: var(--primary-color) !important; }
 
+        /* ── Protector de pantalla: anuncios/uso libre cuando no hay pedido ── */
+        .k-ss { position: fixed; inset: 0; z-index: 10; overflow: hidden; display: none; align-items: center; justify-content: center; }
+        .k-ss.activo { display: flex; }
+        .k-ss-slide { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; transition: opacity 1s ease; }
+        .k-ss-slide img, .k-ss-slide video { width: 100%; height: 100%; object-fit: contain; }
+        .k-ss-vacio { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; color: var(--text-muted); font-size: 1.5rem; }
+
+        /* Rueda de configuración de anuncios: solo en reposo */
+        .k-cfg-btn { position: fixed; top: 14px; right: 14px; z-index: 55; width: 44px; height: 44px;
+            border-radius: 12px; border: 1px solid rgba(255,255,255,.2); background: rgba(0,0,0,.4);
+            color: #fff; font-size: 1.15rem; display: none; align-items: center; justify-content: center; }
+        .k-cfg-btn.visible { display: inline-flex; }
+        .k-cfg-btn:hover { color: var(--primary-color); border-color: var(--primary-color); }
+
+        /* Panel de configuración de anuncios */
+        .k-cfg { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.5);
+            display: none; align-items: center; justify-content: center; padding: 20px; }
+        .k-cfg.abierto { display: flex; }
+        .k-cfg-caja { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 18px;
+            max-width: 520px; width: 100%; max-height: 92vh; overflow-y: auto; padding: 20px;
+            display: flex; flex-direction: column; gap: 14px; }
+        .k-cfg-titulo { display: flex; justify-content: space-between; align-items: center; }
+        .k-cfg-caja h3 { font-size: 1.3rem; color: var(--text-color); }
+        .k-cfg-hint { font-size: .9rem; color: var(--text-muted); }
+        .k-cfg-items { display: flex; flex-direction: column; gap: 8px; }
+        .k-cfg-item { display: flex; align-items: center; gap: 10px; background: var(--bg-light);
+            border: 1px solid var(--border-color); border-radius: 10px; padding: 8px; }
+        .k-cfg-item img, .k-cfg-item video { width: 52px; height: 40px; object-fit: cover; border-radius: 8px; background: #000; }
+        .k-cfg-item span { flex: 1; font-size: .8rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .k-cfg-item button { background: none; border: none; color: var(--danger-color); font-size: 1.1rem; }
+        .k-cfg-subir { display: flex; gap: 8px; align-items: center; }
+        .k-cfg-subir input[type=file] { flex: 1; color: var(--text-color); font-size: .9rem; }
+        .k-btn { border: none; border-radius: 10px; padding: 11px 14px; font-weight: 700; cursor: pointer; }
+        .k-btn-p { background: var(--primary-color); color: #06231f; }
+        .k-cfg-pie { display: flex; justify-content: flex-end; gap: 10px; align-items: center; }
+
         /* ── Legibilidad forzada: contraste alto y fuentes claras en toda la pantalla ── */
         body { font-family: 'Google Sans Flex', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-        .store-name, #clock, .welcome-msg,
         .section-title, .product-name, .product-unit-price, .product-total,
         .summary-row .summary-label, .summary-row .summary-value,
         .empty-cart-text, .qr-title, .qr-desc, .qr-note,
         .display-action, .summary-card, .section-title span {
             color: var(--text-color) !important;
+        }
+        /* El encabezado es oscuro siempre: su texto va en claro (--text-on-primary),
+           tanto en tema claro como oscuro (en claro NO es negro sobre el header). */
+        .store-name, #clock, .welcome-msg {
+            color: var(--text-on-primary) !important;
+            text-shadow: 0 1px 3px rgba(0,0,0,.55);
         }
         .section-title { font-size: 1.5rem; }
         .product-item { background: var(--bg-card) !important; }
@@ -936,6 +977,22 @@
         <div class="gracias-titulo">¡Gracias por tu compra!</div>
         <p class="gracias-msg">Escanea el código QR si quieres que te notifiquemos a tu teléfono cuando esté listo tu pedido.</p>
         <div class="gracias-folio" id="kGraciasFolio"></div>
+    </div>
+
+    <!-- Protector de pantalla (anuncios) cuando no hay pedido -->
+    <div class="k-ss" id="kScreensaver"></div>
+    <!-- Rueda para configurar anuncios (solo en reposo) -->
+    <button class="k-cfg-btn" id="kCfgBtn" title="Configurar anuncios del kiosko" aria-label="Configurar"><i class="fas fa-ellipsis-v"></i></button>
+    <!-- Panel de configuración de anuncios -->
+    <div class="k-cfg" id="kCfg">
+        <div class="k-cfg-caja">
+            <div class="k-cfg-titulo"><h3><i class="fas fa-tv"></i> Anuncios del kiosko</h3>
+                <button class="k-btn" id="kCfgCerrar" style="background:none;color:var(--text-muted)"><i class="fas fa-times"></i></button></div>
+            <div class="k-cfg-hint">Imágenes o videos de promociones o de la comida. Se muestran cuando no hay un pedido en pantalla.</div>
+            <div class="k-cfg-items" id="kCfgItems"></div>
+            <div class="k-cfg-subir"><input type="file" id="kCfgFile" accept="image/*,video/*"><button class="k-btn k-btn-p" id="kCfgSubir"><i class="fas fa-upload"></i> Subir</button></div>
+            <div class="k-cfg-pie"><span id="kCfgEstado" style="color:var(--success-color);display:none"><i class="fas fa-check"></i> Guardado</span><button class="k-btn k-btn-p" id="kCfgGuardar">Guardar</button></div>
+        </div>
     </div>
     <!-- Header -->
     <div class="header">
@@ -1765,6 +1822,133 @@
 (function () {
     'use strict';
 
+    // ============================================================
+    // Protector de pantalla (anuncios de imágenes/videos) + configuración
+    // ============================================================
+    var ssAssets = [];        // [{type,url}] leídos de stores.settings.kiosk
+    var ssTimer = null;       // rotación del carrusel
+    var ssIdx = 0;
+    var graciasTimer = null;  // 20 s para escanear el QR tras la venta
+
+    function ssSlide(i) {
+        var a = ssAssets[i];
+        var html = (a.type === 'video')
+            ? '<video src="' + a.url + '" autoplay muted loop playsinline></video>'
+            : '<img src="' + a.url + '" alt="">';
+        var zona = document.getElementById('kScreensaver');
+        var nuevo = document.createElement('div');
+        nuevo.className = 'k-ss-slide';
+        nuevo.innerHTML = html;
+        zona.appendChild(nuevo);
+        var viejos = zona.querySelectorAll('.k-ss-slide');
+        requestAnimationFrame(function () {
+            viejos.forEach(function (el) { if (el !== nuevo) el.style.opacity = '0'; });
+        });
+        setTimeout(function () {
+            viejos.forEach(function (el) { if (el !== nuevo && el.parentNode) el.parentNode.removeChild(el); });
+        }, 1100);
+    }
+
+    function detenerSS() {
+        if (ssTimer) { clearInterval(ssTimer); ssTimer = null; }
+        var z = document.getElementById('kScreensaver');
+        if (z) { z.classList.remove('activo'); z.innerHTML = ''; }
+        var b = document.getElementById('kCfgBtn');
+        if (b) b.classList.remove('visible');
+    }
+
+    function iniciarSS() {
+        var gracias = document.getElementById('kGracias');
+        if (window.__kioskoCurrent || (gracias && !gracias.classList.contains('hidden'))) return;
+        var z = document.getElementById('kScreensaver');
+        if (!z) return;
+        z.classList.add('activo');
+        z.innerHTML = '';
+        if (!ssAssets.length) {
+            z.innerHTML = '<div class="k-ss-vacio"><i class="fas fa-utensils"></i><div>Su pedido aparecerá aquí</div></div>';
+        } else {
+            ssIdx = 0;
+            ssSlide(0);
+            if (ssAssets.length > 1) {
+                ssTimer = setInterval(function () { ssIdx = (ssIdx + 1) % ssAssets.length; ssSlide(ssIdx); }, 7000);
+            }
+        }
+        var b = document.getElementById('kCfgBtn');
+        if (b) b.classList.add('visible');
+    }
+
+    function ocultarGracias() {
+        var g = document.getElementById('kGracias');
+        if (g) g.classList.add('hidden');
+        var q = document.getElementById('kGraciasQr');
+        if (q) q.innerHTML = '';
+        window.KOSKO_QR_URL = null;
+        iniciarSS();
+    }
+
+    // ── Configuración de anuncios ──
+    function pintarPanelConfig() {
+        var lista = document.getElementById('kCfgItems');
+        lista.innerHTML = '';
+        if (!ssAssets.length) {
+            var v = document.createElement('div');
+            v.className = 'k-cfg-hint';
+            v.textContent = 'Todavía no hay anuncios. Sube una imagen o un video.';
+            lista.appendChild(v);
+            return;
+        }
+        ssAssets.forEach(function (a, i) {
+            var d = document.createElement('div');
+            d.className = 'k-cfg-item';
+            d.innerHTML = (a.type === 'video'
+                    ? '<video src="' + a.url + '" muted playsinline></video>'
+                    : '<img src="' + a.url + '" alt="">') +
+                '<span>' + (a.type === 'video' ? 'Video' : 'Imagen') + '</span>' +
+                '<button type="button" data-rm="' + i + '" title="Quitar"><i class="fas fa-trash"></i></button>';
+            lista.appendChild(d);
+        });
+    }
+
+    function subirAnuncio(file) {
+        var fd = new FormData();
+        fd.append('file', file);
+        var btn = document.getElementById('kCfgSubir');
+        btn.disabled = true;
+        fetch('../api/kiosk/upload.php', { method: 'POST', credentials: 'include', body: fd })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                btn.disabled = false;
+                if (!d || d.success === false) { alert((d && (d.data && d.data.file)) || 'No se pudo subir'); return; }
+                var u = d.data && d.data.url;
+                var tipo = (d.data && d.data.type) || (String(file.type).indexOf('video') === 0 ? 'video' : 'image');
+                ssAssets.push({ type: tipo, url: u });
+                document.getElementById('kCfgFile').value = '';
+                pintarPanelConfig();
+            })
+            .catch(function () { btn.disabled = false; alert('Error de red al subir'); });
+    }
+
+    function guardarAnuncios() {
+        fetch('../api/stores/settings.php', { credentials: 'include' })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (!d || !d.data) return;
+                var o = d.data;
+                var s = Object.assign({}, (o.settings || {}));
+                s.kiosk = Object.assign({}, (s.kiosk || {}), { assets: ssAssets.slice() });
+                var cuerpo = Object.assign({}, o); cuerpo.settings = s;
+                return fetch('../api/stores/settings.php', { method: 'POST', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cuerpo) });
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                var est = document.getElementById('kCfgEstado');
+                if (d && d.success === true) { est.style.display = 'inline'; setTimeout(function () { est.style.display = 'none'; }, 2200); }
+                else alert('No se pudo guardar');
+            })
+            .catch(function () { alert('Error al guardar'); });
+    }
+
     function storeInfo() {
         return window.__kioskoStore || null;
     }
@@ -1793,9 +1977,12 @@
         updateDisplay(lineasAtom(api.lines), totals, storeInfo(), null);
     }
 
-    // Muestra el "¡Gracias por tu compra!" con el QR de notificación (depende del
-    // token de seguimiento del pedido). No es un modal: se ve encima de la pantalla.
+    // Muestra el "¡Gracias por tu compra!" con el QR durante 20 s, para que el cliente
+    // lo escanee; después vuelve al protector de pantalla (anuncios).
     function mostrarGracias(p) {
+        detenerSS();
+        if (graciasTimer) { clearTimeout(graciasTimer); graciasTimer = null; }
+        graciasTimer = setTimeout(ocultarGracias, 20000);
         var caja = document.getElementById('kGraciasQr');
         if (!caja) return;
         caja.innerHTML = '';
@@ -1817,12 +2004,14 @@
         window.KOSKO_QR_URL = null;
         var g = document.getElementById('kGracias');
         if (g) { g.classList.add('hidden'); var q = document.getElementById('kGraciasQr'); if (q) q.innerHTML = ''; }
+        if (graciasTimer) { clearTimeout(graciasTimer); graciasTimer = null; }
         var panel = document.getElementById('qrPanel');
         if (panel) panel.classList.add('hidden');
         var ec = document.getElementById('emptyCart');
         var t = ec && ec.querySelector('.empty-cart-text');
         if (t) t.textContent = 'Su pedido aparecerá aquí';
         updateDisplay([], null, storeInfo(), null);
+        iniciarSS();
     }
 
     function mostrarPedidoFinal(id) {
@@ -1850,6 +2039,7 @@
                 if (!calc) return;
                 // preview ya devuelve image_path por línea.
                 window.__kioskoCurrent = null;
+                detenerSS();
                 pintar(calc);
             });
     }
@@ -1890,6 +2080,7 @@
                 };
                 var sid = o.store_id;
                 var store = window.__kioskoStore;
+                ssAssets = ((o.settings && o.settings.kiosk && o.settings.kiosk.assets) || []).slice();
                 limpiar();
                 if (store.theme_config && window.ThemeColorUtils) {
                     var mode = store.theme_config.theme_mode || 'light';
@@ -1901,8 +2092,30 @@
                     window.ThemeColorUtils.applyWallpaper(store.theme_config, dark, store.theme_config_dark || {});
                 }
                 conectarWS(sid);
+                iniciarSS();
             });
     };
+
+    // ── Configuración de anuncios (rueda) ──
+    document.addEventListener('DOMContentLoaded', function () {
+        var btn = document.getElementById('kCfgBtn');
+        var panel = document.getElementById('kCfg');
+        if (btn) btn.addEventListener('click', function () { pintarPanelConfig(); panel.classList.add('abierto'); });
+        var cerrar = document.getElementById('kCfgCerrar');
+        if (cerrar) cerrar.addEventListener('click', function () { panel.classList.remove('abierto'); });
+        if (panel) panel.addEventListener('click', function (ev) { if (ev.target === panel) panel.classList.remove('abierto'); });
+        var subir = document.getElementById('kCfgSubir');
+        var file = document.getElementById('kCfgFile');
+        if (subir) subir.addEventListener('click', function () { if (file && file.files && file.files[0]) subirAnuncio(file.files[0]); });
+        if (file) file.addEventListener('change', function () { if (file.files && file.files[0]) subirAnuncio(file.files[0]); });
+        var items = document.getElementById('kCfgItems');
+        if (items) items.addEventListener('click', function (ev) {
+            var rm = ev.target.closest('[data-rm]');
+            if (rm) { ssAssets.splice(Number(rm.getAttribute('data-rm')), 1); pintarPanelConfig(); }
+        });
+        var guardar = document.getElementById('kCfgGuardar');
+        if (guardar) guardar.addEventListener('click', function () { guardarAnuncios(); });
+    });
 
     // getDisplayUrl (del clon) entrega el QR del carrito de mesa; aquí el del seguimiento.
     var origGetDisplayUrl = window.getDisplayUrl;

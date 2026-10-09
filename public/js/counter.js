@@ -403,6 +403,15 @@ function ctAsegurarSocket() {
 /** Transmite el carrito en vivo al kiosko: la pantalla del cliente va mostrando lo que
  *  la cajera arma ANTES de confirmar el pedido. Si el carrito queda vacío, se limpia la
  *  pantalla (vuelve al reposo/bienvenida). Va por el socket de la tienda. */
+/** Limpia la pantalla del kiosko (la deja en reposo) cuando se cancela un pedido
+ *  o se cierra el alta sin guardar. */
+function ctResetKiosko() {
+    const rt = ctAsegurarSocket();
+    if (rt && typeof rt.enviar === 'function') {
+        rt.enviar({ type: 'kiosko_cart', items: [], store_id: (tpEstado && tpEstado.tienda && tpEstado.tienda.store_id) || null });
+    }
+}
+
 function ctBroadcastKiosko() {
     const rt = ctAsegurarSocket();
     if (!rt || typeof rt.enviar !== 'function') return;
@@ -1015,6 +1024,9 @@ function ctPonerCocina(on) {
 document.addEventListener('DOMContentLoaded', function () {
     const btnNuevo = document.getElementById('ctBtnNuevo');
     if (btnNuevo) btnNuevo.addEventListener('click', ctNuevo);
+    document.querySelectorAll('[data-cerrar="ctModalNuevo"]').forEach(function (b) {
+        b.addEventListener('click', ctResetKiosko);
+    });
     const guardar = document.getElementById('ctGuardar');
     if (guardar) guardar.addEventListener('click', ctGuardar);
     const nombre = document.getElementById('ctNombre');
@@ -1074,7 +1086,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
         const cancelar = ev.target.closest('[data-ct-cancelar]');
-        if (cancelar) { ctCerrarMenus(); ctCancelar(cancelar.getAttribute('data-ct-cancelar')); return; }
+        if (cancelar) { ctCerrarMenus(); ctCancelar(cancelar.getAttribute('data-ct-cancelar')); ctResetKiosko(); return; }
         const pago = ev.target.closest('[data-ct-pago]');
         if (pago) { ctCerrarMenus(); ctAbrirPago(pago.getAttribute('data-ct-pago')); return; }
     });

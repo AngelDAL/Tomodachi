@@ -928,16 +928,23 @@
         .k-cfg-titulo { display: flex; justify-content: space-between; align-items: center; }
         .k-cfg-caja h3 { font-size: 1.3rem; color: var(--text-color); }
         .k-cfg-hint { font-size: .9rem; color: var(--text-muted); }
-        .k-cfg-items { display: flex; flex-direction: column; gap: 8px; }
-        .k-cfg-item { display: flex; align-items: center; gap: 10px; background: var(--bg-light);
-            border: 1px solid var(--border-color); border-radius: 10px; padding: 8px; }
-        .k-cfg-item img, .k-cfg-item video { width: 52px; height: 40px; object-fit: cover; border-radius: 8px; background: #000; }
-        .k-cfg-item span { flex: 1; font-size: .8rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .k-cfg-item button { background: none; border: none; color: var(--danger-color); font-size: 1.1rem; }
+        .k-cfg-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+        .k-cfg-item { display: flex; flex-direction: column; gap: 8px; align-items: stretch; text-align: center;
+            background: var(--bg-light); border: 1px solid var(--border-color); border-radius: 12px; padding: 8px; }
+        .k-cfg-item.drag-over { border-color: var(--primary-color); outline: 2px dashed var(--primary-color); }
+        .k-cfg-item img, .k-cfg-item video { width: 100%; height: 74px; object-fit: cover; border-radius: 8px; background: #000; }
+        .k-cfg-item .k-cfg-act { display: flex; justify-content: space-between; align-items: center; }
+        .k-cfg-item .k-cfg-tipo { font-size: .72rem; color: var(--text-muted); }
+        .k-cfg-item button { background: none; border: none; color: var(--danger-color); font-size: 1rem; }
+        .k-cfg-fila { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .k-cfg-fila label { display: flex; flex-direction: column; gap: 5px; font-size: .88rem; color: var(--text-muted); font-weight: 600; }
+        .k-cfg-fila input, .k-cfg-fila select { background: var(--bg-card); color: var(--text-color); border: 1px solid var(--border-color);
+            border-radius: 10px; padding: 10px 12px; font-size: .95rem; font-family: inherit; }
         .k-cfg-subir { display: flex; gap: 8px; align-items: center; }
         .k-cfg-subir input[type=file] { flex: 1; color: var(--text-color); font-size: .9rem; }
-        .k-btn { border: none; border-radius: 10px; padding: 11px 14px; font-weight: 700; cursor: pointer; }
+        .k-btn { border: none; border-radius: 10px; padding: 10px 13px; font-weight: 700; cursor: pointer; font-size: .95rem; }
         .k-btn-p { background: var(--primary-color); color: #06231f; }
+        .k-btn-g { background: none; border: 1px solid var(--border-color); color: var(--text-color); }
         .k-cfg-pie { display: flex; justify-content: flex-end; gap: 10px; align-items: center; }
 
         /* ── Legibilidad forzada: contraste alto y fuentes claras en toda la pantalla ── */
@@ -954,6 +961,10 @@
             color: var(--text-on-primary) !important;
             text-shadow: 0 1px 3px rgba(0,0,0,.55);
         }
+        /* El --text-color guardado por la tienda puede ser negro en ambos modos:
+           se fuerza el contraste correcto según el modo activo. */
+        html[data-theme="light"] { --text-color: #0d1c20 !important; --text-muted: #45565c !important; }
+        html[data-theme="dark"]  { --text-color: #f0f4f5 !important; --text-muted: #aab5b9 !important; }
         .section-title { font-size: 1.5rem; }
         .product-item { background: var(--bg-card) !important; }
         .product-name { font-size: 1.35rem; font-weight: 700; }
@@ -988,9 +999,25 @@
         <div class="k-cfg-caja">
             <div class="k-cfg-titulo"><h3><i class="fas fa-tv"></i> Anuncios del kiosko</h3>
                 <button class="k-btn" id="kCfgCerrar" style="background:none;color:var(--text-muted)"><i class="fas fa-times"></i></button></div>
-            <div class="k-cfg-hint">Imágenes o videos de promociones o de la comida. Se muestran cuando no hay un pedido en pantalla.</div>
+            <div class="k-cfg-hint">Imágenes o videos de promociones o de la comida. Se muestran como protector de pantalla cuando no hay un pedido.</div>
+            <div class="k-cfg-fila">
+                <label>Tiempo de inactividad (seg)
+                    <input type="number" id="kCfgIdle" min="5" max="3600" step="5">
+                </label>
+                <label>Transición
+                    <select id="kCfgTrans">
+                        <option value="fade">Fundido</option>
+                        <option value="slide">Deslizar</option>
+                        <option value="none">Sin animación</option>
+                    </select>
+                </label>
+            </div>
             <div class="k-cfg-items" id="kCfgItems"></div>
-            <div class="k-cfg-subir"><input type="file" id="kCfgFile" accept="image/*,video/*"><button class="k-btn k-btn-p" id="kCfgSubir"><i class="fas fa-upload"></i> Subir</button></div>
+            <div class="k-cfg-subir">
+                <input type="file" id="kCfgFile" accept="image/*,video/*">
+                <button class="k-btn k-btn-p" id="kCfgSubir"><i class="fas fa-upload"></i> Subir</button>
+                <button class="k-btn k-btn-g" id="kCfgPreview" type="button"><i class="fas fa-eye"></i> Probar</button>
+            </div>
             <div class="k-cfg-pie"><span id="kCfgEstado" style="color:var(--success-color);display:none"><i class="fas fa-check"></i> Guardado</span><button class="k-btn k-btn-p" id="kCfgGuardar">Guardar</button></div>
         </div>
     </div>
@@ -1829,6 +1856,9 @@
     var ssTimer = null;       // rotación del carrusel
     var ssIdx = 0;
     var graciasTimer = null;  // 20 s para escanear el QR tras la venta
+    var ssIdle = 60;          // segundos de inactividad antes de los anuncios
+    var ssTrans = 'fade';     // fade | slide | none
+    var reposoTimer = null;   // arranque diferido del protector
 
     function ssSlide(i) {
         var a = ssAssets[i];
@@ -1839,10 +1869,23 @@
         var nuevo = document.createElement('div');
         nuevo.className = 'k-ss-slide';
         nuevo.innerHTML = html;
+        if (ssTrans === 'none') {
+            var empty = document.createElement('div'); empty.innerHTML = ''; zona.innerHTML = '';
+            zona.appendChild(nuevo);
+            return;
+        }
+        if (ssTrans === 'slide') { nuevo.style.transform = 'translateX(40px)'; nuevo.style.opacity = '0.01'; }
+        else { nuevo.style.opacity = '0.01'; }
         zona.appendChild(nuevo);
         var viejos = zona.querySelectorAll('.k-ss-slide');
         requestAnimationFrame(function () {
-            viejos.forEach(function (el) { if (el !== nuevo) el.style.opacity = '0'; });
+            requestAnimationFrame(function () {
+                nuevo.style.opacity = '1';
+                nuevo.style.transform = 'translateX(0)';
+                viejos.forEach(function (el) {
+                    if (el !== nuevo) { el.style.opacity = '0'; el.style.transform = 'translateX(-40px)'; }
+                });
+            });
         });
         setTimeout(function () {
             viejos.forEach(function (el) { if (el !== nuevo && el.parentNode) el.parentNode.removeChild(el); });
@@ -1851,6 +1894,7 @@
 
     function detenerSS() {
         if (ssTimer) { clearInterval(ssTimer); ssTimer = null; }
+        if (reposoTimer) { clearTimeout(reposoTimer); reposoTimer = null; }
         var z = document.getElementById('kScreensaver');
         if (z) { z.classList.remove('activo'); z.innerHTML = ''; }
         var b = document.getElementById('kCfgBtn');
@@ -1864,9 +1908,7 @@
         if (!z) return;
         z.classList.add('activo');
         z.innerHTML = '';
-        if (!ssAssets.length) {
-            z.innerHTML = '<div class="k-ss-vacio"><i class="fas fa-utensils"></i><div>Su pedido aparecerá aquí</div></div>';
-        } else {
+        if (ssAssets.length) {
             ssIdx = 0;
             ssSlide(0);
             if (ssAssets.length > 1) {
@@ -1875,6 +1917,21 @@
         }
         var b = document.getElementById('kCfgBtn');
         if (b) b.classList.add('visible');
+    }
+
+    // Reposo con retardo: deja ver el arranque y abre los anuncios tras el
+    // tiempo de inactividad configurado. Mientras tanto, rueda accesible.
+    function programarReposo() {
+        var gracias = document.getElementById('kGracias');
+        if (window.__kioskoCurrent || (gracias && !gracias.classList.contains('hidden'))) return;
+        var b = document.getElementById('kCfgBtn');
+        if (b) b.classList.add('visible');
+        if (ssAssets.length || true) {
+            if (reposoTimer) clearTimeout(reposoTimer);
+            reposoTimer = setTimeout(iniciarSS, Math.max(5, Number(ssIdle) || 60) * 1000);
+        } else {
+            iniciarSS();
+        }
     }
 
     function ocultarGracias() {
@@ -1888,6 +1945,10 @@
 
     // ── Configuración de anuncios ──
     function pintarPanelConfig() {
+        var idle = document.getElementById('kCfgIdle');
+        if (idle) idle.value = ssIdle;
+        var trans = document.getElementById('kCfgTrans');
+        if (trans) trans.value = ssTrans;
         var lista = document.getElementById('kCfgItems');
         lista.innerHTML = '';
         if (!ssAssets.length) {
@@ -1900,11 +1961,13 @@
         ssAssets.forEach(function (a, i) {
             var d = document.createElement('div');
             d.className = 'k-cfg-item';
+            d.draggable = true;
+            d.dataset.idx = i;
             d.innerHTML = (a.type === 'video'
                     ? '<video src="' + a.url + '" muted playsinline></video>'
                     : '<img src="' + a.url + '" alt="">') +
-                '<span>' + (a.type === 'video' ? 'Video' : 'Imagen') + '</span>' +
-                '<button type="button" data-rm="' + i + '" title="Quitar"><i class="fas fa-trash"></i></button>';
+                '<div class="k-cfg-act"><span class="k-cfg-tipo">' + (a.type === 'video' ? 'Video' : 'Imagen') + '</span>' +
+                '<button type="button" data-rm="' + i + '" title="Quitar"><i class="fas fa-trash"></i></button></div>';
             lista.appendChild(d);
         });
     }
@@ -1929,13 +1992,15 @@
     }
 
     function guardarAnuncios() {
+        ssIdle = Math.max(5, Number((document.getElementById('kCfgIdle') || {}).value) || 60);
+        ssTrans = (document.getElementById('kCfgTrans') || {}).value || 'fade';
         fetch('../api/stores/settings.php', { credentials: 'include' })
             .then(function (r) { return r.json(); })
             .then(function (d) {
                 if (!d || !d.data) return;
                 var o = d.data;
                 var s = Object.assign({}, (o.settings || {}));
-                s.kiosk = Object.assign({}, (s.kiosk || {}), { assets: ssAssets.slice() });
+                s.kiosk = Object.assign({}, (s.kiosk || {}), { assets: ssAssets.slice(), seconds: ssIdle, transition: ssTrans });
                 var cuerpo = Object.assign({}, o); cuerpo.settings = s;
                 return fetch('../api/stores/settings.php', { method: 'POST', credentials: 'include',
                     headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cuerpo) });
@@ -2009,9 +2074,9 @@
         if (panel) panel.classList.add('hidden');
         var ec = document.getElementById('emptyCart');
         var t = ec && ec.querySelector('.empty-cart-text');
-        if (t) t.textContent = 'Su pedido aparecerá aquí';
+        if (t) t.textContent = '';
         updateDisplay([], null, storeInfo(), null);
-        iniciarSS();
+        programarReposo();
     }
 
     function mostrarPedidoFinal(id) {
@@ -2080,7 +2145,10 @@
                 };
                 var sid = o.store_id;
                 var store = window.__kioskoStore;
-                ssAssets = ((o.settings && o.settings.kiosk && o.settings.kiosk.assets) || []).slice();
+                var k = (o.settings && o.settings.kiosk) || {};
+                ssAssets = (k.assets || []).slice();
+                ssIdle = Number(k.seconds) > 0 ? Number(k.seconds) : 60;
+                ssTrans = (k.transition === 'slide' || k.transition === 'none') ? k.transition : 'fade';
                 limpiar();
                 if (store.theme_config && window.ThemeColorUtils) {
                     var mode = store.theme_config.theme_mode || 'light';
@@ -2092,7 +2160,7 @@
                     window.ThemeColorUtils.applyWallpaper(store.theme_config, dark, store.theme_config_dark || {});
                 }
                 conectarWS(sid);
-                iniciarSS();
+                programarReposo();
             });
     };
 
@@ -2112,6 +2180,40 @@
         if (items) items.addEventListener('click', function (ev) {
             var rm = ev.target.closest('[data-rm]');
             if (rm) { ssAssets.splice(Number(rm.getAttribute('data-rm')), 1); pintarPanelConfig(); }
+        });
+        // Arrastrar para ordenar las tarjetas de anuncios
+        var arrastrando = null;
+        if (items) items.addEventListener('dragstart', function (ev) {
+            var el = ev.target.closest('.k-cfg-item'); if (!el) return;
+            arrastrando = Number(el.dataset.idx);
+            ev.dataTransfer.effectAllowed = 'move';
+        });
+        if (items) items.addEventListener('dragover', function (ev) {
+            ev.preventDefault();
+            items.querySelectorAll('.k-cfg-item').forEach(function (c) { c.classList.remove('drag-over'); });
+            var sobre = ev.target.closest('.k-cfg-item');
+            if (sobre) sobre.classList.add('drag-over');
+        });
+        if (items) items.addEventListener('drop', function (ev) {
+            ev.preventDefault();
+            var sobre = ev.target.closest('.k-cfg-item'); if (!sobre) return;
+            var a = Number(sobre.dataset.idx);
+            if (arrastrando === null || a === arrastrando) { pintarPanelConfig(); return; }
+            var movido = ssAssets.splice(arrastrando, 1)[0];
+            ssAssets.splice(a, 0, movido);
+            arrastrando = null;
+            pintarPanelConfig();
+        });
+        // Probar la transición: cierra el panel y muestra los anuncios ahora
+        var preview = document.getElementById('kCfgPreview');
+        if (preview) preview.addEventListener('click', function () {
+            panel.classList.remove('abierto');
+            var g = document.getElementById('kGracias');
+            if (window.__kioskoCurrent || (g && !g.classList.contains('hidden'))) return;
+            ssIdle = Math.max(5, Number((document.getElementById('kCfgIdle') || {}).value) || 60);
+            ssTrans = (document.getElementById('kCfgTrans') || {}).value || 'fade';
+            detenerSS();
+            iniciarSS();
         });
         var guardar = document.getElementById('kCfgGuardar');
         if (guardar) guardar.addEventListener('click', function () { guardarAnuncios(); });

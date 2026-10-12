@@ -64,8 +64,13 @@ services:
     ports:
       - "127.0.0.1:${PORT:-8091}:80"
     volumes:
-      # Persistir imágenes subidas (logos, productos, fondos)
-      - app_uploads:/var/www/html/public/assets/images
+      # Persistir imágenes subidas (logos, productos, fondos).
+      # La ruta DEBE ser public/uploads: el entrypoint guarda ahí lo que sube el
+      # usuario y deja public/assets/images/<subdir> como enlace a este volumen.
+      # Si el volumen se monta en assets/images, el entrypoint mueve lo subido a
+      # public/uploads (capa efímera del contenedor) y se pierde en el siguiente
+      # despliegue.
+      - app_uploads:/var/www/html/public/uploads
       # Persistir recursos de Pantallas Digitales fuera de la imagen
       - signage_uploads:/var/www/html/uploads
       # Persistir sesiones PHP (sobreviven a rebuilds del contenedor)

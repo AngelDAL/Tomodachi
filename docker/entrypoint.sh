@@ -58,8 +58,12 @@ SCHEMA_SQL="/var/www/html/database/schema.sql"
 # 7-oct-2026: lo mismo para los LOGOS y los FONDOS (papel tapiz). El logo vivía
 # en la capa efímera: uno subido desde la interfaz se perdía en el siguiente
 # despliegue, igual que pasaba con las fotos de producto antes de este arreglo.
+#
+# 12-oct-2026: `backgrounds` entra al bucle por el mismo motivo — el editor de
+# fondos (api/ai/generate_background.php) escribe en backgrounds/temp/ y un
+# fondo subido desde la interfaz se perdía al recrear el contenedor.
 # ---------------------------------------------------------------------------
-for SUBDIR in products logos wallpapers; do
+for SUBDIR in products logos wallpapers backgrounds; do
   DIR="/var/www/html/public/assets/images/${SUBDIR}"
   PERSISTENTE="/var/www/html/public/uploads/${SUBDIR}"
 
@@ -196,6 +200,8 @@ HTACCESS
 }
 
 write_upload_htaccess /var/www/html/public/assets/images
+# El volumen real de subidas (las imágenes viven aquí; assets/images son enlaces)
+write_upload_htaccess /var/www/html/public/uploads
 write_upload_htaccess /var/www/html/uploads
 write_upload_htaccess /var/www/html/uploads/digital_signage
 

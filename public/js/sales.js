@@ -58,11 +58,20 @@ function buildProductCard(p) {
   } else {
        priceHtml = `<span class="current-price">${formatCurrency(p.price)}</span>`;
   }
+  // Productos SIN control de inventario (tracking_type='none'): el servidor los trata
+  // como ilimitados (`available = PHP_INT_MAX` en Pricing/BomHelper), así que la caja
+  // no debe frenarse por existencias. Antes se tomaba `current_stock` a secas, y un
+  // producto sin inventario con 0 quedaba INVENDIBLE: al tocarlo salía
+  // "Stock insuficiente. Disponible: 0". No se usa `is_stock_controlled` porque el
+  // listado también lo marca `false` para los productos con stock clásico.
+  const sinInventario = p.tracking_type === 'none';
   // El API de inventario entrega `current_stock`, NO `stock_quantity`: sin este
   // respaldo el badge de existencias no se pintaba nunca (nadie lo veía).
-  const stockRaw = (p.stock_quantity !== undefined && p.stock_quantity !== null && p.stock_quantity !== '')
-        ? p.stock_quantity
-        : p.current_stock;
+  const stockRaw = sinInventario
+        ? null
+        : ((p.stock_quantity !== undefined && p.stock_quantity !== null && p.stock_quantity !== '')
+            ? p.stock_quantity
+            : p.current_stock);
   const hayStock = stockRaw !== undefined && stockRaw !== null && stockRaw !== '';
   // La marca roja sale del mínimo que el producto declara (`min_stock`), no de un número
   // fijo en el código. Un producto sin mínimo definido no se marca: el umbral es del dueño.

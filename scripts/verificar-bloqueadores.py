@@ -43,7 +43,10 @@ LISTAS = {
     'easylist': 'https://easylist.to/easylist/easylist.txt',
     'easyprivacy': 'https://easylist.to/easylist/easyprivacy.txt',
     'adguard-spyware': 'https://filters.adtidy.org/extension/ublock/filters/3.txt',
+    'adguard-tracking': 'https://filters.adtidy.org/extension/ublock/filters/2.txt',
     'ublock-privacy': 'https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/privacy.txt',
+    'ublock-unbreak': 'https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/unbreak.txt',
+    'peter-lowe': 'https://pgl.yoyo.org/adservers/serverlist.php?hostformat=adblockplus&showintro=0&mimetype=plaintext',
 }
 # Opciones que hacen que una regla NO aplique a lo nuestro (first-party y de estos tipos).
 NO_APLICAN = ('third-party', '3p', '$image', '$ping', '$popup', '$object', '$other',

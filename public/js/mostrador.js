@@ -25,6 +25,10 @@
 
 const CT_API = '../api/dining/counter.php';
 
+/** ¿El socket de tiempo real está conectado? Lo publica tables.js (ver la red de seguridad
+ *  de abajo): mientras esté vivo, el mostrador NO pide la lista por su cuenta. */
+let ctSocketVivo = false;
+
 const ctEstado = {
     pedidos: [],
     historico: false,
@@ -1198,10 +1202,17 @@ document.addEventListener('DOMContentLoaded', function () {
     // esto eran llamadas repetidas y casi siempre vacías. Queda sólo una red de seguridad lenta
     // por si el socket se cae y el navegador no avisa: sirve para que el icono de "el cliente está
     // viendo" no se quede pegado para siempre. Con el socket sano no molesta a nadie.
+    //
+    // El estado del socket lo publica tables.js en `tomodachi:realtime-estado`. Antes esta guarda
+    // miraba `window.WsRealtime`, que NO existe (el módulo es `TomodachiRealtime`), así que siempre
+    // daba "socket caído" y la red de seguridad pedía la lista cada 90 s aunque el socket estuviera
+    // sano: justo las llamadas de más que se quisieron quitar.
+    document.addEventListener('tomodachi:realtime-estado', function (ev) {
+        ctSocketVivo = (ev.detail === 'conectado');
+    });
     setInterval(function () {
+        if (ctSocketVivo) return;                // el socket ya se encarga
         const panel = document.querySelector('[data-vista-panel="mostrador"]');
-        const socket = window.WsRealtime && window.WsRealtime.estado ? window.WsRealtime.estado() : null;
-        if (socket === 'conectado') return;      // el socket ya se encarga
         if (panel && !panel.classList.contains('hidden')) ctCargar(true);
     }, 90000);
 

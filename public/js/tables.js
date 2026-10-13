@@ -77,18 +77,51 @@ function tpAviso(msg, tipo) {
     if (window.showNotification) window.showNotification(msg, tipo || 'info');
 }
 
+/**
+ * Tope de una LECTURA (ms). Una petición que se queda colgada no la corta el
+ * navegador solo: la pantalla se queda en «Cargando…» para siempre y sin decir
+ * nada. Pasado el tope, la lectura falla con un mensaje y la vista puede
+ * ofrecer Reintentar.
+ *
+ * Solo aplica a GET: en un POST abortar es peligroso (el servidor puede haber
+ * guardado ya —una venta, un pedido— y el reintento la duplicaría), así que las
+ * escrituras se dejan sin tope a propósito.
+ */
+const TP_TIEMPO_MAX_LECTURA = 30000;
+
 async function tpPeticion(url, opciones) {
     const cfg = Object.assign({ credentials: 'include', headers: { 'Content-Type': 'application/json' } }, opciones || {});
-    const res = await fetch(url, cfg);
-    let datos = null;
-    try { datos = await res.json(); } catch (e) { datos = null; }
-    if (!res.ok || !datos || datos.success === false) {
-        const error = new Error((datos && datos.message) || 'No se pudo completar la operación');
-        error.detalles = (datos && datos.error) || null;
-        error.status = res.status;
-        throw error;
+    const metodo = String(cfg.method || 'GET').toUpperCase();
+    let temporizador = null;
+    let puedeAbortar = false;
+    if (metodo === 'GET' && !cfg.signal && typeof AbortController === 'function') {
+        const control = new AbortController();
+        cfg.signal = control.signal;
+        puedeAbortar = true;
+        temporizador = setTimeout(function () { control.abort(); }, cfg.tiempoMaximo || TP_TIEMPO_MAX_LECTURA);
     }
-    return datos.data;
+    delete cfg.tiempoMaximo;
+    try {
+        const res = await fetch(url, cfg);
+        let datos = null;
+        try { datos = await res.json(); } catch (e) { datos = null; }
+        if (!res.ok || !datos || datos.success === false) {
+            const error = new Error((datos && datos.message) || 'No se pudo completar la operación');
+            error.detalles = (datos && datos.error) || null;
+            error.status = res.status;
+            throw error;
+        }
+        return datos.data;
+    } catch (e) {
+        if (puedeAbortar && e && e.name === 'AbortError') {
+            const error = new Error('La conexión tardó demasiado. Revisa la red e inténtalo de nuevo.');
+            error.abortado = true;
+            throw error;
+        }
+        throw e;
+    } finally {
+        if (temporizador) clearTimeout(temporizador);
+    }
 }
 
 function tpMensajeDeError(err) {

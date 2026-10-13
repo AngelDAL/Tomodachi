@@ -19,9 +19,9 @@ css/sidebar-modern.css	6	fa87435b6b0664ddeb4d90b71e8bfc04
 css/variables.css	6	121f6dc3caf9e57ee6af96f4db718ffd
 js/app.js	12	1fd1d24ce2db5b0ce2bf34038d3b768b
 js/cobro.js	2	c01638082a57f1bc9d4ba847e920761b
-js/comandas.js	6	508ede9c4477aaed2b425e91a48eb9f7
+js/comandas.js	7	508ede9c4477aaed2b425e91a48eb9f7
 js/compositor-inventario.js	6	4e622bf2a6c5c0d6a97ea2fbd9372a7d
-js/counter.js	14	98640aa528cd7a09847e97c682084e6f
+js/counter.js	15	4cbf35ac31f15e6b0a343c36c081d182
 js/dashboard.js	3	200245e5ecfc4f29165cffa70760314e
 js/design-system.js	7	a6d47b4914401e512f34f7e692a94b56
 js/inventory-exits.js	3	3a250de195d9e66c8412377bb611fe77
@@ -36,7 +36,7 @@ js/scanner.js	4	828bfb406a22a54d12d54517a37faece
 js/sidebar-loader.js	13	d7bd4144a7a76b248ea7dd147f97b6cd
 js/stock-rule.js	1	5818188ed9718de696abeffe9d55909f
 js/stripe-pos.js	1	a261c0664235a63f2da8b4ae3c1194c7
-js/tables.js	13	703fb87e61822e6af00f2084e52f652c
+js/tables.js	14	634367a5559ae43b3d1d999791efe96a
 js/theme-init.js	5	84c4823f7e3077d695902be1c728089c
 js/tour.js	4	45da073236616c3069a0bf1977d34178
 js/ws-realtime.js	2	b357936b125ec13aa14a31808ac7dad5

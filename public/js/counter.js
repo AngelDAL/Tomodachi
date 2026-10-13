@@ -60,7 +60,9 @@ async function ctCargar(silencioso) {
         ctEstado.pedidos = d.pedidos || [];
     } catch (e) {
         if (!silencioso) {
-            cont.innerHTML = '<div class="tp-vacio"><i class="fas fa-triangle-exclamation"></i><h3>No se pudieron leer los pedidos</h3><p>' + tpEsc(tpMensajeDeError(e)) + '</p></div>';
+            cont.innerHTML = '<div class="tp-vacio"><i class="fas fa-triangle-exclamation"></i>' +
+                '<h3>No se pudieron leer los pedidos</h3><p>' + tpEsc(tpMensajeDeError(e)) + '</p>' +
+                '<button type="button" class="tp-btn primario" data-ct-reintentar>Reintentar</button></div>';
         }
         return;
     }
@@ -1060,6 +1062,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const lista = document.getElementById('ctLista');
     if (lista) lista.addEventListener('click', function (ev) {
+        // Reintentar una lectura que falló (red cortada o tope de tiempo): la
+        // vista vuelve a pedir los pedidos sin recargar toda la página.
+        const reintentar = ev.target.closest('[data-ct-reintentar]');
+        if (reintentar) { reintentar.disabled = true; ctCargar(false); return; }
         // El menú de tres puntos se abre y se cierra aquí mismo.
         const kebab = ev.target.closest('[data-ct-kebab]');
         if (kebab) {

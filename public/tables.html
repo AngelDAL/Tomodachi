@@ -2014,7 +2014,7 @@
                     <button type="button" class="tp-btn hidden" id="ctSalirCocina" style="margin:0 0 12px"><i class="fas fa-arrow-left"></i> Salir de la vista cocina</button>
 
                     <div id="ctLista">
-                        <div class="tp-vacio"><i class="fas fa-spinner fa-spin"></i><p>Cargando pedidos…</p></div>
+                        <div class="tp-vacio" data-ct-cargando="1"><i class="fas fa-spinner fa-spin"></i><p>Cargando pedidos…</p></div>
                     </div>
                 </section>
             </div>
@@ -2458,11 +2458,48 @@
     <script src="js/sidebar-loader.js?v=13"></script>
     <script src="js/app.js?v=12"></script>
     <script src="js/ws-realtime.js?v=2"></script>
-    <script src="js/tables.js?v=13"></script>
+    <script src="js/tables.js?v=14"></script>
     <script src="js/cobro.js?v=2"></script>
-    <script src="js/comandas.js?v=6"></script>
-    <script src="js/counter.js?v=14"></script>
+    <script src="js/comandas.js?v=7"></script>
+    <script src="js/counter.js?v=15"></script>
     <script src="lib/animejs/anime.min.js"></script>
     <script src="js/design-system.js?v=7"></script>
+
+    <script>
+    // Red de seguridad del mostrador. Si su módulo no llegó a cargar —el service
+    // worker sirviendo una copia vieja bajo la misma URL, la red cortándolo— la
+    // pantalla se queda en «Cargando pedidos…» para siempre y sin una sola pista.
+    // Aquí se convierte en un botón que trae la versión nueva.
+    (function () {
+        function vigilar() {
+            var cont = document.getElementById('ctLista');
+            var panel = document.querySelector('[data-vista-panel="mostrador"]');
+            if (!cont || !panel || panel.classList.contains('hidden')) return;
+            if (typeof ctCargar === 'function') return;              // el módulo está: es cosa suya
+            if (!cont.querySelector('[data-ct-cargando]')) return;    // ya pintó algo
+            cont.innerHTML = '<div class="tp-vacio"><i class="fas fa-rotate-right"></i>' +
+                '<h3>El mostrador no cargó</h3>' +
+                '<button type="button" class="tp-btn primario" id="ctRecargarApp"' +
+                ' title="La página tenía una copia vieja de su código: al recargar se trae la última versión">' +
+                'Volver a cargar</button></div>';
+            var boton = document.getElementById('ctRecargarApp');
+            if (!boton) return;
+            boton.addEventListener('click', function () {
+                boton.disabled = true;
+                var recargar = function () { location.reload(); };
+                if (window.caches && caches.keys) {
+                    caches.keys()
+                        .then(function (llaves) {
+                            return Promise.all(llaves.map(function (k) { return caches.delete(k); }));
+                        })
+                        .then(recargar, recargar);
+                } else {
+                    recargar();
+                }
+            });
+        }
+        setInterval(vigilar, 1200);
+    })();
+    </script>
 </body>
 </html>

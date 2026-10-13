@@ -2,8 +2,16 @@
  * Service Worker — Modo offline básico (Fase B)
  *
  * Estrategia:
- * - Assets estáticos (JS/CSS/imágenes/fuentes): cache-first con
- *   revalidación en segundo plano (stale-while-revalidate).
+ * - CÓDIGO de la app (JS/CSS de /public, fuera de /public/lib): NETWORK-FIRST
+ *   con respaldo en caché. Antes era stale-while-revalidate y eso dejó
+ *   pantallas clavadas en «Cargando…»: entregaba el JS viejo guardado y bajaba
+ *   el nuevo para la SIGUIENTE carga, así que una copia mala bajo la misma URL
+ *   (`counter.js?v=14`) se servía para siempre —Ctrl+F5 incluido— y el módulo
+ *   nunca llegaba a ejecutarse. El código es lo único que NO puede quedarse
+ *   viejo en silencio.
+ * - Assets estáticos (imágenes, fuentes, librerías de /public/lib): cache-first
+ *   con revalidación en segundo plano (stale-while-revalidate). Ahí el ahorro
+ *   de red vale más y un archivo viejo no rompe nada.
  * - Navegación (HTML): network-first con fallback a caché
  *   (así siempre ves la última versión cuando hay internet).
  * - API de solo lectura (productos, categorías, clientes):
@@ -15,7 +23,9 @@
  * Registro: public/js/offline.js (guard para HTTPS).
  * ============================================================ */
 
-const CACHE_NAME = 'tomodachi-cache-v5';
+// Subir esta versión BORRA las cachés viejas al activarse (ver activate): es la
+// salida de emergencia cuando una copia mala quedó guardada en un navegador.
+const CACHE_NAME = 'tomodachi-cache-v6';
 const STATIC_ASSETS = [
   '/public/css/fonts.css',
   '/public/css/main.css',
@@ -105,7 +115,27 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Assets estáticos: stale-while-revalidate
+  // CÓDIGO de la app (JS/CSS propios): network-first. Nunca se sirve una copia
+  // guardada mientras haya red; la caché solo entra si la red falla (offline).
+  // Las librerías de /public/lib se quedan con la estrategia de abajo: cambian
+  // poco y pesan, así que ahí sí conviene el ahorro.
+  const esCodigo = /\.(?:js|mjs|css)$/i.test(url.pathname) && !url.pathname.startsWith('/public/lib/');
+  if (esCodigo) {
+    event.respondWith(
+      fetch(event.request)
+        .then((resp) => {
+          if (resp && resp.status === 200) {
+            const clone = resp.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return resp;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // Assets estáticos (imágenes, fuentes, librerías): stale-while-revalidate
   event.respondWith(
     caches.match(event.request).then((cached) => {
       const network = fetch(event.request).then((resp) => {

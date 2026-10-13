@@ -1,6 +1,13 @@
 /**
  * Mostrador — pedidos de clientes de paso (sin mesa).
  *
+ * ¡NO RENOMBRAR ESTE ARCHIVO A «counter.js»! El bloqueador de anuncios lo mata: EasyPrivacy
+ * (lista que uBlock Origin trae activada) incluye la regla `/js/counter.js?`, que atrapa cualquier
+ * `js/counter.js?v=N`. La petición ni sale del navegador, el módulo no se ejecuta y el mostrador se
+ * queda en «Cargando pedidos…» para siempre, sin una sola línea en el log del servidor. Pasó el
+ * 13-oct-2026 y costó una tarde. De ahí el nombre «mostrador»; la API sigue siendo
+ * `api/dining/counter.php`, que ninguna lista bloquea.
+ *
  * La cajera anota lo que pide una persona (a nombre de quién), la cocina lo ve en una pantalla
  * de SOLO LECTURA y el cliente sigue su pedido por un QR/enlace.
  *

@@ -299,7 +299,8 @@ function kdPonerVista(nombre, guardar) {
     if (kdEstado.vista === 'comandas') {
         kdCargar(true);
     }
-    // El mostrador (pedidos de clientes de paso) vive en counter.js: se pide al entrar.
+    // El mostrador (pedidos de clientes de paso) vive en mostrador.js —NO «counter.js»: EasyPrivacy
+    // bloquea `/js/counter.js?` y el módulo no llegaba a cargar—: se pide al entrar.
     if (kdEstado.vista === 'mostrador' && typeof ctCargar === 'function') {
         ctCargar(false);
     }

@@ -8,7 +8,8 @@
  *   el nuevo para la SIGUIENTE carga, así que una copia mala bajo la misma URL
  *   (`counter.js?v=14`) se servía para siempre —Ctrl+F5 incluido— y el módulo
  *   nunca llegaba a ejecutarse. El código es lo único que NO puede quedarse
- *   viejo en silencio.
+ *   viejo en silencio. (El módulo del mostrador se llama hoy `mostrador.js`:
+ *   EasyPrivacy bloquea `/js/counter.js?` y uBlock mataba la petición.)
  * - Assets estáticos (imágenes, fuentes, librerías de /public/lib): cache-first
  *   con revalidación en segundo plano (stale-while-revalidate). Ahí el ahorro
  *   de red vale más y un archivo viejo no rompe nada.

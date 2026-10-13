@@ -19,13 +19,13 @@ css/sidebar-modern.css	6	fa87435b6b0664ddeb4d90b71e8bfc04
 css/variables.css	6	121f6dc3caf9e57ee6af96f4db718ffd
 js/app.js	12	1fd1d24ce2db5b0ce2bf34038d3b768b
 js/cobro.js	2	c01638082a57f1bc9d4ba847e920761b
-js/comandas.js	7	508ede9c4477aaed2b425e91a48eb9f7
+js/comandas.js	8	206117b743abb2e728fb03d142849dd6
 js/compositor-inventario.js	6	4e622bf2a6c5c0d6a97ea2fbd9372a7d
-js/counter.js	15	4cbf35ac31f15e6b0a343c36c081d182
 js/dashboard.js	3	200245e5ecfc4f29165cffa70760314e
 js/design-system.js	7	a6d47b4914401e512f34f7e692a94b56
 js/inventory-exits.js	3	3a250de195d9e66c8412377bb611fe77
 js/inventory.js	21	ff6c352ce8d2b5f505f31efc190fe9b4
+js/mostrador.js	1	90e8055dc2be77c3f1568a4af163b3d2
 js/profile.js	8	5e648f243d694813d4850f91ffae49ef
 js/promotion-client-rules.js	2	f525b40be81b26d1d735dc3c4122f50c
 js/promotions-v2.js	2	685ed10b0d03cee6df18d1e6908aa8d9

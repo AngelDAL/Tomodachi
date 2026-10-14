@@ -9,6 +9,8 @@
  *   POST {action:'create', customer_name?, notes?, items:[{product_id, quantity, notes?}]}
  *   POST {action:'status',  counter_order_id, status:'ready'|'completed'|'cancelled', reason?}
  *   POST {action:'notify',  counter_order_id}   Avisa al cliente (deja el pedido en 'ready').
+ *   POST {action:'reiniciar_folio'}             Reinicia la numeración de tickets (vuelve al #1;
+ *                                               los pedidos activos conservan su número).
  *   POST {action:'payment', counter_order_id, payment_status:'unpaid'|'partial'|'paid', paid_amount?}
  *
  * Regla de oro: NO se puede pasar a 'completed' sin haber avisado antes (status 'ready'),
@@ -109,6 +111,15 @@ try {
         if ($action === 'notify') {
             $pedido = $counter->notificar((int)($data['counter_order_id'] ?? 0), $store_id);
             Response::success($pedido, 'Cliente avisado: pedido listo');
+        }
+
+        // Reiniciar la numeración de tickets del día. Los pedidos activos conservan su número
+        // (lo que se congela es el ticket de cada pedido) y los siguientes vuelven a empezar en 1.
+        if ($action === 'reiniciar_folio') {
+            Response::success(
+                $counter->reiniciarFolio($store_id, (int)($actor['user_id'] ?? 0)),
+                'Numeración reiniciada: el siguiente ticket será el #1'
+            );
         }
 
         // Estado de pago: por cobrar / con adelanto / pagado completo.

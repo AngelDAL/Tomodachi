@@ -145,13 +145,22 @@ class CounterService {
     }
 
     private function insertarPedido($store_id, $fecha, $nombre, $token, $nota, $created_by, $subtotal, $descuento, $total, $pagoEstado = 'unpaid', $pagoMonto = 0) {
+        // `number` sigue siendo la identidad del pedido (índice único por tienda + día).
+        // `ticket_number` es lo que VE el cliente: `number` menos la base vigente de reinicio.
+        // Con 16/17/18 activos y un reinicio en 18, el pedido número 19 se le muestra como #1.
         $sql = "INSERT INTO counter_orders
-                    (store_id, business_date, number, customer_name, tracking_token, notes,
+                    (store_id, business_date, number, ticket_number, customer_name, tracking_token, notes,
                      subtotal, discount, created_by, payment_status, paid_amount)
-                SELECT :store_id, :fecha, COALESCE(MAX(number), 0) + 1, :nombre, :token, :nota,
+                SELECT :store_id, :fecha, base.numero,
+                       base.numero - COALESCE((SELECT MAX(r.base_number)
+                                                 FROM counter_folio_resets r
+                                                WHERE r.store_id = :reset_store
+                                                  AND r.business_date = :reset_fecha), 0),
+                       :nombre, :token, :nota,
                        :subtotal, :descuento, :by, :pago_estado, :pago_monto
-                  FROM counter_orders
-                 WHERE store_id = :store_id_filtro AND business_date = :fecha_filtro";
+                  FROM (SELECT COALESCE(MAX(number), 0) + 1 AS numero
+                          FROM counter_orders
+                         WHERE store_id = :store_id_filtro AND business_date = :fecha_filtro) AS base";
         for ($intento = 1; $intento <= 4; $intento++) {
             try {
                 $stmt = $this->conn->prepare($sql);
@@ -168,6 +177,8 @@ class CounterService {
                     ':pago_monto'      => $pagoMonto,
                     ':store_id_filtro' => $store_id,
                     ':fecha_filtro'    => $fecha,
+                    ':reset_store'     => $store_id,
+                    ':reset_fecha'     => $fecha,
                 ]);
                 return (int)$this->conn->lastInsertId();
             } catch (PDOException $e) {
@@ -394,6 +405,55 @@ class CounterService {
             $pedidos[] = $this->armar($f);
         }
         return ['fecha' => $fecha, 'pedidos' => $pedidos];
+    }
+
+    /**
+     * Reinicia la numeración de TICKETS del mostrador (pedido por Ángel, 14-oct-2026).
+     *
+     * El `number` interno NO se toca: es la identidad del pedido y la llave del índice único
+     * (store_id, business_date, number). Lo que se reinicia es el número que VE el cliente: se
+     * guarda la base (`MAX(number)` del día en este momento) y los pedidos que se creen después
+     * se ven como `number - base`, o sea que el siguiente ticket vuelve a ser el #1.
+     *
+     * Los pedidos ACTIVOS conservan su número porque `ticket_number` se congela al crearlos:
+     * no hay forma de que un reinicio les cambie el ticket que ya le dieron al cliente.
+     *
+     * Llamarla dos veces sin pedidos nuevos no rompe nada: la base vuelve a ser la misma y los
+     * siguientes siguen saliendo desde el #1.
+     *
+     * @return array base usada, próximo ticket visible y cuántos pedidos activos hay ahora.
+     */
+    public function reiniciarFolio($store_id, $created_by = null) {
+        $store_id = (int)$store_id;
+        $fecha    = $this->fechaDeNegocio();
+
+        $stmt = $this->conn->prepare(
+            "SELECT COALESCE(MAX(number), 0) AS ultimo,
+                    COALESCE(SUM(status IN ('pending','ready')), 0) AS activos
+               FROM counter_orders
+              WHERE store_id = :sid AND business_date = :fecha"
+        );
+        $stmt->execute([':sid' => $store_id, ':fecha' => $fecha]);
+        $fila    = $stmt->fetch(PDO::FETCH_ASSOC);
+        $base    = (int)($fila['ultimo'] ?? 0);
+        $activos = (int)($fila['activos'] ?? 0);
+
+        $this->conn->prepare(
+            "INSERT INTO counter_folio_resets (store_id, business_date, base_number, created_by)
+             VALUES (:sid, :fecha, :base, :by)"
+        )->execute([
+            ':sid'   => $store_id,
+            ':fecha' => $fecha,
+            ':base'  => $base,
+            ':by'    => ($created_by !== null && (int)$created_by > 0) ? (int)$created_by : null,
+        ]);
+
+        return [
+            'fecha'                 => $fecha,
+            'base'                  => $base,
+            'proximo_ticket'        => 1,
+            'activos_con_su_numero' => $activos,
+        ];
     }
 
     public function obtener($counter_order_id, $store_id) {
@@ -879,7 +939,11 @@ class CounterService {
 
         $pedido = [
             'counter_order_id' => (int)$f['counter_order_id'],
-            'number'           => (int)$f['number'],
+            // Lo que ve el cliente es el TICKET, no el folio interno: con la numeración
+            // reiniciada pueden volver a empezar en 1. Los pedidos de antes de la migración
+            // 054 traen `ticket_number` NULL y se leen con su `number` de siempre.
+            'number'           => (int)($f['ticket_number'] ?? $f['number']),
+            'folio_interno'    => (int)$f['number'],
             'customer_name'    => $f['customer_name'],
             'status'           => $f['status'],
             'notes'            => $f['notes'],

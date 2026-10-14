@@ -1190,6 +1190,28 @@ document.addEventListener('DOMContentLoaded', function () {
         menu.classList.add('hidden');
         ctPonerCocina(!ctEstado.cocina);
     });
+    // Reiniciar la numeración de tickets del día (menú de tres puntos). Sirve para no topar con
+    // el techo: vuelve a empezar en el #1 y los pedidos ACTIVOS conservan su número, porque el
+    // ticket se congela al crear cada pedido (el folio interno sí sigue subiendo).
+    const menuFolio = document.getElementById('ctMenuFolio');
+    if (menuFolio) menuFolio.addEventListener('click', async function () {
+        menu.classList.add('hidden');
+        const activos = (ctEstado.pedidos || []).length;
+        const ok = await confirmarAccion({
+            titulo: 'Reiniciar numeración de tickets',
+            mensaje: 'Los pedidos activos' + (activos ? ' (' + activos + ' ahora)' : '')
+                + ' conservan su número y los siguientes tickets vuelven a empezar en 1.',
+            textoConfirmar: 'Reiniciar',
+        });
+        if (!ok) return;
+        try {
+            const r = await tpPeticion(CT_API, { method: 'POST', body: JSON.stringify({ action: 'reiniciar_folio' }) });
+            tpAviso('Numeración reiniciada · el siguiente ticket será el #' + (r.proximo_ticket || 1), 'success');
+            await ctCargar(true);
+        } catch (e) {
+            showNotification(e.message || 'No se pudo reiniciar la numeración', 'error');
+        }
+    });
     const salir = document.getElementById('ctSalirCocina');
     if (salir) salir.addEventListener('click', function () { ctPonerCocina(false); });
 

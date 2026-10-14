@@ -1142,6 +1142,7 @@ CREATE TABLE counter_orders (
     store_id INT NOT NULL,
     business_date DATE NOT NULL,
     number INT NOT NULL COMMENT 'Folio del día, por tienda',
+    ticket_number INT NULL COMMENT 'Número visible al cliente; NULL = sin reinicio ese día (se usa number)',
     customer_name VARCHAR(80) NULL COMMENT 'A nombre de quién va el pedido',
     tracking_token CHAR(36) NOT NULL COMMENT 'UUID v4: llave del enlace de seguimiento y canal WS del cliente',
     status ENUM('pending','ready','completed','cancelled') NOT NULL DEFAULT 'pending',
@@ -1161,6 +1162,22 @@ CREATE TABLE counter_orders (
     UNIQUE KEY uk_counter_folio (store_id, business_date, number),
     UNIQUE KEY uk_counter_token (tracking_token),
     INDEX idx_counter_store (store_id, status, business_date),
+    FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(user_id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: counter_folio_resets
+-- Cada reinicio de la numeración de tickets del mostrador. La base es el mayor `number` del
+-- día en ese momento: los pedidos nuevos se ven como `number - base`, así que el primero
+-- después del reinicio es el #1 y los pedidos activos conservan el suyo.
+CREATE TABLE counter_folio_resets (
+    reset_id INT AUTO_INCREMENT PRIMARY KEY,
+    store_id INT NOT NULL,
+    business_date DATE NOT NULL,
+    base_number INT NOT NULL COMMENT 'Mayor `number` del día en el momento de reiniciar',
+    created_by INT NULL COMMENT 'Usuario que reinició (para poder auditarlo)',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_folio_resets (store_id, business_date, base_number),
     FOREIGN KEY (store_id) REFERENCES stores(store_id) ON DELETE CASCADE,
     FOREIGN KEY (created_by) REFERENCES users(user_id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

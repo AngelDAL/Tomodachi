@@ -1149,7 +1149,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const menuKiosko = document.getElementById('ctMenuKiosko');
     if (menuKiosko) menuKiosko.addEventListener('click', function () {
         menu.classList.add('hidden');
-        window.open('kiosko.html', '_blank');
+        // En la MISMA pestaña: abrir una ventana nueva saca al aparato de la app instalada
+        // (PWA) y encima deja una barra del navegador fea. El kiosko tiene su propia vuelta
+        // al mostrador en su menú de tres puntos.
+        window.location.href = 'kiosko.html';
     });
     // Cualquier cierre del modal (Cerrar, la X, Esc) apaga la cámara.
     document.querySelectorAll('[data-cerrar="ctModalEscaner"]').forEach(function (b) {

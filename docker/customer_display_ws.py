@@ -193,7 +193,13 @@ async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
             #   order_update -> cambios de la cuenta por mesa (pedido/comanda)
             #   kiosko_qr    -> el mostrador manda un pedido a la pantalla del cliente en el kiosko
             #   kiosko_cart  -> la cajera arma el pedido en vivo y el kiosko lo muestra mientras
-            if tipo not in {"cart_update", "order_update", "kiosko_qr", "kiosko_cart"}:
+            #   comanda_update -> la comanda de cocina cambió (empezar / lista / entregada /
+            #                     anulada / reimpresa). Se emite hacia el canal de la tienda y
+            #                     hacia el de la estación. Lo usa el tablero de comandas; las
+            #                     demás pantallas lo ignoran a propósito (el mapa del salón ya no
+            #                     recarga por esto, ver `tables.js`). Sin este tipo en la lista,
+            #                     el aviso de reimpresión no llegaba a nadie.
+            if tipo not in {"cart_update", "order_update", "kiosko_qr", "kiosko_cart", "comanda_update"}:
                 continue
             await broadcast(session, json.dumps(message, separators=(",", ":")), writer)
     except (asyncio.IncompleteReadError, ConnectionError, ValueError, json.JSONDecodeError):

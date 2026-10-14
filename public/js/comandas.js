@@ -1213,11 +1213,29 @@ function kdEscucharTiempoReal() {
         // ese carrito (hasta que se guarda el pedido, y eso llega como `order_update`), así que
         // refrescarlo aquí era una recarga por cada producto que agrega la cajera.
         const msg = (ev && ev.detail) || null;
-        if (msg && msg.type === 'kiosko_cart') return;
+        const tipo = (msg && msg.type) || '';
+        if (tipo === 'kiosko_cart') return;
+        // `comanda_update` llega para TODAS las comandas de la tienda (el aviso sale al canal de
+        // la tienda y al de la estación). Con un filtro de estación puesto, los cambios de otra
+        // estación no se piden: el tablero sólo refresca lo que está mostrando.
+        if (tipo === 'comanda_update' && !kdEventoEsDeLaVista(msg)) return;
         // El tablero se refresca aunque estés en el salón: la insignia de la pestaña tiene
         // que decir la verdad cuando alguien mira si hay trabajo pendiente.
         kdCargar(true);
     });
+
+    /**
+     * ¿El cambio de comanda afecta lo que este tablero está mostrando?
+     * Sin filtro (Todas) interesa cualquier cambio; con una estación elegida, sólo los suyos.
+     * Las comandas sin estación no entran en un filtro de estación.
+     */
+    function kdEventoEsDeLaVista(msg) {
+        const filtro = Number(kdEstado.filtro || 0);
+        if (!filtro) return true;
+        const estacion = (msg && msg.station_id !== null && msg.station_id !== undefined)
+            ? Number(msg.station_id) : null;
+        return estacion !== null && estacion === filtro;
+    }
 
     document.addEventListener('tomodachi:realtime-estado', function (ev) {
         const estado = ev.detail;

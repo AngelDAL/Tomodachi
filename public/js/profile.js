@@ -134,6 +134,10 @@ function switchTab(tabId) {
 // ============================================================
 
 let programarGuardadoConfig = null;
+// Vuelve a tomar la foto de "cómo estaba" tras cargar del servidor (evita guardados falsos).
+let refrescarInstantaneaConfig = null;
+// Ajustes tal como los manda el servidor: lo que esta pantalla no edita se devuelve intacto.
+let ajustesDelServidor = {};
 
 function avisoAutosave(texto, estado) {
     const chip = document.getElementById('autosaveChip');
@@ -158,8 +162,15 @@ function activarGuardadoAutomatico() {
     const instantanea = () => Array.prototype.map.call(form.elements, function (el) {
         if (!el.name && !el.id) return '';
         return (el.name || el.id) + '=' + (el.type === 'checkbox' ? (el.checked ? 1 : 0) : el.value);
-    }).join('|') + '|pago=' + pagoMostradorSeleccionado();
+    }).join('|') + '|pago=' + pagoMostradorSeleccionado()
+      // El papel tapiz NO es un campo del formulario (se edita con botones): si no entrara en la
+      // instantánea, quitar el fondo se vería como "sin cambios" y no se guardaría nunca.
+      + '|fondo=' + wallpaperState.url + ',' + wallpaperState.opacity + ',' + wallpaperState.size;
     let previa = instantanea();
+
+    // Al cargar los datos del servidor la instantánea cambia sin que el usuario toque nada: se
+    // vuelve a tomar para no disparar un guardado falso al primer clic.
+    refrescarInstantaneaConfig = function () { previa = instantanea(); };
 
     programarGuardadoConfig = function () {
         clearTimeout(t);
@@ -351,7 +362,10 @@ async function loadCompanySettings() {
           document.getElementById('companyLogoPreview').src = store.logo_url;
         }
 
-        // Cargar configuración de negocio
+        // Cargar configuración de negocio. Se guarda el objeto COMPLETO tal como lo manda el
+        // servidor: al guardar hay que devolver también las claves que esta pantalla NO edita
+        // (los anuncios del kiosko, por ejemplo), o se perderían.
+        ajustesDelServidor = store.settings || {};
         if (store.settings) {
           document.getElementById('allowNegativeStock').checked = !!store.settings.allow_negative_stock;
           document.getElementById('requireOpenRegister').checked = !!store.settings.require_open_register;
@@ -697,6 +711,9 @@ function initThemeTabs() {
             if (darkTabBtn) darkTabBtn.click();
             else applyActiveThemePreview();
             showNotification('Sugerencia de tema oscuro generada desde el claro', 'info');
+            // Los colores los escribió el código, no el usuario: sin esto, el guardado automático
+            // no se enteraría y la sugerencia se perdería al salir de la página.
+            guardarCambioDeFondo();
         });
     }
 }
@@ -759,7 +776,8 @@ function initWallpaperEditor(themeConfig) {
             wallpaperState.url = '';
             renderWallpaperEditor();
             applyWallpaperPreview();
-            setWallpaperStatus('Fondo quitado. Se confirma al guardar la configuración.');
+            setWallpaperStatus('Fondo quitado');
+            guardarCambioDeFondo();
         });
     }
 
@@ -768,6 +786,7 @@ function initWallpaperEditor(themeConfig) {
             wallpaperState.opacity = Math.min(100, Math.max(0, parseInt(opacityInput.value, 10) || 0));
             renderWallpaperEditor();
             applyWallpaperPreview();
+            guardarCambioDeFondo();
         });
     }
 
@@ -777,8 +796,15 @@ function initWallpaperEditor(themeConfig) {
                 wallpaperState.size = btn.getAttribute('data-wallpaper-size') === 'fill' ? 'fill' : 'cover';
                 renderWallpaperEditor();
                 applyWallpaperPreview();
+                guardarCambioDeFondo();
             });
         });
+    }
+
+    // Ya con el fondo real del servidor cargado, la "foto" del autoguardado se vuelve a tomar:
+    // si no, el primer toque parecería un cambio y guardaría sin que nadie lo pidiera.
+    if (typeof refrescarInstantaneaConfig === 'function' && refrescarInstantaneaConfig) {
+        refrescarInstantaneaConfig();
     }
 }
 
@@ -809,6 +835,16 @@ function renderWallpaperEditor() {
 function setWallpaperStatus(texto) {
     const el = document.getElementById('wallpaperStatus');
     if (el) el.textContent = texto;
+}
+
+/**
+ * Los controles del papel tapiz son BOTONES (quitar, Cubrir/Llenar), no campos del formulario, así
+ * que no disparan `input` ni `change` y el guardado automático no se entera. Aquí se le avisa a
+ * mano: apenas se toca, el cambio se registra en el servidor (mismo caso que las formas de pago del
+ * mostrador, más arriba en este archivo).
+ */
+function guardarCambioDeFondo() {
+    if (typeof programarGuardadoConfig === 'function' && programarGuardadoConfig) programarGuardadoConfig();
 }
 
 // Vista previa en vivo: el fondo se pinta en la propia página mientras se ajusta
@@ -850,7 +886,8 @@ async function uploadWallpaper(file) {
             wallpaperState.url = data.data.wallpaper_url;
             renderWallpaperEditor();
             applyWallpaperPreview();
-            setWallpaperStatus('Imagen lista. Se confirma al guardar la configuración.');
+            setWallpaperStatus('Imagen lista');
+            guardarCambioDeFondo();
             showNotification('Imagen de fondo subida', 'success');
         } else {
             setWallpaperStatus('No se pudo subir la imagen.');
@@ -1021,8 +1058,10 @@ document.getElementById('companyForm').addEventListener('submit', async (e) => {
         };
     }
 
-    // Recolectar configuración de negocio
-    const settings = {
+    // Recolectar configuración de negocio. Se parte de lo que YA está guardado y se pisa sólo lo
+    // que esta pantalla edita: el JSON de ajustes es compartido entre pantallas (el kiosko guarda
+    // ahí sus anuncios) y rearmarlo desde cero borraba lo de las demás.
+    const settings = Object.assign({}, ajustesDelServidor, {
         allow_negative_stock: document.getElementById('allowNegativeStock').checked,
         require_open_register: document.getElementById('requireOpenRegister').checked,
         format: readFormatForm(),
@@ -1049,7 +1088,7 @@ document.getElementById('companyForm').addEventListener('submit', async (e) => {
         counter: {
             default_payment: pagoMostradorSeleccionado()
         }
-    };
+    });
 
     const data = {
         store_name: formData.get('store_name'),

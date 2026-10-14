@@ -102,26 +102,34 @@
             background: color-mix(in srgb, var(--primary-color) 30%, transparent);
             border-color: var(--primary-color);
         }
+        /* El menú usa la MISMA tarjeta que los demás menús de la aplicación (el patrón
+           `tp-menu-config` de `tables.html`): fondo de tarjeta, borde suave, esquinas de 12 y
+           sombra. El botón que lo abre sí sigue oscuro y translúcido: flota sobre la pantalla y
+           tiene que distinguirse con cualquier anuncio detrás. */
         .display-actions-menu {
             position: absolute;
-            top: calc(100% + 10px);
+            top: calc(100% + 8px);
             right: 0;
-            min-width: 190px;
+            z-index: 30;
+            min-width: 230px;
             padding: 6px;
-            border: 1px solid color-mix(in srgb, var(--text-on-primary) 18%, transparent);
-            border-radius: 10px;
-            background: color-mix(in srgb, var(--dark-color) 94%, var(--bg-card));
-            box-shadow: 0 12px 28px color-mix(in srgb, var(--dark-color) 35%, transparent);
-            z-index: 20;
+            border: 1px solid var(--border-light, #ddd);
+            border-radius: 12px;
+            background: var(--bg-card, #fff);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, .16);
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
         }
         .display-actions-menu.hidden { display: none; }
         .display-action {
             width: 100%;
-            padding: 10px 12px;
+            min-height: 40px;
+            padding: 11px 12px;
             border: 0;
-            border-radius: 7px;
+            border-radius: 8px;
             background: transparent;
-            color: var(--text-on-primary);
+            color: var(--text-color, #1a1a2e);
             display: flex;
             align-items: center;
             gap: 10px;
@@ -130,8 +138,20 @@
             font: inherit;
             font-size: 0.9rem;
         }
-        .display-action:hover { background: color-mix(in srgb, var(--text-on-primary) 12%, transparent); }
+        /* Iconos alineados en columna: sin esto las etiquetas salen "bailadas" y el menú se lee
+           peor. */
+        .display-action > i { width: 18px; text-align: center; color: var(--primary-color); }
+        /* OJO con la especificidad: la cabecera fuerza `color: #eaf0f1 !important` en TODOS sus
+           botones, y este menú vive dentro de la cabecera. Sin esta regla (más específica y también
+           `!important`) el texto salía claro sobre la tarjeta blanca: ilegible. */
+        .header .display-actions-menu .display-action {
+            color: var(--text-color, #1a1a2e) !important;
+            text-shadow: none !important;
+        }
+        .display-action:hover { background: var(--bg-light, #f5f5f5); }
         .display-action[hidden] { display: none; }
+        .display-actions-sep { height: 1px; margin: 5px 6px; background: var(--border-light, #ddd); }
+        .display-actions-sep[hidden] { display: none; }
 
         .logo {
             display: flex;
@@ -926,7 +946,10 @@
         .gracias-folio { font-size: 1.15rem; font-weight: 700; color: var(--primary-color) !important; }
 
         /* ── Protector de pantalla: anuncios/uso libre cuando no hay pedido ── */
-        .k-ss { position: fixed; inset: 0; z-index: 10; overflow: hidden; display: none; align-items: center; justify-content: center; }
+        .k-ss { position: fixed; inset: 0; z-index: 10; overflow: hidden; display: none; align-items: center; justify-content: center;
+            /* Fondo SÓLIDO propio: sin esto, entre diapositiva y diapositiva (y en las franjas de
+               una imagen "Contener") se veía la pantalla del kiosko por detrás. */
+            background: var(--dark-color); }
         .k-ss.activo { display: flex; }
         .k-ss-slide { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; transition: opacity 1s ease, transform 1s ease; }
         .k-ss-slide img, .k-ss-slide video { width: 100%; height: 100%; object-fit: contain; }
@@ -1104,21 +1127,25 @@
         <!-- Reloj centrado en la parte superior central -->
         <div class="header-center" id="clock"></div>
         <div class="header-controls header-right">
-            <button class="display-actions-toggle" id="displayActionsBtn" type="button" title="Opciones de pantalla" aria-label="Opciones de pantalla" aria-expanded="false">
+            <button class="display-actions-toggle" id="displayActionsBtn" type="button" title="Opciones de la pantalla" aria-label="Opciones de la pantalla" aria-haspopup="true" aria-expanded="false">
                 <i class="fas fa-ellipsis-vertical"></i>
             </button>
-            <div class="display-actions-menu hidden" id="displayActionsMenu">
-                <button class="display-action" id="fullscreenBtn" type="button">
-                    <i class="fas fa-expand"></i> Pantalla completa
+            <div class="display-actions-menu hidden" id="displayActionsMenu" role="menu" aria-label="Opciones de la pantalla">
+                <!-- Orden pensado para quien llega de nuevo: primero lo del día a día (el QR que
+                     se le enseña al cliente y los anuncios), luego la pantalla, y al final y
+                     separada la salida. -->
+                <button class="display-action" id="qrToggleBtn" type="button" role="menuitem">
+                    <i class="fas fa-qrcode"></i> <span id="qrToggleTexto">Mostrar QR</span>
                 </button>
-                <button class="display-action" id="qrToggleBtn" type="button">
-                    <i class="fas fa-qrcode"></i> Mostrar QR
+                <button class="display-action" id="cfgAnunciosBtn" type="button" role="menuitem">
+                    <i class="fas fa-tv"></i> <span>Configurar anuncios</span>
                 </button>
-                <button class="display-action" id="cfgAnunciosBtn" type="button">
-                    <i class="fas fa-tv"></i> Configurar anuncios
+                <button class="display-action" id="fullscreenBtn" type="button" role="menuitem">
+                    <i class="fas fa-expand"></i> <span id="fullscreenTexto">Pantalla completa</span>
                 </button>
-                <button class="display-action" id="volverMostradorBtn" type="button" hidden>
-                    <i class="fas fa-arrow-left"></i> Volver al mostrador
+                <div class="display-actions-sep" id="sepSalir" hidden></div>
+                <button class="display-action" id="volverMostradorBtn" type="button" hidden role="menuitem">
+                    <i class="fas fa-arrow-left"></i> <span>Volver al mostrador</span>
                 </button>
             </div>
         </div>
@@ -1258,7 +1285,20 @@
                 });
             }
             qrPanel.classList.remove('hidden');
+            textoQr(true);
             closeDisplayActions();
+        }
+
+        // El menú dice en todo momento QUÉ va a pasar: con el QR a la vista, la entrada se lee
+        // "Ocultar QR". Un menú que siempre dice "Mostrar" hace dudar a quien llega nuevo.
+        function textoQr(abierto) {
+            const el = document.getElementById('qrToggleTexto');
+            if (el) el.textContent = abierto ? 'Ocultar QR' : 'Mostrar QR';
+        }
+        function cerrarQrPanel() {
+            if (!qrPanel) return;
+            qrPanel.classList.add('hidden');
+            textoQr(false);
         }
 
         if (displayActionsBtn) {
@@ -1275,8 +1315,8 @@
         });
         document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeDisplayActions(); });
         if (qrToggleBtn) qrToggleBtn.addEventListener('click', showQrPanel);
-        if (qrClose) qrClose.addEventListener('click', () => qrPanel.classList.add('hidden'));
-        if (qrPanel) qrPanel.addEventListener('click', (e) => { if (e.target === qrPanel) qrPanel.classList.add('hidden'); });
+        if (qrClose) qrClose.addEventListener('click', cerrarQrPanel);
+        if (qrPanel) qrPanel.addEventListener('click', (e) => { if (e.target === qrPanel) cerrarQrPanel(); });
         if (qrCopyBtn) {
             qrCopyBtn.addEventListener('click', () => {
                 const url = getDisplayUrl();
@@ -1692,6 +1732,9 @@
                 const fs = document.fullscreenElement || document.webkitFullscreenElement;
                 const icon = btn.querySelector('i');
                 if (icon) icon.className = fs ? 'fas fa-compress' : 'fas fa-expand';
+                // La etiqueta también acompaña: dice qué hará el botón, no en qué estado está.
+                const texto = document.getElementById('fullscreenTexto');
+                if (texto) texto.textContent = fs ? 'Salir de pantalla completa' : 'Pantalla completa';
                 btn.title = fs ? 'Salir de pantalla completa' : 'Pantalla completa';
             };
             btn.addEventListener('click', () => {
@@ -1826,38 +1869,81 @@
         el.style.transformOrigin = '';
     }
 
+    /**
+     * Pinta una diapositiva del protector.
+     *
+     * Dos cuidados que se notan a simple vista (los pidió el dueño):
+     *  · El protector lleva FONDO SÓLIDO, así que entre diapositiva y diapositiva no se ve la
+     *    pantalla del kiosko por detrás (ni las franjas de una imagen "Contener" transparentes).
+     *  · La siguiente se monta ENCIMA y la transición no arranca hasta que su imagen está
+     *    cargada: nunca se ve un cuadro a medio pintar ni el hueco en el que no hay ninguna.
+     */
     function ssSlide(i) {
         var a = ssAssets[i];
         if (!a) return;
-        var html = (a.type === 'video')
-            ? '<video src="' + a.url + '" autoplay muted loop playsinline></video>'
-            : '<img src="' + a.url + '" alt="">';
         var zona = document.getElementById('kScreensaver');
+        if (!zona) return;
+
         var nuevo = document.createElement('div');
         nuevo.className = 'k-ss-slide';
-        nuevo.innerHTML = html;
-        estiloAjuste(nuevo.querySelector('img, video'), a);
+        nuevo.innerHTML = (a.type === 'video')
+            ? '<video src="' + a.url + '" autoplay muted loop playsinline></video>'
+            : '<img src="' + a.url + '" alt="">';
+        var media = nuevo.querySelector('img, video');
+        estiloAjuste(media, a);
+
         if (ssTrans === 'none') {
             zona.innerHTML = '';
             zona.appendChild(nuevo);
             return;
         }
-        if (ssTrans === 'slide') { nuevo.style.transform = 'translateX(40px)'; nuevo.style.opacity = '0.01'; }
-        else { nuevo.style.opacity = '0.01'; }
+
+        // La vieja se queda tapando hasta que la nueva esté lista para verse.
+        var viejos = Array.prototype.slice.call(zona.querySelectorAll('.k-ss-slide'));
+        nuevo.style.opacity = '0.01';
+        nuevo.style.transform = ssTrans === 'slide' ? 'translateX(40px)' : 'translateX(0)';
         zona.appendChild(nuevo);
-        var viejos = zona.querySelectorAll('.k-ss-slide');
-        requestAnimationFrame(function () {
+
+        var animar = function () {
+            if (!nuevo.parentNode) return;
             requestAnimationFrame(function () {
-                nuevo.style.opacity = '1';
-                nuevo.style.transform = 'translateX(0)';
-                viejos.forEach(function (el) {
-                    if (el !== nuevo) { el.style.opacity = '0'; el.style.transform = 'translateX(-40px)'; }
+                requestAnimationFrame(function () {
+                    nuevo.style.opacity = '1';
+                    nuevo.style.transform = 'translateX(0)';
+                    viejos.forEach(function (el) {
+                        if (el === nuevo || !el.parentNode) return;
+                        el.style.opacity = '0';
+                        if (ssTrans === 'slide') el.style.transform = 'translateX(-40px)';
+                    });
                 });
             });
-        });
-        setTimeout(function () {
-            viejos.forEach(function (el) { if (el !== nuevo && el.parentNode) el.parentNode.removeChild(el); });
-        }, 1100);
+            setTimeout(function () {
+                viejos.forEach(function (el) { if (el !== nuevo && el.parentNode) el.parentNode.removeChild(el); });
+            }, 1200);
+        };
+
+        var arrancado = false;
+        var arrancar = function () {
+            if (arrancado) return;
+            arrancado = true;
+            animar();
+        };
+
+        if (!media) { arrancar(); return; }
+        if (media.tagName === 'IMG') {
+            // Las imágenes ya en caché llegan completas sin disparar `load`.
+            if (media.complete && media.naturalWidth > 0) arrancar();
+            else {
+                media.addEventListener('load', arrancar, { once: true });
+                media.addEventListener('error', arrancar, { once: true });
+            }
+        } else if (media.readyState >= 2) {
+            arrancar();
+        } else {
+            media.addEventListener('loadeddata', arrancar, { once: true });
+        }
+        // Red de seguridad: un archivo que nunca carga no puede congelar el protector.
+        setTimeout(arrancar, 4000);
     }
 
     function detenerSS() {
@@ -2408,6 +2494,10 @@
             var ref = document.referrer || '';
             if (ref && ref.indexOf(window.location.origin) === 0) {
                 volver.removeAttribute('hidden');
+                // La raya separa la salida de las opciones de la pantalla: son cosas distintas y
+                // sin ella parecía una opción más.
+                var sep = document.getElementById('sepSalir');
+                if (sep) sep.removeAttribute('hidden');
                 volver.addEventListener('click', function () {
                     if (typeof closeDisplayActions === 'function') closeDisplayActions();
                     window.history.back();

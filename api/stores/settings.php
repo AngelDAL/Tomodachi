@@ -76,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         // y se acotan opacidad y ajuste antes de guardar.
         $theme_config = Validator::wallpaperConfig($theme_config);
         $theme_config_dark = Validator::wallpaperConfig($theme_config_dark);
-        $settings = isset($data['settings']) ? $data['settings'] : null;
+        $settings = isset($data['settings']) && is_array($data['settings']) ? $data['settings'] : null;
 
         if (!Validator::required($store_name)) {
             Response::validationError(['store_name' => 'Requerido']);
@@ -84,7 +84,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
         $theme_json = $theme_config ? json_encode($theme_config) : null;
         $dark_json = $theme_config_dark ? json_encode($theme_config_dark) : null;
-        $settings_json = $settings ? json_encode($settings) : null;
+
+        // Los ajustes se FUSIONAN por clave en vez de reemplazarse: el mismo JSON lo escriben
+        // varias pantallas (POS, mostrador, kiosko, configuración) y con el reemplazo seco
+        // cualquiera de ellas borraba lo de las demás — así desaparecieron los anuncios del kiosko
+        // al guardar desde Configuración (esa pantalla no los conoce). Si no llega `settings`, se
+        // deja lo que ya había: antes se guardaba NULL y se perdía TODO.
+        $filaPrevia = $db->selectOne('SELECT settings FROM stores WHERE store_id = ?', [$store_id]);
+        $previos = [];
+        if ($filaPrevia && !empty($filaPrevia['settings'])) {
+            $decodificado = json_decode($filaPrevia['settings'], true);
+            if (is_array($decodificado)) {
+                $previos = $decodificado;
+            }
+        }
+        $settings_json = $previos ? json_encode($previos) : null;
+        if ($settings !== null) {
+            $settings_json = json_encode(array_replace($previos, $settings));
+        }
 
         $db->update(
             'UPDATE stores SET store_name = ?, address = ?, phone = ?, theme_config = ?, theme_config_dark = ?, settings = ?, updated_at = NOW() WHERE store_id = ?',

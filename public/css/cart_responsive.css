@@ -178,7 +178,7 @@
 
 .step-btn:hover {
     background: var(--primary-color);
-    color: white;
+    color: var(--text-on-primary);
 }
 
 .step-btn:active {

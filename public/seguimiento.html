@@ -523,17 +523,52 @@
                 });
         }
 
+        var reintentoWS = 0;
+        var temporizadorWS = null;
+
         function conectarWS() {
             if (!token || !('WebSocket' in window)) return;
+            // Si ya hay un canal abierto (o abriéndose), no se duplica.
+            if (socket && socket.readyState <= 1) return;
             var scheme = (location.protocol === 'https:') ? 'wss:' : 'ws:';
             try { socket = new WebSocket(scheme + '//' + window.location.host + '/ws/?session=' + encodeURIComponent(token)); }
-            catch (e) { socket = null; return; }
+            catch (e) { socket = null; programarReintento(); return; }
+            socket.onopen = function () {
+                reintentoWS = 0;
+                // Al recuperar el canal, se pone la vista al día una sola vez.
+                cargar(true);
+            };
             socket.onmessage = function (ev) {
                 var m = null; try { m = JSON.parse(ev.data); } catch (e) { return; }
                 if (m && (m.type === 'order_update' || m.event)) cargar(true);
             };
             socket.onerror = function () {};
+            socket.onclose = function () { socket = null; programarReintento(); };
         }
+
+        /**
+         * El canal del pedido se caía y no volvía: si el túnel o el móvil cortaban la conexión
+         * un momento (pantalla bloqueada, cambio de red), esta vista se quedaba muda hasta
+         * recargar a mano. Se reintenta con espera creciente —2 s, 4 s, 8 s, 16 s hasta 30 s—
+         * y al volver el canal se recarga una vez. No hay sondeo continuo: sólo se reintenta
+         * el canal, y en segundo plano ni eso (para no gastar batería).
+         */
+        function programarReintento() {
+            if (!token || document.hidden || temporizadorWS) return;
+            var espera = Math.min(2000 * Math.pow(2, reintentoWS), 30000);
+            reintentoWS = Math.min(reintentoWS + 1, 4);
+            temporizadorWS = setTimeout(function () {
+                temporizadorWS = null;
+                conectarWS();
+            }, espera);
+        }
+
+        // Al volver a la pestaña: se reconecta si el canal está caído y se pone al día una vez.
+        document.addEventListener('visibilitychange', function () {
+            if (document.hidden) return;
+            if (!socket || socket.readyState > 1) conectarWS();
+            cargar(true);
+        });
 
         // ---- Avisos push -----------------------------------------------------------
         function b64urlABytes(base64) {

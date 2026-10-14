@@ -130,7 +130,7 @@
 
     padding: 8px 12px;
     background: var(--primary-color);
-    color: white;
+    color: var(--text-on-primary);
     border: none;
     border-radius: 6px;
     cursor: pointer;
@@ -1424,7 +1424,7 @@
 
 .cart-toggle {
     background: var(--primary-color);
-    color: white;
+    color: var(--text-on-primary);
     border: none;
     padding: 12px 16px;
     cursor: pointer;
@@ -1873,7 +1873,7 @@
     width: 100%;
     padding: 12px;
     background: var(--primary-color);
-    color: white;
+    color: var(--text-on-primary);
     border: none;
     border-radius: 8px;
     font-size: 1.2rem;
@@ -2243,7 +2243,7 @@
     width: 100%;
     padding: 12px;
     background: var(--primary-color);
-    color: white;
+    color: var(--text-on-primary);
     border: none;
     border-radius: 6px;
     font-size: 1rem;
@@ -4400,3 +4400,13 @@
 /* `hidden` tiene que ganarle a mis reglas de display (el mismo tropiezo que en el compositor
    de inventario: cualquier `display` de autor le gana al atributo). */
 .opt-ajuste.hidden { display: none; }
+
+/* ---------------------------------------------------------------
+   Área táctil mínima (guía 6.2: 40 px). Medido en el POS el 13-oct-2026: los
+   selectores de vista estaban en 28×32 px, los botones de pago en 32 px, el botón de
+   cliente rápido en 38×38 y el de configuración en 38×38. Es una caja con el dedo.
+   --------------------------------------------------------------- */
+.view-toggle-btn { min-width: 40px; min-height: 40px; }
+.pm-btn          { min-height: 40px; }
+.pos-customer-btn,
+.config-btn-circle { min-width: 40px; min-height: 40px; }

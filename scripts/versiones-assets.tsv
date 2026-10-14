@@ -2,20 +2,20 @@
 # Lo mantiene scripts/verificar-versiones.py --actualizar; no editar a mano.
 # ruta	version	md5
 css/bulk_sales.css	4	0c6f3294f5ee1bf1e36f6cf59eaa90c8
-css/cart_responsive.css	12	93e389961bcab19a1d2a402808f95422
+css/cart_responsive.css	13	23e28a056111fafd9d97e96ba8d9a2a6
 css/dashboard.css	5	8c2d44ff49e0dac2126cf5ba7705188b
 css/design-system.css	11	d68273cb2db5d524f751344139409eda
 css/fonts.css	4	35e58fb00cdd00a6d2260d26dc38d3d0
-css/inventory.css	40	d0e27f97070e7e187b08a6e709d31314
-css/landing.css	4	5c70436f4f0c59a13476cbc3062587b4
+css/inventory.css	41	b126d519a89349411c643a77ce895420
+css/landing.css	5	7067a544915e945d5e84aefefed75d40
 css/login.css	13	9750558bea48675acdaba72826c5c618
 css/main.css	24	982c4e4b84c642982053b99d57f82738
 css/mobile-nav.css	5	cd112fc5358a29e7240bfd7cb33f2bcf
 css/promotions-v2.css	2	19d0f8dd4ac2c00c0a87a876ff7d0c56
-css/promotions.css	14	b0107fe02c683cd1a342299fb420c978
-css/sales.css	53	9433e7cd2b3da772bcdcc7022d2def9b
+css/promotions.css	15	7eb6a6a4155e994d39b92fdbc5c5e4dd
+css/sales.css	54	7dfd83067b38b987563d9e0a89d0474e
 css/scanner_overlay.css	10	ddec787393fac0826aa9a65008753ccc
-css/sidebar-modern.css	6	fa87435b6b0664ddeb4d90b71e8bfc04
+css/sidebar-modern.css	7	08cb781f6144470962e285ef05c987a7
 css/variables.css	6	121f6dc3caf9e57ee6af96f4db718ffd
 js/app.js	13	0eef634f1bb47420b30eddf69acf7238
 js/cobro.js	3	ea99282fb9c34bebdf4e525357649812

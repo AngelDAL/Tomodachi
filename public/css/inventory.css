@@ -896,7 +896,7 @@
 
 .action-buttons .btn-add-product {
     background: var(--primary-color);
-    color: white;
+    color: var(--text-on-primary);
     border-color: var(--primary-color);
 }
 
@@ -2629,7 +2629,7 @@
 .btn-scan.scanning {
     border-color: var(--primary-color);
     background: var(--primary-color);
-    color: white;
+    color: var(--text-on-primary);
     animation: scanPulse 1s ease-in-out infinite;
 }
 
@@ -4701,3 +4701,6 @@
     .inv-toggle { width: 100%; }
     .inv-toggle-btn { flex: 1; }
 }
+
+/* Área táctil mínima (guía 6.2): las pestañas Inventario / Entradas y Salidas medían 36 px. */
+.inv-tab { min-height: 40px; }

@@ -1225,3 +1225,12 @@ body.vista-pedido.con-pedido .pedido-barra { display: none; }
         border-top: 1px solid var(--border-lighter);
     }
 }
+
+/* ---------------------------------------------------------------
+   Área táctil mínima (guía 6.2: 40 px). La carta se usa con el dedo en un teléfono:
+   estos controles medían entre 28 y 38 px de alto.
+   --------------------------------------------------------------- */
+.seccion-chip,
+.promo-chip,
+.pedido-barra .btn,
+.mp-linea-btn { min-height: 40px; }

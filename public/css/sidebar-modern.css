@@ -252,3 +252,6 @@ html.sidebar-loading .main-content {
     transform: translateY(-1px);
     filter: brightness(1.2);
 }
+
+/* Área táctil mínima (guía 6.2): el botón de colapsar el menú medía 35×33 px. */
+.sidebar-desktop-toggle { min-width: 40px; min-height: 40px; }

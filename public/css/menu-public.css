@@ -257,7 +257,7 @@
 }
 .producto-destacado {
     background: var(--primary-color);
-    color: #fff;
+    color: var(--text-on-primary);
 }
 
 /* Agotado: se sigue mostrando (informa), pero se entiende de un vistazo.
@@ -383,7 +383,7 @@ body.con-pedido { padding-bottom: 96px; }
     border: none;
     border-radius: 999px;
     background: var(--primary-color);
-    color: #fff;
+    color: var(--text-on-primary);
     font-family: var(--font-heading);
     font-weight: 600;
     font-size: .85rem;
@@ -569,7 +569,7 @@ body.con-pedido { padding-bottom: 96px; }
     border: none;
     border-radius: var(--ds-radius-md);
     background: var(--primary-color);
-    color: #fff;
+    color: var(--text-on-primary);
     font-family: var(--font-heading);
     font-weight: 700;
     font-size: 1rem;

@@ -3254,6 +3254,18 @@ function tpMarcarVivo(estado) {
     const conocido = Object.prototype.hasOwnProperty.call(etiquetas, estado);
     const texto = conocido ? etiquetas[estado] : 'sin tiempo real';
     const caido = !conocido || estado !== 'conectado';
+    // Ayuda al pasar el mouse: antes esto era un rótulo visible («en vivo») que la guía
+    // prohíbe (nada de texto que describa la pantalla). El estado se ve en el icono y su
+    // color, y aquí queda explicado para quien lo mire.
+    const ayuda = {
+        'conectado': 'Se actualiza solo, en tiempo real',
+        'reconectando': 'Reconectando el aviso en tiempo real…',
+        'sin-conexion': 'Sin conexión en tiempo real: se refresca cada 20 s',
+        'sin-autorizacion': 'Sin autorización para el tiempo real: se refresca cada 20 s',
+        'sin-tiempo-real': 'Este equipo no tiene tiempo real: se refresca cada 20 s',
+        'detenido': 'Aviso en tiempo real detenido: se refresca cada 20 s',
+    };
+    const titulo = ayuda[estado] || (conocido ? etiquetas[estado] : 'Sin tiempo real');
 
     ['tpMapaVivo', 'tpCuentaVivo', 'kdVivo', 'ctVivo'].forEach(function (id) {
         const nodo = document.getElementById(id);
@@ -3262,6 +3274,8 @@ function tpMarcarVivo(estado) {
         nodo.classList.toggle('conectando', estado === 'reconectando');
         const span = nodo.querySelector('span');
         if (span) span.textContent = texto;
+        nodo.setAttribute('title', titulo);
+        nodo.setAttribute('aria-label', titulo);
     });
 
     // El tablero de comandas decide con esto si sondea: si el socket está vivo, sondear es

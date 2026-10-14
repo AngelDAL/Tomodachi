@@ -629,7 +629,7 @@ body.modal-open { overflow: hidden; }
 
 #promoDrawer .drawer-actions .btn-save {
     background: var(--primary-color);
-    color: #fff;
+    color: var(--text-on-primary);
     box-shadow: 0 6px 18px -8px color-mix(in srgb, var(--primary-color) 70%, transparent);
 }
 
@@ -1227,7 +1227,7 @@ body.modal-open { overflow: hidden; }
 }
 #promoModal .modal-footer .btn-primary {
     background: var(--primary-color);
-    color: #fff;
+    color: var(--text-on-primary);
     box-shadow: var(--shadow-primary);
 }
 #promoModal .modal-footer .btn-primary:hover {
@@ -1287,7 +1287,7 @@ body.modal-open { overflow: hidden; }
 }
 #promoDrawer .drawer-actions .btn-save {
     background: var(--primary-color);
-    color: #fff;
+    color: var(--text-on-primary);
     box-shadow: var(--shadow-primary);
 }
 #promoDrawer .drawer-actions .btn-save:hover {

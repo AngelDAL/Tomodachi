@@ -7,12 +7,12 @@
     <title>Clientes - Tomodachi</title>
     <link rel="stylesheet" href="css/fonts.css?v=4">
     <link rel="stylesheet" href="lib/fontawesome/css/all.min.css?v=4">
-    <link rel="stylesheet" href="css/main.css?v=23">
+    <link rel="stylesheet" href="css/main.css?v=24">
     <link rel="stylesheet" href="css/design-system.css?v=11">
     <link rel="stylesheet" href="css/sidebar-modern.css?v=6">
     <link rel="stylesheet" href="css/mobile-nav.css?v=5">
     <link rel="stylesheet" href="css/dashboard.css?v=5">
-    <link rel="stylesheet" href="css/inventory.css?v=39">
+    <link rel="stylesheet" href="css/inventory.css?v=40">
     <style>
         /* ============================================================
            Clientes — alineación local al design system (Sora + radios,
@@ -254,7 +254,7 @@
                 </div>
                 <div style="display:flex; gap:10px; justify-content:flex-end; margin-top: 20px;">
                     <button id="customerCancelBtn" class="btn" style="padding:10px 20px; border-radius:8px; background: var(--bg-light); border:1px solid var(--border-color); cursor:pointer; color: var(--text-medium); transition: background var(--transition-fast);">Cancelar</button>
-                    <button id="customerSaveBtn" class="btn btn-primary" style="padding:10px 24px; border-radius:8px; background: var(--primary-color); color:#fff; border:none; cursor:pointer; box-shadow: var(--shadow-primary); transition: background var(--transition-fast), transform var(--transition-fast);">
+                    <button id="customerSaveBtn" class="btn btn-primary" style="padding:10px 24px; border-radius:8px; background: var(--primary-color); color:var(--text-on-primary); border:none; cursor:pointer; box-shadow: var(--shadow-primary); transition: background var(--transition-fast), transform var(--transition-fast);">
                         <i class="fas fa-save"></i> Guardar
                     </button>
                 </div>
@@ -786,7 +786,7 @@
                                 <label for="paymentRegisterSelect" style="display:block; font-size:0.72rem; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.3px; margin-bottom:4px;">Caja que recibe el abono</label>
                                 <select id="paymentRegisterSelect" style="width:100%; padding:9px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-input); color: var(--text-color);">${registerOptionsHtml()}</select>
                             </div>
-                            <button onclick="submitPayment(${customer.customer_id})" class="btn btn-primary" style="width:100%; margin-top:10px; padding:11px 16px; border-radius:8px; background:var(--primary-color); color:#fff; border:none; cursor:pointer; font-weight:700;">
+                            <button onclick="submitPayment(${customer.customer_id})" class="btn btn-primary" style="width:100%; margin-top:10px; padding:11px 16px; border-radius:8px; background:var(--primary-color); color:var(--text-on-primary); border:none; cursor:pointer; font-weight:700;">
                                 <i class="fas fa-check"></i> Registrar abono
                             </button>
                             ` : `

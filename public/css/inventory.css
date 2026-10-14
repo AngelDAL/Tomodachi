@@ -2619,7 +2619,7 @@
 
 .btn-scan-asignar:hover {
     background: var(--primary-color);
-    color: #fff;
+    color: var(--text-on-primary);
 }
 
 .btn-scan:active {
@@ -3355,7 +3355,7 @@
     color: var(--primary-color); display: flex; align-items: center; justify-content: center;
     font-size: 0.7rem; cursor: pointer; transition: all 0.15s; flex-shrink: 0;
 }
-.comp-available-item .comp-avail-add:hover { background: var(--primary-color); color: #fff; }
+.comp-available-item .comp-avail-add:hover { background: var(--primary-color); color: var(--text-on-primary); }
 .comp-available-item.in-recipe .comp-avail-add { border-color: var(--text-muted); color: var(--text-muted); cursor: default; }
 @media (max-width: 700px) {
     .comp-split-layout { grid-template-columns: 1fr; }
@@ -4665,3 +4665,39 @@
    sin esto, los filtros no se plegaban y el bloque de destino salía aunque el motivo no
    fuera un traspaso. */
 .ci-filtros[hidden], .ci-destino[hidden], .ci-galeria[hidden] { display: none; }
+
+
+/* ---------------------------------------------------------------
+   Interruptor de dos estados (regla del dueño: botones toggle, no <select>).
+   El <select> sigue existiendo oculto porque todo el JS lee su `.value`; estos
+   botones sólo lo mueven y avisan con un `change`, así no se toca nada más.
+   --------------------------------------------------------------- */
+.inv-toggle {
+    display: inline-flex;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--bg-card);
+}
+.inv-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 40px;
+    padding: 9px 14px;
+    border: 0;
+    background: transparent;
+    color: var(--text-light);
+    font: inherit;
+    font-size: var(--font-size-sm, .875rem);
+    font-weight: 600;
+    cursor: pointer;
+}
+.inv-toggle-btn + .inv-toggle-btn { border-left: 1px solid var(--border-color); }
+.inv-toggle-btn.active { background: var(--primary-light); color: var(--primary-ink); }
+.inv-toggle-btn:focus-visible { outline: none; box-shadow: var(--primary-focus-ring, none); }
+@media (max-width: 640px) {
+    .inv-toggle { width: 100%; }
+    .inv-toggle-btn { flex: 1; }
+}

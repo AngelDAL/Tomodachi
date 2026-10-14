@@ -82,6 +82,32 @@ document.addEventListener('DOMContentLoaded', async function () {
     initInventory();
 });
 
+/**
+ * Interruptor de Estado (Activo/Inactivo) del formulario de edición.
+ *
+ * El `<select>` sigue siendo la fuente del dato —todo el JS lee su `.value` y el formulario
+ * manda `name="status"`—, pero el dueño quiere botones toggle y no un desplegable. El botón
+ * mueve el select, avisa con `change` (por si algún listener depende) y se pinta el activo.
+ */
+function invElegirEstado(boton) {
+    const sel = document.getElementById('editProductStatus');
+    if (!sel) return;
+    sel.value = boton.dataset.valor;
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
+    invSincronizarEstado();
+}
+
+/** Pinta el botón que corresponde al valor actual del select (al abrir el modal, por ejemplo). */
+function invSincronizarEstado() {
+    const sel = document.getElementById('editProductStatus');
+    const grupo = sel && sel.closest('.form-group');
+    if (!grupo) return;
+    const valor = sel.value || 'active';
+    grupo.querySelectorAll('.inv-toggle-btn').forEach(function (b) {
+        b.classList.toggle('active', b.dataset.valor === valor);
+    });
+}
+
 function initInventory() {
     bindEvents();
     loadCategories();
@@ -2400,6 +2426,8 @@ function openProductDetails(productId) {
     document.getElementById('editProductDesc').value = product.description || '';
     document.getElementById('editProductCategory').value = product.category_id || '';
     document.getElementById('editProductStatus').value = product.status || 'active';
+    // El interruptor de Estado del modal tiene que reflejar lo que trae el producto.
+    invSincronizarEstado();
     document.getElementById('editProductSku').value = product.sku || '';
     document.getElementById('editProductBarcode').value = product.barcode || '';
     document.getElementById('editProductQR').value = product.qr_code || '';

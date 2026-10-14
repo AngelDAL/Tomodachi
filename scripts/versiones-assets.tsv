@@ -6,13 +6,13 @@ css/cart_responsive.css	12	93e389961bcab19a1d2a402808f95422
 css/dashboard.css	5	8c2d44ff49e0dac2126cf5ba7705188b
 css/design-system.css	11	d68273cb2db5d524f751344139409eda
 css/fonts.css	4	35e58fb00cdd00a6d2260d26dc38d3d0
-css/inventory.css	39	264ebc869e73edbb4dc0b79b5243e692
+css/inventory.css	40	d0e27f97070e7e187b08a6e709d31314
 css/landing.css	4	5c70436f4f0c59a13476cbc3062587b4
 css/login.css	13	9750558bea48675acdaba72826c5c618
-css/main.css	23	281a7c0ccd9671131f47c4469a7afb2f
+css/main.css	24	982c4e4b84c642982053b99d57f82738
 css/mobile-nav.css	5	cd112fc5358a29e7240bfd7cb33f2bcf
 css/promotions-v2.css	2	19d0f8dd4ac2c00c0a87a876ff7d0c56
-css/promotions.css	13	c7b4d1e6fa1d6f50e54a37f91cd2aa36
+css/promotions.css	14	b0107fe02c683cd1a342299fb420c978
 css/sales.css	53	9433e7cd2b3da772bcdcc7022d2def9b
 css/scanner_overlay.css	10	ddec787393fac0826aa9a65008753ccc
 css/sidebar-modern.css	6	fa87435b6b0664ddeb4d90b71e8bfc04
@@ -24,7 +24,7 @@ js/compositor-inventario.js	6	4e622bf2a6c5c0d6a97ea2fbd9372a7d
 js/dashboard.js	3	200245e5ecfc4f29165cffa70760314e
 js/design-system.js	8	91ac9447b377fb3f06dad1a78655a5f0
 js/inventory-exits.js	3	3a250de195d9e66c8412377bb611fe77
-js/inventory.js	21	ff6c352ce8d2b5f505f31efc190fe9b4
+js/inventory.js	22	cbec79ca78d9a659b0c7bf360fc76b15
 js/mostrador.js	2	0d5558e9ed645832b2d34e4d8f4552d4
 js/profile.js	8	5e648f243d694813d4850f91ffae49ef
 js/promotion-client-rules.js	2	f525b40be81b26d1d735dc3c4122f50c
@@ -36,7 +36,7 @@ js/scanner.js	4	828bfb406a22a54d12d54517a37faece
 js/sidebar-loader.js	14	06d9f482238009cd889c09594b1812a6
 js/stock-rule.js	1	5818188ed9718de696abeffe9d55909f
 js/stripe-pos.js	1	a261c0664235a63f2da8b4ae3c1194c7
-js/tables.js	15	a018d3e7f25940ef78e57682384175da
+js/tables.js	16	f5ad4d0062a2b47401aa227f6125420e
 js/theme-init.js	6	01f7b3e5431984cc96e3c5b6147e9579
 js/tour.js	4	45da073236616c3069a0bf1977d34178
 js/ws-realtime.js	2	b357936b125ec13aa14a31808ac7dad5

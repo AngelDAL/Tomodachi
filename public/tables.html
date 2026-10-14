@@ -7,7 +7,7 @@
     <title>Puntos de servicio - Tomodachi</title>
     <link rel="stylesheet" href="css/fonts.css?v=4">
     <link rel="stylesheet" href="lib/fontawesome/css/all.min.css?v=4">
-    <link rel="stylesheet" href="css/main.css?v=23">
+    <link rel="stylesheet" href="css/main.css?v=24">
     <link rel="stylesheet" href="css/design-system.css?v=11">
     <link rel="stylesheet" href="css/sidebar-modern.css?v=6">
     <link rel="stylesheet" href="css/mobile-nav.css?v=5">
@@ -283,7 +283,7 @@
 
         .tp-cuenta-acciones-cab { display: flex; align-items: center; gap: 8px; }
 
-        /* Aviso de tiempo real: sin botón de actualizar, aquí se ve que está vivo */
+        /* Aviso de tiempo real: sin botón de actualizar, el icono dice si está vivo */
         .tp-vivo {
             display: inline-flex;
             align-items: center;
@@ -296,6 +296,10 @@
             color: var(--primary-darker, #1F8A82);
             white-space: nowrap;
         }
+        /* El estado se ve en el icono y en el color, no en un rótulo: la ayuda va en el
+           `title`/`aria-label` que pone tpMarcarVivo (regla 5: nada de texto que describa
+           la pantalla). El <span> se queda en el DOM porque ahí escribe el JS. */
+        .tp-vivo span { display: none; }
         .tp-vivo.desconectado { background: #FDECEA; color: #B3261E; }
         .tp-vivo.conectando { background: #FFF7E6; color: #8A6100; }
 
@@ -715,7 +719,6 @@
             .tp-cuenta-tabs { flex-shrink: 0; }
             .tp-codigo-grande { font-size: 1.15rem; padding: 6px 10px; letter-spacing: .12em; }
             .tp-cuenta-identidad h3 { font-size: .95rem; }
-            .tp-vivo span { display: none; }
             .tp-cuenta-tabs { display: flex; flex: 0 0 auto; border-bottom: 1px solid var(--border-lighter, #eee); }
             .tp-cuenta-cuerpo { grid-template-columns: 1fr; flex: 1; min-height: 0; }
             /* Un panel a la vez: se alterna con el selector de arriba */
@@ -1654,7 +1657,7 @@
             /* Cuántas cosas lleva el pedido, visible desde la otra pestaña. */
             .ct-pestanas .ct-cuenta {
                 display: none; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px;
-                background: var(--primary-color); color: #fff; font-size: .72rem; font-weight: 700;
+                background: var(--primary-color); color: var(--text-on-primary); font-size: .72rem; font-weight: 700;
                 align-items: center; justify-content: center;
             }
             .ct-pestanas .ct-cuenta.visible { display: inline-flex; }
@@ -2458,7 +2461,7 @@
     <script src="js/sidebar-loader.js?v=14"></script>
     <script src="js/app.js?v=13"></script>
     <script src="js/ws-realtime.js?v=2"></script>
-    <script src="js/tables.js?v=15"></script>
+    <script src="js/tables.js?v=16"></script>
     <script src="js/cobro.js?v=3"></script>
     <script src="js/comandas.js?v=9"></script>
     <script src="js/mostrador.js?v=2"></script>

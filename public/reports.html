@@ -1896,32 +1896,41 @@
 
             const cm = d.cash_movements || {};
 
+            // Tarjetas de cierre del corte.
+            // Antes: fondo saturado y el IMPORTE pintado con el MISMO color del fondo
+            // (`--success-color` sobre `--success-color`), así que el número era invisible
+            // (contraste 1:1). Ahora la tarjeta es neutra y el color de estado va de acento
+            // (barra lateral) y en el importe como TEXTO. Los tokens elegidos están medidos
+            // contra `--bg-card` en los dos temas (guía 5.4): éxito 5.13:1, peligro 4.98:1,
+            // info 4.60:1, `--warning-ink` 5.94:1 y `--primary-ink` 5.91:1 en claro; en oscuro
+            // todos por encima de 4.8:1. Los rótulos usan `--text-light` (5.74:1) porque
+            // `--text-muted` (#999 sobre blanco, 2.85:1) no pasa.
             resultsDiv.innerHTML = `
                 <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 1.2rem;">
-                    <div class="closez-card" style="background: var(--info-color); color:#fff; border-radius:12px; padding:0.9rem 1rem;">
+                    <div class="closez-card" style="background: var(--bg-card); border:1px solid var(--border-color); border-left:4px solid var(--info-color); border-radius:12px; padding:0.9rem 1rem;">
                         <div style="font-size:0.8rem; color: var(--text-light);">VENTAS</div>
-                        <div style="font-size:1.3rem; font-weight:800; color: var(--text-color);">${fmt(s.total_sales)}</div>
-                        <div style="font-size:0.75rem; color: var(--text-muted);">${s.total_transactions || 0} transacciones</div>
+                        <div style="font-size:1.3rem; font-weight:800; color: var(--info-color);">${fmt(s.total_sales)}</div>
+                        <div style="font-size:0.75rem; color: var(--text-light);">${s.total_transactions || 0} transacciones</div>
                     </div>
-                    <div class="closez-card" style="background: var(--success-color); color:#fff; border-radius:12px; padding:0.9rem 1rem;">
+                    <div class="closez-card" style="background: var(--bg-card); border:1px solid var(--border-color); border-left:4px solid var(--success-color); border-radius:12px; padding:0.9rem 1rem;">
                         <div style="font-size:0.8rem; color: var(--text-light);">GANANCIA</div>
                         <div style="font-size:1.3rem; font-weight:800; color: var(--success-color);">${fmt(s.total_profit)}</div>
-                        <div style="font-size:0.75rem; color: var(--text-muted);">Ticket prom. ${fmt(s.avg_ticket)}</div>
+                        <div style="font-size:0.75rem; color: var(--text-light);">Ticket prom. ${fmt(s.avg_ticket)}</div>
                     </div>
-                    <div class="closez-card" style="background: var(--warning-color); color:#fff; border-radius:12px; padding:0.9rem 1rem;">
+                    <div class="closez-card" style="background: var(--bg-card); border:1px solid var(--border-color); border-left:4px solid var(--warning-color); border-radius:12px; padding:0.9rem 1rem;">
                         <div style="font-size:0.8rem; color: var(--text-light);">DEVOLUCIONES</div>
-                        <div style="font-size:1.3rem; font-weight:800; color: var(--warning-color);">${fmt(d.refunds?.total)}</div>
-                        <div style="font-size:0.75rem; color: var(--text-muted);">${d.refunds?.count || 0} devoluciones</div>
+                        <div style="font-size:1.3rem; font-weight:800; color: var(--warning-ink);">${fmt(d.refunds?.total)}</div>
+                        <div style="font-size:0.75rem; color: var(--text-light);">${d.refunds?.count || 0} devoluciones</div>
                     </div>
-                    <div class="closez-card" style="background: var(--danger-color); color:#fff; border-radius:12px; padding:0.9rem 1rem;">
+                    <div class="closez-card" style="background: var(--bg-card); border:1px solid var(--border-color); border-left:4px solid var(--danger-color); border-radius:12px; padding:0.9rem 1rem;">
                         <div style="font-size:0.8rem; color: var(--text-light);">CANCELADAS</div>
                         <div style="font-size:1.3rem; font-weight:800; color: var(--danger-color);">${fmt(d.cancelled?.total)}</div>
-                        <div style="font-size:0.75rem; color: var(--text-muted);">${d.cancelled?.count || 0} cancelaciones</div>
+                        <div style="font-size:0.75rem; color: var(--text-light);">${d.cancelled?.count || 0} cancelaciones</div>
                     </div>
-                    <div class="closez-card" style="background: var(--primary-color); color:#fff; border-radius:12px; padding:0.9rem 1rem; grid-column: span 2;">
+                    <div class="closez-card" style="background: var(--bg-card); border:1px solid var(--border-color); border-left:4px solid var(--primary-color); border-radius:12px; padding:0.9rem 1rem; grid-column: span 2;">
                         <div style="font-size:0.8rem; color: var(--text-light);">EFECTIVO ESPERADO EN CAJA</div>
-                        <div style="font-size:1.5rem; font-weight:800; color: var(--primary-color);">${fmt(d.expected_cash)}</div>
-                        <div style="font-size:0.75rem; color: var(--text-muted);">Inicial + ventas efectivo − retiros + entradas − devoluciones</div>
+                        <div style="font-size:1.5rem; font-weight:800; color: var(--primary-ink);">${fmt(d.expected_cash)}</div>
+                        <div style="font-size:0.75rem; color: var(--text-light);">Inicial + ventas efectivo − retiros + entradas − devoluciones</div>
                     </div>
                 </div>
 

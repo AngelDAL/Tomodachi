@@ -775,9 +775,14 @@ TIMESTAMPDIFF(MINUTE, COALESCE(c.sent_at, c.created_at), NOW()) AS minutos,
         $this->avisar((int)$store_id, $comanda['station_id'] !== null ? (int)$comanda['station_id'] : null,
                       'comanda_' . $destino, (int)$comanda_id);
 
-        // El mesero y el comensal ven avanzar su pedido platillo por platillo.
+        // El mesero y el comensal ven avanzar su pedido platillo por platillo. Al canal de la
+        // tienda va con la estación a cuestas: el tablero de comandas filtra por estación y sin
+        // ese dato el aviso gemelo le haría recargar por cambios de otra cocina.
         if ($comanda['session_id'] !== null) {
-            DiningSession::broadcast((int)$comanda['session_id'], 'comanda_' . $destino);
+            DiningSession::broadcast((int)$comanda['session_id'], 'comanda_' . $destino, [
+                'comanda_id' => (int)$comanda_id,
+                'station_id' => $comanda['station_id'] !== null ? (int)$comanda['station_id'] : null,
+            ]);
         }
 
         // Si la comanda es de MOSTRADOR, lo que hizo la cocina tiene que verse igual en la caja y
@@ -838,7 +843,10 @@ TIMESTAMPDIFF(MINUTE, COALESCE(c.sent_at, c.created_at), NOW()) AS minutos,
         if ($comanda['session_id'] !== null) {
             $dining = new DiningSession($this->db);
             $dining->recalcTotals((int)$comanda['session_id']);
-            DiningSession::broadcast((int)$comanda['session_id'], 'comanda_cancelled');
+            DiningSession::broadcast((int)$comanda['session_id'], 'comanda_cancelled', [
+                'comanda_id' => (int)$comanda_id,
+                'station_id' => $comanda['station_id'] !== null ? (int)$comanda['station_id'] : null,
+            ]);
         }
 
         $this->avisar((int)$store_id, $comanda['station_id'] !== null ? (int)$comanda['station_id'] : null,
@@ -1279,6 +1287,18 @@ TIMESTAMPDIFF(MINUTE, COALESCE(c.sent_at, c.created_at), NOW()) AS minutos,
      * no puede tumbar la comanda que sí se creó.
      */
     public function avisar($store_id, $station_id, $evento, $comanda_id) {
+        self::avisarComanda($store_id, $station_id, $evento, $comanda_id);
+    }
+
+    /**
+     * Aviso de comanda a los canales de la tienda y de la estación (best-effort).
+     *
+     * Es estático a propósito: también lo usa quien no tiene una instancia de este servicio,
+     * como el worker de impresión (`PrintQueue`) cuando el ticket sale o cuando falla. Antes
+     * el desenlace de la impresión no se avisaba a nadie y otra tableta se quedaba viendo
+     * «En cola» o «No salió» hasta que algo más la refrescara.
+     */
+    public static function avisarComanda($store_id, $station_id, $evento, $comanda_id) {
         $payload = json_encode([
             'type'       => 'comanda_update',
             'event'      => (string)$evento,

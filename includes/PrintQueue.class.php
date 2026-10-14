@@ -494,6 +494,37 @@ class PrintQueue {
                   WHERE comanda_id = :cid"
             )->execute([':attempts' => (int)$job['attempts'], ':cid' => (int)$job['comanda_id']]);
         }
+
+        $this->avisarImpresion($job, 'comanda_impresa');
+    }
+
+    /**
+     * Avisa a las pantallas el DESENLACE de la impresión (best-effort).
+     *
+     * Antes sólo se avisaba cuando alguien REENCOLaba el ticket (`ComandaService::reimprimir`),
+     * así que otra tableta se quedaba viendo «En cola» o «No salió» hasta que algo más la
+     * refrescara. El aviso lleva `station_id` porque el tablero filtra por estación: sin él,
+     * un tablero con filtro puesto descartaría el aviso de su propia comanda.
+     *
+     * Nunca lanza: que no salga el aviso no puede tumbar un trabajo de impresión que sí pasó.
+     */
+    private function avisarImpresion(array $job, $evento) {
+        if (empty($job['comanda_id'])) {
+            return;
+        }
+        try {
+            if (!class_exists('ComandaService')) {
+                require_once __DIR__ . '/ComandaService.class.php';
+            }
+            $stmt = $this->conn->prepare('SELECT station_id FROM comandas WHERE comanda_id = :cid');
+            $stmt->execute([':cid' => (int)$job['comanda_id']]);
+            $fila = $stmt->fetch(PDO::FETCH_ASSOC);
+            $station = ($fila && $fila['station_id'] !== null) ? (int)$fila['station_id'] : null;
+
+            ComandaService::avisarComanda((int)$job['store_id'], $station, $evento, (int)$job['comanda_id']);
+        } catch (Throwable $e) {
+            // Silencio a propósito: es un aviso, no parte del trabajo.
+        }
     }
 
     /**
@@ -525,6 +556,8 @@ class PrintQueue {
                       WHERE comanda_id = :cid"
                 )->execute([':attempts' => $attempts, ':err' => $error, ':cid' => (int)$job['comanda_id']]);
             }
+            // Se agotaron los intentos: las demás pantallas tienen que ver el "No salió".
+            $this->avisarImpresion($job, 'comanda_impresion_fallida');
             return 'failed';
         }
 
@@ -543,6 +576,8 @@ class PrintQueue {
                   WHERE comanda_id = :cid"
             )->execute([':attempts' => $attempts, ':err' => $error, ':cid' => (int)$job['comanda_id']]);
         }
+        // Vuelve a la cola con espera: el tablero tiene que ver el cambio de intento.
+        $this->avisarImpresion($job, 'comanda_impresion_reintento');
         return 'retry';
     }
 

@@ -619,7 +619,7 @@ class DiningSession {
      * @param string     $event      nombre del evento (ej. 'items_added','sent_to_kitchen')
      * @return void
      */
-    public static function broadcast($session_id, $event) {
+    public static function broadcast($session_id, $event, array $extra = []) {
         $session_id = (int)$session_id;
         if ($session_id <= 0) {
             return;
@@ -642,12 +642,12 @@ class DiningSession {
         //    con el store_id añadido, para que la pantalla sepa de qué tienda es.
         $store_id = self::storeDeCuenta($session_id);
         if ($store_id > 0) {
-            $payloadTienda = json_encode([
+            $payloadTienda = json_encode(array_merge([
                 'type'     => 'order_update',
                 'session'  => (string)$session_id,
                 'event'    => (string)$event,
                 'store_id' => $store_id,
-            ], JSON_UNESCAPED_UNICODE);
+            ], $extra), JSON_UNESCAPED_UNICODE);
             if ($payloadTienda !== false) {
                 self::enviarAlRelay(WsToken::canalTienda($store_id), $payloadTienda);
             }

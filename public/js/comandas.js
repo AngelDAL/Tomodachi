@@ -1215,14 +1215,24 @@ function kdEscucharTiempoReal() {
         const msg = (ev && ev.detail) || null;
         const tipo = (msg && msg.type) || '';
         if (tipo === 'kiosko_cart') return;
-        // `comanda_update` llega para TODAS las comandas de la tienda (el aviso sale al canal de
-        // la tienda y al de la estación). Con un filtro de estación puesto, los cambios de otra
-        // estación no se piden: el tablero sólo refresca lo que está mostrando.
-        if (tipo === 'comanda_update' && !kdEventoEsDeLaVista(msg)) return;
+        // Avisos que hablan de UNA comanda concreta: el `comanda_update` de cocina, su gemelo
+        // `order_update` (la cuenta lo manda con el mismo `comanda_id`/`station_id`) y los
+        // desenlaces de impresión. Con un filtro de estación puesto, los de otra estación no se
+        // piden: el tablero sólo refresca lo que está mostrando.
+        if (esAvisoDeUnaComanda(msg) && !kdEventoEsDeLaVista(msg)) return;
         // El tablero se refresca aunque estés en el salón: la insignia de la pestaña tiene
         // que decir la verdad cuando alguien mira si hay trabajo pendiente.
         kdCargar(true);
     });
+
+    /**
+     * ¿El aviso habla de una comanda concreta?
+     * Los que sí traen `comanda_id` se pueden filtrar por estación; los de la cuenta en general
+     * (agregar platillos, enviar a cocina) no, y siguen refrescando como siempre.
+     */
+    function esAvisoDeUnaComanda(msg) {
+        return !!(msg && msg.comanda_id !== undefined && msg.comanda_id !== null);
+    }
 
     /**
      * ¿El cambio de comanda afecta lo que este tablero está mostrando?

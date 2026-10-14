@@ -171,6 +171,23 @@
         }
         button.activo { background: var(--cta-ok); }
         button.fantasma { background: var(--cta-card); color: var(--cta-text); border: 1px solid var(--cta-border); }
+
+        /* Mientras se cargan los datos NO se enseñan cifras de relleno: los ceros de antes
+           ($0.00 / 00:00) se veían al recargar y parecían un pedido en cero. Mientras carga sólo
+           se ve la franja de estado; las tarjetas aparecen con datos de verdad. */
+        .wrap[data-cargando="1"] #tarjetaQr,
+        .wrap[data-cargando="1"] #tarjetaPedido,
+        .wrap[data-cargando="1"] #tarjetaPago,
+        .wrap[data-cargando="1"] #tarjetaTiempo { display: none; }
+
+        /* El aviso al cliente va ARRIBA y a la derecha: es el primer control que busca. Se ajusta a
+           su texto para no competir con la franja de estado ni robar la atención del QR. */
+        .fila-aviso { display: flex; justify-content: flex-end; }
+        .fila-aviso button {
+            width: auto; padding: 10px 14px; font-size: .84rem; border-radius: 999px;
+            background: var(--cta-card); color: var(--cta-text); border: 1px solid var(--cta-border);
+        }
+        .fila-aviso button.activo { background: var(--cta-ok); color: #fff; border-color: transparent; }
         .problema { background: color-mix(in srgb, var(--cta-alto) 12%, var(--cta-card)); border: 1px solid color-mix(in srgb, var(--cta-alto) 28%, transparent); color: var(--cta-alto); border-radius: 14px; padding: 12px 14px; font-size: .86rem; display: flex; flex-direction: column; gap: 9px; }
         .problema .botones { display: flex; gap: 8px; }
         @media (max-width: 360px) { .wrap { gap: 8px; } .art-img { width: 40px; height: 40px; } }
@@ -178,7 +195,7 @@
     <script src="lib/qrcodejs/qrcode.min.js"></script>
 </head>
 <body>
-    <div class="wrap">
+    <div class="wrap" data-cargando="1">
         <div class="barra">
             <span class="barra-marca"><i class="fas fa-utensils"></i> <span id="marca">Mi pedido</span></span>
             <span class="barra-folio" id="folio">—</span>
@@ -193,38 +210,43 @@
             </span>
         </div>
 
-        <!-- 2. El QR, a la mano desde el principio -->
-        <div class="tarjeta qr-caja">
+        <!-- 2. El aviso al cliente, arriba a la derecha: lo primero que se ve y se toca -->
+        <div class="fila-aviso">
+            <button type="button" id="btnNotif"><i class="fas fa-bell"></i> <span id="btnNotifTexto">Avisarme cuando esté listo</span></button>
+        </div>
+
+        <!-- 3. El QR, a la mano desde el principio -->
+        <div class="tarjeta qr-caja" id="tarjetaQr">
             <div class="tarjeta-titulo"><span>Tu código de recogida</span></div>
             <div class="qr-marco"><div id="qr"></div></div>
             <p class="qr-nota">Muéstralo al llegar para recoger tu pedido.</p>
         </div>
 
-        <!-- 3. Qué pidió, con precios de antes y de ahora -->
-        <div class="tarjeta">
+        <!-- 4. Qué pidió, con precios de antes y de ahora -->
+        <div class="tarjeta" id="tarjetaPedido">
             <div class="tarjeta-titulo"><span>Tu pedido</span><span class="nombre" id="nombre"></span></div>
             <div class="articulos" id="articulos"></div>
             <div class="totales" id="totales">
-                <div class="tfila" id="filaSubtotal"><span>Subtotal</span><span id="subtotal">$0.00</span></div>
-                <div class="tfila desc hidden" id="filaDescuento"><span id="descuentoNombre">Descuento</span><span id="descuento">-$0.00</span></div>
-                <div class="tfila total"><span>Total</span><strong id="total">$0.00</strong></div>
+                <div class="tfila" id="filaSubtotal"><span>Subtotal</span><span id="subtotal">—</span></div>
+                <div class="tfila desc hidden" id="filaDescuento"><span id="descuentoNombre">Descuento</span><span id="descuento">—</span></div>
+                <div class="tfila total"><span>Total</span><strong id="total">—</strong></div>
             </div>
         </div>
 
-        <!-- 4. Cómo va el pago -->
-        <div class="tarjeta">
+        <!-- 5. Cómo va el pago -->
+        <div class="tarjeta" id="tarjetaPago">
             <div class="fila pago-unpaid" id="pago">
                 <div class="fila-icono"><i class="fas fa-clock" id="pagoIcono"></i></div>
                 <div class="fila-txt"><strong id="pagoTitulo">Pago</strong><span id="pagoDetalle"></span></div>
             </div>
         </div>
 
-        <!-- 5. Y hasta abajo, cuánto lleva esperando -->
-        <div class="tarjeta tiempo">
+        <!-- 6. Y abajo, cuánto lleva esperando -->
+        <div class="tarjeta tiempo" id="tarjetaTiempo">
             <div class="fila">
                 <div class="fila-icono"><i class="fas fa-hourglass-half"></i></div>
                 <div class="fila-txt">
-                    <strong class="tiempo-valor" id="reloj">00:00</strong>
+                    <strong class="tiempo-valor" id="reloj">—</strong>
                     <span id="esperaNota">Tiempo de espera</span>
                 </div>
             </div>
@@ -234,8 +256,6 @@
             <span id="problemaTexto">No pudimos cargar tu pedido.</span>
             <div class="botones"><button type="button" id="btnReintentar" class="fantasma">Reintentar</button></div>
         </div>
-
-        <button type="button" id="btnNotif"><i class="fas fa-bell"></i> <span id="btnNotifTexto">Avisarme cuando esté listo</span></button>
     </div>
 
     <!-- Aviso de "listo": aparece solo, con sonido y vibración, encima de todo -->
@@ -393,9 +413,18 @@
         // solo se pierde) y se detiene al tocar "Entendido" o cuando el pedido ya se entregó.
         var pitidoTimer = null;
         var tituloOriginal = document.title;
+        // El mismo aviso no se repite en cada recarga: se recuerda cuál ya vio el cliente (la clave
+        // lleva el sello del aviso, así que un aviso NUEVO sí vuelve a salir).
+        function claveAvisoVisto() {
+            return 'aviso_listo_' + (pedido && pedido.counter_order_id) + '_' + (pedido && pedido.notified_at ? pedido.notified_at : '');
+        }
+        function avisoYaVisto() {
+            try { return localStorage.getItem(claveAvisoVisto()) === '1'; } catch (e) { return false; }
+        }
         function mostrarAvisoListo() {
             if (avisoYaMostrado) return;
             avisoYaMostrado = true;
+            if (avisoYaVisto()) return;   // ya lo vio: el fondo teñido y el estado siguen ahí
             $('avisoListoTexto').textContent = (pedido.customer_name ? pedido.customer_name + ', ' : '') +
                 'muestra este código al llegar al mostrador.';
             $('avisoListo').classList.remove('hidden');
@@ -422,11 +451,16 @@
             $('avisoListo').classList.add('hidden');
             if (pitidoTimer) { clearInterval(pitidoTimer); pitidoTimer = null; }
             document.title = tituloOriginal;
+            try { localStorage.setItem(claveAvisoVisto(), '1'); } catch (e) {}
         }
 
         // ---- Pintado --------------------------------------------------------------
         function pintar() {
             if (!pedido) return;
+            // Ya hay datos de verdad: se quita el estado de carga y aparecen las tarjetas (mientras
+            // carga no se enseña ninguna cifra, para no ver un pedido en cero al recargar).
+            var caja = document.querySelector('.wrap');
+            if (caja) caja.removeAttribute('data-cargando');
             $('folio').textContent = 'Pedido #' + pedido.number;
             $('nombre').textContent = pedido.customer_name || '';
             if (pedido.tema) aplicarTema(pedido.tema);
@@ -537,6 +571,12 @@
         function mostrarProblema(texto) {
             $('problemaTexto').textContent = texto || 'No pudimos cargar tu pedido.';
             $('problema').classList.remove('hidden');
+            // La franja de arriba no puede seguir diciendo "Cargando…" cuando ya sabemos que no
+            // cargó: se queda en un estado neutro y sin cifras.
+            $('estado').className = 'estado';
+            $('estadoIcono').className = 'fas fa-circle-exclamation';
+            $('estadoTexto').textContent = 'No pudimos cargar tu pedido';
+            $('estadoSub').textContent = 'Revisa el enlace o toca Reintentar';
         }
 
         function cargar(silencioso) {

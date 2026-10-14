@@ -3201,6 +3201,16 @@ function tpConectarTiempoReal() {
         // "store" a secas: el servidor resuelve la tienda del que está conectado.
         canal: 'store',
         onEvento: function (msg) {
+            // El kiosko del mostrador manda `kiosko_cart` en CADA toque del carrito (es su pantalla
+            // en vivo) y el mensaje va al canal de la tienda, así que llegaba a todas las pantallas
+            // del personal y aquí se traducía en recargar el mapa, las cuentas y el tablero de
+            // cocina por HTTP: una tormenta de peticiones por cada producto que agrega la cajera.
+            // No es dato del salón: lo consume la pantalla del kiosko, que tiene su propio socket
+            // (kiosko.js / kiosko.html). Se reemite el evento igual, por si otra vista lo mira.
+            if (msg && msg.type === 'kiosko_cart') {
+                document.dispatchEvent(new CustomEvent('tomodachi:realtime', { detail: msg || null }));
+                return;
+            }
             tpCargar(true);
             // Si hay una cuenta a la vista, también se refresca: el comensal pudo pedir o
             // alguien pudo cerrarla desde otro dispositivo.

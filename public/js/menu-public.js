@@ -36,7 +36,8 @@
     var API_ORDER   = '/api/dining/order.php';
 
     var LS_KEY  = 'pos_diner_session';
-    var POLL_MS = 10000;   // fallback obligatorio de tiempo real
+    var POLL_MS = 10000;   // fallback obligatorio de tiempo real (sin socket)
+    var POLL_MS_CON_SOCKET = 60000;   // red de seguridad lenta cuando el socket está vivo
 
     var estado = {
         token: '',
@@ -1734,6 +1735,9 @@
                 }
                 var s = estado.socket;
 
+                // Al abrir el socket, el sondeo baja a red de seguridad lenta (ver iniciarSondeo).
+                s.onopen = function () { iniciarSondeo(); };
+
                 s.onmessage = function (ev) {
                     var msg = null;
                     try { msg = JSON.parse(ev.data); } catch (e) { return; }
@@ -1747,7 +1751,9 @@
                 };
                 s.onclose = function () {
                     if (estado.socket === s) estado.socket = null;
-                    // Sin reconexión agresiva: el sondeo ya mantiene la cuenta fresca.
+                    // Sin reconexión agresiva: el sondeo ya mantiene la cuenta fresca. Se reinicia
+                    // para volver al ritmo rápido (sin socket, 10 s).
+                    iniciarSondeo();
                 };
             })
             .catch(function () { /* sin tiempo real: el sondeo sostiene la vista */ });
@@ -1762,10 +1768,14 @@
 
     function iniciarSondeo() {
         detenerSondeo();
+        // Con el socket VIVO esto es sólo red de seguridad lenta: el relay avisa de cada cambio,
+        // así que pedir la cuenta cada 10 s era tráfico de más (y además escondía que el socket no
+        // se reconecta solo). Sin socket, 10 s: ahí sí es la única forma de enterarse.
+        var intervalo = estado.socket ? POLL_MS_CON_SOCKET : POLL_MS;
         estado.pollTimer = setInterval(function () {
             if (document.hidden) return;
             refrescarCuenta({ silencioso: true });
-        }, POLL_MS);
+        }, intervalo);
     }
 
     function detenerSondeo() {

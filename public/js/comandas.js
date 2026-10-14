@@ -1207,7 +1207,13 @@ function kdFiltrarProductos(q) {
  * tablero se refresca cada 20 s. La pantalla de una cocina no se puede quedar muda.
  */
 function kdEscucharTiempoReal() {
-    document.addEventListener('tomodachi:realtime', function () {
+    document.addEventListener('tomodachi:realtime', function (ev) {
+        // El carrito en vivo del kiosko (`kiosko_cart`) sale en CADA toque del producto en el
+        // mostrador y va al canal de la tienda: el tablero de cocina no tiene nada que ver con
+        // ese carrito (hasta que se guarda el pedido, y eso llega como `order_update`), así que
+        // refrescarlo aquí era una recarga por cada producto que agrega la cajera.
+        const msg = (ev && ev.detail) || null;
+        if (msg && msg.type === 'kiosko_cart') return;
         // El tablero se refresca aunque estés en el salón: la insignia de la pestaña tiene
         // que decir la verdad cuando alguien mira si hay trabajo pendiente.
         kdCargar(true);

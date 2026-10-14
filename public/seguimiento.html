@@ -352,6 +352,19 @@
         }
 
         // ---- Sonido del aviso (sin archivos: se genera en el navegador) -----------
+        // Crea o reanuda el audio SIN sonar nada: el navegador no deja reproducir hasta que el
+        // cliente toca algo, y el aviso puede llegar mucho después de ese primer toque.
+        function desbloquearAudio() {
+            try {
+                var AC = window.AudioContext || window.webkitAudioContext;
+                if (!AC) return;
+                if (!audioCtx) audioCtx = new AC();
+                if (audioCtx.state === 'suspended') {
+                    var pr = audioCtx.resume();
+                    if (pr && pr.catch) pr.catch(function () {});
+                }
+            } catch (e) { /* sin audio, el aviso visual sigue */ }
+        }
         function sonarAviso() {
             try {
                 var AC = window.AudioContext || window.webkitAudioContext;
@@ -376,18 +389,40 @@
         }
         function vibrar() { try { if (navigator.vibrate) navigator.vibrate([140, 70, 140, 70, 220]); } catch (e) {} }
 
+        // El aviso no se queda en un pitido: insiste unas cuantas veces (en un local con ruido uno
+        // solo se pierde) y se detiene al tocar "Entendido" o cuando el pedido ya se entregó.
+        var pitidoTimer = null;
+        var tituloOriginal = document.title;
         function mostrarAvisoListo() {
             if (avisoYaMostrado) return;
             avisoYaMostrado = true;
             $('avisoListoTexto').textContent = (pedido.customer_name ? pedido.customer_name + ', ' : '') +
                 'muestra este código al llegar al mostrador.';
             $('avisoListo').classList.remove('hidden');
+            // También en el título de la pestaña: si el cliente tiene el móvil en otra cosa, lo ve.
+            document.title = '¡LISTO! #' + (pedido.number || '') + ' · Mi pedido';
             sonarAviso();
             vibrar();
             try { dibujarQr(); } catch (e) {}   // el QR del popup, por si el del inicio no salió
             notificar('¡Tu pedido está listo!', 'Pasa al mostrador con tu código.');
+            var repeticiones = 0;
+            if (pitidoTimer) clearInterval(pitidoTimer);
+            pitidoTimer = setInterval(function () {
+                repeticiones++;
+                if (repeticiones >= 5 || !pedido || pedido.status === 'completed') {
+                    clearInterval(pitidoTimer);
+                    pitidoTimer = null;
+                    return;
+                }
+                sonarAviso();
+                vibrar();
+            }, 2400);
         }
-        function ocultarAvisoListo() { $('avisoListo').classList.add('hidden'); }
+        function ocultarAvisoListo() {
+            $('avisoListo').classList.add('hidden');
+            if (pitidoTimer) { clearInterval(pitidoTimer); pitidoTimer = null; }
+            document.title = tituloOriginal;
+        }
 
         // ---- Pintado --------------------------------------------------------------
         function pintar() {
@@ -595,7 +630,13 @@
                 enviarPresencia(true);
                 marcarBotonAvisos();
                 notificar('Avisos activados', 'Te avisaremos cuando tu pedido esté listo.');
-                if (!vapidPublica || !('PushManager' in window)) return;
+                // Sin push configurado, el aviso sólo llega con la página abierta. Se dice tal cual
+                // en vez de dejarlo creer que llegará esté donde esté.
+                if (!vapidPublica || !('PushManager' in window)) {
+                    console.warn('Avisos sin push: falta la clave VAPID o el navegador no lo soporta');
+                    $('btnNotifTexto').textContent = 'Aviso solo con la página abierta';
+                    return;
+                }
                 navigator.serviceWorker.register('counter/sw.js', { scope: 'counter/' }).then(function (reg) {
                     swReg = reg;
                     if (reg.active) return null;
@@ -617,7 +658,20 @@
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ subscribe: true, token: token, endpoint: j.endpoint, p256dh: j.keys && j.keys.p256dh, auth: j.keys && j.keys.auth })
                     });
-                }).catch(function () { /* si el push falla, los avisos en vivo siguen */ });
+                }).catch(function (err) {
+                    // Antes esto se tragaba en silencio: el cliente creía que le avisarían y en la
+                    // tabla no había ninguna suscripción (es justo el caso que reportó Ángel). Se
+                    // deja el motivo en la consola y se le dice al cliente qué hacer.
+                    console.warn('No se pudo activar el aviso push:',
+                        (err && (err.name || err.message)) || 'sin detalle');
+                    var esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+                    var instalada = window.navigator.standalone === true ||
+                        (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+                    $('btnNotifTexto').textContent = (esIOS && !instalada)
+                        ? 'En iPhone: agrega esta página a tu pantalla de inicio'
+                        : 'Aviso solo con la página abierta';
+                });
             }).catch(function () { $('btnNotifTexto').textContent = 'Avisos no disponibles'; });
         }
 
@@ -627,6 +681,13 @@
         }
 
         // ---- Arranque --------------------------------------------------------------
+        // El navegador sólo deja sonar después de que el cliente toque la pantalla, y el aviso
+        // puede llegar mucho después: se desbloquea el audio al primer contacto, aunque no pulse
+        // "Avisarme cuando esté listo".
+        ['pointerdown', 'touchstart', 'keydown'].forEach(function (ev) {
+            window.addEventListener(ev, desbloquearAudio, { once: true, passive: true });
+        });
+
         $('btnNotif').addEventListener('click', activarAvisos);
         $('avisoListoOk').addEventListener('click', ocultarAvisoListo);
         $('btnReintentar').addEventListener('click', function () { cargar(false); });

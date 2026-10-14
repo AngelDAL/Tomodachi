@@ -1,12 +1,5 @@
 # Baseline de deuda de estilos — generado por scripts/verificar-estilos.sh
 # Formato: tipo:archivo<TAB>conteo. Solo se reduce, nunca se sube a mano.
-bloqueante:public/js/PlanManager.js	1
-bloqueante:public/js/cobro.js	1
-bloqueante:public/js/finance.js	2
-bloqueante:public/js/promotions.js	1
-bloqueante:public/js/sales.js	2
-bloqueante:public/js/super_admin.js	1
-bloqueante:public/js/tables.js	2
 emoji:includes/Mail.class.php	5
 emoji:public/digital-group-display.html	1
 emoji:public/digital-signage-display.html	1

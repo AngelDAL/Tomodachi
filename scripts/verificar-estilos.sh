@@ -30,9 +30,9 @@ mapfile -t FILES < <(find public api includes -type f \
     \( -name '*.html' -o -name '*.js' -o -name '*.css' -o -name '*.php' \) \
     -not -path '*/lib/*' -not -path '*/vendor/*' 2>/dev/null | sort)
 
-CSS_ALL=(); JS_ALL=()
+CSS_ALL=(); JS_ALL=(); HTML_ALL=()
 for f in "${FILES[@]}"; do
-    case "$f" in *.css) CSS_ALL+=("$f") ;; *.js) JS_ALL+=("$f") ;; esac
+    case "$f" in *.css) CSS_ALL+=("$f") ;; *.js) JS_ALL+=("$f") ;; *.html) HTML_ALL+=("$f") ;; esac
 done
 
 # Tokens definidos en cualquier CSS o en bloques <style>/<script> de los HTML
@@ -90,10 +90,12 @@ done
 # ---------- 2. alert / confirm / prompt ----------
 hdr "2. alert() / confirm() / prompt() (prohibido: usar showNotification y <dialog>)"
 AC_TOTAL=0
-for f in "${JS_ALL[@]}"; do
-    n=$(grep -oP '(?<![a-zA-Z0-9_.$])(alert|confirm|prompt)\s*\(' "$f" 2>/dev/null | wc -l)
-    nc=$(grep -oP '^\s*(//|\*|/\*).*\b(alert|confirm|prompt)\s*\(' "$f" 2>/dev/null | wc -l)
-    n=$((n-nc))
+# El conteo lo hace scripts/contar-bloqueantes.py: respeta comentarios y cadenas, cuenta
+# `window.prompt(...)` (el lookbehind anterior se lo comía por el punto) y revisa también
+# los <script> en línea del HTML, que antes no aparecían en ningún reporte.
+for f in "${JS_ALL[@]}" "${HTML_ALL[@]}"; do
+    n=$(python3 "$ROOT/scripts/contar-bloqueantes.py" "$f" 2>/dev/null | awk -F'\t' '{s+=$2} END{print s+0}')
+    n=${n:-0}
     if [ "$n" -gt 0 ]; then
         evaluar "bloqueante:$f" "$f" "$n" "llamada(s) bloqueante(s)"
         AC_TOTAL=$((AC_TOTAL+n))

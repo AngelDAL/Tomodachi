@@ -81,9 +81,13 @@ try {
             Response::validationError(['theme_config' => 'Debe ser un objeto JSON']);
         }
 
-        // Tema oscuro personalizado (opcional): si llega, se guarda tal cual;
-        // si no llega, se conserva el existente (null → el frontend deriva).
-        $theme_config_dark = isset($data['theme_config_dark']) ? $data['theme_config_dark'] : null;
+        // Tema oscuro personalizado (opcional): si llega, se guarda (fusionado con el que había);
+        // si NO llega, se conserva el existente (null → el frontend deriva).
+        // OJO con `isset()`: es falso también cuando la clave viene en null, así que "no lo
+        // mandaron" y "lo mandan vacío" quedaban iguales y cualquier POST parcial BORRABA el tema
+        // oscuro guardado. Con `array_key_exists` sí se distinguen.
+        $traeTemaOscuro = array_key_exists('theme_config_dark', $data);
+        $theme_config_dark = $traeTemaOscuro ? $data['theme_config_dark'] : null;
         if ($theme_config_dark !== null && !is_array($theme_config_dark)) {
             Response::validationError(['theme_config_dark' => 'Debe ser un objeto JSON']);
         }
@@ -141,12 +145,53 @@ try {
             $theme_config_dark = $sanitizeTheme($theme_config_dark);
         }
 
-        $theme_json = json_encode($theme_config);
-        $dark_json = $theme_config_dark !== null ? json_encode($theme_config_dark) : null;
-        $db->update(
-            'UPDATE stores SET theme_config = ?, theme_config_dark = ?, updated_at = NOW() WHERE store_id = ?',
-            [$theme_json, $dark_json, $store_id]
+        // FUSIÓN, no reemplazo. Esta API es de uso parcial: un POST con sólo `primary_color`
+        // —lo que manda un agente o un script— REEMPLAZABA el tema entero y borraba el papel
+        // tapiz y las superficies de la tienda. Hallazgo de la revisión del 13-oct-2026:
+        // cualquier equipo que después entrara a esa tienda heredaba el fondo de otra.
+        // El panel de Personalización manda el objeto completo, así que para él el resultado
+        // es el mismo; para un POST parcial, ahora se respeta lo que ya estaba guardado.
+        // Para QUITAR una clave sigue habiendo camino: `wallpaper_url: ''` (y el tema oscuro
+        // completo con `theme_config_dark: null`).
+        $guardado = $db->selectOne(
+            'SELECT theme_config, theme_config_dark FROM stores WHERE store_id = ?',
+            [$store_id]
         );
+        $previoClaro = [];
+        if (!empty($guardado['theme_config'])) {
+            $decodificado = json_decode($guardado['theme_config'], true);
+            if (is_array($decodificado)) { $previoClaro = $decodificado; }
+        }
+        $theme_config = array_merge($previoClaro, $theme_config);
+
+        if ($traeTemaOscuro) {
+            $previoOscuro = [];
+            if (!empty($guardado['theme_config_dark'])) {
+                $decodificado = json_decode($guardado['theme_config_dark'], true);
+                if (is_array($decodificado)) { $previoOscuro = $decodificado; }
+            }
+            if ($theme_config_dark !== null) {
+                $theme_config_dark = array_merge($previoOscuro, $theme_config_dark);
+                $dark_json = json_encode($theme_config_dark);
+            } else {
+                $dark_json = null;   // lo mandaron en null: se borra a propósito
+            }
+            $db->update(
+                'UPDATE stores SET theme_config = ?, theme_config_dark = ?, updated_at = NOW() WHERE store_id = ?',
+                [json_encode($theme_config), $dark_json, $store_id]
+            );
+        } else {
+            // No hablaron del tema oscuro: se deja como está (antes se borraba).
+            $theme_config_dark = null;
+            if (!empty($guardado['theme_config_dark'])) {
+                $decodificado = json_decode($guardado['theme_config_dark'], true);
+                $theme_config_dark = is_array($decodificado) ? $decodificado : null;
+            }
+            $db->update(
+                'UPDATE stores SET theme_config = ?, updated_at = NOW() WHERE store_id = ?',
+                [json_encode($theme_config), $store_id]
+            );
+        }
 
         Response::success([
             'store_id'          => $store_id,

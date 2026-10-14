@@ -284,6 +284,9 @@
         var audioCtx = null;
         var avisoYaMostrado = false;
         var intentos = 0;
+        // true cuando lo que se está viendo salió del teléfono (no del servidor): entonces se sigue
+        // reintentando aunque ya haya algo pintado.
+        var pedidoDeCache = false;
 
         var $ = function (id) { return document.getElementById(id); };
         function dinero(n) { return '$' + (Number(n) || 0).toFixed(2); }
@@ -506,7 +509,7 @@
 
             pintarPago();
             pintarEspera();
-            $('problema').classList.add('hidden');
+            if (!pedidoDeCache) $('problema').classList.add('hidden');
             if (pedido.status === 'ready') mostrarAvisoListo();
         }
 
@@ -579,6 +582,21 @@
             $('estadoSub').textContent = 'Revisa el enlace o toca Reintentar';
         }
 
+        // La última lectura buena se guarda en el propio teléfono: si al recargar la red falla (en
+        // móvil pasa, y ya pasó: un `NetworkError` en Firefox dejaba la página vacía), el cliente
+        // sigue viendo su pedido en vez de nada.
+        function claveCachePedido() { return 'pedido_ultimo_' + token; }
+        function guardarCachePedido(p) {
+            try { localStorage.setItem(claveCachePedido(), JSON.stringify(p)); } catch (e) {}
+        }
+        function leerCachePedido() {
+            try {
+                var raw = localStorage.getItem(claveCachePedido());
+                var p = raw ? JSON.parse(raw) : null;
+                return (p && p.counter_order_id) ? p : null;
+            } catch (e) { return null; }
+        }
+
         function cargar(silencioso) {
             if (!token) return Promise.resolve(false);
             return fetch('../api/counter/track.php?t=' + encodeURIComponent(token), { cache: 'no-store' })
@@ -587,15 +605,35 @@
                     if (!res.ok || !res.d || !res.d.success) throw new Error((res.d && res.d.message) || 'No se pudo leer el pedido');
                     var anterior = pedido ? pedido.status : null;
                     pedido = res.d.data.order;
+                    pedidoDeCache = false;
+                    guardarCachePedido(pedido);
                     vapidPublica = res.d.data.vapid_public_key || '';
                     pintar();
                     if (anterior && anterior !== 'ready' && pedido.status === 'ready') mostrarAvisoListo();
                     return true;
                 })
                 .catch(function (err) {
-                    if (!silencioso) mostrarProblema((err && err.message) || 'No pudimos cargar tu pedido.');
+                    // El motivo técnico va a la consola; al cliente se le dice algo que entienda.
+                    console.warn('No se pudo leer el pedido:', (err && (err.name || err.message)) || 'sin detalle');
+                    if (!pedido) {
+                        var guardado = leerCachePedido();
+                        if (guardado) { pedido = guardado; pintar(); }
+                    }
+                    if (pedido) {
+                        // Se sigue viendo el pedido (de memoria o del teléfono): aviso bajito y la
+                        // franja de estado se queda como está, que es lo que el cliente mira.
+                        pedidoDeCache = true;
+                        if (!silencioso) mostrarSinConexion();
+                    } else if (!silencioso) {
+                        mostrarProblema('No pudimos conectar con el servidor. Revisa tu internet y toca Reintentar.');
+                    }
                     return false;
                 });
+        }
+
+        function mostrarSinConexion() {
+            $('problema').classList.remove('hidden');
+            $('problemaTexto').textContent = 'Sin conexión: te mostramos la última información que llegó. Toca Reintentar para actualizar.';
         }
 
         var reintentoWS = 0;
@@ -745,6 +783,8 @@
         }
         setInterval(function () { if (!document.hidden) enviarPresencia(); }, 20000);
         document.addEventListener('visibilitychange', function () { if (!document.hidden) { enviarPresencia(); cargar(true); } });
+        // Al recuperar la conexión se pregunta de inmediato: el cliente estaba viendo lo guardado.
+        window.addEventListener('online', function () { cargar(true); });
 
         if (!token) {
             mostrarProblema('Falta el identificador del pedido en el enlace.');
@@ -759,7 +799,7 @@
             conectarWS();
             // Si no cargó, se reintenta sin depender del WebSocket (redes móviles flojas).
             setInterval(function () {
-                if (pedido) return;
+                if (pedido && !pedidoDeCache) return;
                 if (intentos >= 40) return;
                 intentos++;
                 cargar(intentos > 2);

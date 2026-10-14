@@ -17,7 +17,7 @@ css/sales.css	52	4816932d8c698c214158641500a926b2
 css/scanner_overlay.css	10	ddec787393fac0826aa9a65008753ccc
 css/sidebar-modern.css	6	fa87435b6b0664ddeb4d90b71e8bfc04
 css/variables.css	6	121f6dc3caf9e57ee6af96f4db718ffd
-js/app.js	12	1fd1d24ce2db5b0ce2bf34038d3b768b
+js/app.js	13	0eef634f1bb47420b30eddf69acf7238
 js/cobro.js	2	c01638082a57f1bc9d4ba847e920761b
 js/comandas.js	8	206117b743abb2e728fb03d142849dd6
 js/compositor-inventario.js	6	4e622bf2a6c5c0d6a97ea2fbd9372a7d
@@ -37,6 +37,6 @@ js/sidebar-loader.js	13	d7bd4144a7a76b248ea7dd147f97b6cd
 js/stock-rule.js	1	5818188ed9718de696abeffe9d55909f
 js/stripe-pos.js	1	a261c0664235a63f2da8b4ae3c1194c7
 js/tables.js	14	634367a5559ae43b3d1d999791efe96a
-js/theme-init.js	5	84c4823f7e3077d695902be1c728089c
+js/theme-init.js	6	01f7b3e5431984cc96e3c5b6147e9579
 js/tour.js	4	45da073236616c3069a0bf1977d34178
 js/ws-realtime.js	2	b357936b125ec13aa14a31808ac7dad5

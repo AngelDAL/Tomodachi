@@ -384,6 +384,10 @@ async function loadStoreSettings() {
             // 1. Aplicar el tema INMEDIATAMENTE. Antes se esperaba hasta 5 s
             // por #navStoreLogo; durante esa espera dashboard/Chart.js leían
             // variables base y quedaban mezcladas con el tema final.
+            // El tema de ESTA tienda es el autoritativo: lo que la caché del dispositivo haya
+            // pintado antes (pos_theme_config no distingue tienda) se borra primero, o al entrar a
+            // otra tienda se quedaban sus colores sueltos y su imagen de fondo.
+            limpiarTemaAjeno();
             if (store.theme_config) {
                 let localTheme = {};
                 try {
@@ -465,6 +469,24 @@ async function loadStoreSettings() {
     } finally {
         // Nunca dejamos esperando a una pantalla si settings.php falla.
         markStoreThemeReady();
+    }
+}
+
+/**
+ * Quita el tema que la caché del dispositivo pudo pintar ANTES de que respondiera
+ * `api/stores/settings.php`.
+ *
+ * La caché (`pos_theme_config`) es del EQUIPO, no de la tienda: al entrar a otra tienda trae los
+ * colores y el papel tapiz de la anterior. `apply()` no borra lo que la config nueva no define (a
+ * propósito: también recibe configs parciales), así que sin esta limpieza quedaban puestos el fondo
+ * y los colores sueltos de la otra tienda. Se limpia y enseguida se aplica la config de ESTA tienda:
+ * lo que la tienda no defina cae al valor por defecto del CSS, que es el que corresponde.
+ *
+ * No toca el modo claro/oscuro ni el formato regional: eso sí es preferencia del equipo.
+ */
+function limpiarTemaAjeno() {
+    if (window.ThemeColorUtils && typeof window.ThemeColorUtils.clearTheme === 'function') {
+        window.ThemeColorUtils.clearTheme();
     }
 }
 

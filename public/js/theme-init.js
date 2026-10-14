@@ -235,6 +235,39 @@
         ].forEach(v => root.style.removeProperty(v));
     }
 
+    /**
+     * Borra TODO lo que el tema escribe inline en <html>: marca, variantes, contraste, superficies
+     * y papel tapiz. Se usa cuando llega la config AUTORITATIVA de la tienda.
+     *
+     * POR QUÉ EXISTE: la caché del dispositivo (`pos_theme_config`) NO distingue de qué tienda es, y
+     * `theme-init.js` la pinta ANTES de que responda `api/stores/settings.php` (es lo que evita el
+     * parpadeo). Al entrar a otra tienda, entonces, la página arranca con los colores y el FONDO de
+     * la anterior. `apply()` —a propósito— NO borra lo que no viene en la config recibida (hay
+     * llamadores que le pasan configs parciales, como la sugerencia de tema oscuro), así que:
+     *   · una tienda SIN `wallpaper_url` dejaba puesta la FOTO de la tienda anterior, y
+     *   · cualquier color que la tienda nueva no defina se quedaba con el de la otra.
+     * Limpiar antes de aplicar la config de la tienda arregla las dos cosas: lo que no venga cae al
+     * valor por defecto del CSS (que es el correcto), y el fondo se quita de verdad.
+     *
+     * NO toca el modo claro/oscuro (`data-theme`): eso sí es preferencia del dispositivo.
+     */
+    function clearTheme() {
+        const root = document.documentElement;
+        // Marca + variantes derivadas (todo lo que escriben apply() y brandVariants()).
+        ['--primary-color', '--secondary-color', '--success-color', '--danger-color',
+         '--warning-color', '--info-color',
+         '--primary-dark', '--primary-darker', '--primary-light', '--primary-lighter',
+         '--primary-shadow', '--primary-hover', '--primary-active', '--secondary-light',
+         '--text-on-primary', '--primary-contrast', '--secondary-contrast'
+        ].forEach(v => root.style.removeProperty(v));
+        clearDerived();
+        // Papel tapiz: clase, tamaño y las dos variables.
+        root.classList.remove('has-wallpaper');
+        root.removeAttribute('data-wallpaper-size');
+        root.style.removeProperty('--wallpaper-image');
+        root.style.removeProperty('--wallpaper-opacity');
+    }
+
     // ============================================================
     // PAPEL TAPIZ DE LA TIENDA (imagen de fondo)
     //
@@ -317,7 +350,7 @@
         root.classList.add('has-wallpaper');
     }
 
-    window.ThemeColorUtils = { hexToRgb, mix, rgbaOf, luminance, contrastText, brandVariants, darkSurfaces, apply, applySurfaces, clearDerived, applyWallpaper, normalizeWallpaperUrl, normalizeWallpaperOpacity, normalizeWallpaperSize, absolutizeWallpaperUrl, DARK_CONFIG_VERSION: 2 };
+    window.ThemeColorUtils = { hexToRgb, mix, rgbaOf, luminance, contrastText, brandVariants, darkSurfaces, apply, applySurfaces, clearDerived, clearTheme, applyWallpaper, normalizeWallpaperUrl, normalizeWallpaperOpacity, normalizeWallpaperSize, absolutizeWallpaperUrl, DARK_CONFIG_VERSION: 2 };
 
     // Versión del modo oscuro. Los temas oscuros guardados por el usuario
     // (localStorage 'pos_theme_config_dark' / stores.theme_config_dark) que NO

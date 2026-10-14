@@ -31,9 +31,9 @@ js/promotion-client-rules.js	2	f525b40be81b26d1d735dc3c4122f50c
 js/promotions-v2.js	2	685ed10b0d03cee6df18d1e6908aa8d9
 js/promotions.js	6	bef366591e374f4e4cfde6b767284727
 js/purchases.js	16	7ac2a18ced1bcc6972646958c6d717a7
-js/sales.js	49	990a8df9fcf584681354e4a533115b75
+js/sales.js	50	df21fad79422010da4e0a9859b7a637b
 js/scanner.js	4	828bfb406a22a54d12d54517a37faece
-js/sidebar-loader.js	13	d7bd4144a7a76b248ea7dd147f97b6cd
+js/sidebar-loader.js	14	06d9f482238009cd889c09594b1812a6
 js/stock-rule.js	1	5818188ed9718de696abeffe9d55909f
 js/stripe-pos.js	1	a261c0664235a63f2da8b4ae3c1194c7
 js/tables.js	14	634367a5559ae43b3d1d999791efe96a

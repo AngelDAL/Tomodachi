@@ -245,6 +245,9 @@ function setupToggles() {
 }
 
 function initPOS() {
+  // La sesión de la pantalla del cliente se restaura AQUÍ: es cuando el HTML ya fijó
+  // `data-store-id` (ver el comentario de restaurarSesionDisplay).
+  restaurarSesionDisplay();
   // Inicializar referencias a elementos DOM
   searchInput = document.getElementById('searchInput');
   searchResults = document.getElementById('searchResults');
@@ -344,13 +347,13 @@ function initPOS() {
   }
 
   // Persistencia: Cargar carritos guardados (Sistema Multi-Tab)
-  const savedCarts = localStorage.getItem('tomodachi_multi_carts');
+  const savedCarts = leerPorTienda('tomodachi_multi_carts');
   if (savedCarts) {
     try {
       MULTI_CARTS = JSON.parse(savedCarts);
     } catch (e) {
       console.error('Error cargando carritos guardados', e);
-      localStorage.removeItem('tomodachi_multi_carts');
+      borrarPorTienda('tomodachi_multi_carts');
     }
   } else {
     // Migración: Si existe un carrito antiguo simple, moverlo al tab 1
@@ -383,7 +386,7 @@ function initPOS() {
   renderCart();
 
   // Cargar ventas suspendidas
-  const savedParked = localStorage.getItem('tomodachi_parked_sales');
+  const savedParked = leerPorTienda('tomodachi_parked_sales');
   if (savedParked) {
     try {
       PARKED_SALES = JSON.parse(savedParked);
@@ -638,7 +641,7 @@ function bindEvents() {
                 const json = await res.json();
                 if (json.success && json.data && json.data.session) {
                     displaySessionUUID = json.data.session;
-                    try { localStorage.setItem('tomodachi_display_session', displaySessionUUID); } catch (_) {}
+                    guardarPorTienda('tomodachi_display_session', displaySessionUUID);
                     saveDisplayCartToken(json.data.cart_token);
                     startSyncInterval();
                     showNotification('Enlace generado. El display se actualiza automáticamente', 'success');
@@ -1240,7 +1243,7 @@ function handleStepBtnClick(btn) {
 function renderCart() {
   // Persistencia: Guardar estado multi-carrito
   MULTI_CARTS[CURRENT_TAB] = CART;
-  localStorage.setItem('tomodachi_multi_carts', JSON.stringify(MULTI_CARTS));
+  guardarPorTienda('tomodachi_multi_carts', JSON.stringify(MULTI_CARTS));
 
   // Actualizar badge de la pestaña actual
   updateTabBadge(CURRENT_TAB);
@@ -1833,7 +1836,7 @@ function renderHistoryView() {
   if (!container) return;
 
   // Cargar datos
-  const saved = localStorage.getItem('tomodachi_recent_sales');
+  const saved = leerPorTienda('tomodachi_recent_sales');
   let sales = [];
   try { sales = JSON.parse(saved) || []; } catch (e) { }
 
@@ -1871,7 +1874,7 @@ let RECENT_SALES = [];
 
 function saveSaleToHistory(saleData) {
   // Cargar historial existente
-  const saved = localStorage.getItem('tomodachi_recent_sales');
+  const saved = leerPorTienda('tomodachi_recent_sales');
   if (saved) {
     try { RECENT_SALES = JSON.parse(saved); } catch (e) { }
   }
@@ -1882,13 +1885,13 @@ function saveSaleToHistory(saleData) {
   // Mantener solo las últimas 10 ventas
   if (RECENT_SALES.length > 10) RECENT_SALES = RECENT_SALES.slice(0, 10);
 
-  localStorage.setItem('tomodachi_recent_sales', JSON.stringify(RECENT_SALES));
+  guardarPorTienda('tomodachi_recent_sales', JSON.stringify(RECENT_SALES));
 }
 
 // Función global para el onclick del HTML inyectado
 window.reprintTicketFromHistory = function (index) {
   // Recargar desde storage por si acaso
-  const saved = localStorage.getItem('tomodachi_recent_sales');
+  const saved = leerPorTienda('tomodachi_recent_sales');
   let sales = [];
   try { sales = JSON.parse(saved) || []; } catch (e) { }
 
@@ -2647,7 +2650,7 @@ async function codiCompleteSale() {
       if (printEnabled) printTicket(ticketData);
       CART = [];
       MULTI_CARTS[CURRENT_TAB] = [];
-      localStorage.setItem('tomodachi_multi_carts', JSON.stringify(MULTI_CARTS));
+      guardarPorTienda('tomodachi_multi_carts', JSON.stringify(MULTI_CARTS));
       renderCart();
       if (discountInput) discountInput.value = '0';
       if (taxInput) taxInput.value = '0';
@@ -2853,7 +2856,7 @@ async function finalizeSale() {
 
       CART = [];
       MULTI_CARTS[CURRENT_TAB] = []; // Limpiar del storage global
-      localStorage.setItem('tomodachi_multi_carts', JSON.stringify(MULTI_CARTS));
+      guardarPorTienda('tomodachi_multi_carts', JSON.stringify(MULTI_CARTS));
 
       renderCart();
       if (discountInput) discountInput.value = '0';
@@ -2879,7 +2882,7 @@ async function finalizeSale() {
         // Limpiar carrito (quedó encolado)
         CART = [];
         MULTI_CARTS[CURRENT_TAB] = [];
-        localStorage.setItem('tomodachi_multi_carts', JSON.stringify(MULTI_CARTS));
+        guardarPorTienda('tomodachi_multi_carts', JSON.stringify(MULTI_CARTS));
         renderCart();
       } catch (qe) {
         showNotification('No se pudo guardar la venta offline', 'error');
@@ -3117,6 +3120,54 @@ function savePrefs(prefs) {
   try {
     const storeId = document.body.getAttribute('data-store-id') || '1';
     localStorage.setItem('pos_prefs_' + storeId, JSON.stringify(prefs));
+  } catch {}
+}
+
+// ============================================================
+// Claves de localStorage POR TIENDA
+// Un mismo equipo (navegador) puede atender varias tiendas; con claves
+// globales, los carritos, ventas suspendidas, el historial y la sesión
+// del display se filtraban de una tienda a otra.
+// ============================================================
+
+/** Clave de localStorage POR TIENDA (mismo patrón que pos_prefs_). */
+function claveDeTienda(nombre) {
+  const storeId = document.body.getAttribute('data-store-id') || '1';
+  return nombre + '_' + storeId;
+}
+
+/**
+ * Lee una clave que ahora es por tienda, ADOPTANDO el valor viejo (sin tienda) una sola vez.
+ * El valor viejo no dice de qué tienda era; se adopta para no perder trabajo en curso (ventas
+ * suspendidas, carritos) y se borra para que no vuelva a filtrarse a otra tienda.
+ */
+function leerPorTienda(nombre) {
+  try {
+    const propia = localStorage.getItem(claveDeTienda(nombre));
+    if (propia !== null) return propia;
+    const vieja = localStorage.getItem(nombre);
+    if (vieja === null) return null;
+    // Adoptar a la tienda actual y borrar la clave global: si quedara,
+    // la siguiente tienda que la lea también la adoptaría.
+    try {
+      localStorage.setItem(claveDeTienda(nombre), vieja);
+      localStorage.removeItem(nombre);
+    } catch {}
+    return vieja;
+  } catch {
+    return null;
+  }
+}
+
+function guardarPorTienda(nombre, valor) {
+  try {
+    localStorage.setItem(claveDeTienda(nombre), valor);
+  } catch {}
+}
+
+function borrarPorTienda(nombre) {
+  try {
+    localStorage.removeItem(claveDeTienda(nombre));
   } catch {}
 }
 
@@ -3686,7 +3737,7 @@ function parkCurrentSale() {
   };
 
   PARKED_SALES.push(saleData);
-  localStorage.setItem('tomodachi_parked_sales', JSON.stringify(PARKED_SALES));
+  guardarPorTienda('tomodachi_parked_sales', JSON.stringify(PARKED_SALES));
 
   CART = [];
   // localStorage.removeItem('tomodachi_cart'); // Ya no se usa
@@ -3705,7 +3756,7 @@ function restoreParkedSale(id) {
 
   CART = [...PARKED_SALES[index].items];
   PARKED_SALES.splice(index, 1);
-  localStorage.setItem('tomodachi_parked_sales', JSON.stringify(PARKED_SALES));
+  guardarPorTienda('tomodachi_parked_sales', JSON.stringify(PARKED_SALES));
 
   renderCart();
   updateParkedSalesIndicator();
@@ -4594,11 +4645,19 @@ function getDisplayCartToken() {
   return null;
 }
 
-// Restaurar UUID de sesión guardado
-try {
-  const saved = localStorage.getItem('tomodachi_display_session');
-  if (saved) displaySessionUUID = saved;
-} catch (_) {};
+// Restaurar la UUID de sesión de la pantalla del cliente.
+//
+// A PROPÓSITO no se hace al cargar este archivo: la clave es POR TIENDA y `data-store-id` lo pone
+// `sales.html` DESPUÉS de esperar la sesión (`await checkSession()`), así que en el arranque del
+// script el atributo todavía no existe, `claveDeTienda` caería al respaldo '1' y la UUID de
+// CUALQUIER tienda se guardaría en la clave de la tienda 1 (y se leería de ahí). Se llama desde
+// `initPOS()`, que corre justo después de que el HTML fije el atributo.
+function restaurarSesionDisplay() {
+  try {
+    const saved = leerPorTienda('tomodachi_display_session');
+    if (saved) displaySessionUUID = saved;
+  } catch (_) {}
+}
 
 // Inicializar sistema de pantalla de cliente
 function initCustomerDisplay() {
@@ -4841,7 +4900,7 @@ function sendCartToCustomerDisplay() {
       if (!json || !json.success || !json.data) return;
       if (json.data.session && json.data.session !== displaySessionUUID) {
         displaySessionUUID = json.data.session;
-        try { localStorage.setItem('tomodachi_display_session', displaySessionUUID); } catch (_) {}
+        guardarPorTienda('tomodachi_display_session', displaySessionUUID);
       }
       saveDisplayCartToken(json.data.cart_token);
     }).catch(err => console.warn('cart_sync error:', err));

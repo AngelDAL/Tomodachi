@@ -821,7 +821,13 @@
     vaciarArmed = false;
     CART.length = 0;
     if (typeof MULTI_CARTS !== 'undefined') MULTI_CARTS[CURRENT_TAB || '1'] = [];
-    try { localStorage.setItem('tomodachi_multi_carts', JSON.stringify(MULTI_CARTS)); } catch (e) {}
+    // Clave por tienda: un mismo equipo puede atender varias tiendas y el
+    // carrito vaciado no debe filtrarse a otra. Se lee el atributo directamente
+    // para no depender de las funciones de sales.js.
+    try {
+      const storeId = document.body.getAttribute('data-store-id') || 1;
+      localStorage.setItem('tomodachi_multi_carts_' + storeId, JSON.stringify(MULTI_CARTS));
+    } catch (e) {}
     if (typeof renderCart === 'function') renderCart();
     if (typeof playSound === 'function') playSound('Sound3.mp3');
     if (typeof showNotification === 'function') showNotification('Carrito vaciado', 'info');

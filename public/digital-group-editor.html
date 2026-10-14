@@ -215,11 +215,20 @@ function renderScreensList(){
 function selectScreen(i){selected=i;renderAll()}
 function setOrient(i,v){screens[i].orientation=v;renderAll()}
 function removeScreen(i){
-  if(!confirm('Eliminar esta pantalla del layout?'))return;
+  // `removeScreen` no es `async`, así que no se puede esperar aquí sin cambiar su contrato
+  // (la llama un `onclick` y no devuelve nada). Se encadena la confirmación en tarjeta.
+  confirmarAccion({
+    titulo: 'Quitar pantalla',
+    mensaje: 'Se quitará esta pantalla del layout y sus pasos asociados.',
+    textoConfirmar: 'Quitar',
+    peligroso: true
+  }).then(function (ok) {
+  if(!ok)return;
   screens.splice(i,1);
   // quitar steps de esa pantalla
   steps=steps.filter(s=>s.screen_id!==(screens[i]?.id));
   selected=null; renderAll();
+  });
 }
 $('btnAddScreen').onclick=()=>{
   const label=$('newScreenLabel').value.trim()||('Pantalla '+(screens.length+1));

@@ -340,20 +340,28 @@
     function cobrarParte(indice, metodo) {
         const p = cb.partes[indice];
         if (!p || cb.partesCobradas[p.share_id]) return;
-        let reference = null;
+        const terminar = (reference) => {
+            cb.pagos.push({
+                method: metodo,
+                amount: redondear(Number(p.amount)),
+                reference: reference,
+                is_tip: false,
+                share_id: Number(p.share_id),
+                etiqueta: p.label || 'Parte',
+            });
+            cb.partesCobradas[p.share_id] = true;
+            pintar();
+        };
         if (metodo === 'transfer') {
-            reference = prompt('Clave de rastreo de la transferencia (opcional):') || null;
+            // pedirTexto reemplaza a prompt() sin bloquear el hilo. El || null
+            // original se conserva: pedirTexto devuelve null si se cancela o
+            // el campo queda vacío.
+            pedirTexto({ titulo: 'Clave de rastreo', etiqueta: 'CLABE o CEP' }).then(clave => {
+                terminar(clave || null);
+            });
+            return;
         }
-        cb.pagos.push({
-            method: metodo,
-            amount: redondear(Number(p.amount)),
-            reference: reference,
-            is_tip: false,
-            share_id: Number(p.share_id),
-            etiqueta: p.label || 'Parte',
-        });
-        cb.partesCobradas[p.share_id] = true;
-        pintar();
+        terminar(null);
     }
 
     // =========================================================

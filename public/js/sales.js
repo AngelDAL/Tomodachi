@@ -3349,7 +3349,14 @@ function handleContextAction(action, productId, categoryId) {
     case 'hide': {
       const prod = allProducts.find(p => p.product_id === productId);
       const name = prod ? prod.product_name : 'Producto';
-      if (confirm(`¿Ocultar "${name}" del Punto de Venta? No se eliminará del inventario.`)) {
+      // confirmarAccion es asíncrona: se encadena con .then para no convertir
+      // handleContextAction en async (su retorno no se usa, pero se respeta el contrato).
+      confirmarAccion({
+        titulo: 'Ocultar del Punto de Venta',
+        mensaje: `¿Ocultar "${name}"? No se eliminará del inventario.`,
+        textoConfirmar: 'Ocultar'
+      }).then(ok => {
+        if (!ok) return;
         fetch('../api/inventory/products.php', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -3363,7 +3370,7 @@ function handleContextAction(action, productId, categoryId) {
             showNotification(data.message || 'Error al ocultar', 'error');
           }
         }).catch(() => showNotification('Error de red', 'error'));
-      }
+      });
       break;
     }
   }
@@ -3750,17 +3757,35 @@ function restoreParkedSale(id) {
   const index = PARKED_SALES.findIndex(s => s.id === id);
   if (index === -1) return;
 
+  // confirmarAccion es asíncrona: restoreParkedSale no es async y no se convierte
+  // para no alterar su contrato; el cuerpo original va dentro del .then.
+  // El índice se re-resuelve al confirmar: mientras el modal está abierto el
+  // arreglo de suspendidas puede cambiar y un índice capturado apuntaría mal.
+  const aplicar = () => {
+    const i = PARKED_SALES.findIndex(s => s.id === id);
+    if (i === -1) return;
+    CART = [...PARKED_SALES[i].items];
+    PARKED_SALES.splice(i, 1);
+    guardarPorTienda('tomodachi_parked_sales', JSON.stringify(PARKED_SALES));
+
+    renderCart();
+    updateParkedSalesIndicator();
+    showNotification('Venta recuperada', 'success');
+  };
+
   if (CART.length > 0) {
-    if (!confirm('Hay productos en el carrito actual. ¿Deseas sobrescribirlos?')) return;
+    confirmarAccion({
+      titulo: 'Reemplazar el carrito',
+      mensaje: 'Hay productos en el carrito actual. ¿Deseas sobrescribirlos?',
+      textoConfirmar: 'Reemplazar',
+      peligroso: true
+    }).then(ok => {
+      if (ok) aplicar();
+    });
+    return;
   }
 
-  CART = [...PARKED_SALES[index].items];
-  PARKED_SALES.splice(index, 1);
-  guardarPorTienda('tomodachi_parked_sales', JSON.stringify(PARKED_SALES));
-
-  renderCart();
-  updateParkedSalesIndicator();
-  showNotification('Venta recuperada', 'success');
+  aplicar();
 }
 
 function updateParkedSalesIndicator() {

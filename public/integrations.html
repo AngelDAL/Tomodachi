@@ -631,15 +631,22 @@
         }
 
         function revokeToken(id, name) {
-            if (!confirm('¿Revocar la clave "' + name + '"? Ya no podrá usarse.')) return;
-            fetch('../api/api_tokens/revoke.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ token_id: id })
-            }).then(r => r.json()).then(d => {
-                if (d.success) loadTokens();
-                else alert(d.message || 'Error al revocar');
+            confirmarAccion({
+                titulo: 'Revocar clave',
+                mensaje: '¿Revocar la clave "' + name + '"? Ya no podrá usarse.',
+                textoConfirmar: 'Revocar',
+                peligroso: true
+            }).then(ok => {
+                if (!ok) return;
+                fetch('../api/api_tokens/revoke.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ token_id: id })
+                }).then(r => r.json()).then(d => {
+                    if (d.success) loadTokens();
+                    else showNotification(d.message || 'Error al revocar', 'error');
+                });
             });
         }
 

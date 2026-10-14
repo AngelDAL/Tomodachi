@@ -643,7 +643,7 @@
         async function saveCustomer() {
             const id = document.getElementById('customerIdInput').value;
             const name = document.getElementById('customerNameInput').value.trim();
-            if (!name) { alert('El nombre es requerido'); return; }
+            if (!name) { showNotification('El nombre es requerido', 'warning'); return; }
             const payload = {
                 full_name: name,
                 phone: document.getElementById('customerPhoneInput').value.trim(),
@@ -663,13 +663,19 @@
                 closeCustomerModal();
                 loadCustomers(document.getElementById('customerSearchInput').value.trim(), currentStatusFilter, currentBalanceFilter);
             } catch (e) {
-                alert('Error: ' + e.message);
+                showNotification('Error: ' + e.message, 'error');
             }
         }
 
         async function deleteCustomer(id) {
             const c = CUSTOMERS.find(x => x.customer_id === id);
-            if (!confirm(`¿Eliminar al cliente "${c ? c.full_name : ''}"? No se puede si tiene saldo pendiente.`)) return;
+            const ok = await confirmarAccion({
+                titulo: 'Eliminar cliente',
+                mensaje: `¿Eliminar al cliente "${c ? c.full_name : ''}"? No se puede si tiene saldo pendiente.`,
+                textoConfirmar: 'Eliminar',
+                peligroso: true
+            });
+            if (!ok) return;
             try {
                 const res = await fetch('../api/customers/customers.php', {
                     method: 'DELETE',
@@ -680,7 +686,7 @@
                 if (!data.success) throw new Error(data.message);
                 loadCustomers(document.getElementById('customerSearchInput').value.trim(), currentStatusFilter, currentBalanceFilter);
             } catch (e) {
-                alert('Error: ' + e.message);
+                showNotification('Error: ' + e.message, 'error');
             }
         }
 
@@ -816,7 +822,7 @@
                 `;
                 document.getElementById('customerDetailModal').showModal();
             } catch (e) {
-                alert('Error: ' + e.message);
+                showNotification('Error: ' + e.message, 'error');
             }
         }
 
@@ -840,12 +846,12 @@
 
         async function submitPayment(customerId) {
             const amount = parseFloat(document.getElementById('paymentAmountInput').value);
-            if (!amount || amount <= 0) { alert('Monto inválido'); return; }
+            if (!amount || amount <= 0) { showNotification('Monto inválido', 'warning'); return; }
             const payment_method = document.getElementById('paymentMethodInput').value;
             // De qué caja entra el dinero (solo aplica al efectivo)
             const regSel = document.getElementById('paymentRegisterSelect');
             const register_id = regSel ? (Number(regSel.value) || 0) : 0;
-            if (payment_method === 'cash' && !register_id) { alert('Elige la caja que recibe el abono'); return; }
+            if (payment_method === 'cash' && !register_id) { showNotification('Elige la caja que recibe el abono', 'warning'); return; }
             try {
                 const res = await fetch('../api/customers/payments.php', {
                     method: 'POST',
@@ -857,7 +863,7 @@
                 openCustomerDetail(customerId);
                 loadCustomers(document.getElementById('customerSearchInput').value.trim(), currentStatusFilter, currentBalanceFilter);
             } catch (e) {
-                alert('Error: ' + e.message);
+                showNotification('Error: ' + e.message, 'error');
             }
         }
     </script>

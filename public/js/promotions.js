@@ -60,7 +60,9 @@ let confirmCallback = null;
 function showConfirmModal(title, message, onConfirm) {
     const modal = document.getElementById('confirmModal');
     if (!modal) {
-        if (confirm(message)) onConfirm(); // Fallback
+        // Respaldo si el HTML no trae el modal del sistema: mismo flujo, sin
+        // confirm() (bloquea el hilo y no se puede estilizar).
+        confirmarAccion({ titulo: title, mensaje: message }).then(ok => { if (ok) onConfirm(); });
         return;
     }
 

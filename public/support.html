@@ -442,6 +442,11 @@
                             <textarea id="message" name="message" class="form-control" placeholder="Cuéntanos más detalles..." required></textarea>
                         </div>
 
+                        <p id="supportEstado" role="status" aria-live="polite"
+                           style="display: none; margin: 0 0 12px; font-size: .875rem; align-items: center; gap: 8px;">
+                            <i class="fas fa-triangle-exclamation" aria-hidden="true"></i><span></span>
+                        </p>
+
                         <button type="submit" class="btn btn-primary btn-submit">
                             <span class="loading-spinner"></span> Enviar Mensaje
                         </button>
@@ -564,6 +569,18 @@
         // Form Handling
         const form = document.getElementById('supportForm');
         const overlay = document.getElementById('successOverlay');
+
+        // Aviso en línea, sin bloquear: antes estos dos errores eran `alert()`, que congelan
+        // la pestaña y no se pueden estilizar (regla 2 de la guía).
+        function avisoSoporte(mensaje) {
+            const estado = document.getElementById('supportEstado');
+            if (!estado) return;
+            estado.querySelector('span').textContent = mensaje;
+            estado.style.color = 'var(--danger-color)';
+            estado.style.display = 'flex';
+            clearTimeout(estado._temporizador);
+            estado._temporizador = setTimeout(function () { estado.style.display = 'none'; }, 6000);
+        }
         
         form.addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -597,11 +614,11 @@
                     overlay.classList.add('active');
                     form.reset();
                 } else {
-                    alert('Error: ' + result.message);
+                    avisoSoporte('Error: ' + result.message);
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('Hubo un error al conectar con el servidor. Por favor intenta más tarde.');
+                avisoSoporte('Hubo un error al conectar con el servidor. Por favor intenta más tarde.');
             } finally {
                 submitBtn.disabled = false;
                 spinner.style.display = 'none';

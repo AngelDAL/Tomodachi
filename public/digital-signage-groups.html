@@ -84,7 +84,7 @@ async function load(){
 
 function openEditor(id){location.href=`digital-group-editor.html?group=${id}`}
 async function dupe(id){
-  if(!confirm('Duplicar este grupo como plantilla (versión alternativa)?'))return;
+  if(!await confirmarAccion({titulo:'Duplicar grupo',mensaje:'Se creará una copia de este grupo como plantilla (versión alternativa).',textoConfirmar:'Duplicar'}))return;
   const r=await call('display_groups/duplicate.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({group_id:id})});
   toast(r.success?'Grupo duplicado como plantilla':(r.message||'Error'),r.success?'':'error');
   if(r.success)load();
@@ -95,7 +95,7 @@ async function toggleAct(id,act){
   if(r.success)load();
 }
 async function del(id){
-  if(!confirm('Eliminar este grupo de pantallas?'))return;
+  if(!await confirmarAccion({titulo:'Eliminar grupo',mensaje:'Se eliminará este grupo de pantallas. Esta acción no se puede deshacer.',textoConfirmar:'Eliminar',peligroso:true}))return;
   const r=await call('display_groups/delete.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({group_id:id})});
   toast(r.success?'Eliminado':(r.message||'Error'),r.success?'':'error');
   if(r.success)load();

@@ -368,7 +368,9 @@ function notify(msg, type) {
     if (typeof showNotification === 'function') {
         showNotification(msg, type);
     } else {
-        alert(msg);
+        // Sin showNotification no hay aviso visible, pero alert() está prohibido
+        // (bloquea el hilo y no se puede estilizar). Se deja rastro en consola.
+        console.warn(msg);
     }
 }
 
@@ -525,7 +527,14 @@ document.getElementById('addTerminalForm').addEventListener('submit', async (e) 
 });
 
 async function deleteTerminal(terminalId) {
-    if (!confirm('¿Estás seguro de eliminar esta terminal?')) return;
+    // deleteTerminal ya es async: se usa await directo.
+    const ok = await confirmarAccion({
+        titulo: 'Eliminar terminal',
+        mensaje: '¿Estás seguro de eliminar esta terminal?',
+        textoConfirmar: 'Eliminar',
+        peligroso: true
+    });
+    if (!ok) return;
     
     try {
         const res = await fetch('../api/terminals/delete.php', {

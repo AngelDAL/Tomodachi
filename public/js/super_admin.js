@@ -151,7 +151,13 @@ async function loadAllUsers() {
 
 async function toggleStatus(userId, currentStatus) {
     const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
-    if (!confirm(`¿Estás seguro de cambiar el estado a ${newStatus}?`)) return;
+    // toggleStatus ya es async: se usa await directo.
+    const ok = await confirmarAccion({
+        titulo: 'Cambiar estado',
+        mensaje: `¿Estás seguro de cambiar el estado a ${newStatus}?`,
+        textoConfirmar: 'Cambiar'
+    });
+    if (!ok) return;
 
     try {
         const res = await fetch('../api/users/update.php', {

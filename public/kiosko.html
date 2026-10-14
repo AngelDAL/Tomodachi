@@ -1976,6 +1976,31 @@
         });
     }
 
+    // Aviso del panel de configuración sin `alert()`: bloquean el hilo y en una pantalla
+    // táctil de kiosko se sienten como si se hubiera colgado. Reusa el mismo renglón que ya
+    // usa el "Guardado" correcto, en rojo mientras dura el error.
+    function avisoKiosko(mensaje) {
+        var est = document.getElementById('kCfgEstado');
+        if (!est) return;
+        est.textContent = '';
+        var icono = document.createElement('i');
+        icono.className = 'fas fa-triangle-exclamation';
+        est.appendChild(icono);
+        est.appendChild(document.createTextNode(' ' + mensaje));
+        est.style.color = 'var(--danger-color)';
+        est.style.display = 'inline';
+        clearTimeout(est._temporizador);
+        est._temporizador = setTimeout(function () {
+            est.style.display = 'none';
+            est.textContent = '';
+            var ok = document.createElement('i');
+            ok.className = 'fas fa-check';
+            est.appendChild(ok);
+            est.appendChild(document.createTextNode(' Guardado'));
+            est.style.color = 'var(--success-color)';
+        }, 4000);
+    }
+
     function subirAnuncio(file) {
         var fd = new FormData();
         fd.append('file', file);
@@ -1985,14 +2010,14 @@
             .then(function (r) { return r.json(); })
             .then(function (d) {
                 btn.disabled = false;
-                if (!d || d.success === false) { alert((d && (d.data && d.data.file)) || 'No se pudo subir'); return; }
+                if (!d || d.success === false) { avisoKiosko((d && (d.data && d.data.file)) || 'No se pudo subir'); return; }
                 var u = d.data && d.data.url;
                 var tipo = (d.data && d.data.type) || (String(file.type).indexOf('video') === 0 ? 'video' : 'image');
                 ssAssets.push({ type: tipo, url: u });
                 document.getElementById('kCfgFile').value = '';
                 pintarPanelConfig();
             })
-            .catch(function () { btn.disabled = false; alert('Error de red al subir'); });
+            .catch(function () { btn.disabled = false; avisoKiosko('Error de red al subir'); });
     }
 
     function guardarAnuncios() {
@@ -2013,9 +2038,9 @@
             .then(function (d) {
                 var est = document.getElementById('kCfgEstado');
                 if (d && d.success === true) { est.style.display = 'inline'; setTimeout(function () { est.style.display = 'none'; }, 2200); }
-                else alert('No se pudo guardar');
+                else avisoKiosko('No se pudo guardar');
             })
-            .catch(function () { alert('Error al guardar'); });
+            .catch(function () { avisoKiosko('Error al guardar'); });
     }
 
     function storeInfo() {

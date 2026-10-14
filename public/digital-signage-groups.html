@@ -12,10 +12,10 @@
 .head h1{font-size:1.25rem;margin:0;display:flex;align-items:center;gap:.6rem}
 .btn{border:0;border-radius:8px;padding:.55rem .9rem;font:inherit;font-size:.85rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:.45rem}
 .btn-primary{background:var(--primary-color);color:#fff}
-.btn-secondary{background:var(--bg-secondary,#eef2f7);color:var(--text-primary,#333);border:1px solid var(--border-color,#d5dfe8)}
+.btn-secondary{background:var(--bg-light,#eef2f7);color:var(--text-color,#333);border:1px solid var(--border-color,#d5dfe8)}
 .btn-danger{background:#fee2e2;color:#b91c1c}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem}
-.gcard{background:var(--card-bg,#fff);border:1px solid var(--border-color,#e2e8f0);border-radius:12px;padding:1rem;cursor:pointer;transition:box-shadow .15s;display:flex;flex-direction:column;gap:.5rem}
+.gcard{background:var(--bg-card,#fff);border:1px solid var(--border-color,#e2e8f0);border-radius:12px;padding:1rem;cursor:pointer;transition:box-shadow .15s;display:flex;flex-direction:column;gap:.5rem}
 .gcard:hover{box-shadow:0 8px 20px rgba(0,0,0,.1)}
 .gcard .gname{font-weight:700;font-size:.95rem;display:flex;align-items:center;gap:.5rem}
 .gcard .gmeta{font-size:.75rem;color:var(--text-muted,#64748b)}
@@ -27,12 +27,12 @@
 .empty i{font-size:2.2rem;opacity:.35;margin-bottom:.6rem;display:block}
 .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:#1e293b;color:#fff;padding:.85rem 1.25rem;border-radius:8px;z-index:100;transform:translateY(100px);opacity:0;transition:all .3s}.toast.show{transform:none;opacity:1}
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:200;padding:1rem}
-.modal-box{background:var(--card-bg,#fff);border-radius:12px;padding:1.25rem;width:100%;max-width:380px;color:var(--text-primary,#333)}
+.modal-box{background:var(--bg-card,#fff);border-radius:12px;padding:1.25rem;width:100%;max-width:380px;color:var(--text-color,#333)}
 .modal-box h3{margin:0 0 1rem}
 .modal-box input{width:100%;padding:.6rem;border:1px solid var(--border-color,#d5dfe8);border-radius:8px;font:inherit;margin-bottom:.8rem}
 .modal-box .modal-actions{display:flex;gap:.5rem;justify-content:flex-end}
 </style>
-    <link rel="stylesheet" href="css/design-system.css?v=10">
+    <link rel="stylesheet" href="css/design-system.css?v=11">
     <script src="lib/animejs/anime.min.js" defer></script>
     <script src="js/design-system.js?v=7" defer></script>
 </head>

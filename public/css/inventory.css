@@ -1667,7 +1667,10 @@
 
 .profit-item.highlight {
     background: var(--primary-light);
-    border-color: rgba(var(--primary-rgb), 0.2);
+    /* `--primary-rgb` no existe en el catálogo, así que `rgba(var(--primary-rgb), .2)` era una
+       declaración inválida y el borde se caía sin más. `--primary-shadow` es la tinta de marca
+       translúcida del proyecto (mismo uso que en los botones). */
+    border-color: var(--primary-shadow);
 }
 
 .profit-item.highlight .value {
@@ -2108,7 +2111,7 @@
 .ai-column h3 {
     font-size: 1rem;
     margin-bottom: 15px;
-    color: var(--text-primary);
+    color: var(--text-color);
     border-bottom: 2px solid var(--primary-color);
     padding-bottom: 5px;
     display: inline-block;

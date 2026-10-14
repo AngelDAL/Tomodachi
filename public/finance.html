@@ -10,7 +10,7 @@
     <!-- FontAwesome -->
     <link rel="stylesheet" href="lib/fontawesome/css/all.min.css?v=4">
     <link rel="stylesheet" href="css/main.css?v=23">
-    <link rel="stylesheet" href="css/design-system.css?v=10">
+    <link rel="stylesheet" href="css/design-system.css?v=11">
     <link rel="stylesheet" href="css/sidebar-modern.css?v=6">
     <link rel="stylesheet" href="css/mobile-nav.css?v=5">
     <link rel="stylesheet" href="css/dashboard.css?v=5">
@@ -40,14 +40,14 @@
             background: var(--bg-card);
             border-radius: var(--ds-radius-lg, 20px);
             padding: 20px;
-            box-shadow: var(--ds-shadow-md, var(--card-shadow));
+            box-shadow: var(--ds-shadow-md, var(--shadow-md));
             border: 1px solid var(--border-light);
             border-left: 5px solid var(--border-color);
             transition: transform .25s cubic-bezier(.4,0,.2,1), box-shadow .3s ease, border-color .25s ease;
         }
         .terminal-card:hover {
             transform: translateY(-3px);
-            box-shadow: var(--ds-shadow-lg, var(--card-shadow));
+            box-shadow: var(--ds-shadow-lg, var(--shadow-md));
         }
         .terminal-card.open {
             border-left-color: var(--success-color);
@@ -119,7 +119,7 @@
             background: linear-gradient(135deg, var(--bg-card), color-mix(in srgb, var(--primary-color) 4%, var(--bg-card)));
             padding: 20px;
             border-radius: var(--ds-radius-lg, 20px);
-            box-shadow: var(--ds-shadow-md, var(--card-shadow));
+            box-shadow: var(--ds-shadow-md, var(--shadow-md));
             border: 1px solid var(--border-light);
             display: flex;
             align-items: center;
@@ -128,7 +128,7 @@
         }
         .summary-card:hover {
             transform: translateY(-2px);
-            box-shadow: var(--ds-shadow-lg, var(--card-shadow));
+            box-shadow: var(--ds-shadow-lg, var(--shadow-md));
         }
         .summary-icon {
             font-size: 2.8rem;

@@ -2137,7 +2137,7 @@ function updateApartadoHint() {
 
   // Lo que se sumará al saldo del cliente (en verde si la venta queda liquidada)
   pendienteEl.textContent = formatCurrency(pendiente);
-  pendienteEl.style.color = pendiente > 0 ? '' : 'var(--ds-success, #10b981)';
+  pendienteEl.style.color = pendiente > 0 ? '' : 'var(--success-color, #10b981)';
   if (box) box.classList.toggle('is-error', excede);
 
   // Saldo resultante: sirve para no pasarse del límite de crédito y para planear

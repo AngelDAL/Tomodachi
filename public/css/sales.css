@@ -3006,7 +3006,7 @@
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
-  color: var(--ds-success, #10b981);
+  color: var(--success-color, #10b981);
   font-size: 1.1rem;
   font-weight: 600;
   animation: codiPaidPop 0.4s ease;
@@ -3019,7 +3019,7 @@
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
-  color: var(--ds-danger, #ef4444);
+  color: var(--danger-color, #ef4444);
   font-size: 0.95rem;
   text-align: center;
 }
@@ -3258,7 +3258,7 @@
     border: 1.5px solid var(--border-color);
     border-radius: 10px;
     background: var(--bg-card);
-    color: var(--text-dark);
+    color: var(--text-color);
     font-family: inherit;
     font-size: 0.9rem;
 }
@@ -3313,7 +3313,7 @@
 
 .picker-customer-info strong {
     display: block;
-    color: var(--text-dark);
+    color: var(--text-color);
     font-size: 0.92rem;
     white-space: nowrap;
     overflow: hidden;

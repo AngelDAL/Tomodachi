@@ -8,14 +8,14 @@
     <link rel="manifest" href="manifest.json">
 <style>
 body{margin:0;font-family:inherit}
-.topbar{height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 1.1rem;background:var(--card-bg,#fff);border-bottom:1px solid var(--border-color,#e2e8f0);gap:.75rem}
+.topbar{height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 1.1rem;background:var(--bg-card,#fff);border-bottom:1px solid var(--border-color,#e2e8f0);gap:.75rem}
 .topbar .tt{display:flex;align-items:center;gap:.6rem;font-weight:700;min-width:0}
 .topbar .ta{display:flex;gap:.5rem;align-items:center}
 .btn{border:0;border-radius:8px;padding:.5rem .85rem;font:inherit;font-size:.83rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:.4rem}
 .btn-primary{background:var(--primary-color);color:#fff}
-.btn-secondary{background:var(--bg-secondary,#eef2f7);color:var(--text-primary,#333);border:1px solid var(--border-color,#d5dfe8)}
+.btn-secondary{background:var(--bg-light,#eef2f7);color:var(--text-color,#333);border:1px solid var(--border-color,#d5dfe8)}
 .btn-danger{background:#fee2e2;color:#b91c1c}
-.back{width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;background:var(--bg-secondary,#eef2f7);border:1px solid var(--border-color,#d5dfe8);cursor:pointer;color:var(--text-primary)}
+.back{width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;background:var(--bg-light,#eef2f7);border:1px solid var(--border-color,#d5dfe8);cursor:pointer;color:var(--text-color)}
 
 .editor{display:grid;grid-template-columns:1fr 340px;height:calc(100vh - 52px)}
 .editor-canvas{position:relative;background:#1b2531;overflow:hidden}
@@ -27,12 +27,12 @@ body{margin:0;font-family:inherit}
 .group-screen-box .s-title{font-weight:600}
 .group-screen-box .handle{position:absolute;right:3px;bottom:3px;width:14px;height:14px;background:#ffd54a;border-radius:2px;cursor:se-resize;z-index:3}
 
-.sidebar{background:var(--bg-primary,#fff);border-left:1px solid var(--border-color,#e2e8f0);overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:.9rem}
+.sidebar{background:var(--bg-body,#fff);border-left:1px solid var(--border-color,#e2e8f0);overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:.9rem}
 .sidebar h3{margin:0 0 .4rem;font-size:.9rem;color:var(--text-muted,#64748b);text-transform:uppercase;letter-spacing:.04em}
 .ginfo input{width:100%;padding:.55rem;border:1px solid var(--border-color,#d5dfe8);border-radius:8px;font:inherit;font-size:.85rem;margin-top:.3rem}
 
 .screens-list{display:flex;flex-direction:column;gap:.45rem;max-height:180px;overflow-y:auto}
-.screen-row{display:flex;align-items:center;gap:.4rem;padding:.4rem .5rem;border:1px solid var(--border-color,#d5dfe8);border-radius:7px;font-size:.78rem;background:var(--card-bg,#fff)}
+.screen-row{display:flex;align-items:center;gap:.4rem;padding:.4rem .5rem;border:1px solid var(--border-color,#d5dfe8);border-radius:7px;font-size:.78rem;background:var(--bg-card,#fff)}
 .screen-row.active{border-color:var(--primary-color);background:color-mix(in srgb,var(--primary-color,#3a6ea5) 10%,transparent)}
 .screen-row .lbl{flex:1;font-weight:600;cursor:pointer}
 .screen-row .sz{font-size:.7rem;color:var(--text-muted,#64748b)}
@@ -42,7 +42,7 @@ body{margin:0;font-family:inherit}
 .addscreen input{flex:1;padding:.45rem;border:1px solid var(--border-color,#d5dfe8);border-radius:7px;font:inherit;font-size:.8rem}
 
 .steps-list{display:flex;flex-direction:column;gap:.8rem;max-height:270px;overflow-y:auto}
-.step-card{border:1px solid var(--border-color,#d5dfe8);border-radius:8px;padding:.6rem;background:var(--card-bg,#fff)}
+.step-card{border:1px solid var(--border-color,#d5dfe8);border-radius:8px;padding:.6rem;background:var(--bg-card,#fff)}
 .step-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem;font-size:.78rem;font-weight:700}
 .step-card .assign{display:flex;flex-direction:column;gap:.35rem}
 .assign-row{display:flex;align-items:center;gap:.35rem;font-size:.75rem}
@@ -51,7 +51,7 @@ body{margin:0;font-family:inherit}
 
 .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:#1e293b;color:#fff;padding:.85rem 1.25rem;border-radius:8px;z-index:100;transform:translateY(100px);opacity:0;transition:all .3s}.toast.show{transform:none;opacity:1}
 </style>
-    <link rel="stylesheet" href="css/design-system.css?v=10">
+    <link rel="stylesheet" href="css/design-system.css?v=11">
     <script src="lib/animejs/anime.min.js" defer></script>
     <script src="js/design-system.js?v=7" defer></script>
 </head>

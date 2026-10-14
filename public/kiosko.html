@@ -1118,9 +1118,6 @@
         // ============================================================
         // Configuración
         // ============================================================
-        const CHANNEL_NAME = 'tomodachi_pos_sync';
-        let broadcastChannel = null;
-
         const urlParams = new URLSearchParams(window.location.search);
         const SESSION_UUID = urlParams.get('cart');
         // Credencial de lectura del carrito (TAB-25-X3): la UUID sola ya no abre el carrito.
@@ -1128,14 +1125,6 @@
         // leer por la sesión del navegador (mismo equipo) o no leerá nada.
         const CART_TOKEN = urlParams.get('token') || '';
         const CART_EXP = urlParams.get('exp') || '';
-
-        function cartSyncUrl() {
-            let url = '../api/sales/cart_sync.php?session=' + encodeURIComponent(SESSION_UUID);
-            if (CART_TOKEN && CART_EXP) {
-                url += '&exp=' + encodeURIComponent(CART_EXP) + '&token=' + encodeURIComponent(CART_TOKEN);
-            }
-            return url;
-        }
 
         // Elementos del DOM
         const productsList = document.getElementById('productsList');
@@ -1153,145 +1142,7 @@
         const qrUrlBox = document.getElementById('qrUrlBox');
         const qrCopyBtn = document.getElementById('qrCopyBtn');
 
-        // ============================================================
-        // Polling: consulta al servidor cada 2s (tablets, otros dispositivos)
-        // ============================================================
-        let pollTimer = null;
-        let realtimeSocket = null;
-        let realtimeReconnectTimer = null;
-        let lastRealtimeSignature = '';
-        let lastJson = '';
         let displayRenderToken = 0;
-
-        function receiveDisplayUpdate(data) {
-            const signature = JSON.stringify([data.cart || [], data.totals || {}, data.activeTab || null]);
-            if (signature === lastRealtimeSignature) return;
-            lastRealtimeSignature = signature;
-            updateDisplay(data.cart || [], data.totals || null, data.storeInfo || null, data.activeTab || null);
-            setConnStatus('connected');
-        }
-
-        // WebSocket es el transporte principal. HTTP solo recupera el estado
-        // inicial y funciona como respaldo lento si no hay socket.
-        function realtimeUrl() {
-            const scheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            return `${scheme}//${window.location.host}/ws/?session=${encodeURIComponent(SESSION_UUID)}`;
-        }
-
-        function startFallbackPolling() {
-            if (pollTimer || !SESSION_UUID) return;
-            pollTimer = setInterval(pollOnce, 15000);
-        }
-
-        function connectRealtime() {
-            if (!SESSION_UUID || (realtimeSocket && (realtimeSocket.readyState === WebSocket.OPEN || realtimeSocket.readyState === WebSocket.CONNECTING))) return;
-            if (realtimeReconnectTimer) clearTimeout(realtimeReconnectTimer);
-            try {
-                realtimeSocket = new WebSocket(realtimeUrl());
-                realtimeSocket.onopen = () => {
-                    stopPolling();
-                    setConnStatus('connected');
-                };
-                realtimeSocket.onmessage = (event) => {
-                    try {
-                        const data = JSON.parse(event.data);
-                        if (data.type === 'cart_update') receiveDisplayUpdate(data);
-                    } catch (_) {}
-                };
-                realtimeSocket.onclose = () => {
-                    realtimeSocket = null;
-                    startFallbackPolling();
-                    realtimeReconnectTimer = setTimeout(connectRealtime, 3000);
-                };
-                realtimeSocket.onerror = () => realtimeSocket?.close();
-            } catch (_) {
-                startFallbackPolling();
-                realtimeReconnectTimer = setTimeout(connectRealtime, 3000);
-            }
-        }
-
-        function startPolling() {
-            if (!SESSION_UUID) {
-                setConnStatus('ready');
-                return;
-            }
-            setConnStatus('connecting');
-            pollOnce();
-            connectRealtime();
-        }
-
-        function stopPolling() {
-            if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
-        }
-
-        async function pollOnce() {
-            try {
-                const url = cartSyncUrl() + '&_=' + Date.now();
-                const res = await fetch(url);
-                const json = await res.json();
-                if (json.success && json.data) {
-                    // Hash del contenido real del carrito (product_id + quantity + unit_price)
-                    let contentHash = '0';
-                    if (json.data.cart && json.data.cart.length > 0) {
-                        const parts = json.data.cart.map(i => i.product_id + ':' + i.quantity + ':' + i.unit_price);
-                        contentHash = parts.join('|');
-                    }
-                    if (contentHash !== lastJson) {
-                        lastJson = contentHash;
-                        receiveDisplayUpdate(json.data);
-                    }
-                    setConnStatus('connected');
-                } else {
-                    setConnStatus('disconnected');
-                }
-            } catch (e) {
-                setConnStatus('disconnected');
-            }
-        }
-
-        // ============================================================
-        // BroadcastChannel (misma ventana/pestaña — popup del POS)
-        // ============================================================
-        function initBroadcastChannel() {
-            try {
-                broadcastChannel = new BroadcastChannel(CHANNEL_NAME);
-                broadcastChannel.onmessage = (event) => {
-                    if (event.data.type === 'cart_update') {
-                        receiveDisplayUpdate(event.data);
-                    }
-                };
-                setTimeout(() => {
-                    broadcastChannel.postMessage({ type: 'request_data' });
-                }, 500);
-            } catch (error) {
-                initLocalStorageFallback();
-            }
-        }
-
-        function initLocalStorageFallback() {
-            window.addEventListener('storage', (e) => {
-                if (e.key === 'tomodachi_customer_display') {
-                    try {
-                        const data = JSON.parse(e.newValue || '{}');
-                        receiveDisplayUpdate(data);
-                    } catch (_) {}
-                }
-            });
-            try {
-                const stored = localStorage.getItem('tomodachi_customer_display');
-                if (stored) {
-                    const data = JSON.parse(stored);
-                    receiveDisplayUpdate(data);
-                }
-            } catch (_) {}
-        }
-
-        // ============================================================
-        // Estado de conexión
-        // ============================================================
-        function setConnStatus(status) {
-            // El kiosco no muestra texto de conexión para conservar un encabezado limpio.
-        }
 
         // ============================================================
         // QR / Link panel
@@ -1791,9 +1642,6 @@
             // kiosko_qr), no del carrito de una mesa; lo enchufa initKiosko() de abajo.
             if (typeof initKiosko === 'function') {
                 initKiosko();
-            } else {
-                startPolling();
-                initBroadcastChannel();
             }
 
             console.log('Pantalla de cliente iniciada');
@@ -1830,14 +1678,6 @@
                     }
                 });
             }, 3000); // Cambiar imagen cada 3 segundos
-        });
-
-        // Limpiar al cerrar
-        window.addEventListener('beforeunload', () => {
-            if (broadcastChannel) broadcastChannel.close();
-            if (realtimeReconnectTimer) clearTimeout(realtimeReconnectTimer);
-            if (realtimeSocket) realtimeSocket.close();
-            stopPolling();
         });
     </script>
 

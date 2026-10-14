@@ -64,7 +64,12 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            position: relative;
+            /* Fijo y por encima del protector (z-index 10): el menú de la esquina
+               debe seguir alcanzable cuando los anuncios cubren la pantalla. */
+            position: fixed;
+            top: 15px;
+            right: 40px;
+            z-index: 55;
         }
 
         /* Reloj centrado */
@@ -80,12 +85,12 @@
 
         /* Menú compacto de acciones del kiosco. */
         .display-actions-toggle {
-            background: transparent;
+            background: color-mix(in srgb, var(--dark-color) 45%, transparent);
             border: 1px solid rgba(255, 255, 255, 0.35);
             color: var(--text-on-primary);
             border-radius: 8px;
             width: 40px;
-            height: 36px;
+            height: 40px;
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -126,6 +131,7 @@
             font-size: 0.9rem;
         }
         .display-action:hover { background: color-mix(in srgb, var(--text-on-primary) 12%, transparent); }
+        .display-action[hidden] { display: none; }
 
         .logo {
             display: flex;
@@ -616,6 +622,11 @@
                 padding: 10px 16px;
             }
 
+            .header-controls {
+                top: 10px;
+                right: 16px;
+            }
+
             .logo-img {
                 width: 40px;
                 height: 40px;
@@ -716,6 +727,11 @@
 
             .header {
                 padding: 8px 12px;
+            }
+
+            .header-controls {
+                top: 8px;
+                right: 12px;
             }
 
             .logo {
@@ -835,6 +851,11 @@
                 padding: 6px 12px;
             }
 
+            .header-controls {
+                top: 6px;
+                right: 12px;
+            }
+
             .logo-img {
                 width: 32px;
                 height: 32px;
@@ -907,45 +928,81 @@
         /* ── Protector de pantalla: anuncios/uso libre cuando no hay pedido ── */
         .k-ss { position: fixed; inset: 0; z-index: 10; overflow: hidden; display: none; align-items: center; justify-content: center; }
         .k-ss.activo { display: flex; }
-        .k-ss-slide { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; transition: opacity 1s ease; }
+        .k-ss-slide { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; transition: opacity 1s ease, transform 1s ease; }
         .k-ss-slide img, .k-ss-slide video { width: 100%; height: 100%; object-fit: contain; }
         .k-ss-vacio { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; color: var(--text-muted); font-size: 1.5rem; }
 
-        /* Rueda de configuración de anuncios: solo en reposo */
-        .k-cfg-btn { position: fixed; top: 14px; right: 14px; z-index: 55; width: 44px; height: 44px;
-            border-radius: 12px; border: 1px solid rgba(255,255,255,.2); background: rgba(0,0,0,.4);
-            color: #fff; font-size: 1.15rem; display: none; align-items: center; justify-content: center; }
-        .k-cfg-btn.visible { display: inline-flex; }
-        .k-cfg-btn:hover { color: var(--primary-color); border-color: var(--primary-color); }
-
-        /* Panel de configuración de anuncios */
+        /* Panel de configuración de anuncios (se abre desde el menú de la esquina) */
         .k-cfg { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.5);
             display: none; align-items: center; justify-content: center; padding: 20px; }
         .k-cfg.abierto { display: flex; }
         .k-cfg-caja { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 18px;
-            max-width: 520px; width: 100%; max-height: 92vh; overflow-y: auto; padding: 20px;
+            max-width: 600px; width: 100%; max-height: 92vh; overflow-y: auto; padding: 20px;
             display: flex; flex-direction: column; gap: 14px; }
         .k-cfg-titulo { display: flex; justify-content: space-between; align-items: center; }
         .k-cfg-caja h3 { font-size: 1.3rem; color: var(--text-color); }
         .k-cfg-hint { font-size: .9rem; color: var(--text-muted); }
-        .k-cfg-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
-        .k-cfg-item { display: flex; flex-direction: column; gap: 8px; align-items: stretch; text-align: center;
+        /* Sugerencia de encuadre según la pantalla donde se abre el kiosko */
+        .k-cfg-sug { display: none; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between;
+            background: var(--primary-light, var(--bg-light)); border: 1px solid var(--border-color);
+            border-radius: 12px; padding: 10px 12px; }
+        .k-cfg-sug.visible { display: flex; }
+        .k-cfg-sug-texto { font-size: .88rem; color: var(--text-color); flex: 1; min-width: 200px; line-height: 1.4; }
+        .k-cfg-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+        .k-cfg-item { display: flex; flex-direction: column; gap: 8px; align-items: stretch;
             background: var(--bg-light); border: 1px solid var(--border-color); border-radius: 12px; padding: 8px; }
-        .k-cfg-item.drag-over { border-color: var(--primary-color); outline: 2px dashed var(--primary-color); }
-        .k-cfg-item img, .k-cfg-item video { width: 100%; height: 74px; object-fit: cover; border-radius: 8px; background: #000; }
-        .k-cfg-item .k-cfg-act { display: flex; justify-content: space-between; align-items: center; }
-        .k-cfg-item .k-cfg-tipo { font-size: .72rem; color: var(--text-muted); }
-        .k-cfg-item button { background: none; border: none; color: var(--danger-color); font-size: 1rem; }
+        .k-cfg-item.arrastrando { opacity: .55; border-color: var(--primary-color); }
+        .k-cfg-item-top { display: flex; align-items: center; gap: 4px; }
+        .k-cfg-item-media { flex: 1; min-width: 0; overflow: hidden; border-radius: 8px; }
+        .k-cfg-item img, .k-cfg-item video { width: 100%; height: 74px; object-fit: cover; border-radius: 8px;
+            background: var(--dark-color); display: block; }
+        .k-cfg-item .k-cfg-tipo { font-size: .72rem; color: var(--text-muted); text-align: center; }
+        .k-cfg-mano, .k-cfg-item .k-cfg-quitar { width: 40px; height: 40px; flex: none;
+            display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);
+            border-radius: 10px; background: var(--bg-card); color: var(--text-color); cursor: pointer;
+            touch-action: none; font-size: .95rem; padding: 0; }
+        .k-cfg-item .k-cfg-quitar { color: var(--danger-color); }
+        .k-cfg-modos { display: flex; flex-direction: column; gap: 6px; }
+        .k-cfg-modos button { min-height: 40px; border: 1px solid var(--border-color); border-radius: 10px;
+            background: var(--bg-card); color: var(--text-color); font: inherit; font-size: .82rem; font-weight: 600; cursor: pointer; }
+        .k-cfg-modos button.active { background: var(--primary-color); border-color: var(--primary-color); color: var(--text-on-primary); }
         .k-cfg-fila { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .k-cfg-fila label { display: flex; flex-direction: column; gap: 5px; font-size: .88rem; color: var(--text-muted); font-weight: 600; }
-        .k-cfg-fila input, .k-cfg-fila select { background: var(--bg-card); color: var(--text-color); border: 1px solid var(--border-color);
-            border-radius: 10px; padding: 10px 12px; font-size: .95rem; font-family: inherit; }
+        .k-cfg-fila label, .k-cfg-campo { display: flex; flex-direction: column; gap: 5px; font-size: .88rem; color: var(--text-muted); font-weight: 600; }
+        .k-cfg-fila input { background: var(--bg-card); color: var(--text-color); border: 1px solid var(--border-color);
+            border-radius: 10px; padding: 10px 12px; font-size: .95rem; font-family: inherit; min-height: 40px; }
+        .k-cfg-trans { display: flex; gap: 6px; }
+        .k-cfg-trans button { flex: 1; min-height: 40px; border: 1px solid var(--border-color); border-radius: 10px;
+            background: var(--bg-card); color: var(--text-color); font: inherit; font-size: .82rem; font-weight: 600; cursor: pointer; padding: 6px 4px; }
+        .k-cfg-trans button.active { background: var(--primary-color); border-color: var(--primary-color); color: var(--text-on-primary); }
+        /* Editor de recorte: la vista previa usa la misma proporción que la pantalla real */
+        .k-cfg-crop { display: none; flex-direction: column; gap: 10px; border: 1px solid var(--border-color);
+            border-radius: 12px; padding: 12px; background: var(--bg-card); }
+        .k-cfg-crop.abierto { display: flex; }
+        .k-cfg-crop-titulo { display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+            font-weight: 700; color: var(--text-color); font-size: .95rem; }
+        .k-cfg-crop-marco { position: relative; overflow: hidden; border-radius: 12px; border: 1px solid var(--border-color);
+            background: var(--dark-color); margin: 0 auto; touch-action: none; cursor: grab; }
+        .k-cfg-crop-marco:active { cursor: grabbing; }
+        .k-cfg-crop-media { position: absolute; inset: 0; }
+        .k-cfg-crop-media img, .k-cfg-crop-media video { width: 100%; height: 100%; display: block; }
+        .k-cfg-zoom { display: flex; flex-direction: column; gap: 4px; font-size: .88rem; color: var(--text-muted); font-weight: 600; }
+        .k-cfg-zoom input[type=range] { width: 100%; min-height: 40px; accent-color: var(--primary-color); cursor: pointer; }
         .k-cfg-subir { display: flex; gap: 8px; align-items: center; }
-        .k-cfg-subir input[type=file] { flex: 1; color: var(--text-color); font-size: .9rem; }
-        .k-btn { border: none; border-radius: 10px; padding: 10px 13px; font-weight: 700; cursor: pointer; font-size: .95rem; }
-        .k-btn-p { background: var(--primary-color); color: #06231f; }
+        .k-cfg-subir input[type=file] { flex: 1; color: var(--text-color); font-size: .9rem; min-height: 40px; }
+        .k-btn { border: none; border-radius: 10px; padding: 10px 13px; font-weight: 700; cursor: pointer; font-size: .95rem; min-height: 40px; }
+        .k-btn-p { background: var(--primary-color); color: var(--text-on-primary, #06231f); }
         .k-btn-g { background: none; border: 1px solid var(--border-color); color: var(--text-color); }
         .k-cfg-pie { display: flex; justify-content: flex-end; gap: 10px; align-items: center; }
+
+        /* Aviso emergente del kiosko (showNotification no se carga aquí: app.js no entra) */
+        .k-toast { position: fixed; top: 72px; left: 50%; transform: translateX(-50%) translateY(-8px);
+            z-index: var(--capa-aviso, 200000); display: flex; align-items: center; gap: 8px; padding: 12px 18px;
+            border-radius: 12px; background: var(--bg-card); color: var(--text-color); border: 1px solid var(--border-color);
+            box-shadow: var(--ds-shadow-lg); opacity: 0; transition: opacity .3s ease, transform .3s ease;
+            font-size: .95rem; max-width: min(90vw, 420px); }
+        .k-toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .k-toast-success { border-left: 4px solid var(--success-color); }
+        .k-toast-error { border-left: 4px solid var(--danger-color); }
 
         /* ── Legibilidad forzada: contraste alto y fuentes claras en toda la pantalla ── */
         body { font-family: 'Google Sans Flex', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
@@ -996,27 +1053,40 @@
 
     <!-- Protector de pantalla (anuncios) cuando no hay pedido -->
     <div class="k-ss" id="kScreensaver"></div>
-    <!-- Rueda para configurar anuncios (solo en reposo) -->
-    <button class="k-cfg-btn" id="kCfgBtn" title="Configurar anuncios del kiosko" aria-label="Configurar"><i class="fas fa-ellipsis-v"></i></button>
-    <!-- Panel de configuración de anuncios -->
+    <!-- Panel de configuración de anuncios (se abre desde el menú de la esquina) -->
     <div class="k-cfg" id="kCfg">
         <div class="k-cfg-caja">
             <div class="k-cfg-titulo"><h3><i class="fas fa-tv"></i> Anuncios del kiosko</h3>
-                <button class="k-btn" id="kCfgCerrar" style="background:none;color:var(--text-muted)"><i class="fas fa-times"></i></button></div>
+                <button class="k-btn" id="kCfgCerrar" style="background:none;color:var(--text-muted)" aria-label="Cerrar"><i class="fas fa-times"></i></button></div>
             <div class="k-cfg-hint">Imágenes o videos de promociones o de la comida. Se muestran como protector de pantalla cuando no hay un pedido.</div>
+            <div class="k-cfg-sug" id="kCfgSug">
+                <span class="k-cfg-sug-texto" id="kCfgSugTexto"></span>
+                <button class="k-btn k-btn-g" id="kCfgSugBtn" type="button">Aplicar a todas</button>
+            </div>
             <div class="k-cfg-fila">
                 <label>Tiempo de inactividad (seg)
                     <input type="number" id="kCfgIdle" min="5" max="3600" step="5">
                 </label>
-                <label>Transición
-                    <select id="kCfgTrans">
-                        <option value="fade">Fundido</option>
-                        <option value="slide">Deslizar</option>
-                        <option value="none">Sin animación</option>
-                    </select>
-                </label>
+                <div class="k-cfg-campo">
+                    <span>Transición</span>
+                    <div class="k-cfg-trans" id="kCfgTrans" role="group" aria-label="Transición entre anuncios">
+                        <button type="button" data-valor="fade">Fundido</button>
+                        <button type="button" data-valor="slide">Deslizar</button>
+                        <button type="button" data-valor="none">Sin animación</button>
+                    </div>
+                </div>
             </div>
             <div class="k-cfg-items" id="kCfgItems"></div>
+            <div class="k-cfg-crop" id="kCfgCrop">
+                <div class="k-cfg-crop-titulo"><span><i class="fas fa-crop-simple"></i> Recorte</span><span class="k-cfg-hint" id="kCfgCropNombre"></span></div>
+                <div class="k-cfg-crop-marco" id="kCfgCropMarco" title="Arrastra para centrar la zona que quieres ver">
+                    <div class="k-cfg-crop-media" id="kCfgCropMedia"></div>
+                </div>
+                <label class="k-cfg-zoom">Acercamiento
+                    <input type="range" id="kCfgCropZoom" min="1" max="3" step="0.05" value="1">
+                </label>
+                <div class="k-cfg-hint">Arrastra sobre la vista previa para centrar la zona que se ve. En el kiosko se ve igual.</div>
+            </div>
             <div class="k-cfg-subir">
                 <input type="file" id="kCfgFile" accept="image/*,video/*">
                 <button class="k-btn k-btn-p" id="kCfgSubir"><i class="fas fa-upload"></i> Subir</button>
@@ -1043,6 +1113,12 @@
                 </button>
                 <button class="display-action" id="qrToggleBtn" type="button">
                     <i class="fas fa-qrcode"></i> Mostrar QR
+                </button>
+                <button class="display-action" id="cfgAnunciosBtn" type="button">
+                    <i class="fas fa-tv"></i> Configurar anuncios
+                </button>
+                <button class="display-action" id="volverMostradorBtn" type="button" hidden>
+                    <i class="fas fa-arrow-left"></i> Volver al mostrador
                 </button>
             </div>
         </div>
@@ -1696,16 +1772,63 @@
     // ============================================================
     // Protector de pantalla (anuncios de imágenes/videos) + configuración
     // ============================================================
-    var ssAssets = [];        // [{type,url}] leídos de stores.settings.kiosk
+    var ssAssets = [];        // [{type,url,ajuste,zoom,foco_x,foco_y}] leídos de stores.settings.kiosk
     var ssTimer = null;       // rotación del carrusel
     var ssIdx = 0;
     var graciasTimer = null;  // 20 s para escanear el QR tras la venta
     var ssIdle = 60;          // segundos de inactividad antes de los anuncios
     var ssTrans = 'fade';     // fade | slide | none
     var reposoTimer = null;   // arranque diferido del protector
+    var ssCropIdx = -1;       // anuncio abierto en el editor de recorte
+
+    function clamp01(v, def) {
+        v = Number(v);
+        return isFinite(v) ? Math.min(1, Math.max(0, v)) : def;
+    }
+
+    // Entradas viejas sin `ajuste` siguen viéndose como antes: Contener.
+    function normalizarAsset(a) {
+        a = a || {};
+        return {
+            type: a.type === 'video' ? 'video' : 'image',
+            url: a.url || '',
+            ajuste: (a.ajuste === 'cover' || a.ajuste === 'crop') ? a.ajuste : 'contain',
+            zoom: Math.min(3, Math.max(1, Number(a.zoom) || 1)),
+            foco_x: clamp01(a.foco_x, 0.5),
+            foco_y: clamp01(a.foco_y, 0.5)
+        };
+    }
+
+    // Un solo cálculo para la vista previa del panel y para el protector real:
+    // el resultado sólo depende de la proporción del contenedor.
+    function estiloAjuste(el, a) {
+        if (!el || !a) return;
+        if (a.ajuste === 'cover' || a.ajuste === 'crop') {
+            var z = a.ajuste === 'crop' ? Math.min(3, Math.max(1, Number(a.zoom) || 1)) : 1;
+            var fx = a.ajuste === 'crop' ? clamp01(a.foco_x, 0.5) : 0.5;
+            var fy = a.ajuste === 'crop' ? clamp01(a.foco_y, 0.5) : 0.5;
+            var px = (fx * 100).toFixed(2) + '%';
+            var py = (fy * 100).toFixed(2) + '%';
+            el.style.objectFit = 'cover';
+            el.style.objectPosition = px + ' ' + py;
+            if (a.ajuste === 'crop' && z > 1) {
+                el.style.transform = 'scale(' + z.toFixed(2) + ')';
+                el.style.transformOrigin = px + ' ' + py;
+            } else {
+                el.style.transform = '';
+                el.style.transformOrigin = '';
+            }
+            return;
+        }
+        el.style.objectFit = 'contain';
+        el.style.objectPosition = '';
+        el.style.transform = '';
+        el.style.transformOrigin = '';
+    }
 
     function ssSlide(i) {
         var a = ssAssets[i];
+        if (!a) return;
         var html = (a.type === 'video')
             ? '<video src="' + a.url + '" autoplay muted loop playsinline></video>'
             : '<img src="' + a.url + '" alt="">';
@@ -1713,8 +1836,9 @@
         var nuevo = document.createElement('div');
         nuevo.className = 'k-ss-slide';
         nuevo.innerHTML = html;
+        estiloAjuste(nuevo.querySelector('img, video'), a);
         if (ssTrans === 'none') {
-            var empty = document.createElement('div'); empty.innerHTML = ''; zona.innerHTML = '';
+            zona.innerHTML = '';
             zona.appendChild(nuevo);
             return;
         }
@@ -1741,8 +1865,6 @@
         if (reposoTimer) { clearTimeout(reposoTimer); reposoTimer = null; }
         var z = document.getElementById('kScreensaver');
         if (z) { z.classList.remove('activo'); z.innerHTML = ''; }
-        var b = document.getElementById('kCfgBtn');
-        if (b) b.classList.remove('visible');
     }
 
     function iniciarSS() {
@@ -1759,23 +1881,46 @@
                 ssTimer = setInterval(function () { ssIdx = (ssIdx + 1) % ssAssets.length; ssSlide(ssIdx); }, 7000);
             }
         }
-        var b = document.getElementById('kCfgBtn');
-        if (b) b.classList.add('visible');
     }
 
     // Reposo con retardo: deja ver el arranque y abre los anuncios tras el
-    // tiempo de inactividad configurado. Mientras tanto, rueda accesible.
+    // tiempo de inactividad configurado.
     function programarReposo() {
         var gracias = document.getElementById('kGracias');
         if (window.__kioskoCurrent || (gracias && !gracias.classList.contains('hidden'))) return;
-        var b = document.getElementById('kCfgBtn');
-        if (b) b.classList.add('visible');
-        if (ssAssets.length || true) {
-            if (reposoTimer) clearTimeout(reposoTimer);
-            reposoTimer = setTimeout(iniciarSS, Math.max(5, Number(ssIdle) || 60) * 1000);
-        } else {
-            iniciarSS();
-        }
+        if (reposoTimer) clearTimeout(reposoTimer);
+        reposoTimer = setTimeout(iniciarSS, Math.max(5, Number(ssIdle) || 60) * 1000);
+    }
+
+    // Cualquier toque o tecla sobre los anuncios los quita y reinicia el contador.
+    function cerrarSSporEntrada() {
+        var panel = document.getElementById('kCfg');
+        if (panel && panel.classList.contains('abierto')) return;
+        var z = document.getElementById('kScreensaver');
+        if (!z || !z.classList.contains('activo')) return;
+        detenerSS();
+        if (typeof closeDisplayActions === 'function') closeDisplayActions();
+        programarReposo();
+    }
+
+    // Aviso emergente propio: app.js (showNotification) no se carga en el kiosko.
+    function kioskoToast(mensaje, tipo) {
+        tipo = tipo || 'info';
+        var previo = document.querySelector('.k-toast');
+        if (previo) previo.remove();
+        var t = document.createElement('div');
+        t.className = 'k-toast k-toast-' + (tipo === 'error' ? 'error' : 'success');
+        var icono = document.createElement('i');
+        icono.className = 'fas fa-' + (tipo === 'error' ? 'triangle-exclamation' : 'check');
+        icono.setAttribute('aria-hidden', 'true');
+        t.appendChild(icono);
+        t.appendChild(document.createTextNode(' ' + mensaje));
+        document.body.appendChild(t);
+        requestAnimationFrame(function () { t.classList.add('visible'); });
+        setTimeout(function () {
+            t.classList.remove('visible');
+            setTimeout(function () { if (t.parentNode) t.remove(); }, 320);
+        }, 3200);
     }
 
     function ocultarGracias() {
@@ -1788,32 +1933,246 @@
     }
 
     // ── Configuración de anuncios ──
+    function pintarSugerencia() {
+        var caja = document.getElementById('kCfgSug');
+        var texto = document.getElementById('kCfgSugTexto');
+        if (!caja || !texto) return;
+        var w = window.innerWidth || 0;
+        var h = window.innerHeight || 0;
+        if (!w || !h) { caja.classList.remove('visible'); return; }
+        var apaisada = w >= h;
+        var r = apaisada ? (w / h) : (h / w);
+        var conocidas = [[16 / 9, '16:9'], [4 / 3, '4:3'], [16 / 10, '16:10'], [3 / 2, '3:2'], [5 / 4, '5:4'], [21 / 9, '21:9'], [2, '2:1']];
+        var etiqueta = Math.round(r * 100) + ':100';
+        for (var k = 0; k < conocidas.length; k++) {
+            if (Math.abs(r - conocidas[k][0]) < 0.06) { etiqueta = conocidas[k][1]; break; }
+        }
+        if (!apaisada) {
+            var partes = etiqueta.split(':');
+            etiqueta = partes[1] + ':' + partes[0];
+        }
+        texto.textContent = 'Tu pantalla es ' + (apaisada ? 'apaisada' : 'vertical') + ' (' + etiqueta +
+            '): para llenarla sin franjas, cada anuncio puede usar el encuadre «Cubrir».';
+        caja.classList.add('visible');
+    }
+
+    function tarjetaAnuncio(a, i) {
+        var d = document.createElement('div');
+        d.className = 'k-cfg-item';
+        d.dataset.idx = String(i);
+
+        var top = document.createElement('div');
+        top.className = 'k-cfg-item-top';
+
+        var mano = document.createElement('button');
+        mano.type = 'button';
+        mano.className = 'k-cfg-mano';
+        mano.title = 'Arrastrar para ordenar';
+        mano.setAttribute('aria-label', 'Arrastrar para ordenar');
+        mano.innerHTML = '<i class="fas fa-grip-vertical" aria-hidden="true"></i>';
+        prepararArrastre(mano);
+        top.appendChild(mano);
+
+        var media = document.createElement('div');
+        media.className = 'k-cfg-item-media';
+        media.innerHTML = (a.type === 'video'
+            ? '<video src="' + a.url + '" muted playsinline></video>'
+            : '<img src="' + a.url + '" alt="">');
+        estiloAjuste(media.querySelector('img, video'), a);
+        top.appendChild(media);
+
+        var quitar = document.createElement('button');
+        quitar.type = 'button';
+        quitar.className = 'k-cfg-quitar';
+        quitar.title = 'Quitar de la lista';
+        quitar.setAttribute('aria-label', 'Quitar de la lista');
+        quitar.setAttribute('data-rm', String(i));
+        quitar.innerHTML = '<i class="fas fa-trash" aria-hidden="true"></i>';
+        top.appendChild(quitar);
+        d.appendChild(top);
+
+        var tipo = document.createElement('span');
+        tipo.className = 'k-cfg-tipo';
+        tipo.textContent = (a.type === 'video' ? 'Video' : 'Imagen');
+        d.appendChild(tipo);
+
+        var modos = document.createElement('div');
+        modos.className = 'k-cfg-modos';
+        modos.setAttribute('role', 'group');
+        modos.setAttribute('aria-label', 'Encuadre del anuncio ' + (i + 1));
+        [['contain', 'Contener'], ['cover', 'Cubrir'], ['crop', 'Recorte']].forEach(function (op) {
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.textContent = op[1];
+            b.setAttribute('data-ajuste', op[0]);
+            b.setAttribute('data-i', String(i));
+            if ((a.ajuste || 'contain') === op[0]) b.classList.add('active');
+            modos.appendChild(b);
+        });
+        d.appendChild(modos);
+        return d;
+    }
+
+    // Reordenar con el dedo o con el ratón: el arrastre HTML5 no llega en tabletas.
+    function prepararArrastre(mano) {
+        var lista = document.getElementById('kCfgItems');
+        var tarjeta = null;
+        mano.addEventListener('pointerdown', function (ev) {
+            tarjeta = mano.closest('.k-cfg-item');
+            if (!tarjeta) return;
+            ev.preventDefault();
+            tarjeta.classList.add('arrastrando');
+            try { mano.setPointerCapture(ev.pointerId); } catch (e) { /* sigue sin captura */ }
+        });
+        mano.addEventListener('pointermove', function (ev) {
+            if (!tarjeta || !lista) return;
+            var otras = lista.querySelectorAll('.k-cfg-item');
+            for (var j = 0; j < otras.length; j++) {
+                var c = otras[j];
+                if (c === tarjeta) continue;
+                var r = c.getBoundingClientRect();
+                if (ev.clientX < r.left || ev.clientX > r.right || ev.clientY < r.top || ev.clientY > r.bottom) continue;
+                if (ev.clientY < r.top + r.height / 2) lista.insertBefore(tarjeta, c);
+                else lista.insertBefore(tarjeta, c.nextSibling);
+                break;
+            }
+        });
+        function soltar() {
+            if (!tarjeta) return;
+            tarjeta.classList.remove('arrastrando');
+            var orden = [];
+            var nodos = lista.querySelectorAll('.k-cfg-item');
+            for (var j = 0; j < nodos.length; j++) {
+                var a = ssAssets[Number(nodos[j].dataset.idx)];
+                if (a) orden.push(a);
+            }
+            ssAssets = orden;
+            tarjeta = null;
+            pintarPanelConfig();
+        }
+        mano.addEventListener('pointerup', soltar);
+        mano.addEventListener('pointercancel', soltar);
+    }
+
+    function refrescarMiniatura(i) {
+        var card = document.querySelector('.k-cfg-item[data-idx="' + i + '"]');
+        if (!card) return;
+        estiloAjuste(card.querySelector('.k-cfg-item-media img, .k-cfg-item-media video'), ssAssets[i]);
+    }
+
+    // Zoom y punto focal del editor de recorte (se cablean una sola vez).
+    function prepararEditorRecorte() {
+        var marco = document.getElementById('kCfgCropMarco');
+        var mediaBox = document.getElementById('kCfgCropMedia');
+        if (!marco || !mediaBox) return;
+        var arrastre = null;
+        marco.addEventListener('pointerdown', function (ev) {
+            if (ssCropIdx < 0 || ssCropIdx >= ssAssets.length) return;
+            ev.preventDefault();
+            arrastre = { x: ev.clientX, y: ev.clientY };
+            try { marco.setPointerCapture(ev.pointerId); } catch (e) { /* sigue sin captura */ }
+        });
+        marco.addEventListener('pointermove', function (ev) {
+            if (!arrastre || ssCropIdx < 0 || ssCropIdx >= ssAssets.length) return;
+            var a = ssAssets[ssCropIdx];
+            var rect = marco.getBoundingClientRect();
+            var z = Math.min(3, Math.max(1, Number(a.zoom) || 1));
+            var dx = (ev.clientX - arrastre.x) / Math.max(1, rect.width * z);
+            var dy = (ev.clientY - arrastre.y) / Math.max(1, rect.height * z);
+            arrastre.x = ev.clientX;
+            arrastre.y = ev.clientY;
+            a.foco_x = clamp01((a.foco_x == null ? 0.5 : a.foco_x) - dx, 0.5);
+            a.foco_y = clamp01((a.foco_y == null ? 0.5 : a.foco_y) - dy, 0.5);
+            estiloAjuste(mediaBox.querySelector('img, video'), a);
+            refrescarMiniatura(ssCropIdx);
+        });
+        function soltar() { arrastre = null; }
+        marco.addEventListener('pointerup', soltar);
+        marco.addEventListener('pointercancel', soltar);
+        var zoom = document.getElementById('kCfgCropZoom');
+        if (zoom) zoom.addEventListener('input', function () {
+            if (ssCropIdx < 0 || ssCropIdx >= ssAssets.length) return;
+            var a = ssAssets[ssCropIdx];
+            a.zoom = Math.min(3, Math.max(1, Number(zoom.value) || 1));
+            estiloAjuste(mediaBox.querySelector('img, video'), a);
+            refrescarMiniatura(ssCropIdx);
+        });
+    }
+
+    function pintarEditorRecorte() {
+        var ed = document.getElementById('kCfgCrop');
+        if (!ed) return;
+        var marco = document.getElementById('kCfgCropMarco');
+        var mediaBox = document.getElementById('kCfgCropMedia');
+        var a = (ssCropIdx >= 0 && ssCropIdx < ssAssets.length) ? ssAssets[ssCropIdx] : null;
+        if (!a || a.ajuste !== 'crop') {
+            ed.classList.remove('abierto');
+            if (mediaBox) { mediaBox.innerHTML = ''; delete mediaBox.dataset.url; }
+            return;
+        }
+        ed.classList.add('abierto');
+        // El marco replica la proporción de la pantalla del kiosko: así lo que se
+        // ve aquí es lo mismo que se verá en el protector a pantalla completa.
+        var w = window.innerWidth || 1280;
+        var h = window.innerHeight || 720;
+        var r = Math.max(0.2, Math.min(5, w / h));
+        var dispW = Math.min((marco.parentNode && marco.parentNode.clientWidth) || 520, 560);
+        var dispH = Math.round(Math.min(window.innerHeight * 0.38, 320));
+        var boxW = dispW;
+        var boxH = Math.round(boxW / r);
+        if (boxH > dispH) { boxH = dispH; boxW = Math.round(boxH * r); }
+        marco.style.width = boxW + 'px';
+        marco.style.height = boxH + 'px';
+        if (mediaBox.dataset.url !== a.url) {
+            mediaBox.innerHTML = '';
+            var el = document.createElement(a.type === 'video' ? 'video' : 'img');
+            if (a.type === 'video') { el.muted = true; el.loop = true; el.autoplay = true; el.playsInline = true; }
+            el.src = a.url;
+            el.alt = '';
+            mediaBox.appendChild(el);
+            mediaBox.dataset.url = a.url;
+        }
+        estiloAjuste(mediaBox.querySelector('img, video'), a);
+        var zoom = document.getElementById('kCfgCropZoom');
+        if (zoom) zoom.value = String(a.zoom);
+        var nombre = document.getElementById('kCfgCropNombre');
+        if (nombre) nombre.textContent = (a.type === 'video' ? 'Video' : 'Imagen') + ' ' + (ssCropIdx + 1) + ' de ' + ssAssets.length;
+        // El panel es largo en tableta: si el editor quedó fuera del área visible,
+        // se trae a la vista para que zoom y arrastre sean utilizables.
+        if (ed.scrollIntoView) ed.scrollIntoView({ block: 'nearest' });
+    }
+
     function pintarPanelConfig() {
         var idle = document.getElementById('kCfgIdle');
         if (idle) idle.value = ssIdle;
         var trans = document.getElementById('kCfgTrans');
-        if (trans) trans.value = ssTrans;
+        if (trans) {
+            var btns = trans.querySelectorAll('button[data-valor]');
+            btns.forEach(function (b) {
+                b.classList.toggle('active', b.getAttribute('data-valor') === ssTrans);
+            });
+        }
+        pintarSugerencia();
         var lista = document.getElementById('kCfgItems');
         lista.innerHTML = '';
+        if (ssCropIdx >= ssAssets.length) ssCropIdx = -1;
+        if (ssCropIdx >= 0 && (!ssAssets[ssCropIdx] || ssAssets[ssCropIdx].ajuste !== 'crop')) ssCropIdx = -1;
+        if (ssCropIdx < 0) {
+            for (var t = 0; t < ssAssets.length; t++) {
+                if (ssAssets[t].ajuste === 'crop') { ssCropIdx = t; break; }
+            }
+        }
         if (!ssAssets.length) {
+            ssCropIdx = -1;
             var v = document.createElement('div');
             v.className = 'k-cfg-hint';
             v.textContent = 'Todavía no hay anuncios. Sube una imagen o un video.';
             lista.appendChild(v);
+            pintarEditorRecorte();
             return;
         }
-        ssAssets.forEach(function (a, i) {
-            var d = document.createElement('div');
-            d.className = 'k-cfg-item';
-            d.draggable = true;
-            d.dataset.idx = i;
-            d.innerHTML = (a.type === 'video'
-                    ? '<video src="' + a.url + '" muted playsinline></video>'
-                    : '<img src="' + a.url + '" alt="">') +
-                '<div class="k-cfg-act"><span class="k-cfg-tipo">' + (a.type === 'video' ? 'Video' : 'Imagen') + '</span>' +
-                '<button type="button" data-rm="' + i + '" title="Quitar"><i class="fas fa-trash"></i></button></div>';
-            lista.appendChild(d);
-        });
+        ssAssets.forEach(function (a, i) { lista.appendChild(tarjetaAnuncio(a, i)); });
+        pintarEditorRecorte();
     }
 
     // Aviso del panel de configuración sin `alert()`: bloquean el hilo y en una pantalla
@@ -1853,7 +2212,7 @@
                 if (!d || d.success === false) { avisoKiosko((d && (d.data && d.data.file)) || 'No se pudo subir'); return; }
                 var u = d.data && d.data.url;
                 var tipo = (d.data && d.data.type) || (String(file.type).indexOf('video') === 0 ? 'video' : 'image');
-                ssAssets.push({ type: tipo, url: u });
+                ssAssets.push(normalizarAsset({ type: tipo, url: u }));
                 document.getElementById('kCfgFile').value = '';
                 pintarPanelConfig();
             })
@@ -1862,7 +2221,6 @@
 
     function guardarAnuncios() {
         ssIdle = Math.max(5, Number((document.getElementById('kCfgIdle') || {}).value) || 60);
-        ssTrans = (document.getElementById('kCfgTrans') || {}).value || 'fade';
         fetch('../api/stores/settings.php', { credentials: 'include' })
             .then(function (r) { return r.json(); })
             .then(function (d) {
@@ -2015,7 +2373,7 @@
                 var sid = o.store_id;
                 var store = window.__kioskoStore;
                 var k = (o.settings && o.settings.kiosk) || {};
-                ssAssets = (k.assets || []).slice();
+                ssAssets = (k.assets || []).map(normalizarAsset);
                 ssIdle = Number(k.seconds) > 0 ? Number(k.seconds) : 60;
                 ssTrans = (k.transition === 'slide' || k.transition === 'none') ? k.transition : 'fade';
                 limpiar();
@@ -2033,11 +2391,29 @@
             });
     };
 
-    // ── Configuración de anuncios (rueda) ──
+    // ── Configuración de anuncios (menú de la esquina) ──
     document.addEventListener('DOMContentLoaded', function () {
-        var btn = document.getElementById('kCfgBtn');
         var panel = document.getElementById('kCfg');
-        if (btn) btn.addEventListener('click', function () { pintarPanelConfig(); panel.classList.add('abierto'); });
+        // El menú unificado de la esquina superior derecha abre la configuración.
+        var cfgMenu = document.getElementById('cfgAnunciosBtn');
+        if (cfgMenu) cfgMenu.addEventListener('click', function () {
+            if (typeof closeDisplayActions === 'function') closeDisplayActions();
+            if (!panel) return;
+            pintarPanelConfig();
+            panel.classList.add('abierto');
+        });
+        // "Volver al mostrador" sólo cuando el kiosko se abrió desde el mostrador.
+        var volver = document.getElementById('volverMostradorBtn');
+        if (volver) {
+            var ref = document.referrer || '';
+            if (ref && ref.indexOf(window.location.origin) === 0) {
+                volver.removeAttribute('hidden');
+                volver.addEventListener('click', function () {
+                    if (typeof closeDisplayActions === 'function') closeDisplayActions();
+                    window.history.back();
+                });
+            }
+        }
         var cerrar = document.getElementById('kCfgCerrar');
         if (cerrar) cerrar.addEventListener('click', function () { panel.classList.remove('abierto'); });
         if (panel) panel.addEventListener('click', function (ev) { if (ev.target === panel) panel.classList.remove('abierto'); });
@@ -2045,33 +2421,52 @@
         var file = document.getElementById('kCfgFile');
         if (subir) subir.addEventListener('click', function () { if (file && file.files && file.files[0]) subirAnuncio(file.files[0]); });
         if (file) file.addEventListener('change', function () { if (file.files && file.files[0]) subirAnuncio(file.files[0]); });
+        // Quitar una diapositiva o cambiar su encuadre
         var items = document.getElementById('kCfgItems');
         if (items) items.addEventListener('click', function (ev) {
             var rm = ev.target.closest('[data-rm]');
-            if (rm) { ssAssets.splice(Number(rm.getAttribute('data-rm')), 1); pintarPanelConfig(); }
+            if (rm) {
+                var idx = Number(rm.getAttribute('data-rm'));
+                if (!isFinite(idx) || idx < 0 || idx >= ssAssets.length) return;
+                ssAssets.splice(idx, 1);
+                if (ssCropIdx === idx) ssCropIdx = -1;
+                else if (ssCropIdx > idx) ssCropIdx--;
+                pintarPanelConfig();
+                return;
+            }
+            var mod = ev.target.closest('button[data-ajuste]');
+            if (mod) {
+                var i2 = Number(mod.getAttribute('data-i'));
+                var a2 = ssAssets[i2];
+                if (!a2) return;
+                a2.ajuste = mod.getAttribute('data-ajuste');
+                if (a2.ajuste === 'crop') ssCropIdx = i2;
+                else if (ssCropIdx === i2) ssCropIdx = -1;
+                pintarPanelConfig();
+            }
         });
-        // Arrastrar para ordenar las tarjetas de anuncios
-        var arrastrando = null;
-        if (items) items.addEventListener('dragstart', function (ev) {
-            var el = ev.target.closest('.k-cfg-item'); if (!el) return;
-            arrastrando = Number(el.dataset.idx);
-            ev.dataTransfer.effectAllowed = 'move';
+        // Transición: botones tipo interruptor, no un desplegable
+        var trans = document.getElementById('kCfgTrans');
+        if (trans) trans.addEventListener('click', function (ev) {
+            var b = ev.target.closest('button[data-valor]');
+            if (!b) return;
+            ssTrans = b.getAttribute('data-valor');
+            var btns = trans.querySelectorAll('button[data-valor]');
+            btns.forEach(function (x) { x.classList.toggle('active', x === b); });
         });
-        if (items) items.addEventListener('dragover', function (ev) {
-            ev.preventDefault();
-            items.querySelectorAll('.k-cfg-item').forEach(function (c) { c.classList.remove('drag-over'); });
-            var sobre = ev.target.closest('.k-cfg-item');
-            if (sobre) sobre.classList.add('drag-over');
-        });
-        if (items) items.addEventListener('drop', function (ev) {
-            ev.preventDefault();
-            var sobre = ev.target.closest('.k-cfg-item'); if (!sobre) return;
-            var a = Number(sobre.dataset.idx);
-            if (arrastrando === null || a === arrastrando) { pintarPanelConfig(); return; }
-            var movido = ssAssets.splice(arrastrando, 1)[0];
-            ssAssets.splice(a, 0, movido);
-            arrastrando = null;
+        // Sugerencia de encuadre según la pantalla: la elección sigue siendo del usuario
+        var sugBtn = document.getElementById('kCfgSugBtn');
+        if (sugBtn) sugBtn.addEventListener('click', function () {
+            ssAssets.forEach(function (a) { a.ajuste = 'cover'; });
+            ssCropIdx = -1;
             pintarPanelConfig();
+            kioskoToast('Encuadre «Cubrir» aplicado a todos. Pulsa Guardar para aplicarlo.', 'success');
+        });
+        // Editor de recorte: zoom y punto focal sobre la vista previa
+        prepararEditorRecorte();
+        window.addEventListener('resize', function () {
+            var ed = document.getElementById('kCfgCrop');
+            if (ed && ed.classList.contains('abierto')) pintarEditorRecorte();
         });
         // Probar la transición: cierra el panel y muestra los anuncios ahora
         var preview = document.getElementById('kCfgPreview');
@@ -2080,12 +2475,16 @@
             var g = document.getElementById('kGracias');
             if (window.__kioskoCurrent || (g && !g.classList.contains('hidden'))) return;
             ssIdle = Math.max(5, Number((document.getElementById('kCfgIdle') || {}).value) || 60);
-            ssTrans = (document.getElementById('kCfgTrans') || {}).value || 'fade';
             detenerSS();
             iniciarSS();
         });
         var guardar = document.getElementById('kCfgGuardar');
         if (guardar) guardar.addEventListener('click', function () { guardarAnuncios(); });
+        // Con los anuncios en pantalla, cualquier toque o tecla los quita y
+        // reinicia el contador de inactividad (también con el dedo).
+        var zonaSS = document.getElementById('kScreensaver');
+        if (zonaSS) zonaSS.addEventListener('pointerdown', cerrarSSporEntrada);
+        document.addEventListener('keydown', function () { cerrarSSporEntrada(); });
     });
 
     // getDisplayUrl (del clon) entrega el QR del carrito de mesa; aquí el del seguimiento.
@@ -2094,10 +2493,6 @@
         if (window.KOSKO_QR_URL) return window.KOSKO_QR_URL;
         return origGetDisplayUrl ? origGetDisplayUrl() : '#';
     };
-
-    // El "Mostrar QR" del encabezado no aplica a mesas en el kiosko: igual funciona.
-    var btnQr = document.getElementById('qrToggleBtn');
-    if (btnQr) btnQr.style.display = 'none';
 })();
 </script>
 </body>

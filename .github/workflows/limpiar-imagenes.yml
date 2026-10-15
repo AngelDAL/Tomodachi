@@ -1,0 +1,39 @@
+name: Limpiar imágenes viejas de GHCR
+
+# El registro TAMBIÉN acumula y nadie lo ve: `build-images.yml` sube tres etiquetas por build
+# (`latest`, el commit corto y la rama), y cada una pesa cientos de MB. Las etiquetas de commit
+# no las usa nadie —el despliegue va por `latest` y la vuelta atrás se guarda en el servidor con
+# su propio nombre—, así que se conservan las últimas y se borran las viejas.
+#
+# `latest`, la rama y `main` están protegidas: nunca se tocan (son las que despliegan).
+#
+# Corre solo los domingos y también a mano desde la pestaña Actions.
+
+on:
+  schedule:
+    - cron: '0 8 * * 0' # domingos 08:00 UTC (02:00 en México)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  limpiar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: App — conservar las últimas 12 versiones
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: tomodachi
+          package-type: container
+          min-versions-to-keep: 12
+          ignore-versions: '^(latest|community-edition|main)$'
+
+      - name: Relay del WebSocket — conservar las últimas 12 versiones
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: tomodachi-ws
+          package-type: container
+          min-versions-to-keep: 12
+          ignore-versions: '^(latest|community-edition|main)$'

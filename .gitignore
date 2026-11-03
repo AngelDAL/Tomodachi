@@ -47,3 +47,6 @@ api/ai/config.php
 __pycache__/
 *.pyc
 .worktrees/
+
+# Briefs de trabajo de agentes (no versionar)
+.briefs/

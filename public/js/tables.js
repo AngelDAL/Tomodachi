@@ -1654,6 +1654,12 @@ function tpJuntarPunto(tableId) {
 // Eventos
 // ============================================================
 document.addEventListener('DOMContentLoaded', async function () {
+    // Guardia de sesión: esta era la única pantalla interna sin guarda; sin
+    // sesión se quedaba pintando "No autorizado" en vez de ir al login.
+    // Si no hay sesión, requireSession() se encarga de redirigir (o de abrir
+    // el modal de re-login si el usuario pidió sesión permanente).
+    await requireSession();
+
     // Cualquier modal se cierra con su X o con el botón de cancelar.
     document.querySelectorAll('[data-cerrar]').forEach(function (b) {
         b.addEventListener('click', function () { tpCerrarModal(b.getAttribute('data-cerrar')); });

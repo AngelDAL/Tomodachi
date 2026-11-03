@@ -25,6 +25,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
+/**
+ * Marca el panel como "sin cifras" cuando la carga de los KPI falló.
+ * Por qué: el HTML trae $0.00 / 0 por defecto; si la API no responde, el
+ * usuario leería "Ventas del día $0.00" como si la tienda no hubiera vendido
+ * nada. Con guiones queda claro que no hay datos, y el aviso sale una sola
+ * vez (no uno por reintento).
+ */
+function marcarCifrasNoDisponibles() {
+    ['dailySales', 'dailyProfit', 'transactions', 'inventoryValue', 'lowStockCount', 'topCategory'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = '—';
+    });
+    showNotification('No se pudieron cargar las cifras del panel', 'error');
+}
+
 async function loadDashboardStats() {
     // Reintento: el SW o la red pueden fallar la primera vez al navegar.
     for (let attempt = 1; attempt <= 3; attempt++) {
@@ -32,6 +47,7 @@ async function loadDashboardStats() {
             const response = await fetch('../api/reports/dashboard_stats.php');
             if (!response.ok) {
                 if (attempt < 3) { await new Promise(r => setTimeout(r, 600 * attempt)); continue; }
+                marcarCifrasNoDisponibles();
                 return;
             }
             const result = await response.json();
@@ -83,6 +99,10 @@ async function loadDashboardStats() {
                 renderLowStockList(data.lowStockList);
                 renderTopProductsList(data.topProducts);
                 renderRecentSalesList(data.recentSales);
+            } else {
+                // La API respondió pero con error: sin esto el panel seguiría
+                // mostrando los $0.00 por defecto como si fueran reales.
+                marcarCifrasNoDisponibles();
             }
             return;
         } catch (error) {
@@ -90,6 +110,8 @@ async function loadDashboardStats() {
             if (attempt < 3) { await new Promise(r => setTimeout(r, 600 * attempt)); continue; }
         }
     }
+    // Los 3 intentos terminaron en excepción (red caída): mismo aviso único.
+    marcarCifrasNoDisponibles();
 }
 
 async function loadChartData() {

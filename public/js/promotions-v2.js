@@ -70,6 +70,8 @@
     const loadTags = async () => { const r = await fetch('../api/promotions/tags.php'); const d = await r.json(); if (d.success) tagSelect.innerHTML = '<option value="">Agregar etiqueta…</option>' + d.data.map(t => `<option value="${t.tag_id}" data-name="${esc(t.name)}">${esc(t.name)}</option>`).join(''); };
     await loadTags();
     tagSelect.addEventListener('change', () => { const o=tagSelect.selectedOptions[0]; if (!o?.value) return; if (!selectedTargets.some(t=>t.type==='tag' && +t.id===+o.value)) selectedTargets.push({type:'tag',id:+o.value,name:o.dataset.name,required_quantity:1}); renderSelectedProductsList(); tagSelect.value=''; });
-    newTag?.addEventListener('click', async () => { const name = window.prompt('Nombre de la etiqueta'); if (!name?.trim()) return; const r=await fetch('../api/promotions/tags.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'create',name:name.trim()})}); const d=await r.json(); if(!d.success) return showNotification(d.message||'No se pudo crear la etiqueta','error'); await loadTags(); selectedTargets.push({type:'tag',id:d.data.tag_id,name:d.data.name,required_quantity:1}); renderSelectedProductsList(); });
+    // pedirTexto en vez de window.prompt: prompt() bloquea el hilo y está
+    // prohibido en este proyecto. Devuelve null si el usuario cancela.
+    newTag?.addEventListener('click', async () => { const name = await pedirTexto({ titulo: 'Nueva etiqueta', etiqueta: 'Nombre de la etiqueta' }); if (!name?.trim()) return; const r=await fetch('../api/promotions/tags.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'create',name:name.trim()})}); const d=await r.json(); if(!d.success) return showNotification(d.message||'No se pudo crear la etiqueta','error'); await loadTags(); selectedTargets.push({type:'tag',id:d.data.tag_id,name:d.data.name,required_quantity:1}); renderSelectedProductsList(); });
   });
 })();

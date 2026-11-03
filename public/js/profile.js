@@ -1142,6 +1142,7 @@ document.getElementById('companyForm').addEventListener('submit', async (e) => {
 });
 
 async function loadUsers() {
+    const tbody = document.getElementById('usersList');
     try {
         // Obtener store_id de la sesión actual (o del perfil cargado)
         // Como es admin, read.php sin params devuelve todos, pero queremos filtrar por store si el backend lo requiere
@@ -1152,7 +1153,6 @@ async function loadUsers() {
         const data = await res.json();
 
         if (data.success) {
-            const tbody = document.getElementById('usersList');
             tbody.innerHTML = '';
             data.data.forEach(user => {
                 const tr = document.createElement('tr');
@@ -1173,9 +1173,18 @@ async function loadUsers() {
                 `;
                 tbody.appendChild(tr);
             });
+        } else {
+            throw new Error(data.message || 'No se pudo cargar la lista de usuarios');
         }
     } catch (error) {
         console.error('Error loading users:', error);
+        // Por qué: una tabla con encabezados y cero filas parece "no hay
+        // usuarios" cuando en realidad falló la carga. Se pone el estado
+        // vacío visible y se avisa, para que no se lea como lista real.
+        if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="6"><div class="history-empty">No se pudieron cargar los usuarios.</div></td></tr>';
+        }
+        showNotification('No se pudo cargar la lista de usuarios', 'error');
     }
 }
 

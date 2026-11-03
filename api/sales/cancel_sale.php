@@ -1,7 +1,10 @@
 <?php
 /**
  * Cancelar venta
- * POST /api/sales/cancel_sale.php {"sale_id":123}
+ * POST /api/sales/cancel_sale.php {"sale_id":123,"reason":"Cobro duplicado"}
+ *
+ * Exige `reason`: el motivo es obligatorio para dejar constancia de POR QUÉ se
+ * canceló (quién y cuándo quedan en cancelled_by / cancelled_at).
  */
 require_once '../../config/database.php';
 require_once '../../config/constants.php';
@@ -36,6 +39,16 @@ try {
     $sale_id = isset($data['sale_id']) ? (int)$data['sale_id'] : 0;
     if ($sale_id<=0) { Response::validationError(['sale_id'=>'Requerido']); }
 
+    // Motivo obligatorio: cancelar sin dejar constancia de por qué deja la
+    // auditoría de la venta incompleta. Se sanitiza y se exige texto real
+    // (sin solo espacios) de 1 a 255 caracteres, que es lo que admite la columna.
+    $reason = (isset($data['reason']) && is_string($data['reason']))
+        ? Validator::sanitizeString($data['reason'])
+        : '';
+    if (trim($reason) === '' || mb_strlen($reason) > 255) {
+        Response::validationError(['reason' => 'Motivo obligatorio de 1 a 255 caracteres']);
+    }
+
     $sale = $db->selectOne('SELECT sale_id, store_id, register_id, payment_method, status, total, customer_id, amount_paid FROM sales WHERE sale_id = ?',[$sale_id]);
     if (!$sale) { Response::notFound('Venta no existe'); }
     if ($sale['status'] !== SALE_COMPLETED) { Response::error('Solo ventas completadas pueden cancelarse',409); }
@@ -62,6 +75,14 @@ try {
                 $bom->restoreForSale($db, $sale['store_id'], $currentUser['user_id'], $sale_id, $it['product_id'], $it['quantity'], 'Cancelación');
                 continue;
             }
+            // Componente: la venta descontó product_lots (vía BomHelper::consumeLots),
+            // así que hay que devolver a los lotes. Reingresar a products.current_stock
+            // inflaría un campo que para componentes nadie lee (su existencia es la
+            // suma de sus presentaciones).
+            if ($type === TRACKING_COMPONENT) {
+                $bom->restoreForSale($db, $sale['store_id'], $currentUser['user_id'], $sale_id, $it['product_id'], $it['quantity'], 'Cancelación');
+                continue;
+            }
             if ($type === TRACKING_NONE) {
                 // Servicio: restituye sus componentes si tiene composición (no-op si es puro).
                 $bom->restoreForSale($db, $sale['store_id'], $currentUser['user_id'], $sale_id, $it['product_id'], $it['quantity'], 'Cancelación');
@@ -73,8 +94,13 @@ try {
                 $sale['store_id'],$it['product_id'],$currentUser['user_id'],MOVEMENT_RETURN,$it['quantity'],$prod['current_stock'],$new_stock,'Cancelación venta #'.$sale_id
             ]);
         }
-        // Actualizar estado venta
-        $db->update('UPDATE sales SET status = ? WHERE sale_id = ?',[SALE_CANCELLED,$sale_id]);
+        // Actualizar estado venta: un solo UPDATE con status + motivo + fecha + autor,
+        // para que la cancelación quede atómica (un estado sin motivo, o un motivo sin
+        // fecha, dejaría el registro de auditoría incompleto).
+        $db->update(
+            'UPDATE sales SET status = ?, cancel_reason = ?, cancelled_at = NOW(), cancelled_by = ? WHERE sale_id = ?',
+            [SALE_CANCELLED, $reason, $currentUser['user_id'], $sale_id]
+        );
         // Si la venta era apartado, revertir el balance del cliente
         if ($sale['payment_method'] === PAYMENT_CREDIT && $sale['customer_id'] > 0) {
             $debtAmount = (float)$sale['total'] - (float)$sale['amount_paid'];

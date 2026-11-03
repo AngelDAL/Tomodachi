@@ -144,6 +144,14 @@ try {
                 $bom->restoreForSale($db, $store_id, $currentUser['user_id'], $sale_id, $ri['product_id'], $ri['quantity'], 'Devolución');
                 continue;
             }
+            // Componente: la venta descontó product_lots (vía BomHelper::consumeLots),
+            // así que hay que devolver a los lotes. Reingresar a products.current_stock
+            // inflaría un campo que para componentes nadie lee (su existencia es la
+            // suma de sus presentaciones).
+            if ($type === TRACKING_COMPONENT) {
+                $bom->restoreForSale($db, $store_id, $currentUser['user_id'], $sale_id, $ri['product_id'], $ri['quantity'], 'Devolución');
+                continue;
+            }
             if ($type === TRACKING_NONE) {
                 // Servicio: restituye sus componentes si tiene composición (no-op si es puro).
                 $bom->restoreForSale($db, $store_id, $currentUser['user_id'], $sale_id, $ri['product_id'], $ri['quantity'], 'Devolución');

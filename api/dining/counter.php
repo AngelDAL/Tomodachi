@@ -128,9 +128,15 @@ try {
                 (int)($data['counter_order_id'] ?? 0),
                 $store_id,
                 $data['payment_status'] ?? '',
-                $data['paid_amount'] ?? null
+                $data['paid_amount'] ?? null,
+                (int)($actor['user_id'] ?? 0)
             );
-            Response::success($pedido, 'Pago actualizado');
+            // Al marcar el pago completo se creó la venta (caja + stock): la cajera
+            // tiene que ver el número de ticket, no solo "Pago actualizado".
+            $mensaje = is_array($pedido) && !empty($pedido['sale_id'])
+                ? 'Venta #' . (int)$pedido['sale_id'] . ' registrada'
+                : 'Pago actualizado';
+            Response::success($pedido, $mensaje);
         }
 
         // Nota del pedido: la cajera la puede poner al tomarlo o después, y la lee quien cocina.

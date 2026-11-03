@@ -20,6 +20,8 @@ require_once __DIR__ . '/Pricing.class.php';
 require_once __DIR__ . '/BomHelper.class.php';   // Pricing lo usa al construir (recetas/BOM)
 require_once __DIR__ . '/WebPush.class.php';
 require_once __DIR__ . '/ComandaService.class.php';   // el pedido de mostrador tambien es una comanda de cocina
+require_once __DIR__ . '/SaleService.class.php';      // al marcar el pago completo hay que crear la VENTA: es el
+                                                      // unico camino del dinero del sistema (caja, stock y pagos)
 
 class CounterService {
 
@@ -709,7 +711,7 @@ class CounterService {
     }
 
     /** Marca el estado de pago: por cobrar / con adelanto / pagado completo. */
-    public function marcarPago($counter_order_id, $store_id, $payment_status, $paid_amount = null) {
+    public function marcarPago($counter_order_id, $store_id, $payment_status, $paid_amount = null, $user_id = 0) {
         $payment_status = (string)$payment_status;
         if (!in_array($payment_status, ['unpaid', 'partial', 'paid'], true)) {
             throw new Exception('Estado de pago no permitido', 422);
@@ -739,13 +741,95 @@ class CounterService {
             }
         }
 
+        // --- Cobro de verdad -------------------------------------------------
+        // Marcar el pedido como pagado ES cobrar: hasta hoy solo se guardaba un
+        // estado y el dinero no entraba (en produccion 39 pedidos pagados por
+        // $3,801.99 sin venta, sin movimiento de caja y sin descontar stock).
+        // La venta se crea ANTES del UPDATE: si falla, el pedido queda como estaba
+        // y la cajera ve el error, en vez de un pago marcado que nunca existio.
+        // Solo en la transicion a 'paid': repetir el clic crearia dos ventas.
+        $saleId = 0;
+        if ($payment_status === 'paid' && $pedido['payment_status'] !== 'paid') {
+            $saleId = $this->registrarVenta($pedido, (int)$store_id, (int)$user_id);
+        }
+
         $stmt = $this->conn->prepare(
             "UPDATE counter_orders SET payment_status = :est, paid_amount = :monto
               WHERE counter_order_id = :id AND store_id = :sid"
         );
         $stmt->execute([':est' => $payment_status, ':monto' => $monto, ':id' => (int)$counter_order_id, ':sid' => (int)$store_id]);
         $this->avisar((int)$store_id, $pedido['tracking_token'], 'counter_payment', (int)$counter_order_id);
-        return $this->obtener((int)$counter_order_id, (int)$store_id);
+        $resultado = $this->obtener((int)$counter_order_id, (int)$store_id);
+        // La cajera tiene que ver que el dinero entró de verdad, no solo que cambió
+        // una etiqueta: el número de venta se devuelve aparte (campo nuevo, el resto
+        // de la respuesta no cambia).
+        if ($saleId > 0 && is_array($resultado)) {
+            $resultado['sale_id'] = $saleId;
+        }
+        return $resultado;
+    }
+
+    /**
+     * Crea la venta real de un pedido de mostrador cobrado.
+     *
+     * Pasa por SaleService para que caja, pagos e inventario se muevan por el MISMO
+     * camino que el POS y el cobro del salón. Los precios van como `lines` (los del
+     * propio pedido) para cobrar exactamente lo que se le cotizó al cliente, y
+     * `expected_total` hace que el servidor rechace con 409 si el total no coincide
+     * en vez de cobrar otra cosa.
+     *
+     * Se propaga cualquier excepción: el caller no debe marcar el pedido como pagado
+     * si la venta no se creó.
+     */
+    private function registrarVenta(array $pedido, $store_id, $user_id) {
+        $items = $pedido['items'] ?? [];
+        if (!$items) {
+            throw new Exception('El pedido no tiene artículos: no se puede cobrar', 422);
+        }
+
+        $lines = [];
+        $sumaLineas = 0.0;
+        foreach ($items as $it) {
+            $pid = (int)($it['product_id'] ?? 0);
+            if ($pid <= 0) {
+                // El producto se dio de baja después de anotar el pedido: no hay
+                // nada que cobrar ni que descontar del inventario.
+                throw new Exception('Un artículo del pedido ya no existe en el catálogo: '
+                    . 'revísalo antes de cobrar', 409);
+            }
+            $qty  = (float)$it['quantity'];
+            $unit = (float)$it['unit_price'];
+            $lines[] = ['product_id' => $pid, 'quantity' => $qty, 'unit_price' => $unit];
+            $sumaLineas += round($qty * $unit, 2);
+        }
+
+        $total = round((float)$pedido['total'], 2);
+        // El precio de los artículos YA trae aplicadas las promociones de línea, pero
+        // el descuento de cuenta no. SaleService cobra `subtotal - discount`, así que
+        // se le pasa la diferencia: sin eso se cobraría más de lo cotizado (o el
+        // cobro rechazaría con 409) cuando hay descuento de cuenta activo.
+        $descuento = round($sumaLineas - $total, 2);
+        if ($descuento < 0) { $descuento = 0.0; }
+
+        $r = (new SaleService($this->db))->createSale([
+            'store_id'       => (int)$store_id,
+            'actor'          => ['user_id' => (int)$user_id, 'via' => 'session'],
+            'lines'          => $lines,
+            'expected_total' => $total,
+            'payments'       => [[
+                'method' => PAYMENT_CASH,
+                'amount' => $total,
+                'is_tip' => false,
+            ]],
+            'payment_method' => PAYMENT_CASH,
+            'discount'       => $descuento,
+            'tax'            => 0.0,
+            'customer_id'    => 0,
+            'register_id'    => 0,
+            'tip_amount'     => 0.0,
+            'origen'         => 'mostrador',
+        ]);
+        return (int)($r['sale_id'] ?? 0);
     }
 
     // =========================================================

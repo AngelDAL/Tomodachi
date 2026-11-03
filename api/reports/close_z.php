@@ -8,7 +8,8 @@
  * - Ventas por método de pago (efectivo, tarjeta, transferencia, mixto)
  * - Cancelaciones y devoluciones (monto y cantidad)
  * - Movimientos de caja: retiros (withdrawal), entradas (entry), saldo de ventas en efectivo
- * - Arqueo esperado de la caja (apertura + ventas efectivo - retiros + entradas - devoluciones)
+ * - Arqueo esperado de la caja (apertura + ventas efectivo + entradas - retiros);
+ *   las devoluciones NO se restan aparte: ya son un retiro (withdrawal) en cash_movements
  *
  * Auth: sesión admin/manager o token con scope read.
  */
@@ -55,7 +56,7 @@ try {
         $params[] = $register_id;
     }
 
-    // 1. Resumen de ventas completadas
+    // 1. Resumen de ventas completadas (y reembolsadas: deben verse, aunque su ganancia cuenta 0)
     $stmt = $conn->prepare("
         SELECT
             COUNT(*) as total_transactions,
@@ -63,13 +64,15 @@ try {
             COALESCE(SUM(s.refunded_amount), 0) as total_refunded,
             COALESCE(AVG(s.total), 0) as avg_ticket,
             COALESCE(SUM(s.total - (
-                SELECT COALESCE(SUM(sd.quantity * COALESCE(sd.unit_cost, p.cost, 0)), 0)
-                FROM sale_details sd
-                LEFT JOIN products p ON sd.product_id = p.product_id
-                WHERE sd.sale_id = s.sale_id
+                CASE WHEN s.status = 'completed' THEN (
+                    SELECT COALESCE(SUM(sd.quantity * COALESCE(sd.unit_cost, p.cost, 0)), 0)
+                    FROM sale_details sd
+                    LEFT JOIN products p ON sd.product_id = p.product_id
+                    WHERE sd.sale_id = s.sale_id
+                ) ELSE 0 END
             )), 0) as total_profit
         FROM sales s
-        WHERE s.store_id = ? AND DATE(s.sale_date) = ? AND s.status = 'completed' $registerFilter
+        WHERE s.store_id = ? AND DATE(s.sale_date) = ? AND s.status IN ('completed', 'refunded') $registerFilter
     ");
     $stmt->execute($params);
     $summary = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -78,7 +81,7 @@ try {
     $stmt = $conn->prepare("
         SELECT s.payment_method, COUNT(*) as count, COALESCE(SUM(s.total), 0) as total
         FROM sales s
-        WHERE s.store_id = ? AND DATE(s.sale_date) = ? AND s.status = 'completed' $registerFilter
+        WHERE s.store_id = ? AND DATE(s.sale_date) = ? AND s.status IN ('completed', 'refunded') $registerFilter
         GROUP BY s.payment_method
     ");
     $stmt->execute($params);
@@ -145,18 +148,25 @@ try {
         SELECT register_id, opening_date, closing_date, initial_amount, final_amount, expected_amount, difference, status, notes
         FROM cash_registers
         WHERE store_id = ? AND DATE(opening_date) = ? $openFilter
-        ORDER BY opening_date DESC LIMIT 5
+        ORDER BY opening_date DESC
     ");
     $stmt->execute($openParams);
     $registers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Arqueo esperado = inicial + ventas efectivo - retiros + entradas - devoluciones efectivo
+    // Arqueo esperado = inicial de TODAS las cajas del día + ventas efectivo + entradas - retiros
+    // MISMA regla que api/cash_register/close_register.php (inicial + entradas - retiros + ventas).
+    // Las devoluciones NO se restan aquí: refund_sale.php ya inserta un movimiento
+    // movement_type = 'withdrawal' por el importe devuelto, así que ya están en 'withdrawals'.
+    // Restarlas otra vez (como se hacía con - refunds.total) dejaba el esperado bajo por el doble.
     $cashSales = (float)$movements['cash_sales'];
-    $expectedCash = (float)($registers[0]['initial_amount'] ?? 0)
+    $initialCash = 0.0;
+    foreach ($registers as $reg) {
+        $initialCash += (float)$reg['initial_amount'];
+    }
+    $expectedCash = $initialCash
         + $cashSales
         - (float)$movements['withdrawals']
-        + (float)$movements['entries']
-        - (float)$refunds['total'];
+        + (float)$movements['entries'];
 
     Response::success([
         'date' => $date,

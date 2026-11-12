@@ -684,22 +684,11 @@
         })();
 
         // ---------- Vuelta al menú anterior ----------
-        // Si se llegó desde una vista de la app, se regresa ahí. Si no
-        // (enlace guardado, pestaña nueva), se va a Configuración → Datos,
-        // que es donde vive el acceso a Integraciones.
+        // Integraciones solo se entra desde Configuración → Datos: se vuelve ahí
+        // siempre, con la pestaña correcta aunque el navegador recargue la página
+        // (history.back() dejaba la pestaña «Mi Perfil» cuando no había copia
+        // en caché de la vista anterior).
         document.getElementById('btnVolver').addEventListener('click', () => {
-            const ref = document.referrer;
-            // history.length 1 = la pestaña no tiene de dónde regresar (se abrió
-            // directa o en una pestaña nueva): ahí volver no haría nada.
-            if (ref && history.length > 1) {
-                try {
-                    const u = new URL(ref);
-                    if (u.origin === location.origin && /\/public\/[^/]+\.html$/.test(u.pathname)) {
-                        history.back();
-                        return;
-                    }
-                } catch (e) { /* referrer ilegible: se usa el respaldo */ }
-            }
             location.href = 'profile.html#datos';
         });
 

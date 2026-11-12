@@ -33,7 +33,8 @@ try {
     $current = $auth->isLoggedIn() ? $auth->getCurrentUser() : null;
     $board = $db->selectOne(
         'SELECT board_id, store_id, name, orientation, slide_duration, 
-                transition_animation, theme_config, show_qr, is_active
+                transition_animation, theme_config, show_qr, is_active,
+                scheduled_start, scheduled_end
          FROM digital_boards 
          WHERE board_id = ?',
         [$board_id]

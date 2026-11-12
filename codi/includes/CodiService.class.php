@@ -408,9 +408,11 @@ class CodiService
             
             // Auto-completar venta si está configurado
             if ($this->config['auto_complete_sale'] && $payment['sale_id']) {
+                // store_id además del sale_id: aunque un pago ajeno se colara,
+                // la venta solo se toca si es de la MISMA tienda que el pago.
                 $this->db->update(
-                    'UPDATE sales SET codi_payment_id = ?, payment_method = ? WHERE sale_id = ?',
-                    [$paymentId, 'codi', $payment['sale_id']]
+                    'UPDATE sales SET codi_payment_id = ?, payment_method = ? WHERE sale_id = ? AND store_id = ?',
+                    [$paymentId, 'codi', $payment['sale_id'], $payment['store_id']]
                 );
             }
             

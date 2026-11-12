@@ -175,7 +175,10 @@ try {
             if (!Validator::required($product_name)) { $errors['product_name'] = 'Requerido'; }
 
             if ($category_id) {
-                $catExists = $db->selectOne('SELECT category_id FROM categories WHERE category_id = ?', [$category_id]);
+                // La categoría tiene que ser de ESTA tienda: si no, un producto
+                // propio apuntaba a una categoría ajena (y su nombre se filtraba
+                // en el listado).
+                $catExists = $db->selectOne('SELECT category_id FROM categories WHERE category_id = ? AND store_id = ?', [$category_id, $store_id]);
                 if (!$catExists) { $category_id = null; }
             } else {
                 $category_id = null;
@@ -287,7 +290,7 @@ try {
             if (isset($data['cost'])) { if (!Validator::validatePrice($data['cost'])) { Response::validationError(['cost' => 'Inválido']); } $fields[] = 'cost = ?'; $params[] = $data['cost']; }
             if (isset($data['min_stock'])) { $fields[] = 'min_stock = ?'; $params[] = (int)$data['min_stock']; }
             if (isset($data['status'])) { if (!in_array($data['status'], [STATUS_ACTIVE, STATUS_INACTIVE])) { Response::validationError(['status' => 'Inválido']); } $fields[] = 'status = ?'; $params[] = $data['status']; }
-            if (isset($data['category_id'])) { $cid = (int)$data['category_id']; if ($cid && !$db->selectOne('SELECT category_id FROM categories WHERE category_id = ?', [$cid])) { Response::validationError(['category_id' => 'No existe']); } $fields[] = 'category_id = ?'; $params[] = $cid; }
+            if (isset($data['category_id'])) { $cid = (int)$data['category_id']; if ($cid && !$db->selectOne('SELECT category_id FROM categories WHERE category_id = ? AND store_id = ?', [$cid, $store_id])) { Response::validationError(['category_id' => 'No existe']); } $fields[] = 'category_id = ?'; $params[] = $cid; }
             if (isset($data['is_bulk'])) { $fields[] = 'is_bulk = ?'; $params[] = (int)$data['is_bulk']; }
             if (isset($data['bulk_unit'])) { $fields[] = 'bulk_unit = ?'; $params[] = Validator::sanitizeString($data['bulk_unit']); }
 

@@ -52,6 +52,15 @@ try {
         Response::validationError(['amount' => 'Monto inválido']);
     }
 
+    // La venta asociada tiene que ser de ESTA tienda: si no, se siembra una
+    // referencia a una venta de otra empresa en los cobros propios.
+    if ($saleId) {
+        $venta = $db->selectOne('SELECT sale_id FROM sales WHERE sale_id = ? AND store_id = ?', [$saleId, $storeId]);
+        if (!$venta) {
+            Response::notFound('La venta no existe o no es de esta tienda');
+        }
+    }
+
     $stripe = new StripeService($db, $storeId);
     if (!$stripe->isEnabled()) {
         Response::error('Stripe no está habilitado para esta tienda', 403);

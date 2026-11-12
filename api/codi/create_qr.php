@@ -47,12 +47,22 @@ try {
     $concept = isset($data['concept']) ? Validator::sanitizeString($data['concept']) : '';
     $reference = isset($data['reference']) ? Validator::sanitizeString($data['reference']) : null;
     $saleId = isset($data['sale_id']) ? (int)$data['sale_id'] : null;
-    
+
     if ($amount <= 0) {
         Response::validationError(['amount' => 'Monto inválido']);
     }
     if (strlen($concept) < 3) {
         Response::validationError(['concept' => 'Concepto muy corto (mín. 3 caracteres)']);
+    }
+
+    // La venta tiene que ser de ESTA tienda: sin esto un token con permiso de
+    // escritura podía asociar pagos (y con auto_complete, cambiar el método de
+    // pago) de ventas de otra empresa.
+    if ($saleId) {
+        $venta = $db->selectOne('SELECT sale_id FROM sales WHERE sale_id = ? AND store_id = ?', [$saleId, $storeId]);
+        if (!$venta) {
+            Response::notFound('La venta no existe o no es de esta tienda');
+        }
     }
     
     // Inicializar servicio CoDi

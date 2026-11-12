@@ -19,7 +19,12 @@ try {
     $conn = $db->getConnection();
     $currentUser = $actor;
     
-    $store_id = $currentUser['store_id'] ?? 1; // Default to store 1 if not set
+    // Sin tienda no se sirve nada: el `?? 1` anterior devolvía las métricas de
+    // OTRA empresa en lugar de fallar.
+    $store_id = isset($currentUser['store_id']) ? (int)$currentUser['store_id'] : 0;
+    if ($store_id <= 0) {
+        Response::error('Tienda no identificada', 400);
+    }
     
     $type = $_GET['type'] ?? 'dashboard';
     $start_date = isset($_GET['start_date']) ? str_replace('T', ' ', $_GET['start_date']) : date('Y-m-01 00:00:00');

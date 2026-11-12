@@ -59,6 +59,14 @@ try {
     if (!preg_match('/^[0-9]{10}$/', preg_replace('/[^0-9]/', '', $phone))) {
         Response::validationError(['phone' => 'Teléfono inválido (10 dígitos)']);
     }
+
+    // La venta tiene que ser de ESTA tienda (mismo motivo que en create_qr).
+    if ($saleId) {
+        $venta = $db->selectOne('SELECT sale_id FROM sales WHERE sale_id = ? AND store_id = ?', [$saleId, $storeId]);
+        if (!$venta) {
+            Response::notFound('La venta no existe o no es de esta tienda');
+        }
+    }
     
     // Inicializar servicio CoDi
     $codi = new CodiService($db, $storeId);

@@ -28,7 +28,10 @@ try {
     
     $conn = $db->getConnection();
     $currentUser = $actor;
-    $store_id = $currentUser['store_id'] ?? 1;
+    $store_id = isset($currentUser['store_id']) ? (int)$currentUser['store_id'] : 0;
+    if ($store_id <= 0) {
+        Response::error('Tienda no identificada', 400);
+    }
     
     $startDate = $_GET['start_date'] ?? date('Y-m-d', strtotime('-6 days'));
     $endDate = $_GET['end_date'] ?? date('Y-m-d');

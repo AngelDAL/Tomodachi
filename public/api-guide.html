@@ -12,6 +12,10 @@
     <style>
         :root { --guide-max: 920px; }
         body { background: var(--bg-body); color: var(--text-color); }
+        /* Dentro de Integraciones la guía vive en un marco: el enlace de
+           vuelta mandaría a Integraciones dentro de la misma página. */
+        body.embed .back { display: none; }
+        body.embed .guide { padding-top: 24px; }
         .guide { max-width: var(--guide-max); margin: 0 auto; padding: 42px 20px 72px; }
         .guide-header { border-bottom: 1px solid var(--border-light); padding-bottom: 26px; margin-bottom: 28px; }
         h1 { margin: 0 0 10px; font-size: clamp(1.8rem, 4vw, 2.5rem); }
@@ -113,5 +117,12 @@ Reglas:
     <p>Tomodachi Community no necesita una integración propietaria con Claude u OpenAI: cualquier agente capaz de realizar peticiones HTTP puede usar esta API. La pantalla de Integraciones permite copiar la clave, copiar un prompt preparado y abrir esta guía.</p>
     <p>Los botones “Claude” y “OpenAI” pueden añadirse posteriormente como asistentes de configuración, pero no deben enviar la clave automáticamente a un proveedor externo. La clave debe permanecer bajo control del dueño de la tienda.</p>
 </main>
+<script>
+    // ?embed=1 → la guía se muestra dentro de Integraciones (marco), sin su
+    // enlace de vuelta, que dentro del marco no tendría dónde volver.
+    if (new URLSearchParams(location.search).get('embed') === '1') {
+        document.body.classList.add('embed');
+    }
+</script>
 </body>
 </html>

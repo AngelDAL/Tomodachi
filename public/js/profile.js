@@ -34,6 +34,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // Volver desde Integraciones: profile.html#datos abre esa pestaña directamente.
+    const destinoHash = (location.hash || '').replace(/^#/, '');
+    if (destinoHash && pestanaVisible(destinoHash)) switchTab(destinoHash);
+
     // Color picker sync & Real-time preview (CLARO y OSCURO)
     attachThemeLivePreview('themeControls');
     attachThemeLivePreview('themeControlsDark');

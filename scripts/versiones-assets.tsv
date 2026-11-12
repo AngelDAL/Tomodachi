@@ -21,14 +21,14 @@ js/app.js	13	0eef634f1bb47420b30eddf69acf7238
 js/cobro.js	3	ea99282fb9c34bebdf4e525357649812
 js/comandas.js	11	12c92a21f6752ce4bd631c87e6349e53
 js/compositor-inventario.js	6	4e622bf2a6c5c0d6a97ea2fbd9372a7d
-js/dashboard.js	3	200245e5ecfc4f29165cffa70760314e
+js/dashboard.js	4	b9668c8a97fd7a1765dda6b3675f63ca
 js/design-system.js	8	91ac9447b377fb3f06dad1a78655a5f0
 js/inventory-exits.js	3	3a250de195d9e66c8412377bb611fe77
 js/inventory.js	22	cbec79ca78d9a659b0c7bf360fc76b15
 js/mostrador.js	4	4b53d631ac0a8c8961300abe45ae8f09
-js/profile.js	9	6554ec7983b4567ca14786335bc470e2
+js/profile.js	11	a0a08aaffba98c3d24ae008c7e108d64
 js/promotion-client-rules.js	2	f525b40be81b26d1d735dc3c4122f50c
-js/promotions-v2.js	2	685ed10b0d03cee6df18d1e6908aa8d9
+js/promotions-v2.js	3	257c23007d8c4721fedc4f957e973c37
 js/promotions.js	7	45e193739d8631ee688e663459f95fc2
 js/purchases.js	16	7ac2a18ced1bcc6972646958c6d717a7
 js/sales.js	52	a69078ba12312dd245d70860d973ef04
@@ -36,7 +36,7 @@ js/scanner.js	4	828bfb406a22a54d12d54517a37faece
 js/sidebar-loader.js	14	06d9f482238009cd889c09594b1812a6
 js/stock-rule.js	1	5818188ed9718de696abeffe9d55909f
 js/stripe-pos.js	1	a261c0664235a63f2da8b4ae3c1194c7
-js/tables.js	17	9f50c59ab35200b089a3a303c62f3232
+js/tables.js	18	a058cbdd108a34e176799eb4c357b5c8
 js/theme-init.js	6	01f7b3e5431984cc96e3c5b6147e9579
 js/tour.js	4	45da073236616c3069a0bf1977d34178
 js/ws-realtime.js	2	b357936b125ec13aa14a31808ac7dad5

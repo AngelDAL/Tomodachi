@@ -16,51 +16,195 @@
     <script src="js/theme-init.js?v=6"></script>
     <script src="js/format-utils.js"></script>
     <style>
-        .integrations-container {
-            max-width: 1000px;
+        .int-wrap {
+            max-width: 1180px;
             margin: 0 auto;
-            padding: 2rem 1.5rem;
+            padding: 1.25rem 1.5rem 3rem;
         }
-        .integrations-header {
-            margin-bottom: 2rem;
+
+        /* ---------- Encabezado + vuelta ---------- */
+        .int-top {
+            display: flex;
+            align-items: center;
+            gap: 0.9rem;
+            margin-bottom: 1.25rem;
+            flex-wrap: wrap;
         }
-        .integrations-header h1 {
-            font-size: 1.8rem;
-            margin-bottom: 0.4rem;
+        .int-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 16px;
+            border-radius: var(--ds-radius-pill, 100px);
+            border: 1.5px solid var(--border-color);
+            background: var(--bg-card);
+            color: var(--text-color);
+            font-weight: 600;
+            font-size: 0.88rem;
+            cursor: pointer;
+            transition: border-color .2s ease, transform .2s ease;
+        }
+        .int-back:hover {
+            border-color: var(--primary-color);
+            transform: translateX(-2px);
+        }
+        .int-title {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin: 0;
+            font-size: 1.6rem;
             color: var(--text-color);
         }
-        .integrations-header p {
+        .int-title i { color: var(--primary-color); }
+
+        /* Icono de ayuda: el texto largo vive aquí, no en la pantalla */
+        .int-help {
             color: var(--text-muted);
-            max-width: 700px;
+            cursor: help;
+            font-size: 0.95rem;
+            vertical-align: middle;
         }
-        .card {
+        .int-help:hover { color: var(--primary-color); }
+
+        /* ---------- Rejilla: menú lateral + contenido ---------- */
+        .int-layout {
+            display: grid;
+            grid-template-columns: 255px minmax(0, 1fr);
+            gap: 1.25rem;
+            align-items: start;
+        }
+        .int-nav {
+            position: sticky;
+            top: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
             background: var(--bg-card);
-            border-radius: var(--ds-radius-lg, 20px);
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-            box-shadow: var(--ds-shadow-sm, 0 2px 8px rgba(0,0,0,0.06));
             border: 1px solid var(--border-light);
-            transition: box-shadow .3s ease, transform .25s cubic-bezier(.4,0,.2,1);
+            border-radius: var(--ds-radius-lg, 20px);
+            padding: 0.6rem;
+            box-shadow: var(--ds-shadow-sm, 0 2px 8px rgba(0,0,0,0.06));
         }
-        .card:hover {
-            box-shadow: var(--ds-shadow-md, 0 2px 8px rgba(0,0,0,0.06));
+        .int-nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+            width: 100%;
+            padding: 0.72rem 0.8rem;
+            border-radius: 12px;
+            border: 1.5px solid transparent;
+            background: transparent;
+            color: var(--text-color);
+            font-family: inherit;
+            font-size: 0.92rem;
+            font-weight: 600;
+            text-align: left;
+            text-decoration: none;
+            cursor: pointer;
+            transition: background .2s ease, border-color .2s ease, color .2s ease;
         }
-        .card h3 {
-            margin-bottom: 0.4rem;
+        .int-nav-item:hover { background: var(--bg-light); }
+        .int-nav-item i:first-child {
+            width: 20px;
+            text-align: center;
+            color: var(--primary-color);
+            flex-shrink: 0;
         }
-        .card .subtitle {
+        .int-nav-item .chev {
+            margin-left: auto;
+            font-size: 0.7rem;
             color: var(--text-muted);
-            font-size: 0.9rem;
-            margin-bottom: 1.2rem;
+            transition: transform .2s ease;
         }
+        .int-nav-item.active {
+            background: color-mix(in srgb, var(--primary-color) 12%, var(--bg-card));
+            border-color: color-mix(in srgb, var(--primary-color) 42%, transparent);
+            color: var(--primary-dark, var(--primary-color));
+        }
+        /* El área activa queda DESPLEGADA: la flecha gira */
+        .int-nav-item.active .chev { transform: rotate(90deg); color: inherit; }
+
+        .int-area { display: none; }
+        .int-area.active { display: block; }
+
+        .int-area-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        .int-area-head h3 { margin: 0; }
+        .int-frame {
+            width: 100%;
+            height: 72vh;
+            min-height: 460px;
+            border: 1px solid var(--border-light);
+            border-radius: var(--ds-radius-md, 14px);
+            background: var(--bg-card);
+        }
+
+        /* ---------- Pestañas de claves ---------- */
+        .int-tabs {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border-light);
+            padding-bottom: 0.75rem;
+        }
+        .int-tab {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 8px 15px;
+            border-radius: var(--ds-radius-pill, 100px);
+            border: 1.5px solid var(--border-color);
+            background: transparent;
+            color: var(--text-medium);
+            font-family: inherit;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all .2s ease;
+        }
+        .int-tab:hover { border-color: color-mix(in srgb, var(--primary-color) 45%, transparent); }
+        .int-tab.active {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+            color: var(--text-on-primary);
+        }
+        .int-count {
+            display: inline-block;
+            min-width: 20px;
+            padding: 1px 6px;
+            border-radius: var(--ds-radius-pill, 100px);
+            background: color-mix(in srgb, var(--text-muted) 18%, transparent);
+            font-size: 0.72rem;
+            text-align: center;
+        }
+        .int-tab.active .int-count { background: rgba(255,255,255,0.25); }
+
+        /* Listas largas: alto máximo y adentro se desplaza */
+        .int-list {
+            max-height: 440px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        .int-list::-webkit-scrollbar { width: 8px; }
+        .int-list::-webkit-scrollbar-thumb {
+            background: color-mix(in srgb, var(--text-muted) 35%, transparent);
+            border-radius: 8px;
+        }
+
         .form-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 1rem;
         }
-        .form-group {
-            margin-bottom: 1rem;
-        }
+        .form-group { margin-bottom: 1rem; }
         .form-group label {
             display: block;
             font-weight: 600;
@@ -81,7 +225,7 @@
         }
         .scopes-group {
             display: flex;
-            gap: 1rem;
+            gap: 0.6rem;
             flex-wrap: wrap;
         }
         .scope-check {
@@ -93,23 +237,33 @@
             border-radius: var(--ds-radius-pill, 100px);
             border: 1.5px solid transparent;
             cursor: pointer;
+            font-family: inherit;
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--text-color);
             transition: border-color .2s ease, background .2s ease, transform .2s ease;
         }
         .scope-check:hover {
             border-color: color-mix(in srgb, var(--primary-color) 40%, transparent);
             transform: translateY(-1px);
         }
+        .scope-check.active,
         .scope-check:has(input:checked) {
             background: color-mix(in srgb, var(--primary-color) 10%, var(--bg-light));
             border-color: color-mix(in srgb, var(--primary-color) 45%, transparent);
+            color: var(--primary-dark, var(--primary-color));
         }
         .scope-check input {
             width: auto;
             accent-color: var(--primary-color);
         }
-        .token-list {
-            margin-top: 0.5rem;
+        .scope-help {
+            margin: 8px 0 0;
+            color: var(--text-muted);
+            font-size: .82rem;
         }
+
+        .token-list { margin-top: 0.5rem; }
         .token-item {
             display: flex;
             align-items: center;
@@ -127,16 +281,14 @@
             border-color: color-mix(in srgb, var(--primary-color) 35%, var(--border-color));
             box-shadow: var(--ds-shadow-sm, 0 1px 3px rgba(0,0,0,0.08));
         }
-        .token-item .token-info {
-            flex: 1;
-            min-width: 220px;
-        }
+        .token-item .token-info { flex: 1; min-width: 220px; }
         .token-item .token-name {
             font-weight: 600;
             margin-bottom: 4px;
             display: flex;
             align-items: center;
             gap: 8px;
+            flex-wrap: wrap;
         }
         .token-item .token-meta {
             font-size: 0.8rem;
@@ -182,18 +334,28 @@
             font-size: 0.9rem;
             transition: all 0.2s;
         }
-        .btn-primary {
-            background: var(--primary-color);
-            color: var(--text-on-primary);
-        }
+        .btn-primary { background: var(--primary-color); color: var(--text-on-primary); }
         .btn-primary:hover { background: var(--primary-dark); }
         .btn-danger {
             background: transparent;
             color: var(--danger-color);
             border: 1px solid var(--danger-color);
         }
-        .btn-danger:hover { background: var(--danger-color); }
+        .btn-danger:hover { background: var(--danger-color); color: #fff; }
         .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+        .btn-secondary {
+            background: var(--bg-light);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+        }
+        .btn-secondary:hover { border-color: var(--primary-color); }
+        #copyPromptBtn {
+            background: var(--primary-color);
+            color: var(--text-on-primary);
+            border-color: var(--primary-color);
+        }
+        #copyPromptBtn:hover { background: var(--primary-dark); }
+
         .msg {
             margin-top: 1rem;
             padding: 10px 14px;
@@ -229,33 +391,12 @@
             flex-wrap: wrap;
             margin-top: 10px;
         }
-        .btn-secondary {
-            background: var(--bg-light);
-            color: var(--text-color);
-            border: 1px solid var(--border-color);
-        }
-        .btn-secondary:hover { border-color: var(--primary-color); }
-        #copyPromptBtn {
-            background: var(--primary-color);
-            color: var(--text-on-primary);
-            border-color: var(--primary-color);
-        }
-        #copyPromptBtn:hover { background: var(--primary-dark); }
-        .scope-help {
-            margin: 8px 0 0;
-            color: var(--text-muted);
-            font-size: .82rem;
-        }
         .empty-state {
             text-align: center;
             padding: 2.5rem;
             color: var(--text-muted);
         }
-        .empty-state i {
-            font-size: 2.5rem;
-            margin-bottom: 0.8rem;
-            color: var(--text-muted);
-        }
+        .empty-state i { font-size: 2.5rem; margin-bottom: 0.8rem; color: var(--text-muted); }
         .api-doc-hint {
             background: var(--bg-light);
             border-left: 4px solid var(--primary-color);
@@ -271,8 +412,29 @@
             border-radius: 4px;
             font-size: 0.8rem;
         }
+
+        /* ---------- Responsive ---------- */
+        @media (max-width: 900px) {
+            .int-layout { grid-template-columns: 1fr; }
+            /* El menú lateral se acuesta en una tira deslizable */
+            .int-nav {
+                position: static;
+                flex-direction: row;
+                overflow-x: auto;
+                padding: 0.45rem;
+                gap: 6px;
+                scrollbar-width: none;
+            }
+            .int-nav::-webkit-scrollbar { display: none; }
+            .int-nav-item { width: auto; white-space: nowrap; padding: 0.6rem 0.9rem; }
+            .int-nav-item .chev { display: none; }
+            .int-list { max-height: 60vh; }
+            .int-frame { height: 65vh; min-height: 380px; }
+        }
         @media (max-width: 700px) {
             .form-grid { grid-template-columns: 1fr; }
+            .int-wrap { padding: 1rem 1rem 2.5rem; }
+            .int-title { font-size: 1.3rem; }
         }
     </style>
 </head>
@@ -290,147 +452,223 @@
         </aside>
 
         <main class="main-content">
-            <div class="integrations-container">
-                <div class="integrations-header">
-                    <h1><i class="fas fa-plug"></i> Integraciones</h1>
-                    <p>Crea claves de acceso para conectar tus asistentes y herramientas a este sistema.
-                       Cada clave pertenece a esta empresa y puedes revocarla cuando quieras.</p>
+            <div class="int-wrap">
+
+                <div class="int-top">
+                    <button type="button" class="int-back" id="btnVolver">
+                        <i class="fas fa-arrow-left"></i> Configuración
+                    </button>
+                    <h1 class="int-title"><i class="fas fa-plug"></i> Integraciones</h1>
+                    <span class="int-help" title="Conecta tus asistentes y herramientas con claves de acceso. Cada clave pertenece a esta empresa: solo puede consultar y modificar la información de esta tienda, nunca la de otra."><i class="fas fa-circle-info"></i></span>
                 </div>
 
-                <!-- Formulario de creación -->
-                <div class="card">
-                    <h3><i class="fas fa-key"></i> Nueva clave de acceso</h3>
-                    <p class="subtitle">Define qué puede hacer esta clave y por cuánto tiempo.</p>
-                    <form id="createTokenForm">
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label for="tokenName">Nombre</label>
-                                <input type="text" id="tokenName" required placeholder="ej. mi-agente-ia">
-                            </div>
-                            <div class="form-group">
-                                <label for="tokenExpiry">Expiración</label>
-                                <select id="tokenExpiry">
-                                    <option value="0">Nunca expira</option>
-                                    <option value="7">7 días</option>
-                                    <option value="30" selected>30 días</option>
-                                    <option value="90">90 días</option>
-                                    <option value="365">1 año</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label>Permisos</label>
-                            <div class="scopes-group">
-                                <label class="scope-check">
-                                    <input type="checkbox" name="scopes" value="read" checked>
-                                    <span><i class="fas fa-eye"></i> Solo lectura</span>
-                                </label>
-                                <label class="scope-check">
-                                    <input type="checkbox" name="scopes" value="write">
-                                    <span><i class="fas fa-pen"></i> Lectura y escritura</span>
-                                </label>
-                                <label class="scope-check">
-                                    <input type="checkbox" name="scopes" value="custom">
-                                    <span><i class="fas fa-palette"></i> Personalizar apariencia</span>
-                                </label>
-                            </div>
-                            <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">
-                                Solo lectura: consultar datos. · Lectura y escritura: consultar y crear o
-                                modificar datos (incluye lectura). · Personalizar apariencia: tema y colores.
-                            </p>
-                            <p class="scope-help"><i class="fas fa-circle-info"></i>
-                                Para un agente que administra la tienda seleccione <strong>Lectura y escritura</strong>.
-                                No es necesario marcar también “Solo lectura”.
-                            </p>
-                        </div>
-                        <button type="submit" class="btn btn-primary" id="createBtn">
-                            <i class="fas fa-plus"></i> Generar clave
+                <div class="int-layout">
+
+                    <!-- ===== Menú lateral de áreas ===== -->
+                    <nav class="int-nav" aria-label="Áreas de integración">
+                        <button type="button" class="int-nav-item active" data-area="claves">
+                            <i class="fas fa-key"></i> Claves de acceso
+                            <i class="fas fa-chevron-right chev"></i>
                         </button>
-                        <div class="msg" id="createMsg"></div>
-                        <div class="token-reveal" id="tokenReveal" style="display: none;"></div>
-                        <div class="token-actions" id="tokenActions" style="display: none;">
-                            <button type="button" class="btn btn-secondary btn-sm" id="copyTokenBtn">
-                                <i class="fas fa-copy"></i> Copiar clave
-                            </button>
-                            <button type="button" class="btn btn-secondary btn-sm" id="copyPromptBtn">
-                                <i class="fas fa-robot"></i> Conectar mi Agente de IA a mi sitio
-                            </button>
-                            <a class="btn btn-secondary btn-sm" href="api-guide.html" target="_blank" rel="noopener">
-                                <i class="fas fa-book"></i> Ver guía de API
-                            </a>
-                        </div>
-                    </form>
-                </div>
+                        <button type="button" class="int-nav-item" data-area="stripe">
+                            <i class="fab fa-stripe"></i> Cobros con tarjeta
+                            <i class="fas fa-chevron-right chev"></i>
+                        </button>
+                        <button type="button" class="int-nav-item" data-area="guia">
+                            <i class="fas fa-book"></i> Guía de API
+                            <i class="fas fa-chevron-right chev"></i>
+                        </button>
+                    </nav>
 
-                <!-- Lista de tokens -->
-                <div class="card">
-                    <h3><i class="fas fa-list"></i> Claves existentes</h3>
-                    <p class="subtitle">Las claves se muestran solo al crearlas. Aquí puedes ver su estado y revocarlas.</p>
-                    <div id="tokenList">
-                        <div class="empty-state">
-                            <i class="fas fa-key"></i>
-                            <p>Cargando claves...</p>
-                        </div>
+                    <!-- ===== Contenido del área elegida ===== -->
+                    <div class="int-panels">
+
+                        <!-- ---------- Claves de acceso ---------- -->
+                        <section class="int-area active" id="area-claves">
+                            <div class="card">
+                                <div class="int-area-head">
+                                    <h3>
+                                        <i class="fas fa-key"></i> Claves de acceso
+                                        <span class="int-help" title="Las claves se muestran una sola vez, al crearlas. Después solo ves su estado y puedes revocarlas."><i class="fas fa-circle-info"></i></span>
+                                    </h3>
+                                    <button type="button" class="btn btn-primary" id="btnNuevaClave">
+                                        <i class="fas fa-plus"></i> Nueva clave
+                                    </button>
+                                </div>
+
+                                <div class="int-tabs" role="tablist">
+                                    <button type="button" class="int-tab active" data-filtro="activas" role="tab">
+                                        <i class="fas fa-circle-check"></i> Activas <span class="int-count" id="cntActivas">0</span>
+                                    </button>
+                                    <button type="button" class="int-tab" data-filtro="expiradas" role="tab">
+                                        <i class="fas fa-clock"></i> Expiradas <span class="int-count" id="cntExpiradas">0</span>
+                                    </button>
+                                    <button type="button" class="int-tab" data-filtro="revocadas" role="tab">
+                                        <i class="fas fa-ban"></i> Revocadas <span class="int-count" id="cntRevocadas">0</span>
+                                    </button>
+                                    <button type="button" class="int-tab" data-filtro="todas" role="tab">
+                                        <i class="fas fa-list"></i> Todas <span class="int-count" id="cntTodas">0</span>
+                                    </button>
+                                </div>
+
+                                <div class="int-list" id="tokenList">
+                                    <div class="empty-state">
+                                        <i class="fas fa-key"></i>
+                                        <p>Cargando claves...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- ---------- Cobros con tarjeta ---------- -->
+                        <section class="int-area" id="area-stripe">
+                            <div class="card" id="stripeCard">
+                                <div class="int-area-head">
+                                    <h3>
+                                        <i class="fab fa-stripe"></i> Cobros con tarjeta
+                                        <span class="int-help" title="Cobra con tarjeta directo desde el Punto de Venta. Necesitas una cuenta de Stripe; copia aquí tus claves de API y listo. Los datos de la tarjeta los captura Stripe, nunca este servidor."><i class="fas fa-circle-info"></i></span>
+                                    </h3>
+                                </div>
+                                <form id="stripeConfigForm">
+                                    <div class="form-grid">
+                                        <div class="form-group">
+                                            <label for="stripePublishableKey">Clave pública (pk_...)</label>
+                                            <input type="text" id="stripePublishableKey" placeholder="pk_live_... o pk_test_..." autocomplete="off">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="stripeCurrency">Moneda</label>
+                                            <select id="stripeCurrency">
+                                                <option value="mxn" selected>MXN — Peso mexicano</option>
+                                                <option value="usd">USD — Dólar estadounidense</option>
+                                                <option value="eur">EUR — Euro</option>
+                                                <option value="cop">COP — Peso colombiano</option>
+                                                <option value="ars">ARS — Peso argentino</option>
+                                                <option value="clp">CLP — Peso chileno</option>
+                                                <option value="pen">PEN — Sol peruano</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="stripeSecretKey">Clave secreta (sk_... o rk_...)</label>
+                                        <input type="password" id="stripeSecretKey" placeholder="sk_test_... o rk_test_..." autocomplete="new-password">
+                                        <small id="stripeSecretHint" style="color: var(--text-muted);"></small>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="stripeWebhookSecret">Firma de webhook (whsec_...)</label>
+                                        <input type="password" id="stripeWebhookSecret" placeholder="whsec_..." autocomplete="new-password">
+                                        <small id="stripeWebhookHint" style="color: var(--text-muted);"></small>
+                                    </div>
+                                    <div class="api-doc-hint">
+                                        <i class="fas fa-info-circle"></i>
+                                        En tu panel de Stripe (Developers → Webhooks) registra esta URL con los eventos
+                                        <code>payment_intent.succeeded</code>, <code>payment_intent.payment_failed</code> y
+                                        <code>payment_intent.canceled</code>:<br>
+                                        <code id="stripeWebhookUrl"></code>
+                                    </div>
+                                    <div class="form-group" style="margin-top: 0.75rem;">
+                                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                            <input type="checkbox" id="stripeEnabled" style="width: auto;">
+                                            Habilitar cobros con Stripe en el Punto de Venta
+                                        </label>
+                                    </div>
+                                    <div id="stripeConfigMsg" class="msg"></div>
+                                    <button type="submit" class="btn-primary" id="stripeSaveBtn">
+                                        <i class="fas fa-save"></i> Guardar configuración
+                                    </button>
+                                </form>
+                            </div>
+                        </section>
+
+                        <!-- ---------- Guía de API ---------- -->
+                        <section class="int-area" id="area-guia">
+                            <div class="card">
+                                <div class="int-area-head">
+                                    <h3>
+                                        <i class="fas fa-book"></i> Guía de API
+                                        <span class="int-help" title="Endpoints, permisos y ejemplos para conectar un agente o una herramienta externa."><i class="fas fa-circle-info"></i></span>
+                                    </h3>
+                                    <a class="btn btn-secondary btn-sm" href="api-guide.html" target="_blank" rel="noopener">
+                                        <i class="fas fa-up-right-from-square"></i> Abrir en pestaña
+                                    </a>
+                                </div>
+                                <iframe class="int-frame" id="guiaFrame" src="api-guide.html?embed=1" title="Guía de API" loading="lazy"></iframe>
+                            </div>
+                        </section>
+
                     </div>
                 </div>
-
-                <!-- Cobros con tarjeta (Stripe) -->
-                <div class="card" id="stripeCard">
-                    <h3><i class="fab fa-stripe"></i> Cobros con tarjeta (Stripe)</h3>
-                    <p class="subtitle">Cobra con tarjeta directo desde el Punto de Venta. Necesitas una cuenta de
-                        <a href="https://dashboard.stripe.com/register" target="_blank" rel="noopener">Stripe</a>;
-                        copia aquí tus claves de API y listo. Los datos de la tarjeta los captura Stripe, nunca este servidor.</p>
-                    <form id="stripeConfigForm">
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label for="stripePublishableKey">Clave pública (pk_...)</label>
-                                <input type="text" id="stripePublishableKey" placeholder="pk_live_... o pk_test_..." autocomplete="off">
-                            </div>
-                            <div class="form-group">
-                                <label for="stripeCurrency">Moneda</label>
-                                <select id="stripeCurrency">
-                                    <option value="mxn" selected>MXN — Peso mexicano</option>
-                                    <option value="usd">USD — Dólar estadounidense</option>
-                                    <option value="eur">EUR — Euro</option>
-                                    <option value="cop">COP — Peso colombiano</option>
-                                    <option value="ars">ARS — Peso argentino</option>
-                                    <option value="clp">CLP — Peso chileno</option>
-                                    <option value="pen">PEN — Sol peruano</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label for="stripeSecretKey">Clave secreta (sk_... o rk_...)</label>
-                            <input type="password" id="stripeSecretKey" placeholder="sk_test_... o rk_test_..." autocomplete="new-password">
-                            <small id="stripeSecretHint" style="color: var(--text-muted);"></small>
-                        </div>
-                        <div class="form-group">
-                            <label for="stripeWebhookSecret">Firma de webhook (whsec_...)</label>
-                            <input type="password" id="stripeWebhookSecret" placeholder="whsec_..." autocomplete="new-password">
-                            <small id="stripeWebhookHint" style="color: var(--text-muted);"></small>
-                        </div>
-                        <div class="api-doc-hint">
-                            <i class="fas fa-info-circle"></i>
-                            En tu panel de Stripe (Developers → Webhooks) registra esta URL con los eventos
-                            <code>payment_intent.succeeded</code>, <code>payment_intent.payment_failed</code> y
-                            <code>payment_intent.canceled</code>:<br>
-                            <code id="stripeWebhookUrl"></code>
-                        </div>
-                        <div class="form-group" style="margin-top: 0.75rem;">
-                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                                <input type="checkbox" id="stripeEnabled" style="width: auto;">
-                                Habilitar cobros con Stripe en el Punto de Venta
-                            </label>
-                        </div>
-                        <div id="stripeConfigMsg" class="msg"></div>
-                        <button type="submit" class="btn-primary" id="stripeSaveBtn">
-                            <i class="fas fa-save"></i> Guardar configuración
-                        </button>
-                    </form>
-                </div>
-
             </div>
         </main>
+    </div>
+
+    <!-- ===== Modal: nueva clave ===== -->
+    <div class="modal" id="nuevaClaveModal" role="dialog" aria-modal="true" aria-labelledby="nuevaClaveTitulo">
+        <div class="modal-content" style="max-width: 620px;">
+            <div class="modal-header">
+                <h2 id="nuevaClaveTitulo"><i class="fas fa-key"></i> Nueva clave de acceso</h2>
+                <button type="button" class="modal-close" id="cerrarModalClave" aria-label="Cerrar"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="createTokenForm">
+                <div class="modal-body">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="tokenName">Nombre</label>
+                            <input type="text" id="tokenName" required placeholder="ej. mi-agente-ia">
+                        </div>
+                        <div class="form-group">
+                            <label>Expiración</label>
+                            <div class="scopes-group" id="expGroup" role="radiogroup" aria-label="Expiración">
+                                <button type="button" class="scope-check" data-days="7"><span>7 días</span></button>
+                                <button type="button" class="scope-check active" data-days="30"><span>30 días</span></button>
+                                <button type="button" class="scope-check" data-days="90"><span>90 días</span></button>
+                                <button type="button" class="scope-check" data-days="365"><span>1 año</span></button>
+                                <button type="button" class="scope-check" data-days="0"><span>Nunca expira</span></button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Permisos</label>
+                        <div class="scopes-group">
+                            <label class="scope-check">
+                                <input type="checkbox" name="scopes" value="read" checked>
+                                <span><i class="fas fa-eye"></i> Solo lectura</span>
+                            </label>
+                            <label class="scope-check">
+                                <input type="checkbox" name="scopes" value="write">
+                                <span><i class="fas fa-pen"></i> Lectura y escritura</span>
+                            </label>
+                            <label class="scope-check">
+                                <input type="checkbox" name="scopes" value="custom">
+                                <span><i class="fas fa-palette"></i> Personalizar apariencia</span>
+                            </label>
+                        </div>
+                        <p class="scope-help">
+                            <span class="int-help" title="Solo lectura: consultar datos. Lectura y escritura: consultar y crear o modificar datos (incluye lectura). Personalizar apariencia: tema y colores. Para un agente que administra la tienda elija Lectura y escritura; no es necesario marcar también «Solo lectura»."><i class="fas fa-circle-info"></i></span>
+                            Alcance de la clave dentro de esta empresa.
+                        </p>
+                    </div>
+                    <div class="msg" id="createMsg"></div>
+                    <div class="token-reveal" id="tokenReveal" style="display: none;"></div>
+                    <div class="token-actions" id="tokenActions" style="display: none;">
+                        <button type="button" class="btn btn-secondary btn-sm" id="copyTokenBtn">
+                            <i class="fas fa-copy"></i> Copiar clave
+                        </button>
+                        <button type="button" class="btn btn-sm" id="copyPromptBtn">
+                            <i class="fas fa-robot"></i> Conectar mi Agente de IA a mi sitio
+                        </button>
+                        <a class="btn btn-secondary btn-sm" href="api-guide.html" target="_blank" rel="noopener">
+                            <i class="fas fa-book"></i> Ver guía de API
+                        </a>
+                    </div>
+                </div>
+                <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:10px; margin-top: 1.25rem;">
+                    <button type="button" class="btn btn-secondary" id="cancelarModalClave">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="createBtn">
+                        <i class="fas fa-plus"></i> Generar clave
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <script src="js/sidebar-loader.js?v=14"></script>
@@ -445,6 +683,325 @@
             loadStripeConfig();
         })();
 
+        // ---------- Vuelta al menú anterior ----------
+        // Si se llegó desde una vista de la app, se regresa ahí. Si no
+        // (enlace guardado, pestaña nueva), se va a Configuración → Datos,
+        // que es donde vive el acceso a Integraciones.
+        document.getElementById('btnVolver').addEventListener('click', () => {
+            const ref = document.referrer;
+            if (ref) {
+                try {
+                    const u = new URL(ref);
+                    if (u.origin === location.origin && /\/public\/[^/]+\.html$/.test(u.pathname)) {
+                        history.back();
+                        return;
+                    }
+                } catch (e) { /* referrer ilegible: se usa el respaldo */ }
+            }
+            location.href = 'profile.html#datos';
+        });
+
+        // ---------- Menú lateral: despliega el área elegida ----------
+        document.querySelectorAll('.int-nav-item').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const area = btn.dataset.area;
+                document.querySelectorAll('.int-nav-item').forEach(b => b.classList.toggle('active', b === btn));
+                document.querySelectorAll('.int-area').forEach(a => a.classList.toggle('active', a.id === 'area-' + area));
+            });
+        });
+
+        // ---------- Pestañas de claves ----------
+        let filtroActivo = 'activas';
+        let clavesCargadas = [];
+
+        document.querySelectorAll('.int-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                filtroActivo = tab.dataset.filtro;
+                document.querySelectorAll('.int-tab').forEach(t => t.classList.toggle('active', t === tab));
+                pintarClaves();
+            });
+        });
+
+        function pasaFiltro(t) {
+            const revocada = t.revoked == 1;
+            const expirada = !!t.is_expired;
+            if (filtroActivo === 'activas') return !revocada && !expirada;
+            if (filtroActivo === 'expiradas') return !revocada && expirada;
+            if (filtroActivo === 'revocadas') return revocada;
+            return true;
+        }
+
+        function pintarClaves() {
+            const list = document.getElementById('tokenList');
+            const revocadas = clavesCargadas.filter(t => t.revoked == 1).length;
+            const expiradas = clavesCargadas.filter(t => t.revoked != 1 && t.is_expired).length;
+            const activas = clavesCargadas.length - revocadas - expiradas;
+
+            document.getElementById('cntActivas').textContent = activas;
+            document.getElementById('cntExpiradas').textContent = expiradas;
+            document.getElementById('cntRevocadas').textContent = revocadas;
+            document.getElementById('cntTodas').textContent = clavesCargadas.length;
+
+            if (clavesCargadas.length === 0) {
+                list.innerHTML = '<div class="empty-state"><i class="fas fa-key"></i><p>Aún no tienes claves. Crea una con el botón «Nueva clave».</p></div>';
+                return;
+            }
+
+            const visibles = clavesCargadas.filter(pasaFiltro);
+            if (visibles.length === 0) {
+                const aviso = {
+                    activas: 'No hay claves activas.',
+                    expiradas: 'No hay claves expiradas.',
+                    revocadas: 'No hay claves revocadas.',
+                    todas: 'No hay claves.'
+                }[filtroActivo];
+                list.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>' + aviso + '</p></div>';
+                return;
+            }
+
+            const scopeLabels = { read: 'Solo lectura', write: 'Leer y editar', custom: 'Personalizar' };
+            list.innerHTML = '<div class="token-list">' + visibles.map(t => {
+                const scopes = (t.scopes || '').split(',').filter(Boolean)
+                    .map(s => '<span class="badge badge-scope">' + (scopeLabels[s] || escapeHtml(s)) + '</span>').join(' ');
+
+                let stateBadge = '<span class="badge badge-active">Activa</span>';
+                if (t.revoked == 1) stateBadge = '<span class="badge badge-revoked">Revocada</span>';
+                else if (t.is_expired) stateBadge = '<span class="badge badge-expired">Expirada</span>';
+
+                const exp = t.expires_at
+                    ? 'Expira: ' + t.expires_at.replace('T', ' ').slice(0, 16)
+                    : 'Sin expiración';
+                const lastUsed = t.last_used_at
+                    ? 'Último uso: ' + t.last_used_at.replace('T', ' ').slice(0, 16)
+                    : 'Sin uso aún';
+
+                const puedeRevocar = t.revoked != 1 && !t.is_expired;
+                return '' +
+                    '<div class="token-item">' +
+                        '<div class="token-info">' +
+                            '<div class="token-name">' +
+                                '<i class="fas fa-key" style="color: var(--primary-color);"></i>' +
+                                escapeHtml(t.name) +
+                                stateBadge +
+                            '</div>' +
+                            '<div class="token-meta">' +
+                                '<code>' + escapeHtml(t.token_prefix) + '...</code> · ' + scopes + ' · ' + exp + ' · ' + lastUsed +
+                            '</div>' +
+                        '</div>' +
+                        (puedeRevocar
+                            ? '<button type="button" class="btn btn-danger btn-sm" data-revocar="' + t.token_id + '" data-nombre="' + escapeHtml(t.name) + '">' +
+                                '<i class="fas fa-ban"></i> Revocar</button>'
+                            : '') +
+                    '</div>';
+            }).join('') + '</div>';
+        }
+
+        document.getElementById('tokenList').addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-revocar]');
+            if (!btn) return;
+            revokeToken(parseInt(btn.dataset.revocar, 10), btn.dataset.nombre);
+        });
+
+        // ---------- Modal de nueva clave ----------
+        const modalClave = document.getElementById('nuevaClaveModal');
+        let claveCopiada = true; // sin clave pendiente, cerrar no cuesta nada
+
+        function abrirModalClave() {
+            modalClave.classList.add('show');
+            document.body.classList.add('modal-open');
+            setTimeout(() => document.getElementById('tokenName').focus(), 60);
+        }
+
+        function cerrarModalClave() {
+            modalClave.classList.remove('show');
+            document.body.classList.remove('modal-open');
+        }
+
+        document.getElementById('btnNuevaClave').addEventListener('click', abrirModalClave);
+        document.getElementById('cerrarModalClave').addEventListener('click', pedirCierreModal);
+        document.getElementById('cancelarModalClave').addEventListener('click', pedirCierreModal);
+        modalClave.addEventListener('mousedown', (e) => { if (e.target === modalClave) pedirCierreModal(); });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modalClave.classList.contains('show')) pedirCierreModal();
+        });
+
+        // Cerrar con una clave sin copiar la perdería para siempre: se pregunta antes.
+        function pedirCierreModal() {
+            if (window.lastGeneratedToken && !claveCopiada) {
+                confirmarAccion({
+                    titulo: 'Cerrar sin copiar',
+                    mensaje: 'La clave todavía no se ha copiado y no volverá a mostrarse. ¿Cerrar de todos modos?',
+                    textoConfirmar: 'Cerrar',
+                    peligroso: true
+                }).then(ok => { if (ok) cerrarModalClave(); });
+                return;
+            }
+            cerrarModalClave();
+        }
+
+        // Expiración: botones, no un select (un clic y listo)
+        document.querySelectorAll('#expGroup .scope-check').forEach(opt => {
+            opt.addEventListener('click', () => {
+                document.querySelectorAll('#expGroup .scope-check').forEach(o => o.classList.toggle('active', o === opt));
+            });
+        });
+        function expiracionElegida() {
+            const activo = document.querySelector('#expGroup .scope-check.active');
+            return activo ? parseInt(activo.dataset.days, 10) : 30;
+        }
+
+        // Crear token
+        document.getElementById('createTokenForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const msg = document.getElementById('createMsg');
+            const reveal = document.getElementById('tokenReveal');
+            const tokenActions = document.getElementById('tokenActions');
+            msg.className = 'msg';
+            reveal.style.display = 'none';
+            tokenActions.style.display = 'none';
+            window.lastGeneratedToken = null;
+            claveCopiada = false;
+
+            const scopes = Array.from(document.querySelectorAll('input[name="scopes"]:checked')).map(c => c.value);
+            if (scopes.length === 0) {
+                msg.className = 'msg error';
+                msg.textContent = 'Selecciona al menos un permiso.';
+                return;
+            }
+
+            const btn = document.getElementById('createBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
+
+            try {
+                const res = await fetch('../api/api_tokens/create.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        name: document.getElementById('tokenName').value.trim(),
+                        scopes: scopes,
+                        expires_in_days: expiracionElegida()
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    msg.className = 'msg success';
+                    msg.textContent = 'Clave generada. Cópiala ahora; no volverá a mostrarse.';
+                    reveal.style.display = 'block';
+                    reveal.textContent = data.data.token;
+                    tokenActions.style.display = 'flex';
+                    window.lastGeneratedToken = data.data.token;
+                    e.target.reset();
+                    document.querySelectorAll('input[name="scopes"]').forEach(c => { c.checked = (c.value === 'read'); });
+                    document.querySelectorAll('#expGroup .scope-check').forEach(o => o.classList.toggle('active', o.dataset.days === '30'));
+                    filtroActivo = 'activas';
+                    document.querySelectorAll('.int-tab').forEach(t => t.classList.toggle('active', t.dataset.filtro === 'activas'));
+                    loadTokens();
+                } else {
+                    msg.className = 'msg error';
+                    msg.textContent = data.message || 'Error al generar la clave';
+                }
+            } catch (err) {
+                msg.className = 'msg error';
+                msg.textContent = 'Error de conexión. Intente nuevamente.';
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-plus"></i> Generar clave';
+            }
+        });
+
+        // Cargar tokens
+        async function loadTokens() {
+            const list = document.getElementById('tokenList');
+            try {
+                const res = await fetch('../api/api_tokens/read.php', { credentials: 'include' });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.message);
+                clavesCargadas = data.data || [];
+                pintarClaves();
+            } catch (err) {
+                list.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error al cargar claves.</p></div>';
+            }
+        }
+
+        function revokeToken(id, name) {
+            confirmarAccion({
+                titulo: 'Revocar clave',
+                mensaje: '¿Revocar la clave "' + name + '"? Ya no podrá usarse.',
+                textoConfirmar: 'Revocar',
+                peligroso: true
+            }).then(ok => {
+                if (!ok) return;
+                fetch('../api/api_tokens/revoke.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ token_id: id })
+                }).then(r => r.json()).then(d => {
+                    if (d.success) loadTokens();
+                    else showNotification(d.message || 'Error al revocar', 'error');
+                });
+            });
+        }
+
+        function escapeHtml(s) {
+            return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        function integrationPrompt() {
+            const base = window.location.origin;
+            return `Actúa como mi agente de administración de Tomodachi POS.
+
+CONEXIÓN
+- URL base: ${base}
+- API key: ${window.lastGeneratedToken || '[PEGA_AQUI_TU_CLAVE]'}
+- En cada petición usa el encabezado: Authorization: Bearer ${window.lastGeneratedToken || '[PEGA_AQUI_TU_CLAVE]'}
+- Guía completa: ${base}/api-guide.html
+
+ALCANCE Y SEGURIDAD
+- Esta clave pertenece a una sola tienda. Nunca intentes consultar o modificar otra tienda.
+- Consulta primero la información actual antes de proponer o ejecutar cambios.
+- Antes de crear, modificar, cancelar, devolver o eliminar información, explica la acción y pide confirmación explícita.
+- No inventes IDs, precios, existencias, clientes ni ventas. Si faltan datos, consúltalos mediante la API.
+- No muestres esta API key en respuestas públicas ni la envíes a otra persona o servicio.
+- Respeta los errores: 401 significa clave inválida/expirada/revocada; 403 significa permiso insuficiente; 422 significa datos inválidos; 409 significa conflicto.
+
+CONSULTAS HABITUALES
+- Productos: GET ${base}/api/inventory/products.php
+- Categorías: GET ${base}/api/inventory/categories.php
+- Clientes: GET ${base}/api/customers/customers.php
+- Ventas: GET ${base}/api/sales/get_sales.php
+- Detalle de venta: GET ${base}/api/sales/sale_details.php?sale_id=ID
+- Estadísticas: GET ${base}/api/reports/dashboard_stats.php
+- Cierre Z: GET ${base}/api/reports/close_z.php
+
+ACCIONES DE ESCRITURA
+- Crear venta: POST ${base}/api/sales/create_sale.php
+- Actualizar producto: PUT ${base}/api/inventory/products.php
+- Ajustar existencias: POST ${base}/api/inventory/stock.php
+- Crear o modificar clientes, promociones y otras entidades solo mediante los endpoints documentados.
+- Nunca ejecutes una acción destructiva sin confirmación.
+
+FORMATO
+- Las respuestas normalmente tienen {success, message, data, error}.
+- Devuelve resultados claros en español, incluyendo ID, nombre, precio, existencia y cualquier advertencia relevante.
+- Si una operación no está permitida por el scope o por el rol, dilo claramente y no intentes evadir el control.`;
+        }
+
+        document.getElementById('copyTokenBtn').addEventListener('click', async () => {
+            if (!window.lastGeneratedToken) return;
+            await navigator.clipboard.writeText(window.lastGeneratedToken);
+            claveCopiada = true;
+            document.getElementById('createMsg').className = 'msg success';
+            document.getElementById('createMsg').textContent = 'Clave copiada al portapapeles.';
+        });
+        document.getElementById('copyPromptBtn').addEventListener('click', async () => {
+            await navigator.clipboard.writeText(integrationPrompt());
+            document.getElementById('createMsg').className = 'msg success';
+            document.getElementById('createMsg').textContent = 'Prompt copiado. Pégalo en tu agente junto con la clave.';
+        });
+
         // ---------- Cobros con tarjeta (Stripe) ----------
         document.getElementById('stripeWebhookUrl').textContent =
             location.origin + '/api/stripe/webhook.php';
@@ -456,6 +1013,7 @@
                 const data = await res.json();
                 if (res.status === 403) {
                     document.getElementById('stripeCard').style.display = 'none';
+                    document.querySelector('.int-nav-item[data-area="stripe"]').style.display = 'none';
                     return;
                 }
                 if (!data.success) return;
@@ -523,187 +1081,6 @@
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fas fa-save"></i> Guardar configuración';
             }
-        });
-
-        // Crear token
-        document.getElementById('createTokenForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const msg = document.getElementById('createMsg');
-            const reveal = document.getElementById('tokenReveal');
-            const tokenActions = document.getElementById('tokenActions');
-            msg.className = 'msg';
-            reveal.style.display = 'none';
-            tokenActions.style.display = 'none';
-
-            const scopes = Array.from(document.querySelectorAll('input[name="scopes"]:checked')).map(c => c.value);
-            if (scopes.length === 0) {
-                msg.className = 'msg error';
-                msg.textContent = 'Selecciona al menos un permiso.';
-                return;
-            }
-
-            const btn = document.getElementById('createBtn');
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
-
-            try {
-                const res = await fetch('../api/api_tokens/create.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({
-                        name: document.getElementById('tokenName').value.trim(),
-                        scopes: scopes,
-                        expires_in_days: parseInt(document.getElementById('tokenExpiry').value, 10)
-                    })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    msg.className = 'msg success';
-                    msg.textContent = 'Clave generada. Cópiala ahora; no volverá a mostrarse.';
-                    reveal.style.display = 'block';
-                    reveal.textContent = data.data.token;
-                    tokenActions.style.display = 'flex';
-                    window.lastGeneratedToken = data.data.token;
-                    e.target.reset();
-                    loadTokens();
-                } else {
-                    msg.className = 'msg error';
-                    msg.textContent = data.message || 'Error al generar la clave';
-                }
-            } catch (err) {
-                msg.className = 'msg error';
-                msg.textContent = 'Error de conexión. Intente nuevamente.';
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-plus"></i> Generar clave';
-            }
-        });
-
-        // Cargar tokens
-        async function loadTokens() {
-            const list = document.getElementById('tokenList');
-            try {
-                const res = await fetch('../api/api_tokens/read.php', { credentials: 'include' });
-                const data = await res.json();
-                if (!data.success) throw new Error(data.message);
-
-                if (!data.data || data.data.length === 0) {
-                    list.innerHTML = '<div class="empty-state"><i class="fas fa-key"></i><p>Aún no tienes claves. Crea una arriba.</p></div>';
-                    return;
-                }
-
-                list.innerHTML = data.data.map(t => {
-                    const scopeLabels = { read: 'Solo lectura', write: 'Leer y editar', custom: 'Personalizar' };
-                    const scopes = (t.scopes || '').split(',').filter(Boolean)
-                        .map(s => `<span class="badge badge-scope">${scopeLabels[s] || s}</span>`).join(' ');
-                    let stateBadge = '<span class="badge badge-active">Activa</span>';
-                    if (t.revoked == 1) stateBadge = '<span class="badge badge-revoked">Revocada</span>';
-                    else if (t.is_expired) stateBadge = '<span class="badge badge-expired">Expirada</span>';
-
-                    const exp = t.expires_at
-                        ? 'Expira: ' + t.expires_at.replace('T', ' ').slice(0, 16)
-                        : 'Sin expiración';
-                    const lastUsed = t.last_used_at
-                        ? 'Último uso: ' + t.last_used_at.replace('T', ' ').slice(0, 16)
-                        : 'Sin uso aún';
-
-                    const canRevoke = t.revoked != 1 && !t.is_expired;
-                    return `
-                        <div class="token-item">
-                            <div class="token-info">
-                                <div class="token-name">
-                                    <i class="fas fa-key" style="color: var(--primary-color);"></i>
-                                    ${escapeHtml(t.name)}
-                                    ${stateBadge}
-                                </div>
-                                <div class="token-meta">
-                                    <code>${escapeHtml(t.token_prefix)}...</code> · ${scopes} · ${exp} · ${lastUsed}
-                                </div>
-                            </div>
-                            ${canRevoke ? `<button class="btn btn-danger btn-sm" onclick="revokeToken(${t.token_id}, '${escapeHtml(t.name)}')">
-                                <i class="fas fa-ban"></i> Revocar</button>` : ''}
-                        </div>`;
-                }).join('');
-            } catch (err) {
-                list.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error al cargar claves.</p></div>';
-            }
-        }
-
-        function revokeToken(id, name) {
-            confirmarAccion({
-                titulo: 'Revocar clave',
-                mensaje: '¿Revocar la clave "' + name + '"? Ya no podrá usarse.',
-                textoConfirmar: 'Revocar',
-                peligroso: true
-            }).then(ok => {
-                if (!ok) return;
-                fetch('../api/api_tokens/revoke.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ token_id: id })
-                }).then(r => r.json()).then(d => {
-                    if (d.success) loadTokens();
-                    else showNotification(d.message || 'Error al revocar', 'error');
-                });
-            });
-        }
-
-        function escapeHtml(s) {
-            return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-        }
-
-        function integrationPrompt() {
-            const base = window.location.origin;
-            return `Actúa como mi agente de administración de Tomodachi POS.
-
-CONEXIÓN
-- URL base: ${base}
-- API key: ${window.lastGeneratedToken || '[PEGA_AQUI_TU_CLAVE]'}
-- En cada petición usa el encabezado: Authorization: Bearer ${window.lastGeneratedToken || '[PEGA_AQUI_TU_CLAVE]'}
-- Guía completa: ${base}/api-guide.html
-
-ALCANCE Y SEGURIDAD
-- Esta clave pertenece a una sola tienda. Nunca intentes consultar o modificar otra tienda.
-- Consulta primero la información actual antes de proponer o ejecutar cambios.
-- Antes de crear, modificar, cancelar, devolver o eliminar información, explica la acción y pide confirmación explícita.
-- No inventes IDs, precios, existencias, clientes ni ventas. Si faltan datos, consúltalos mediante la API.
-- No muestres esta API key en respuestas públicas ni la envíes a otra persona o servicio.
-- Respeta los errores: 401 significa clave inválida/expirada/revocada; 403 significa permiso insuficiente; 422 significa datos inválidos; 409 significa conflicto.
-
-CONSULTAS HABITUALES
-- Productos: GET ${base}/api/inventory/products.php
-- Categorías: GET ${base}/api/inventory/categories.php
-- Clientes: GET ${base}/api/customers/customers.php
-- Ventas: GET ${base}/api/sales/get_sales.php
-- Detalle de venta: GET ${base}/api/sales/sale_details.php?sale_id=ID
-- Estadísticas: GET ${base}/api/reports/dashboard_stats.php
-- Cierre Z: GET ${base}/api/reports/close_z.php
-
-ACCIONES DE ESCRITURA
-- Crear venta: POST ${base}/api/sales/create_sale.php
-- Actualizar producto: PUT ${base}/api/inventory/products.php
-- Ajustar existencias: POST ${base}/api/inventory/stock.php
-- Crear o modificar clientes, promociones y otras entidades solo mediante los endpoints documentados.
-- Nunca ejecutes una acción destructiva sin confirmación.
-
-FORMATO
-- Las respuestas normalmente tienen {success, message, data, error}.
-- Devuelve resultados claros en español, incluyendo ID, nombre, precio, existencia y cualquier advertencia relevante.
-- Si una operación no está permitida por el scope o por el rol, dilo claramente y no intentes evadir el control.`;
-        }
-
-        document.getElementById('copyTokenBtn').addEventListener('click', async () => {
-            if (!window.lastGeneratedToken) return;
-            await navigator.clipboard.writeText(window.lastGeneratedToken);
-            document.getElementById('createMsg').className = 'msg success';
-            document.getElementById('createMsg').textContent = 'Clave copiada al portapapeles.';
-        });
-        document.getElementById('copyPromptBtn').addEventListener('click', async () => {
-            await navigator.clipboard.writeText(integrationPrompt());
-            document.getElementById('createMsg').className = 'msg success';
-            document.getElementById('createMsg').textContent = 'Prompt copiado. Pégalo en tu agente junto con la clave.';
         });
     </script>
     <script src="lib/animejs/anime.min.js"></script>

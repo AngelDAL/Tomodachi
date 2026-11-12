@@ -413,6 +413,127 @@
             font-size: 0.8rem;
         }
 
+        /* ---------- Filtro de claves (oculto hasta que se pide) ---------- */
+        .int-filter-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        .int-filter-row h3 { margin: 0; }
+        .int-filter-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .int-filter-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 8px 14px;
+            border-radius: var(--ds-radius-pill, 100px);
+            border: 1.5px solid var(--border-color);
+            background: var(--bg-card);
+            color: var(--text-color);
+            font-family: inherit;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: border-color .2s ease, background .2s ease;
+        }
+        .int-filter-btn:hover { border-color: var(--primary-color); }
+        .int-filter-btn[aria-expanded="true"] {
+            background: color-mix(in srgb, var(--primary-color) 12%, var(--bg-card));
+            border-color: color-mix(in srgb, var(--primary-color) 45%, transparent);
+            color: var(--primary-dark, var(--primary-color));
+        }
+        .int-filter-panel {
+            border-bottom: 1px solid var(--border-light);
+            padding-bottom: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        .int-filter-panel[hidden] { display: none; }
+        .int-filter-panel .int-tabs { margin-bottom: 0; border-bottom: 0; padding-bottom: 0; }
+        .int-filter-label {
+            display: block;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            margin-bottom: 0.5rem;
+        }
+
+        /* ---------- Pasos del modal ---------- */
+        .int-steps {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-top: 6px;
+        }
+        .int-step {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 11px;
+            border-radius: var(--ds-radius-pill, 100px);
+            border: 1.5px solid var(--border-color);
+            background: var(--bg-light);
+            color: var(--text-muted);
+            font-size: 0.72rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .int-step.active {
+            background: color-mix(in srgb, var(--primary-color) 14%, var(--bg-card));
+            border-color: color-mix(in srgb, var(--primary-color) 45%, transparent);
+            color: var(--primary-dark, var(--primary-color));
+        }
+        .int-step.done {
+            background: color-mix(in srgb, var(--success-color) 14%, var(--bg-card));
+            border-color: color-mix(in srgb, var(--success-color) 40%, transparent);
+            color: var(--success-color);
+        }
+        .int-paso[hidden] { display: none; }
+        .int-paso-titulo {
+            margin: 0 0 0.35rem;
+            font-size: 1rem;
+        }
+        .int-paso-ayuda {
+            margin: 0 0 1rem;
+            color: var(--text-muted);
+            font-size: 0.84rem;
+        }
+        .int-resumen {
+            border: 1px solid var(--border-color);
+            border-radius: var(--ds-radius-md, 14px);
+            background: var(--bg-lightest);
+            padding: 4px 14px;
+            margin: 0 0 0.5rem;
+        }
+        .int-resumen-fila {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 9px 0;
+            border-bottom: 1px solid var(--border-light);
+            font-size: 0.9rem;
+        }
+        .int-resumen-fila:last-child { border-bottom: 0; }
+        .int-resumen-fila dt { color: var(--text-muted); }
+        .int-resumen-fila dd { margin: 0; font-weight: 600; text-align: right; }
+        .int-paso-acciones {
+            display: flex;
+            justify-content: space-between;
+            gap: 0.75rem;
+            margin-top: 1.25rem;
+        }
+        .int-paso-acciones .btn { min-height: 42px; }
+
         /* ---------- Responsive ---------- */
         @media (max-width: 900px) {
             .int-layout { grid-template-columns: 1fr; }
@@ -486,29 +607,43 @@
                         <!-- ---------- Claves de acceso ---------- -->
                         <section class="int-area active" id="area-claves">
                             <div class="card">
-                                <div class="int-area-head">
+                                <div class="int-filter-row">
                                     <h3>
                                         <i class="fas fa-key"></i> Claves de acceso
                                         <span class="int-help" title="Las claves se muestran una sola vez, al crearlas. Después solo ves su estado y puedes revocarlas."><i class="fas fa-circle-info"></i></span>
                                     </h3>
-                                    <button type="button" class="btn btn-primary" id="btnNuevaClave">
-                                        <i class="fas fa-plus"></i> Nueva clave
-                                    </button>
+                                    <div class="int-filter-actions">
+                                        <button type="button" class="int-filter-btn" id="btnFiltrar"
+                                                aria-expanded="false" aria-controls="filtroClaves"
+                                                title="Mostrar solo las claves que te interesan">
+                                            <i class="fas fa-filter"></i>
+                                            <span id="filtroEtiqueta">Activas</span>
+                                            <span class="int-count" id="cntFiltro">0</span>
+                                        </button>
+                                        <button type="button" class="btn btn-primary" id="btnNuevaClave">
+                                            <i class="fas fa-plus"></i> Nueva clave
+                                        </button>
+                                    </div>
                                 </div>
 
-                                <div class="int-tabs" role="tablist">
-                                    <button type="button" class="int-tab active" data-filtro="activas" role="tab">
-                                        <i class="fas fa-circle-check"></i> Activas <span class="int-count" id="cntActivas">0</span>
-                                    </button>
-                                    <button type="button" class="int-tab" data-filtro="expiradas" role="tab">
-                                        <i class="fas fa-clock"></i> Expiradas <span class="int-count" id="cntExpiradas">0</span>
-                                    </button>
-                                    <button type="button" class="int-tab" data-filtro="revocadas" role="tab">
-                                        <i class="fas fa-ban"></i> Revocadas <span class="int-count" id="cntRevocadas">0</span>
-                                    </button>
-                                    <button type="button" class="int-tab" data-filtro="todas" role="tab">
-                                        <i class="fas fa-list"></i> Todas <span class="int-count" id="cntTodas">0</span>
-                                    </button>
+                                <!-- Las pestañas no están siempre a la vista: se despliegan
+                                     con el filtro y se pliegan al elegir. -->
+                                <div class="int-filter-panel" id="filtroClaves" hidden>
+                                    <span class="int-filter-label">Mostrar</span>
+                                    <div class="int-tabs" role="tablist">
+                                        <button type="button" class="int-tab active" data-filtro="activas" role="tab">
+                                            <i class="fas fa-circle-check"></i> Activas <span class="int-count" id="cntActivas">0</span>
+                                        </button>
+                                        <button type="button" class="int-tab" data-filtro="expiradas" role="tab">
+                                            <i class="fas fa-clock"></i> Expiradas <span class="int-count" id="cntExpiradas">0</span>
+                                        </button>
+                                        <button type="button" class="int-tab" data-filtro="revocadas" role="tab">
+                                            <i class="fas fa-ban"></i> Revocadas <span class="int-count" id="cntRevocadas">0</span>
+                                        </button>
+                                        <button type="button" class="int-tab" data-filtro="todas" role="tab">
+                                            <i class="fas fa-list"></i> Todas <span class="int-count" id="cntTodas">0</span>
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div class="int-list" id="tokenList">
@@ -603,19 +738,30 @@
 
     <!-- ===== Modal: nueva clave ===== -->
     <div class="modal" id="nuevaClaveModal" role="dialog" aria-modal="true" aria-labelledby="nuevaClaveTitulo">
-        <div class="modal-content" style="max-width: 620px;">
+        <div class="modal-content" style="max-width: 560px;">
             <div class="modal-header">
-                <h2 id="nuevaClaveTitulo"><i class="fas fa-key"></i> Nueva clave de acceso</h2>
+                <div style="min-width:0;">
+                    <h2 id="nuevaClaveTitulo"><i class="fas fa-key"></i> Nueva clave de acceso</h2>
+                    <div class="int-steps" id="pasosClave">
+                        <span class="int-step active" data-paso="1">1 Datos</span>
+                        <span class="int-step" data-paso="2">2 Permisos</span>
+                        <span class="int-step" data-paso="3">3 Generar</span>
+                    </div>
+                </div>
                 <button type="button" class="modal-close" id="cerrarModalClave" aria-label="Cerrar"><i class="fas fa-times"></i></button>
             </div>
             <form id="createTokenForm">
                 <div class="modal-body">
-                    <div class="form-grid">
+
+                    <!-- Paso 1: solo lo necesario para empezar -->
+                    <section class="int-paso" data-paso="1">
+                        <h3 class="int-paso-titulo">Datos de la clave</h3>
+                        <p class="int-paso-ayuda">Ponle un nombre que diga para qué la vas a usar.</p>
                         <div class="form-group">
                             <label for="tokenName">Nombre</label>
-                            <input type="text" id="tokenName" required placeholder="ej. mi-agente-ia">
+                            <input type="text" id="tokenName" required placeholder="ej. mi-agente-ia" autocomplete="off">
                         </div>
-                        <div class="form-group">
+                        <div class="form-group" style="margin-bottom:0;">
                             <label>Expiración</label>
                             <div class="scopes-group" id="expGroup" role="radiogroup" aria-label="Expiración">
                                 <button type="button" class="scope-check" data-days="7"><span>7 días</span></button>
@@ -625,45 +771,79 @@
                                 <button type="button" class="scope-check" data-days="0"><span>Nunca expira</span></button>
                             </div>
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Permisos</label>
-                        <div class="scopes-group">
-                            <label class="scope-check">
-                                <input type="checkbox" name="scopes" value="read" checked>
-                                <span><i class="fas fa-eye"></i> Solo lectura</span>
-                            </label>
-                            <label class="scope-check">
-                                <input type="checkbox" name="scopes" value="write">
-                                <span><i class="fas fa-pen"></i> Lectura y escritura</span>
-                            </label>
-                            <label class="scope-check">
-                                <input type="checkbox" name="scopes" value="custom">
-                                <span><i class="fas fa-palette"></i> Personalizar apariencia</span>
-                            </label>
+                    </section>
+
+                    <!-- Paso 2: permisos, que no compiten con el resto -->
+                    <section class="int-paso" data-paso="2" hidden>
+                        <h3 class="int-paso-titulo">Qué puede hacer la clave</h3>
+                        <p class="int-paso-ayuda">Todo lo que marque aquí queda dentro de esta empresa.</p>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>Permisos</label>
+                            <div class="scopes-group">
+                                <label class="scope-check">
+                                    <input type="checkbox" name="scopes" value="read" checked>
+                                    <span><i class="fas fa-eye"></i> Solo lectura</span>
+                                </label>
+                                <label class="scope-check">
+                                    <input type="checkbox" name="scopes" value="write">
+                                    <span><i class="fas fa-pen"></i> Lectura y escritura</span>
+                                </label>
+                                <label class="scope-check">
+                                    <input type="checkbox" name="scopes" value="custom">
+                                    <span><i class="fas fa-palette"></i> Personalizar apariencia</span>
+                                </label>
+                            </div>
+                            <p class="scope-help">
+                                <span class="int-help" title="Solo lectura: consultar datos. Lectura y escritura: consultar y crear o modificar datos (incluye lectura). Personalizar apariencia: tema y colores. Para un agente que administra la tienda elija Lectura y escritura; no es necesario marcar también «Solo lectura»."><i class="fas fa-circle-info"></i></span>
+                                Alcance de la clave dentro de esta empresa.
+                            </p>
                         </div>
-                        <p class="scope-help">
-                            <span class="int-help" title="Solo lectura: consultar datos. Lectura y escritura: consultar y crear o modificar datos (incluye lectura). Personalizar apariencia: tema y colores. Para un agente que administra la tienda elija Lectura y escritura; no es necesario marcar también «Solo lectura»."><i class="fas fa-circle-info"></i></span>
-                            Alcance de la clave dentro de esta empresa.
+                    </section>
+
+                    <!-- Paso 3: resumen, sin campos abiertos -->
+                    <section class="int-paso" data-paso="3" hidden>
+                        <h3 class="int-paso-titulo">Revisa antes de generar</h3>
+                        <p class="int-paso-ayuda">Así quedará la clave. Si algo no cuadra, vuelve y corrígelo.</p>
+                        <dl class="int-resumen">
+                            <div class="int-resumen-fila"><dt>Nombre</dt><dd id="resNombre">—</dd></div>
+                            <div class="int-resumen-fila"><dt>Expiración</dt><dd id="resExpira">—</dd></div>
+                            <div class="int-resumen-fila"><dt>Permisos</dt><dd id="resPermisos">—</dd></div>
+                        </dl>
+                        <p class="scope-help" style="margin-top:.75rem;">
+                            <span class="int-help" title="Guarda la clave apenas la generes: después solo verás su prefijo y su estado."><i class="fas fa-circle-info"></i></span>
+                            La clave se muestra una sola vez.
                         </p>
-                    </div>
+                    </section>
+
+                    <!-- Resultado -->
+                    <section class="int-paso" data-paso="4" hidden>
+                        <h3 class="int-paso-titulo">Clave generada</h3>
+                        <div class="token-reveal" id="tokenReveal"></div>
+                        <div class="token-actions" id="tokenActions">
+                            <button type="button" class="btn btn-secondary btn-sm" id="copyTokenBtn">
+                                <i class="fas fa-copy"></i> Copiar clave
+                            </button>
+                            <button type="button" class="btn btn-sm" id="copyPromptBtn">
+                                <i class="fas fa-robot"></i> Conectar mi Agente de IA
+                            </button>
+                            <a class="btn btn-secondary btn-sm" href="api-guide.html" target="_blank" rel="noopener">
+                                <i class="fas fa-book"></i> Guía de API
+                            </a>
+                        </div>
+                    </section>
+
                     <div class="msg" id="createMsg"></div>
-                    <div class="token-reveal" id="tokenReveal" style="display: none;"></div>
-                    <div class="token-actions" id="tokenActions" style="display: none;">
-                        <button type="button" class="btn btn-secondary btn-sm" id="copyTokenBtn">
-                            <i class="fas fa-copy"></i> Copiar clave
-                        </button>
-                        <button type="button" class="btn btn-sm" id="copyPromptBtn">
-                            <i class="fas fa-robot"></i> Conectar mi Agente de IA a mi sitio
-                        </button>
-                        <a class="btn btn-secondary btn-sm" href="api-guide.html" target="_blank" rel="noopener">
-                            <i class="fas fa-book"></i> Ver guía de API
-                        </a>
-                    </div>
                 </div>
-                <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:10px; margin-top: 1.25rem;">
+                <div class="modal-footer" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:1.25rem;">
+                    <button type="button" class="btn btn-secondary" id="pasoAtras" hidden>
+                        <i class="fas fa-arrow-left"></i> Atrás
+                    </button>
+                    <span style="flex:1"></span>
                     <button type="button" class="btn btn-secondary" id="cancelarModalClave">Cancelar</button>
-                    <button type="submit" class="btn btn-primary" id="createBtn">
+                    <button type="button" class="btn btn-primary" id="pasoSiguiente">
+                        Siguiente <i class="fas fa-arrow-right"></i>
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="createBtn" hidden>
                         <i class="fas fa-plus"></i> Generar clave
                     </button>
                 </div>
@@ -705,11 +885,31 @@
         let filtroActivo = 'activas';
         let clavesCargadas = [];
 
+        const ETIQUETAS_FILTRO = { activas: 'Activas', expiradas: 'Expiradas', revocadas: 'Revocadas', todas: 'Todas' };
+
+        // Las pestañas viven detrás del filtro: se despliegan solo cuando se
+        // piden y se pliegan al elegir, para no saturar la vista.
+        const panelFiltro = document.getElementById('filtroClaves');
+        const btnFiltrar = document.getElementById('btnFiltrar');
+
+        function abrirFiltro(abrir) {
+            panelFiltro.hidden = !abrir;
+            btnFiltrar.setAttribute('aria-expanded', String(!!abrir));
+        }
+        btnFiltrar.addEventListener('click', () => abrirFiltro(panelFiltro.hidden));
+
+        function pintarEtiquetaFiltro() {
+            document.getElementById('filtroEtiqueta').textContent = ETIQUETAS_FILTRO[filtroActivo];
+            const celda = document.getElementById('cnt' + ETIQUETAS_FILTRO[filtroActivo]);
+            document.getElementById('cntFiltro').textContent = celda ? celda.textContent : '0';
+        }
+
         document.querySelectorAll('.int-tab').forEach(tab => {
             tab.addEventListener('click', () => {
                 filtroActivo = tab.dataset.filtro;
                 document.querySelectorAll('.int-tab').forEach(t => t.classList.toggle('active', t === tab));
                 pintarClaves();
+                abrirFiltro(false);
             });
         });
 
@@ -732,6 +932,7 @@
             document.getElementById('cntExpiradas').textContent = expiradas;
             document.getElementById('cntRevocadas').textContent = revocadas;
             document.getElementById('cntTodas').textContent = clavesCargadas.length;
+            pintarEtiquetaFiltro();
 
             if (clavesCargadas.length === 0) {
                 list.innerHTML = '<div class="empty-state"><i class="fas fa-key"></i><p>Aún no tienes claves. Crea una con el botón «Nueva clave».</p></div>';
@@ -793,13 +994,45 @@
             revokeToken(parseInt(btn.dataset.revocar, 10), btn.dataset.nombre);
         });
 
-        // ---------- Modal de nueva clave ----------
+        // ---------- Modal de nueva clave (en pasos) ----------
         const modalClave = document.getElementById('nuevaClaveModal');
         let claveCopiada = true; // sin clave pendiente, cerrar no cuesta nada
+        let pasoActual = 1;
+
+        // Cada paso enseña SOLO lo que toca; el resto queda recogido.
+        function irPaso(n) {
+            pasoActual = n;
+            document.querySelectorAll('.int-paso').forEach(seccion => {
+                seccion.hidden = Number(seccion.dataset.paso) !== n;
+            });
+            document.querySelectorAll('#pasosClave .int-step').forEach(marcador => {
+                const p = Number(marcador.dataset.paso);
+                if (n === 4) {
+                    marcador.classList.remove('active');
+                    marcador.classList.add('done');
+                } else {
+                    marcador.classList.toggle('active', p === n);
+                    marcador.classList.toggle('done', p < n);
+                }
+            });
+            document.getElementById('pasoAtras').hidden = (n === 1 || n === 4);
+            document.getElementById('pasoSiguiente').hidden = (n >= 3);
+            document.getElementById('createBtn').hidden = (n !== 3);
+            document.getElementById('cancelarModalClave').textContent = (n === 4) ? 'Cerrar' : 'Cancelar';
+            const msg = document.getElementById('createMsg');
+            msg.className = 'msg';
+            msg.textContent = '';
+        }
 
         function abrirModalClave() {
             modalClave.classList.add('show');
             document.body.classList.add('modal-open');
+            document.getElementById('createTokenForm').reset();
+            document.querySelectorAll('#expGroup .scope-check').forEach(o => o.classList.toggle('active', o.dataset.days === '30'));
+            document.querySelectorAll('input[name="scopes"]').forEach(c => { c.checked = (c.value === 'read'); });
+            window.lastGeneratedToken = null;
+            claveCopiada = true;
+            irPaso(1);
             setTimeout(() => document.getElementById('tokenName').focus(), 60);
         }
 
@@ -808,12 +1041,46 @@
             document.body.classList.remove('modal-open');
         }
 
+        // Validación de cada paso y relleno del resumen antes de generar.
+        function avanzar() {
+            const msg = document.getElementById('createMsg');
+            if (pasoActual === 1) {
+                if (!document.getElementById('tokenName').value.trim()) {
+                    msg.className = 'msg error';
+                    msg.textContent = 'Ponle un nombre a la clave.';
+                    document.getElementById('tokenName').focus();
+                    return;
+                }
+                irPaso(2);
+                return;
+            }
+            if (pasoActual === 2) {
+                const marcados = Array.from(document.querySelectorAll('input[name="scopes"]:checked'));
+                if (!marcados.length) {
+                    msg.className = 'msg error';
+                    msg.textContent = 'Selecciona al menos un permiso.';
+                    return;
+                }
+                const etiquetas = { read: 'Solo lectura', write: 'Lectura y escritura', custom: 'Personalizar apariencia' };
+                const activo = document.querySelector('#expGroup .scope-check.active');
+                document.getElementById('resNombre').textContent = document.getElementById('tokenName').value.trim();
+                document.getElementById('resExpira').textContent = activo ? activo.textContent.trim() : '30 días';
+                document.getElementById('resPermisos').textContent =
+                    marcados.map(c => etiquetas[c.value] || c.value).join(' · ');
+                irPaso(3);
+            }
+        }
+
         document.getElementById('btnNuevaClave').addEventListener('click', abrirModalClave);
         document.getElementById('cerrarModalClave').addEventListener('click', pedirCierreModal);
         document.getElementById('cancelarModalClave').addEventListener('click', pedirCierreModal);
         modalClave.addEventListener('mousedown', (e) => { if (e.target === modalClave) pedirCierreModal(); });
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && modalClave.classList.contains('show')) pedirCierreModal();
+        });
+        document.getElementById('pasoSiguiente').addEventListener('click', avanzar);
+        document.getElementById('pasoAtras').addEventListener('click', () => {
+            if (pasoActual > 1 && pasoActual < 4) irPaso(pasoActual - 1);
         });
 
         // Cerrar con una clave sin copiar la perdería para siempre: se pregunta antes.
@@ -841,14 +1108,19 @@
             return activo ? parseInt(activo.dataset.days, 10) : 30;
         }
 
-        // Crear token
+        // Crear token: solo en el paso 3. Antes, Enter o «Siguiente» avanzan.
         document.getElementById('createTokenForm').addEventListener('submit', async (e) => {
+            if (pasoActual < 3) {
+                e.preventDefault();
+                avanzar();
+                return;
+            }
             e.preventDefault();
             const msg = document.getElementById('createMsg');
             const reveal = document.getElementById('tokenReveal');
             const tokenActions = document.getElementById('tokenActions');
             msg.className = 'msg';
-            reveal.style.display = 'none';
+            msg.textContent = '';
             tokenActions.style.display = 'none';
             window.lastGeneratedToken = null;
             claveCopiada = false;
@@ -877,15 +1149,13 @@
                 });
                 const data = await res.json();
                 if (data.success) {
-                    msg.className = 'msg success';
-                    msg.textContent = 'Clave generada. Cópiala ahora; no volverá a mostrarse.';
+                    window.lastGeneratedToken = data.data.token;
                     reveal.style.display = 'block';
                     reveal.textContent = data.data.token;
                     tokenActions.style.display = 'flex';
-                    window.lastGeneratedToken = data.data.token;
-                    e.target.reset();
-                    document.querySelectorAll('input[name="scopes"]').forEach(c => { c.checked = (c.value === 'read'); });
-                    document.querySelectorAll('#expGroup .scope-check').forEach(o => o.classList.toggle('active', o.dataset.days === '30'));
+                    irPaso(4);
+                    msg.className = 'msg success';
+                    msg.textContent = 'Clave generada. Cópiala ahora; no volverá a mostrarse.';
                     filtroActivo = 'activas';
                     document.querySelectorAll('.int-tab').forEach(t => t.classList.toggle('active', t.dataset.filtro === 'activas'));
                     loadTokens();

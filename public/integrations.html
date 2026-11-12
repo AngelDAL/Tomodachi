@@ -16,6 +16,10 @@
     <script src="js/theme-init.js?v=6"></script>
     <script src="js/format-utils.js"></script>
     <style>
+        /* .btn/.int-* imponen display por clase, que gana sobre el [hidden] del
+           navegador: sin esto «Atrás», «Siguiente» y «Generar» se veían a la vez. */
+        [hidden] { display: none !important; }
+
         .int-wrap {
             max-width: 1180px;
             margin: 0 auto;
@@ -501,6 +505,7 @@
         .int-paso-titulo {
             margin: 0 0 0.35rem;
             font-size: 1rem;
+            color: var(--text-color);
         }
         .int-paso-ayuda {
             margin: 0 0 1rem;
